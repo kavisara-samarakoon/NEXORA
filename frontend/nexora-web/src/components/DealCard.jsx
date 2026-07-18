@@ -1,5 +1,5 @@
 /**
- * DealCard — Displays a single game deal with pricing info.
+ * DealCard — Displays a single game deal with pricing, rating and actions.
  *
  * Props:
  *   store    (string) — store name, e.g. "Steam Store"
@@ -21,14 +21,21 @@ function DealCard({ store, discount, title, priceOld, priceNew, rating, stars })
 
       <h3 className="nx-deal-card__title">{title}</h3>
 
-      <div className="nx-deal-card__prices">
-        <span className="nx-deal-card__price-old">{priceOld}</span>
-        <span className="nx-deal-card__price-new">{priceNew}</span>
-      </div>
-
       <div className="nx-deal-card__rating">
         <span className="nx-deal-card__stars">{stars}</span>
-        {rating}
+        <span className="nx-deal-card__rating-num">{rating}</span>
+      </div>
+
+      <div className="nx-deal-card__footer">
+        <div className="nx-deal-card__prices">
+          <span className="nx-deal-card__price-old">{priceOld}</span>
+          <span className="nx-deal-card__price-new">{priceNew}</span>
+        </div>
+
+        <div className="nx-deal-card__actions">
+          <button className="nx-deal-card__wishlist-btn" aria-label="Add to wishlist">♡</button>
+          <button className="nx-deal-card__view-btn">View Deal</button>
+        </div>
       </div>
     </div>
   )

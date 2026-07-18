@@ -11,6 +11,7 @@ const GIVEAWAYS = [
     title: 'Cyber Shadow',
     meta: 'Action · Platformer · Indie',
     timer: '2d 14h 32m left',
+    claimed: 78,
   },
   {
     id: 2,
@@ -19,6 +20,7 @@ const GIVEAWAYS = [
     title: 'Star Wars Battlefront II',
     meta: 'Action · Shooter · Multiplayer',
     timer: '5d 06h 12m left',
+    claimed: 45,
   },
   {
     id: 3,
@@ -27,6 +29,7 @@ const GIVEAWAYS = [
     title: 'Shadow Warrior 2',
     meta: 'FPS · Action · Open World',
     timer: '1d 03h 45m left',
+    claimed: 91,
   },
 ]
 
