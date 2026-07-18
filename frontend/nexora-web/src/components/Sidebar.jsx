@@ -26,7 +26,11 @@ function Sidebar({ isOpen, onClose }) {
     <aside className={`nx-sidebar ${isOpen ? 'nx-sidebar--open' : ''}`}>
       {/* Brand */}
       <div className="nx-sidebar__brand">
-        <div className="nx-sidebar__logo">N</div>
+        <img
+          src="/brand/nexora-logo.png"
+          alt="NEXORA logo"
+          className="nx-sidebar__logo"
+        />
         <div>
           <div className="nx-sidebar__title">NEXORA</div>
           <div className="nx-sidebar__subtitle">Game Hub</div>
