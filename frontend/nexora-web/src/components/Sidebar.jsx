@@ -1,24 +1,28 @@
+import { NavLink } from 'react-router-dom'
+
 /**
  * Sidebar — Left navigation panel with NEXORA branding.
  *
  * Props:
  *   isOpen      (boolean) — whether the sidebar is visible on mobile
  *   onClose     (function) — callback to close the sidebar
+ *
+ * Uses NavLink from react-router-dom so the browser URL updates
+ * and the active link gets highlighted automatically.
  */
 
-/* Navigation items — kept here because they belong to the sidebar */
+/* Navigation items — each has a route path */
 const NAV_ITEMS = [
-  { icon: '🏠', label: 'Dashboard', active: true },
-  { icon: '🔥', label: 'Deals', badge: '24' },
-  { icon: '🎁', label: 'Giveaways', badge: '7' },
-  { icon: '📋', label: 'Wishlist' },
-  { icon: '🔔', label: 'Alerts' },
-  { icon: '📊', label: 'Analytics' },
+  { icon: '🏠', label: 'Dashboard', path: '/' },
+  { icon: '🔥', label: 'Deals', path: '/deals', badge: '24' },
+  { icon: '🎁', label: 'Giveaways', path: '/giveaways', badge: '7' },
+  { icon: '📋', label: 'Wishlist', path: '/wishlist' },
+  { icon: '🛡️', label: 'Security', path: '/security' },
+  { icon: '🤖', label: 'Sentinel', path: '/sentinel' },
 ]
 
 const NAV_SYSTEM = [
-  { icon: '🛡️', label: 'Security' },
-  { icon: '⚙️', label: 'Settings' },
+  { icon: '⚙️', label: 'Settings', path: '/settings' },
 ]
 
 function Sidebar({ isOpen, onClose }) {
@@ -42,30 +46,35 @@ function Sidebar({ isOpen, onClose }) {
         <span className="nx-sidebar__section-label">Main Menu</span>
 
         {NAV_ITEMS.map((item) => (
-          <a
+          <NavLink
             key={item.label}
-            href="#"
-            className={`nx-sidebar__link ${item.active ? 'nx-sidebar__link--active' : ''}`}
-            onClick={(e) => { e.preventDefault(); onClose(); }}
+            to={item.path}
+            end={item.path === '/'}
+            className={({ isActive }) =>
+              `nx-sidebar__link ${isActive ? 'nx-sidebar__link--active' : ''}`
+            }
+            onClick={onClose}
           >
             <span className="nx-sidebar__link-icon">{item.icon}</span>
             {item.label}
             {item.badge && <span className="nx-sidebar__badge">{item.badge}</span>}
-          </a>
+          </NavLink>
         ))}
 
         <span className="nx-sidebar__section-label">System</span>
 
         {NAV_SYSTEM.map((item) => (
-          <a
+          <NavLink
             key={item.label}
-            href="#"
-            className="nx-sidebar__link"
-            onClick={(e) => { e.preventDefault(); onClose(); }}
+            to={item.path}
+            className={({ isActive }) =>
+              `nx-sidebar__link ${isActive ? 'nx-sidebar__link--active' : ''}`
+            }
+            onClick={onClose}
           >
             <span className="nx-sidebar__link-icon">{item.icon}</span>
             {item.label}
-          </a>
+          </NavLink>
         ))}
       </nav>
 
