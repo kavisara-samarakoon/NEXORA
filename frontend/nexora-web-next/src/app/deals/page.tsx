@@ -3,6 +3,7 @@ import DealsExplorer from "@/components/DealsExplorer";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import { getDeals } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -12,14 +13,16 @@ export const metadata: Metadata = createPageMetadata({
   keywords: ["game deals", "PC game discounts", "Steam deals", "game price tracking"],
 });
 
-export default function DealsPage() {
+export default async function DealsPage() {
+  const { deals, source } = await getDeals();
+
   return (
     <div className="app-shell">
       <Sidebar />
       <div className="main-shell">
         <Topbar />
         <main className="dashboard deals-page">
-          <DealsExplorer />
+          <DealsExplorer deals={deals} source={source} />
         </main>
       </div>
       <SentinelButton />

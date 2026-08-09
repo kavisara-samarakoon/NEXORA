@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import {
   dealFilters,
-  deals,
   type DealFilter,
   type DealStatus,
   type GameDeal,
 } from "@/data/deals";
+import type { DealsResult } from "@/lib/api";
 
 const networkActivity = [35, 58, 42, 75, 52, 90, 68, 45, 82, 60, 38, 72];
 const dealNetworkIcons = {
@@ -91,11 +91,12 @@ function DealCard({
   );
 }
 
-function DealNetworkStatus() {
+function DealNetworkStatus({ source }: { source: DealsResult["source"] }) {
+  const isApiSource = source === "api";
   const items = [
-    { label: "Price Sync", value: "Demo mode", badge: "Demo", tone: "orange", icon: "sync" },
-    { label: "Data Source", value: "Static dataset", badge: "Static", tone: "blue", icon: "globe" },
-    { label: "Cache", value: "Ready for backend", badge: "Ready", tone: "green", icon: "database" },
+    { label: "Price Sync", value: isApiSource ? "Backend API" : "Demo mode", badge: isApiSource ? "Live" : "Demo", tone: "orange", icon: "sync" },
+    { label: "Data Source", value: isApiSource ? "Spring Boot" : "Static dataset", badge: isApiSource ? "API" : "Static", tone: "blue", icon: "globe" },
+    { label: "Cache", value: isApiSource ? "Fresh response" : "Fallback ready", badge: "Ready", tone: "green", icon: "database" },
     { label: "Security", value: "Safe redirects planned", badge: "Planned", tone: "purple", icon: "shield" },
   ] as const;
 
@@ -107,7 +108,9 @@ function DealNetworkStatus() {
           <span>System telemetry</span>
           <h2 id="deal-network-title">Deal Network Status</h2>
         </div>
-        <span className="deals-network__live"><span aria-hidden="true" /> Demo</span>
+        <span className="deals-network__live">
+          <span aria-hidden="true" /> {isApiSource ? "Live" : "Demo"}
+        </span>
       </div>
 
       <div className="deals-network__items">
@@ -145,7 +148,7 @@ function DealNetworkStatus() {
   );
 }
 
-export default function DealsExplorer() {
+export default function DealsExplorer({ deals, source }: DealsResult) {
   const [activeFilter, setActiveFilter] = useState<DealFilter>("All Stores");
   const [searchQuery, setSearchQuery] = useState("");
   const [alerts, setAlerts] = useState<Set<number>>(() => new Set());
@@ -167,7 +170,7 @@ export default function DealsExplorer() {
       if (activeFilter === "Free Weekend") return deal.status === "Free Weekend";
       return deal.store === activeFilter;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, deals, searchQuery]);
 
   function toggleAlert(dealId: number) {
     setAlerts((current) => {
@@ -248,7 +251,7 @@ export default function DealsExplorer() {
         <section aria-label="Available game deals">
           <div className="deals-results-bar">
             <span><strong>{filteredDeals.length}</strong> deals detected</span>
-            <span>Static intelligence feed</span>
+            <span>{source === "api" ? "Backend intelligence feed" : "Static fallback feed"}</span>
           </div>
           <div className="deals-grid">
             {filteredDeals.map((deal) => (
@@ -269,7 +272,7 @@ export default function DealsExplorer() {
             )}
           </div>
         </section>
-        <DealNetworkStatus />
+        <DealNetworkStatus source={source} />
       </div>
     </>
   );
