@@ -29,6 +29,8 @@ The API starts at `http://localhost:8080`.
 | `GET` | `/api/giveaways` | Returns demo game giveaways |
 | `GET` | `/api/wishlist` | Returns demo wishlist items |
 | `GET` | `/api/security/status` | Returns the demo security summary |
+| `GET` | `/api/sentinel/status` | Returns the Sentinel integration status |
+| `GET` | `/api/sentinel/demo` | Returns Sentinel page demo data |
 
 ## Build and test
 
