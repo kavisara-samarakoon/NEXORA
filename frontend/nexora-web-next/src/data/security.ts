@@ -27,6 +27,16 @@ export type TimelineEvent = {
   type: "success" | "warn" | "info";
 };
 
+export type SecurityStatusData = {
+  securityScore: number;
+  status: string;
+  activeSessions: number;
+  protectedApis: number;
+  alertCount: number;
+  accountProtection: readonly ProtectionItem[];
+  networkProtection: readonly ProtectionItem[];
+};
+
 export const accountProtection = [
   {
     id: 1,
@@ -96,6 +106,16 @@ export const networkProtection = [
     statusType: "planned",
   },
 ] satisfies readonly ProtectionItem[];
+
+export const securityStatus = {
+  securityScore: 92,
+  status: "Secure",
+  activeSessions: 2,
+  protectedApis: 4,
+  alertCount: 1,
+  accountProtection,
+  networkProtection,
+} satisfies SecurityStatusData;
 
 export const securityTimeline = [
   {

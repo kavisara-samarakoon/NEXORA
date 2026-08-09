@@ -1,11 +1,10 @@
 import {
-  accountProtection,
-  networkProtection,
   securityTimeline,
   type ProtectionIcon,
   type ProtectionItem,
   type TimelineEvent,
 } from "@/data/security";
+import type { SecurityStatusResult } from "@/lib/api";
 
 function ProtectionIconGraphic({ icon }: { icon: ProtectionIcon }) {
   if (icon === "key") return "🔑";
@@ -86,11 +85,20 @@ function SecurityTimeline() {
   );
 }
 
-function SecurityOperations() {
+function SecurityOperations({
+  securityScore,
+  source,
+  status,
+}: {
+  securityScore: number;
+  source: SecurityStatusResult["source"];
+  status: string;
+}) {
+  const isApiSource = source === "api";
   const operations = [
     { label: "Auth Layer", value: "Demo mode", badge: "Demo", tone: "green", icon: "lock" },
     { label: "API Security", value: "Protection planned", badge: "Planned", tone: "orange", icon: "shield" },
-    { label: "Monitoring", value: "Interface ready", badge: "Ready", tone: "blue", icon: "chart" },
+    { label: "Monitoring", value: isApiSource ? "Backend status API" : "Interface ready", badge: isApiSource ? "API" : "Ready", tone: "blue", icon: "chart" },
     { label: "Incident Response", value: "Backend support later", badge: "Future", tone: "purple", icon: "alert" },
   ] as const;
 
@@ -121,9 +129,9 @@ function SecurityOperations() {
           <svg viewBox="0 0 120 120" aria-hidden="true">
             <defs><linearGradient id="security-score-gradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#58F5A5" /><stop offset="100%" stopColor="#00D4FF" /></linearGradient></defs>
             <circle cx="60" cy="60" r="50" className="sc-score__track" />
-            <circle cx="60" cy="60" r="50" className="sc-score__value" pathLength="100" />
+            <circle cx="60" cy="60" r="50" className="sc-score__value" pathLength="100" style={{ strokeDasharray: `${securityScore} 100` }} />
           </svg>
-          <div><strong>92%</strong><span>Secure</span></div>
+          <div><strong>{securityScore}%</strong><span>{status}</span></div>
         </div>
         <div className="sc-score__legend"><span><i /> Identity</span><span><i /> Network</span><span><i /> Monitor</span></div>
       </div>
@@ -131,7 +139,20 @@ function SecurityOperations() {
   );
 }
 
-export default function SecurityCenter() {
+export default function SecurityCenter({ securityStatus, source }: SecurityStatusResult) {
+  const {
+    accountProtection,
+    activeSessions,
+    alertCount,
+    networkProtection,
+    protectedApis,
+    securityScore,
+    status,
+  } = securityStatus;
+  const secureAccountItems = accountProtection.filter(
+    (item) => item.statusType === "ok",
+  ).length;
+
   return (
     <>
       <section className="sc-hero" aria-labelledby="security-title">
@@ -145,10 +166,10 @@ export default function SecurityCenter() {
             <p>Account protection, API safety, session monitoring, and secure game platform access — your digital perimeter in one command center.</p>
           </div>
           <div className="sc-hero__stats" aria-label="Security summary">
-            <div><strong>92%</strong><span>Security score</span></div>
-            <div><strong>2</strong><span>Active sessions</span></div>
-            <div><strong>4</strong><span>Protected APIs</span></div>
-            <div><strong>1</strong><span>Alert detected</span></div>
+            <div><strong>{securityScore}%</strong><span>Security score</span></div>
+            <div><strong>{activeSessions}</strong><span>Active sessions</span></div>
+            <div><strong>{protectedApis}</strong><span>Protected APIs</span></div>
+            <div><strong>{alertCount}</strong><span>{alertCount === 1 ? "Alert detected" : "Alerts detected"}</span></div>
           </div>
         </div>
       </section>
@@ -160,11 +181,11 @@ export default function SecurityCenter() {
 
       <div className="sc-layout">
         <div className="sc-content">
-          <ProtectionSection badge="3/4 secure" items={accountProtection} title="Account Protection" />
+          <ProtectionSection badge={`${secureAccountItems}/${accountProtection.length} secure`} items={accountProtection} title="Account Protection" />
           <ProtectionSection badge="Roadmap" items={networkProtection} planned title="API & Network Protection" />
           <SecurityTimeline />
         </div>
-        <SecurityOperations />
+        <SecurityOperations securityScore={securityScore} source={source} status={status} />
       </div>
     </>
   );

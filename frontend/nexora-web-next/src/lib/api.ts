@@ -11,6 +11,13 @@ import {
   type GiveawayTag,
 } from "@/data/giveaways";
 import {
+  securityStatus as fallbackSecurityStatus,
+  type ProtectionIcon,
+  type ProtectionItem,
+  type ProtectionStatus,
+  type SecurityStatusData,
+} from "@/data/security";
+import {
   wishlistItems as fallbackWishlistItems,
   type WishlistItem,
   type WishlistPriority,
@@ -51,6 +58,21 @@ const GIVEAWAY_TAGS: readonly GiveawayTag[] = [
   "new",
   "popular",
 ];
+const PROTECTION_ICONS: readonly ProtectionIcon[] = [
+  "key",
+  "lock",
+  "device",
+  "eye",
+  "tls",
+  "bolt",
+  "redirect",
+  "gateway",
+];
+const PROTECTION_STATUSES: readonly ProtectionStatus[] = [
+  "ok",
+  "warn",
+  "planned",
+];
 const WISHLIST_STORES: readonly WishlistStore[] = [
   "Steam",
   "Epic Games",
@@ -79,6 +101,11 @@ export type GiveawaysResult = {
 
 export type WishlistResult = {
   wishlistItems: readonly WishlistItem[];
+  source: "api" | "fallback";
+};
+
+export type SecurityStatusResult = {
+  securityStatus: SecurityStatusData;
   source: "api" | "fallback";
 };
 
@@ -141,6 +168,41 @@ function isWishlistItem(value: unknown): value is WishlistItem {
     WISHLIST_STATUSES.includes(item.status as WishlistStatus) &&
     typeof item.alertActive === "boolean" &&
     WISHLIST_PRIORITIES.includes(item.priority as WishlistPriority)
+  );
+}
+
+function isProtectionItem(value: unknown): value is ProtectionItem {
+  if (typeof value !== "object" || value === null) return false;
+
+  const item = value as Record<string, unknown>;
+
+  return (
+    typeof item.id === "number" &&
+    PROTECTION_ICONS.includes(item.icon as ProtectionIcon) &&
+    typeof item.label === "string" &&
+    typeof item.description === "string" &&
+    typeof item.status === "string" &&
+    PROTECTION_STATUSES.includes(item.statusType as ProtectionStatus)
+  );
+}
+
+function isSecurityStatus(value: unknown): value is SecurityStatusData {
+  if (typeof value !== "object" || value === null) return false;
+
+  const securityStatus = value as Record<string, unknown>;
+
+  return (
+    typeof securityStatus.securityScore === "number" &&
+    securityStatus.securityScore >= 0 &&
+    securityStatus.securityScore <= 100 &&
+    typeof securityStatus.status === "string" &&
+    typeof securityStatus.activeSessions === "number" &&
+    typeof securityStatus.protectedApis === "number" &&
+    typeof securityStatus.alertCount === "number" &&
+    Array.isArray(securityStatus.accountProtection) &&
+    securityStatus.accountProtection.every(isProtectionItem) &&
+    Array.isArray(securityStatus.networkProtection) &&
+    securityStatus.networkProtection.every(isProtectionItem)
   );
 }
 
@@ -222,5 +284,32 @@ export async function getWishlist(): Promise<WishlistResult> {
     return { wishlistItems: data, source: "api" };
   } catch {
     return { wishlistItems: fallbackWishlistItems, source: "fallback" };
+  }
+}
+
+export async function getSecurityStatus(): Promise<SecurityStatusResult> {
+  const apiBaseUrl = (
+    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
+  ).replace(/\/+$/, "");
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/security/status`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Security status API returned ${response.status}`);
+    }
+
+    const data: unknown = await response.json();
+
+    if (!isSecurityStatus(data)) {
+      throw new Error("Security status API returned an unexpected response");
+    }
+
+    return { securityStatus: data, source: "api" };
+  } catch {
+    return { securityStatus: fallbackSecurityStatus, source: "fallback" };
   }
 }
