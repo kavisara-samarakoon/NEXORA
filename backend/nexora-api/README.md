@@ -1,8 +1,8 @@
 # NEXORA API
 
-Initial Spring Boot backend foundation for NEXORA. It currently provides the
-welcome and health endpoints and allows local requests from the Next.js and
-Vite development servers.
+Initial Spring Boot backend foundation for NEXORA. It provides welcome and
+health endpoints, static demo APIs for the frontend, and allows local requests
+from the Next.js and Vite development servers.
 
 ## Requirements
 
@@ -25,6 +25,10 @@ The API starts at `http://localhost:8080`.
 | --- | --- | --- |
 | `GET` | `/api` | Returns the NEXORA API welcome message |
 | `GET` | `/api/health` | Returns the API health status |
+| `GET` | `/api/deals` | Returns demo game deals |
+| `GET` | `/api/giveaways` | Returns demo game giveaways |
+| `GET` | `/api/wishlist` | Returns demo wishlist items |
+| `GET` | `/api/security/status` | Returns the demo security summary |
 
 ## Build and test
 
@@ -46,5 +50,6 @@ The API accepts local browser requests from:
 - `http://localhost:3000`
 - `http://localhost:5173`
 
+Demo API data is held in memory and resets whenever the application restarts.
 No database, authentication, AI integration, or external API integration is
 included in this foundation.
