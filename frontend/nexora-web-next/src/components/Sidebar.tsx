@@ -62,6 +62,15 @@ function SentinelIcon() {
   );
 }
 
+function SettingsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.7-1.7l.9-1.9-2.1-2.1-1.9.9a7 7 0 0 0-1.7-.7l-.7-2h-3l-.7 2a7 7 0 0 0-1.7.7l-1.9-.9-2.1 2.1.9 1.9a7 7 0 0 0-.7 1.7l-2 .7v3l2 .7a7 7 0 0 0 .7 1.7l-.9 1.9 2.1 2.1 1.9-.9a7 7 0 0 0 1.7.7l.7 2h3l.7-2a7 7 0 0 0 1.7-.7l1.9.9 2.1-2.1-.9-1.9a7 7 0 0 0 .7-1.7z" />
+    </svg>
+  );
+}
+
 const upcomingItems: NavItem[] = [
   {
     label: "Library",
@@ -178,6 +187,15 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon"><SentinelIcon /></span>
             Sentinel
+          </Link>
+          <Link
+            className={`nav-item${pathname.startsWith("/settings") ? " nav-item--active" : ""}`}
+            href="/settings"
+            aria-current={pathname.startsWith("/settings") ? "page" : undefined}
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="nav-item__icon"><SettingsIcon /></span>
+            Settings
           </Link>
 
           <span className="sidebar__label sidebar__label--spaced">Coming next</span>
