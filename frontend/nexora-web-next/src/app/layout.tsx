@@ -60,8 +60,20 @@ export const metadata: Metadata = {
     images: ["/brand/nexora-logo.png"],
   },
   icons: {
-    icon: [{ url: "/brand/nexora-logo.png", type: "image/png", sizes: "1254x1254" }],
-    apple: [{ url: "/brand/nexora-logo.png", type: "image/png", sizes: "1254x1254" }],
+    icon: [
+      {
+        url: "/brand/nexora-logo.png",
+        type: "image/png",
+        sizes: "1254x1254",
+      },
+    ],
+    apple: [
+      {
+        url: "/brand/nexora-logo.png",
+        type: "image/png",
+        sizes: "1254x1254",
+      },
+    ],
     shortcut: ["/brand/nexora-logo.png"],
   },
   robots: {
@@ -87,10 +99,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
-      lang="en" data-scroll-behavior="smooth"
+      lang="en"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
       className={`${inter.variable} ${orbitron.variable}`}
     >
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
