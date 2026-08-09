@@ -1,8 +1,10 @@
 # NEXORA API
 
-Initial Spring Boot backend foundation for NEXORA. It provides welcome and
-health endpoints, static demo APIs for the frontend, and allows local requests
-from the Next.js and Vite development servers.
+Spring Boot REST API for NEXORA. The current backend provides health, welcome,
+and static in-memory demo endpoints for the production Next.js frontend.
+
+No database, authentication, Gemini integration, or external API calls are
+included yet.
 
 ## Requirements
 
@@ -17,41 +19,53 @@ From `backend/nexora-api`:
 mvn spring-boot:run
 ```
 
-The API starts at `http://localhost:8080`.
+The API starts at [http://localhost:8080](http://localhost:8080).
 
 ## Endpoints
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api` | Returns the NEXORA API welcome message |
-| `GET` | `/api/health` | Returns the API health status |
+| `GET` | `/api` | Returns the NEXORA API welcome response |
+| `GET` | `/api/health` | Returns the service health status |
 | `GET` | `/api/deals` | Returns demo game deals |
 | `GET` | `/api/giveaways` | Returns demo game giveaways |
 | `GET` | `/api/wishlist` | Returns demo wishlist items |
-| `GET` | `/api/security/status` | Returns the demo security summary |
+| `GET` | `/api/security/status` | Returns the demo security summary and protection items |
 | `GET` | `/api/sentinel/status` | Returns the Sentinel integration status |
-| `GET` | `/api/sentinel/demo` | Returns Sentinel page demo data |
+| `GET` | `/api/sentinel/demo` | Returns Sentinel messages, suggestions, capabilities, and system status |
 
-## Build and test
+All feature data is stored in immutable in-memory collections. Restarting the
+application restores the original demo data.
+
+## Maven commands
 
 ```bash
-mvn test
-mvn clean package
+mvn spring-boot:run  # Start the local API
+mvn test             # Compile and run all tests
+mvn clean package    # Test and create the executable JAR
 ```
 
-The packaged application is created under `target/` and can be run with:
+Run the packaged application with:
 
 ```bash
 java -jar target/nexora-api-0.0.1-SNAPSHOT.jar
 ```
 
-## CORS
+## Frontend connection and CORS
 
-The API accepts local browser requests from:
+The Next.js frontend reads the backend origin from
+`NEXT_PUBLIC_API_BASE_URL`, which defaults to `http://localhost:8080` during
+local development.
 
-- `http://localhost:3000`
-- `http://localhost:5173`
+The backend allows browser requests to `/api/**` from these local origins:
 
-Demo API data is held in memory and resets whenever the application restarts.
-No database, authentication, AI integration, or external API integration is
-included in this foundation.
+- `http://localhost:3000` — production Next.js frontend in development
+- `http://localhost:5173` — retained Vite prototype
+
+## Future work
+
+- Add database persistence and migrations.
+- Add authentication, authorization, and session management.
+- Add approved external game-store and pricing APIs.
+- Add real Gemini integration for Sentinel with privacy and safety controls.
+- Add production configuration, observability, and deployment support.
