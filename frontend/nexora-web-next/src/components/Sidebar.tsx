@@ -45,6 +45,14 @@ function WishlistIcon() {
   );
 }
 
+function SecurityIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
 const upcomingItems: NavItem[] = [
   {
     label: "Library",
@@ -143,6 +151,15 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon"><WishlistIcon /></span>
             Wishlist
+          </Link>
+          <Link
+            className={`nav-item${pathname.startsWith("/security") ? " nav-item--active" : ""}`}
+            href="/security"
+            aria-current={pathname.startsWith("/security") ? "page" : undefined}
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="nav-item__icon"><SecurityIcon /></span>
+            Security
           </Link>
 
           <span className="sidebar__label sidebar__label--spaced">Coming next</span>
