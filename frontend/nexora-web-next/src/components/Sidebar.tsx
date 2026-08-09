@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 type NavItem = {
@@ -16,6 +17,14 @@ function GridIcon() {
       <rect x="14" y="3" width="7" height="7" rx="2" />
       <rect x="3" y="14" width="7" height="7" rx="2" />
       <rect x="14" y="14" width="7" height="7" rx="2" />
+    </svg>
+  );
+}
+
+function DealsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M13 3s1 4-2 6c-2-3-5-2-5-2s-2 3-1 7c1 5 5 7 8 7 5 0 8-4 7-9-1-4-5-6-5-6s1 4-2 5c1-5 0-8 0-8Z" />
     </svg>
   );
 }
@@ -41,6 +50,7 @@ const upcomingItems: NavItem[] = [
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <>
@@ -83,13 +93,22 @@ export default function Sidebar() {
         <nav id="primary-navigation" className="sidebar__nav" aria-label="Primary navigation">
           <span className="sidebar__label">Command</span>
           <Link
-            className="nav-item nav-item--active"
+            className={`nav-item${pathname === "/" ? " nav-item--active" : ""}`}
             href="/"
-            aria-current="page"
+            aria-current={pathname === "/" ? "page" : undefined}
             onClick={() => setIsOpen(false)}
           >
             <span className="nav-item__icon"><GridIcon /></span>
             Dashboard
+          </Link>
+          <Link
+            className={`nav-item${pathname.startsWith("/deals") ? " nav-item--active" : ""}`}
+            href="/deals"
+            aria-current={pathname.startsWith("/deals") ? "page" : undefined}
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="nav-item__icon"><DealsIcon /></span>
+            Deals
           </Link>
 
           <span className="sidebar__label sidebar__label--spaced">Coming next</span>
