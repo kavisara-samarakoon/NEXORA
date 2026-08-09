@@ -53,6 +53,15 @@ function SecurityIcon() {
   );
 }
 
+function SentinelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="7" width="16" height="13" rx="3" />
+      <path d="M12 3v4M9 12h.01M15 12h.01M9 16h6" />
+    </svg>
+  );
+}
+
 const upcomingItems: NavItem[] = [
   {
     label: "Library",
@@ -160,6 +169,15 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon"><SecurityIcon /></span>
             Security
+          </Link>
+          <Link
+            className={`nav-item${pathname.startsWith("/sentinel") ? " nav-item--active" : ""}`}
+            href="/sentinel"
+            aria-current={pathname.startsWith("/sentinel") ? "page" : undefined}
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="nav-item__icon"><SentinelIcon /></span>
+            Sentinel
           </Link>
 
           <span className="sidebar__label sidebar__label--spaced">Coming next</span>

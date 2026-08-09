@@ -1,10 +1,11 @@
+import Link from "next/link";
+
 export default function SentinelButton() {
   return (
-    <button
+    <Link
       className="sentinel-button"
-      type="button"
+      href="/sentinel"
       aria-label="Open NEXORA Sentinel"
-      title="Sentinel is coming soon"
     >
       <span className="sentinel-button__orb" aria-hidden="true">
         <svg viewBox="0 0 24 24">
@@ -17,6 +18,6 @@ export default function SentinelButton() {
         <strong>Sentinel</strong>
       </span>
       <span className="sentinel-button__pulse" aria-hidden="true" />
-    </button>
+    </Link>
   );
 }
