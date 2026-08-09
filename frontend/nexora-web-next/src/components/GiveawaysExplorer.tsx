@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import {
   giveawayFilters,
-  giveaways,
   type Giveaway,
   type GiveawayFilter,
   type GiveawayTag,
 } from "@/data/giveaways";
+import type { GiveawaysResult } from "@/lib/api";
 
 const platformAvailability = [
   { name: "Steam", value: 85, platform: "steam" },
@@ -123,10 +123,11 @@ function GiveawayCard({
   );
 }
 
-function GiveawayNetworkStatus() {
+function GiveawayNetworkStatus({ source }: { source: GiveawaysResult["source"] }) {
+  const isApiSource = source === "api";
   const items = [
-    { label: "Giveaway Sync", value: "Demo mode", badge: "Demo", tone: "orange", icon: "sync" },
-    { label: "Data Source", value: "Static dataset", badge: "Static", tone: "blue", icon: "globe" },
+    { label: "Giveaway Sync", value: isApiSource ? "Backend API" : "Demo mode", badge: isApiSource ? "Live" : "Demo", tone: "orange", icon: "sync" },
+    { label: "Data Source", value: isApiSource ? "Spring Boot" : "Static dataset", badge: isApiSource ? "API" : "Static", tone: "blue", icon: "globe" },
     { label: "Claim Links", value: "Safe redirects planned", badge: "Planned", tone: "green", icon: "link" },
     { label: "Alerts", value: "Local reminders active", badge: "Local", tone: "purple", icon: "bell" },
   ] as const;
@@ -136,7 +137,9 @@ function GiveawayNetworkStatus() {
       <div className="ga-network__header">
         <span className="ga-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Drop telemetry</span><h2 id="giveaway-network-title">Giveaway Network Status</h2></div>
-        <span className="ga-network__live"><span aria-hidden="true" /> Demo</span>
+        <span className="ga-network__live">
+          <span aria-hidden="true" /> {isApiSource ? "Live" : "Demo"}
+        </span>
       </div>
 
       <div className="ga-network__items">
@@ -167,7 +170,7 @@ function GiveawayNetworkStatus() {
   );
 }
 
-export default function GiveawaysExplorer() {
+export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult) {
   const [activeFilter, setActiveFilter] = useState<GiveawayFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [reminders, setReminders] = useState<Set<number>>(() => new Set());
@@ -190,7 +193,7 @@ export default function GiveawaysExplorer() {
       if (activeFilter === "Popular") return giveaway.tag === "popular";
       return giveaway.platformLabel === activeFilter;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, giveaways, searchQuery]);
 
   function toggleReminder(giveawayId: number) {
     setReminders((current) => {
@@ -271,7 +274,7 @@ export default function GiveawaysExplorer() {
         <section aria-label="Available game giveaways">
           <div className="ga-results-bar">
             <span><strong>{filteredGiveaways.length}</strong> live drops detected</span>
-            <span>Static intelligence feed</span>
+            <span>{source === "api" ? "Backend intelligence feed" : "Static fallback feed"}</span>
           </div>
           <div className="ga-grid">
             {filteredGiveaways.map((giveaway) => (
@@ -294,7 +297,7 @@ export default function GiveawaysExplorer() {
             )}
           </div>
         </section>
-        <GiveawayNetworkStatus />
+        <GiveawayNetworkStatus source={source} />
       </div>
     </>
   );
