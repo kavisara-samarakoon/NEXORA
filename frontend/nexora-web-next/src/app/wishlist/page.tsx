@@ -3,11 +3,14 @@ import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import WishlistExplorer from "@/components/WishlistExplorer";
+import { createPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Smart Wishlist Control",
-  description: "Track wanted games and local price alerts with NEXORA.",
-};
+  description: "Organize wanted games, target prices, tracked stores, and local price alerts with NEXORA Smart Wishlist Control.",
+  path: "/wishlist",
+  keywords: ["gaming wishlist", "game price alerts", "game price tracker", "wanted games"],
+});
 
 export default function WishlistPage() {
   return (

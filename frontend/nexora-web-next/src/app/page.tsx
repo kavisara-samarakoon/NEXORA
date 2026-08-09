@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import DashboardHero from "@/components/DashboardHero";
 import DealCard from "@/components/DealCard";
 import GiveawayCard from "@/components/GiveawayCard";
@@ -6,6 +7,14 @@ import Sidebar from "@/components/Sidebar";
 import StatusPanels from "@/components/StatusPanels";
 import Topbar from "@/components/Topbar";
 import { dashboardDeals, dashboardGiveaways } from "@/data/dashboard";
+import { createPageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Gaming Dashboard",
+  description: "Discover game deals, live giveaways, platform intelligence, and network status from the NEXORA dashboard.",
+  path: "/",
+  keywords: ["gaming dashboard", "game discovery", "game deals", "free games"],
+});
 
 export default function Home() {
   return (

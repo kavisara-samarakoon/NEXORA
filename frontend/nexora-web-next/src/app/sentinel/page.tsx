@@ -3,11 +3,14 @@ import SentinelButton from "@/components/SentinelButton";
 import SentinelExperience from "@/components/SentinelExperience";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import { createPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "NEXORA Sentinel",
-  description: "Preview NEXORA's AI assistant for games, deals, and account safety.",
-};
+  description: "Preview NEXORA Sentinel, an AI assistant concept for game discovery, deal guidance, giveaways, and account safety.",
+  path: "/sentinel",
+  keywords: ["gaming AI assistant", "game recommendations", "deal assistant", "account safety guidance"],
+});
 
 export default function SentinelPage() {
   return (

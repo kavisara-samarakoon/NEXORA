@@ -3,11 +3,14 @@ import SentinelButton from "@/components/SentinelButton";
 import SettingsCenter from "@/components/SettingsCenter";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import { createPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Account Control Center",
-  description: "Manage your NEXORA profile, notifications, security, platforms, and appearance.",
-};
+  description: "Explore NEXORA profile preferences, notifications, security controls, connected gaming platforms, and appearance settings.",
+  path: "/settings",
+  keywords: ["NEXORA settings", "gaming profile", "notification preferences", "connected gaming platforms"],
+});
 
 export default function SettingsPage() {
   return (
