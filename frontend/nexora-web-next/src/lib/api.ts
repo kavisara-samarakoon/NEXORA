@@ -10,6 +10,13 @@ import {
   type GiveawayPlatform,
   type GiveawayTag,
 } from "@/data/giveaways";
+import {
+  wishlistItems as fallbackWishlistItems,
+  type WishlistItem,
+  type WishlistPriority,
+  type WishlistStatus,
+  type WishlistStore,
+} from "@/data/wishlist";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const DEAL_STORES: readonly DealStore[] = [
@@ -44,6 +51,21 @@ const GIVEAWAY_TAGS: readonly GiveawayTag[] = [
   "new",
   "popular",
 ];
+const WISHLIST_STORES: readonly WishlistStore[] = [
+  "Steam",
+  "Epic Games",
+  "GOG",
+];
+const WISHLIST_STATUSES: readonly WishlistStatus[] = [
+  "price-drop",
+  "free-now",
+  "tracking",
+];
+const WISHLIST_PRIORITIES: readonly WishlistPriority[] = [
+  "high",
+  "medium",
+  "low",
+];
 
 export type DealsResult = {
   deals: readonly GameDeal[];
@@ -52,6 +74,11 @@ export type DealsResult = {
 
 export type GiveawaysResult = {
   giveaways: readonly Giveaway[];
+  source: "api" | "fallback";
+};
+
+export type WishlistResult = {
+  wishlistItems: readonly WishlistItem[];
   source: "api" | "fallback";
 };
 
@@ -95,6 +122,25 @@ function isGiveaway(value: unknown): value is Giveaway {
     giveaway.status === "live" &&
     GIVEAWAY_TAGS.includes(giveaway.tag as GiveawayTag) &&
     typeof giveaway.originalPrice === "string"
+  );
+}
+
+function isWishlistItem(value: unknown): value is WishlistItem {
+  if (typeof value !== "object" || value === null) return false;
+
+  const item = value as Record<string, unknown>;
+
+  return (
+    typeof item.id === "number" &&
+    typeof item.title === "string" &&
+    WISHLIST_STORES.includes(item.store as WishlistStore) &&
+    typeof item.currentPrice === "string" &&
+    typeof item.targetPrice === "string" &&
+    typeof item.lowestEver === "string" &&
+    (typeof item.discount === "string" || item.discount === null) &&
+    WISHLIST_STATUSES.includes(item.status as WishlistStatus) &&
+    typeof item.alertActive === "boolean" &&
+    WISHLIST_PRIORITIES.includes(item.priority as WishlistPriority)
   );
 }
 
@@ -149,5 +195,32 @@ export async function getGiveaways(): Promise<GiveawaysResult> {
     return { giveaways: data, source: "api" };
   } catch {
     return { giveaways: fallbackGiveaways, source: "fallback" };
+  }
+}
+
+export async function getWishlist(): Promise<WishlistResult> {
+  const apiBaseUrl = (
+    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
+  ).replace(/\/+$/, "");
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/wishlist`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Wishlist API returned ${response.status}`);
+    }
+
+    const data: unknown = await response.json();
+
+    if (!Array.isArray(data) || !data.every(isWishlistItem)) {
+      throw new Error("Wishlist API returned an unexpected response");
+    }
+
+    return { wishlistItems: data, source: "api" };
+  } catch {
+    return { wishlistItems: fallbackWishlistItems, source: "fallback" };
   }
 }

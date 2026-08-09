@@ -3,12 +3,12 @@
 import { useMemo, useState } from "react";
 import {
   wishlistFilters,
-  wishlistItems,
   type WishlistFilter,
   type WishlistItem,
   type WishlistPriority,
   type WishlistStatus,
 } from "@/data/wishlist";
+import type { WishlistResult } from "@/lib/api";
 
 const wishlistNetworkIcons = {
   bolt: "⚡",
@@ -103,7 +103,16 @@ function WishlistCard({
   );
 }
 
-function WishlistAlertPanel({ alerts }: { alerts: Record<number, boolean> }) {
+function WishlistAlertPanel({
+  alerts,
+  source,
+  wishlistItems,
+}: {
+  alerts: Record<number, boolean>;
+  source: WishlistResult["source"];
+  wishlistItems: readonly WishlistItem[];
+}) {
+  const isApiSource = source === "api";
   const activeAlerts = wishlistItems.filter((item) => alerts[item.id]).length;
   const pausedAlerts = wishlistItems.length - activeAlerts;
   const priceDrops = wishlistItems.filter((item) => item.status === "price-drop").length;
@@ -113,11 +122,11 @@ function WishlistAlertPanel({ alerts }: { alerts: Record<number, boolean> }) {
     { store: "Epic", count: wishlistItems.filter((item) => item.store === "Epic Games").length, tone: "epic" },
     { store: "GOG", count: wishlistItems.filter((item) => item.store === "GOG").length, tone: "gog" },
   ] as const;
-  const maxStoreCount = Math.max(...storeCounts.map((store) => store.count));
+  const maxStoreCount = Math.max(1, ...storeCounts.map((store) => store.count));
 
   const items = [
     { label: "Alert Engine", value: "Local demo state", badge: "Demo", tone: "orange", icon: "bolt" },
-    { label: "Data Source", value: "Static dataset", badge: "Static", tone: "blue", icon: "globe" },
+    { label: "Data Source", value: isApiSource ? "Spring Boot" : "Static dataset", badge: isApiSource ? "API" : "Static", tone: "blue", icon: "globe" },
     { label: "Notification Queue", value: "Backend support later", badge: "Future", tone: "purple", icon: "mail" },
     { label: "Security", value: "Account-safe alerts planned", badge: "Planned", tone: "green", icon: "shield" },
   ] as const;
@@ -168,7 +177,7 @@ function WishlistAlertPanel({ alerts }: { alerts: Record<number, boolean> }) {
   );
 }
 
-export default function WishlistExplorer() {
+export default function WishlistExplorer({ wishlistItems, source }: WishlistResult) {
   const [activeFilter, setActiveFilter] = useState<WishlistFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [alerts, setAlerts] = useState<Record<number, boolean>>(() =>
@@ -191,7 +200,7 @@ export default function WishlistExplorer() {
       if (activeFilter === "High Priority") return item.priority === "high";
       return item.store === activeFilter;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, wishlistItems]);
 
   function toggleAlert(itemId: number) {
     setAlerts((current) => ({ ...current, [itemId]: !current[itemId] }));
@@ -268,7 +277,7 @@ export default function WishlistExplorer() {
         <section aria-label="Tracked wishlist games">
           <div className="wl-results-bar">
             <span><strong>{filteredItems.length}</strong> tracked games</span>
-            <span>Static intelligence feed</span>
+            <span>{source === "api" ? "Backend intelligence feed" : "Static fallback feed"}</span>
           </div>
           <div className="wl-grid">
             {filteredItems.map((item) => (
@@ -284,7 +293,7 @@ export default function WishlistExplorer() {
             )}
           </div>
         </section>
-        <WishlistAlertPanel alerts={alerts} />
+        <WishlistAlertPanel alerts={alerts} source={source} wishlistItems={wishlistItems} />
       </div>
     </>
   );
