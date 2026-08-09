@@ -37,6 +37,14 @@ function GiveawaysIcon() {
   );
 }
 
+function WishlistIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 4h14v16H5zM9 4v16M12 8h4M12 12h4M12 16h3" />
+    </svg>
+  );
+}
+
 const upcomingItems: NavItem[] = [
   {
     label: "Library",
@@ -126,6 +134,15 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon"><GiveawaysIcon /></span>
             Giveaways
+          </Link>
+          <Link
+            className={`nav-item${pathname.startsWith("/wishlist") ? " nav-item--active" : ""}`}
+            href="/wishlist"
+            aria-current={pathname.startsWith("/wishlist") ? "page" : undefined}
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="nav-item__icon"><WishlistIcon /></span>
+            Wishlist
           </Link>
 
           <span className="sidebar__label sidebar__label--spaced">Coming next</span>
