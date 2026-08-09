@@ -6035,6 +6035,767 @@
 }
 
 
+/* ════════════════════════════════════════════════════════
+   SENTINEL PAGE — NEXORA Sentinel AI Assistant
+   ════════════════════════════════════════════════════════ */
+
+/* ─── SENTINEL HEADER ─── */
+.sn-header {
+  position: relative;
+  border-radius: var(--radius-lg);
+  padding: 48px 44px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(0,212,255,0.07) 0%, rgba(255,122,0,0.05) 50%, rgba(168,85,247,0.03) 100%);
+  border: 1px solid rgba(0,212,255,0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 8px 40px rgba(0,0,0,0.3);
+}
+
+.sn-header__orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(60px);
+}
+
+.sn-header__orb--blue {
+  width: 340px;
+  height: 340px;
+  top: -100px;
+  right: -50px;
+  background: rgba(0,212,255,0.14);
+  animation: orb-drift 9s ease-in-out infinite;
+}
+
+.sn-header__orb--orange {
+  width: 260px;
+  height: 260px;
+  bottom: -80px;
+  left: 12%;
+  background: rgba(255,122,0,0.10);
+  animation: orb-drift 12s ease-in-out infinite reverse;
+}
+
+.sn-header__scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,212,255,0.012) 2px,
+    rgba(0,212,255,0.012) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sn-header__inner {
+  position: relative;
+  z-index: 1;
+}
+
+.sn-header__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: var(--radius-xl);
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.2);
+  color: var(--nx-blue);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.sn-header__tag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nx-blue);
+  animation: pulse-dot 2s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(0,212,255,0.5);
+}
+
+.sn-header__title {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--nx-white);
+  margin-bottom: 14px;
+  letter-spacing: -0.3px;
+}
+
+.sn-header__title span {
+  background: linear-gradient(90deg, var(--nx-blue), #66E0FF, var(--nx-orange));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 4s linear infinite;
+}
+
+.sn-header__desc {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--nx-text);
+  max-width: 560px;
+}
+
+
+/* ─── DISCLAIMER ─── */
+.sn-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 24px;
+  border-radius: var(--radius-md);
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.12);
+}
+
+.sn-disclaimer__icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sn-disclaimer__text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--nx-text);
+}
+
+.sn-disclaimer__text strong {
+  color: var(--nx-blue);
+  font-weight: 600;
+}
+
+
+/* ─── SENTINEL LAYOUT ─── */
+.sn-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 28px;
+  align-items: start;
+}
+
+.sn-content {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+
+/* ─── CHAT PANEL ─── */
+.sn-chat {
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat header */
+.sn-chat__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.sn-chat__header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sn-chat__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(255,122,0,0.1));
+  border: 1px solid rgba(0,212,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.sn-chat__header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sn-chat__header-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--nx-white);
+}
+
+.sn-chat__header-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--nx-blue);
+  font-weight: 500;
+}
+
+.sn-chat__header-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nx-blue);
+  animation: pulse-dot 2s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(0,212,255,0.5);
+}
+
+.sn-chat__header-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: rgba(255,122,0,0.1);
+  color: var(--nx-orange);
+  letter-spacing: 0.5px;
+}
+
+/* Chat messages area */
+.sn-chat__messages {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 280px;
+}
+
+/* Chat bubble */
+.sn-chat__bubble {
+  display: flex;
+  gap: 10px;
+  max-width: 85%;
+}
+
+.sn-chat__bubble--user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.sn-chat__bubble--ai {
+  align-self: flex-start;
+}
+
+.sn-chat__bubble-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sn-chat__bubble-content {
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sn-chat__bubble--user .sn-chat__bubble-content {
+  background: linear-gradient(135deg, rgba(255,122,0,0.12), rgba(255,122,0,0.06));
+  border: 1px solid rgba(255,122,0,0.15);
+  color: var(--nx-text-bright);
+  border-bottom-right-radius: 4px;
+}
+
+.sn-chat__bubble--ai .sn-chat__bubble-content {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--nx-text-bright);
+  border-bottom-left-radius: 4px;
+}
+
+.sn-chat__bubble-text {
+  margin: 0;
+}
+
+.sn-chat__bubble-text strong {
+  color: var(--nx-blue);
+  font-weight: 600;
+}
+
+/* Typing indicator */
+.sn-chat__typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-bottom-left-radius: 4px;
+}
+
+.sn-chat__typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nx-blue);
+  opacity: 0.4;
+  animation: typing-bounce 1.4s ease-in-out infinite;
+}
+
+.sn-chat__typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.sn-chat__typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* Quick suggestion chips */
+.sn-chat__suggestions {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px 16px;
+  flex-wrap: wrap;
+}
+
+.sn-chat__suggestion-chip {
+  padding: 7px 14px;
+  border-radius: var(--radius-xl);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--nx-text);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.sn-chat__suggestion-chip:hover {
+  background: rgba(0,212,255,0.08);
+  border-color: rgba(0,212,255,0.2);
+  color: var(--nx-blue);
+}
+
+/* Chat input row */
+.sn-chat__input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.sn-chat__input {
+  flex: 1;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--nx-border);
+  background: rgba(255,255,255,0.03);
+  color: var(--nx-text-bright);
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.sn-chat__input::placeholder {
+  color: rgba(160,160,176,0.4);
+}
+
+.sn-chat__input:focus {
+  outline: none;
+  border-color: rgba(0,212,255,0.4);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+}
+
+.sn-chat__send-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--nx-blue), rgba(0,212,255,0.7));
+  border: none;
+  color: var(--nx-white);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(0,212,255,0.15);
+}
+
+.sn-chat__send-btn:hover {
+  box-shadow: 0 0 24px rgba(0,212,255,0.3);
+  transform: scale(1.05);
+}
+
+
+/* ─── SECTION HEADER ─── */
+.sn-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sn-section-header__title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--nx-white);
+  letter-spacing: 0.5px;
+}
+
+
+/* ─── CAPABILITY CARDS ─── */
+.sn-capabilities {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.sn-capability {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sn-capability:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+
+.sn-capability--blue:hover   { border-color: rgba(0,212,255,0.2); }
+.sn-capability--orange:hover { border-color: rgba(255,122,0,0.2); }
+.sn-capability--green:hover  { border-color: rgba(16,185,129,0.2); }
+.sn-capability--purple:hover { border-color: rgba(168,85,247,0.2); }
+
+.sn-capability__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.sn-capability__accent--blue   { background: linear-gradient(90deg, var(--nx-blue), #66E0FF); }
+.sn-capability__accent--orange { background: linear-gradient(90deg, var(--nx-orange), #FFB347); }
+.sn-capability__accent--green  { background: linear-gradient(90deg, #10B981, #34D399); }
+.sn-capability__accent--purple { background: linear-gradient(90deg, #A855F7, #C084FC); }
+
+.sn-capability__icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sn-capability__icon-box--blue   { background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.12); }
+.sn-capability__icon-box--orange { background: rgba(255,122,0,0.08); border: 1px solid rgba(255,122,0,0.12); }
+.sn-capability__icon-box--green  { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.12); }
+.sn-capability__icon-box--purple { background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.12); }
+
+.sn-capability__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sn-capability__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nx-white);
+  margin-bottom: 6px;
+}
+
+.sn-capability__desc {
+  font-size: 12px;
+  color: var(--nx-text);
+  line-height: 1.5;
+}
+
+
+/* ─── SENTINEL SYSTEM STATUS PANEL ─── */
+.sn-network {
+  position: sticky;
+  top: calc(var(--topbar-h) + 32px);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sn-network__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sn-network__icon {
+  font-size: 20px;
+}
+
+.sn-network__title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--nx-white);
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.sn-network__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--nx-blue);
+  letter-spacing: 1px;
+}
+
+.sn-network__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nx-blue);
+  animation: pulse-dot 2s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(0,212,255,0.5);
+}
+
+/* Network items */
+.sn-network__items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sn-network__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.sn-network__item:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.sn-network__item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.sn-network__item-icon--blue   { background: rgba(0,212,255,0.1); }
+.sn-network__item-icon--orange { background: rgba(255,122,0,0.1); }
+.sn-network__item-icon--green  { background: rgba(16,185,129,0.1); }
+.sn-network__item-icon--purple { background: rgba(168,85,247,0.1); }
+
+.sn-network__item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sn-network__item-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--nx-text-bright);
+}
+
+.sn-network__item-value {
+  font-size: 11px;
+  color: var(--nx-text);
+}
+
+.sn-network__item-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.sn-network__item-badge--demo {
+  background: rgba(0,212,255,0.1);
+  color: var(--nx-blue);
+}
+
+.sn-network__item-badge--offline {
+  background: rgba(255,122,0,0.1);
+  color: var(--nx-orange);
+}
+
+.sn-network__item-badge--future {
+  background: rgba(168,85,247,0.1);
+  color: #A855F7;
+}
+
+.sn-network__item-badge--safe {
+  background: rgba(16,185,129,0.1);
+  color: #10B981;
+}
+
+/* About Sentinel widget */
+.sn-network__about {
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.sn-network__about-label {
+  font-size: 11px;
+  color: var(--nx-text);
+  margin-bottom: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sn-network__about-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sn-network__about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sn-network__about-key {
+  font-size: 12px;
+  color: var(--nx-text);
+}
+
+.sn-network__about-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nx-text-bright);
+}
+
+
+/* ─── SENTINEL PAGE RESPONSIVE ─── */
+@media (max-width: 1200px) {
+  .sn-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sn-network {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .sn-header {
+    padding: 32px 20px;
+  }
+
+  .sn-header__title {
+    font-size: 24px;
+  }
+
+  .sn-capabilities {
+    grid-template-columns: 1fr;
+  }
+
+  .sn-chat__messages {
+    padding: 16px;
+    min-height: 200px;
+  }
+
+  .sn-chat__bubble {
+    max-width: 95%;
+  }
+
+  .sn-chat__suggestions {
+    padding: 0 16px 12px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .sn-chat__suggestion-chip {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .sn-chat__input-row {
+    padding: 12px 16px;
+  }
+
+  .sn-disclaimer {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+
 /* ═══ RESPONSIVE: PLACEHOLDER PAGES ═══ */
 @media (max-width: 1200px) {
   .nx-page-header {

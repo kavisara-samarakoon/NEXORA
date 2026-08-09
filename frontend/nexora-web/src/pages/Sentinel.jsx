@@ -1,95 +1,317 @@
 /**
- * Sentinel — NEXORA's AI-powered gaming assistant.
+ * Sentinel — Premium "NEXORA Sentinel" AI assistant page.
  *
- * Placeholder page with static sample content.
- * Backend integration will be added later.
+ * Features:
+ * - Cyber-themed page header with animated gradient title
+ * - Demo disclaimer banner
+ * - Large Liquid Glass chatbot panel with static messages + typing indicator
+ * - Chat input with send button
+ * - Quick suggestion chips
+ * - 4 capability cards
+ * - Sentinel System Status side panel
+ *
+ * All data is static. AI integration will be added later.
  */
 
-const SENTINEL_FEATURES = [
+/* ── Static chat messages ── */
+const CHAT_MESSAGES = [
   {
     id: 1,
-    icon: '🎯',
-    title: 'Smart Deal Finder',
-    description: 'Sentinel scans thousands of stores to find deals tailored to your gaming taste.',
+    role: 'user',
+    text: 'Find me co-op games under $15',
   },
   {
     id: 2,
-    icon: '🔔',
-    title: 'Price Drop Alerts',
-    description: 'Get instant notifications when wishlisted games hit your target price.',
+    role: 'ai',
+    text: 'I found **12 co-op games** under $15 across Steam and Epic Games. Top picks: **It Takes Two ($9.99)**, **Deep Rock Galactic ($7.49)**, and **Stardew Valley ($11.99)**. Want me to add any to your wishlist?',
   },
   {
     id: 3,
-    icon: '🤖',
-    title: 'Game Recommendations',
-    description: 'AI-powered suggestions based on your play history and preferences.',
+    role: 'user',
+    text: 'Add It Takes Two to my wishlist and set a price alert for $7',
   },
   {
     id: 4,
-    icon: '📊',
-    title: 'Market Analysis',
-    description: 'Historical price charts and predictions for upcoming sales events.',
+    role: 'ai',
+    text: '✅ Done! **It Takes Two** has been added to your wishlist with a price alert at **$7.00**. I\'ll notify you the moment it drops below that threshold. Anything else?',
   },
 ]
 
-const RECENT_QUERIES = [
-  { id: 1, query: 'Find RPGs under $20', time: '5 min ago' },
-  { id: 2, query: 'When is the next Steam sale?', time: '2 hours ago' },
-  { id: 3, query: 'Compare Elden Ring prices across stores', time: '1 day ago' },
+const SUGGESTION_CHIPS = [
+  'Find RPGs under $20',
+  'When is the next Steam sale?',
+  'Free games this week',
+  'Is my account secure?',
+  'Compare Elden Ring prices',
+]
+
+const CAPABILITY_CARDS = [
+  {
+    id: 1,
+    icon: '🎮',
+    title: 'Game Discovery Assistant',
+    description: 'Ask Sentinel to find games by genre, price, platform, or play style across all major stores.',
+    color: 'blue',
+  },
+  {
+    id: 2,
+    icon: '💰',
+    title: 'Deal Recommendation Support',
+    description: 'Get personalized deal suggestions, price history insights, and sale predictions.',
+    color: 'orange',
+  },
+  {
+    id: 3,
+    icon: '🛡️',
+    title: 'Account Safety Guidance',
+    description: 'Sentinel helps you review session activity, password strength, and connected platform security.',
+    color: 'green',
+  },
+  {
+    id: 4,
+    icon: '🔐',
+    title: 'Cyber Security Awareness',
+    description: 'Learn about phishing risks, safe store redirects, and best practices for gaming account safety.',
+    color: 'purple',
+  },
 ]
 
 function Sentinel() {
   return (
     <div className="nx-content">
-      {/* Page header */}
-      <div className="nx-page-header">
-        <div className="nx-page-header__text">
-          <h1 className="nx-page-header__title">
-            🤖 <span>Sentinel AI</span>
-          </h1>
-          <p className="nx-page-header__desc">
-            Your intelligent gaming companion. Sentinel uses machine learning
-            to help you find the best deals, track prices, and discover new games.
-          </p>
+      {/* ═══════════ PAGE HEADER ═══════════ */}
+      <div className="sn-header">
+        {/* Decorative orbs */}
+        <div className="sn-header__orb sn-header__orb--blue" />
+        <div className="sn-header__orb sn-header__orb--orange" />
+
+        {/* Scanlines */}
+        <div className="sn-header__scanlines" />
+
+        <div className="sn-header__inner">
+          <div className="sn-header__text">
+            <div className="sn-header__tag">
+              <span className="sn-header__tag-dot" />
+              <span>AI ASSISTANT</span>
+            </div>
+            <h1 className="sn-header__title">
+              🤖 <span>NEXORA Sentinel</span>
+            </h1>
+            <p className="sn-header__desc">
+              Your AI assistant for game discovery, deal guidance, and account
+              safety — powered by intelligent conversation.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* AI chat preview */}
-      <div className="nx-glass-card nx-glass-card--accent-orange">
-        <div className="nx-sentinel-preview">
-          <div className="nx-sentinel-preview__bubble nx-sentinel-preview__bubble--user">
-            Find me co-op games under $15
-          </div>
-          <div className="nx-sentinel-preview__bubble nx-sentinel-preview__bubble--ai">
-            🤖 I found <strong>12 co-op games</strong> under $15 across Steam and Epic Games.
-            Top picks: <strong>It Takes Two ($9.99)</strong>, <strong>Deep Rock Galactic ($7.49)</strong>,
-            and <strong>Stardew Valley ($11.99)</strong>. Want me to add any to your wishlist?
-          </div>
+      {/* ═══════════ DEMO DISCLAIMER ═══════════ */}
+      <div className="sn-disclaimer">
+        <span className="sn-disclaimer__icon">ℹ️</span>
+        <div className="sn-disclaimer__text">
+          <strong>AI Demo Mode</strong> — Chat messages are static samples.
+          Real AI integration (Gemini API) and backend conversation logic
+          will be added in a future sprint.
         </div>
       </div>
 
-      {/* Feature cards */}
-      <div className="nx-grid nx-grid--2">
-        {SENTINEL_FEATURES.map((feature) => (
-          <div key={feature.id} className="nx-glass-card nx-glass-card--hoverable">
-            <span className="nx-placeholder-card__icon-lg">{feature.icon}</span>
-            <h3 className="nx-placeholder-card__title">{feature.title}</h3>
-            <p className="nx-placeholder-card__meta">{feature.description}</p>
-          </div>
-        ))}
-      </div>
+      {/* ═══════════ MAIN CONTENT AREA ═══════════ */}
+      <div className="sn-layout">
+        {/* ── Left content ── */}
+        <div className="sn-content">
 
-      {/* Recent queries */}
-      <div className="nx-glass-card">
-        <h3 className="nx-placeholder-card__title" style={{ marginBottom: '20px' }}>
-          🕐 Recent Queries
-        </h3>
-        {RECENT_QUERIES.map((q) => (
-          <div key={q.id} className="nx-recent-query">
-            <span className="nx-recent-query__text">"{q.query}"</span>
-            <span className="nx-recent-query__time">{q.time}</span>
+          {/* ── Chat Panel ── */}
+          <div className="sn-chat">
+            {/* Chat header */}
+            <div className="sn-chat__header">
+              <div className="sn-chat__header-left">
+                <span className="sn-chat__avatar">🤖</span>
+                <div className="sn-chat__header-info">
+                  <span className="sn-chat__header-name">Sentinel AI</span>
+                  <span className="sn-chat__header-status">
+                    <span className="sn-chat__header-dot" />
+                    Demo Mode
+                  </span>
+                </div>
+              </div>
+              <span className="sn-chat__header-badge">STATIC PREVIEW</span>
+            </div>
+
+            {/* Chat messages */}
+            <div className="sn-chat__messages">
+              {CHAT_MESSAGES.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`sn-chat__bubble sn-chat__bubble--${msg.role}`}
+                >
+                  {msg.role === 'ai' && (
+                    <span className="sn-chat__bubble-avatar">🤖</span>
+                  )}
+                  <div className="sn-chat__bubble-content">
+                    {msg.role === 'ai' ? (
+                      <p
+                        className="sn-chat__bubble-text"
+                        dangerouslySetInnerHTML={{
+                          __html: msg.text
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
+                        }}
+                      />
+                    ) : (
+                      <p className="sn-chat__bubble-text">{msg.text}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Typing indicator */}
+              <div className="sn-chat__bubble sn-chat__bubble--ai">
+                <span className="sn-chat__bubble-avatar">🤖</span>
+                <div className="sn-chat__typing">
+                  <span className="sn-chat__typing-dot" />
+                  <span className="sn-chat__typing-dot" />
+                  <span className="sn-chat__typing-dot" />
+                </div>
+              </div>
+            </div>
+
+            {/* Quick suggestion chips */}
+            <div className="sn-chat__suggestions">
+              {SUGGESTION_CHIPS.map((chip) => (
+                <button key={chip} className="sn-chat__suggestion-chip">
+                  {chip}
+                </button>
+              ))}
+            </div>
+
+            {/* Chat input */}
+            <div className="sn-chat__input-row">
+              <input
+                className="sn-chat__input"
+                type="text"
+                placeholder="Ask Sentinel about games, deals, giveaways or account security..."
+                readOnly
+              />
+              <button className="sn-chat__send-btn" aria-label="Send message">
+                ↗
+              </button>
+            </div>
           </div>
-        ))}
+
+          {/* ── Capability Cards ── */}
+          <div className="sn-section-header">
+            <h2 className="sn-section-header__title">⚡ Sentinel Capabilities</h2>
+          </div>
+          <div className="sn-capabilities">
+            {CAPABILITY_CARDS.map((card) => (
+              <div
+                key={card.id}
+                className={`sn-capability sn-capability--${card.color}`}
+              >
+                <div className={`sn-capability__accent sn-capability__accent--${card.color}`} />
+                <div className={`sn-capability__icon-box sn-capability__icon-box--${card.color}`}>
+                  <span className="sn-capability__icon">{card.icon}</span>
+                </div>
+                <div className="sn-capability__info">
+                  <h3 className="sn-capability__title">{card.title}</h3>
+                  <p className="sn-capability__desc">{card.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Sentinel System Status panel ── */}
+        <aside className="sn-network">
+          <div className="sn-network__header">
+            <span className="sn-network__icon">📡</span>
+            <h3 className="sn-network__title">Sentinel System Status</h3>
+            <span className="sn-network__live">
+              <span className="sn-network__live-dot" />
+              DEMO
+            </span>
+          </div>
+
+          <div className="sn-network__items">
+            {/* AI Status */}
+            <div className="sn-network__item">
+              <div className="sn-network__item-icon sn-network__item-icon--blue">
+                🤖
+              </div>
+              <div className="sn-network__item-info">
+                <span className="sn-network__item-label">AI Status</span>
+                <span className="sn-network__item-value">Demo Mode</span>
+              </div>
+              <span className="sn-network__item-badge sn-network__item-badge--demo">
+                DEMO
+              </span>
+            </div>
+
+            {/* Backend */}
+            <div className="sn-network__item">
+              <div className="sn-network__item-icon sn-network__item-icon--orange">
+                🌐
+              </div>
+              <div className="sn-network__item-info">
+                <span className="sn-network__item-label">Backend</span>
+                <span className="sn-network__item-value">Not connected yet</span>
+              </div>
+              <span className="sn-network__item-badge sn-network__item-badge--offline">
+                OFFLINE
+              </span>
+            </div>
+
+            {/* Gemini API */}
+            <div className="sn-network__item">
+              <div className="sn-network__item-icon sn-network__item-icon--purple">
+                ✨
+              </div>
+              <div className="sn-network__item-info">
+                <span className="sn-network__item-label">Gemini API</span>
+                <span className="sn-network__item-value">Future integration</span>
+              </div>
+              <span className="sn-network__item-badge sn-network__item-badge--future">
+                FUTURE
+              </span>
+            </div>
+
+            {/* Privacy */}
+            <div className="sn-network__item">
+              <div className="sn-network__item-icon sn-network__item-icon--green">
+                🔒
+              </div>
+              <div className="sn-network__item-info">
+                <span className="sn-network__item-label">Privacy</span>
+                <span className="sn-network__item-value">No real messages saved</span>
+              </div>
+              <span className="sn-network__item-badge sn-network__item-badge--safe">
+                SAFE
+              </span>
+            </div>
+          </div>
+
+          {/* Sentinel info widget */}
+          <div className="sn-network__about">
+            <div className="sn-network__about-label">About Sentinel</div>
+            <div className="sn-network__about-rows">
+              <div className="sn-network__about-row">
+                <span className="sn-network__about-key">Version</span>
+                <span className="sn-network__about-val">0.1.0-demo</span>
+              </div>
+              <div className="sn-network__about-row">
+                <span className="sn-network__about-key">Model</span>
+                <span className="sn-network__about-val">Planned: Gemini</span>
+              </div>
+              <div className="sn-network__about-row">
+                <span className="sn-network__about-key">Conversations</span>
+                <span className="sn-network__about-val">Static Only</span>
+              </div>
+              <div className="sn-network__about-row">
+                <span className="sn-network__about-key">Response Time</span>
+                <span className="sn-network__about-val">N/A (Demo)</span>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   )
