@@ -6,10 +6,7 @@ import { sentinelMessages, sentinelSuggestions } from "@/data/sentinel";
 function SentinelAvatar() {
   return (
     <span className="sn-avatar" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7z" />
-        <path d="M9 12h.01M15 12h.01M10 16h4" />
-      </svg>
+      🤖
     </span>
   );
 }
@@ -85,7 +82,7 @@ export default function SentinelChat() {
           onChange={(event) => setDraft(event.target.value)}
         />
         <button type="submit" aria-label="Send message preview" disabled={!draft.trim()}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 17 8-17 8 4-8zM8 12h13" /></svg>
+          <span aria-hidden="true">↗</span>
         </button>
       </form>
     </section>

@@ -1,18 +1,17 @@
+import Link from "next/link";
+
 export default function Topbar() {
   return (
     <header className="topbar">
       <div className="topbar__search" role="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-4-4" />
-        </svg>
+        <span className="topbar__search-icon" aria-hidden="true">🔍</span>
         <label className="sr-only" htmlFor="nexora-search">
-          Search NEXORA
+          Search games, deals, and giveaways
         </label>
         <input
           id="nexora-search"
           type="search"
-          placeholder="Search NEXORA"
+          placeholder="Search games, deals, giveaways..."
           autoComplete="off"
         />
         <kbd>⌘ K</kbd>
@@ -23,22 +22,14 @@ export default function Topbar() {
           <span className="status-dot" aria-hidden="true" />
           Online
         </div>
-        <button className="icon-button" type="button" aria-label="Notifications">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
-          </svg>
+        <button className="icon-button icon-button--emoji" type="button" aria-label="Notifications">
+          <span aria-hidden="true">🔔</span>
           <span className="notification-dot" />
         </button>
-        <button className="profile-button" type="button" aria-label="Open profile menu">
-          <span>KS</span>
-          <span className="profile-button__copy">
-            <strong>Operator</strong>
-            <small>Commander</small>
-          </span>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m8 10 4 4 4-4" />
-          </svg>
+        <button className="icon-button icon-button--emoji" type="button" aria-label="Messages">
+          <span aria-hidden="true">💬</span>
         </button>
+        <Link className="topbar__avatar" href="/settings" aria-label="Open account settings">KS</Link>
       </div>
     </header>
   );

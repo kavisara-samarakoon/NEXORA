@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Giveaway } from "@/data/dashboard";
 
 export default function GiveawayCard({ giveaway }: { giveaway: Giveaway }) {
@@ -15,10 +16,7 @@ export default function GiveawayCard({ giveaway }: { giveaway: Giveaway }) {
         <div>
           <span>{giveaway.claimed}% claimed</span>
           <span className="giveaway-card__timer">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v5l3 2" />
-            </svg>
+            <span aria-hidden="true">⏱️</span>
             {giveaway.timer}
           </span>
         </div>
@@ -34,9 +32,9 @@ export default function GiveawayCard({ giveaway }: { giveaway: Giveaway }) {
         </div>
       </div>
 
-      <button type="button" disabled>
-        Claim now <span aria-hidden="true">→</span>
-      </button>
+      <Link href="/giveaways" aria-label={`View giveaway details for ${giveaway.title}`}>
+        Claim Now <span aria-hidden="true">→</span>
+      </Link>
     </article>
   );
 }

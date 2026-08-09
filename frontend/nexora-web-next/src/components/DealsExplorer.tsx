@@ -10,6 +10,12 @@ import {
 } from "@/data/deals";
 
 const networkActivity = [35, 58, 42, 75, 52, 90, 68, 45, 82, 60, 38, 72];
+const dealNetworkIcons = {
+  sync: "🔄",
+  globe: "🌐",
+  database: "💾",
+  shield: "🛡️",
+} as const;
 
 function storeClass(store: GameDeal["store"]) {
   return store.toLowerCase().replace(" games", "");
@@ -68,10 +74,8 @@ function DealCard({
           aria-pressed={alertIsSet}
           onClick={() => onToggleAlert(deal.id)}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
-          </svg>
-          {alertIsSet ? "Alert set" : "Set alert"}
+          <span aria-hidden="true">🔔</span>
+          {alertIsSet ? "Alert Set" : "Set Alert"}
         </button>
         <button
           className={`deals-card__view deals-card__view--${color}`}
@@ -79,10 +83,8 @@ function DealCard({
           aria-disabled="true"
           title="Store redirects are planned for a later migration"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" />
-          </svg>
-          View deal
+          <span aria-hidden="true">↗</span>
+          View Deal
         </button>
       </div>
     </article>
@@ -100,9 +102,7 @@ function DealNetworkStatus() {
   return (
     <aside className="deals-network" aria-labelledby="deal-network-title">
       <div className="deals-network__header">
-        <span className="deals-network__header-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg>
-        </span>
+        <span className="deals-network__header-icon" aria-hidden="true">📡</span>
         <div>
           <span>System telemetry</span>
           <h2 id="deal-network-title">Deal Network Status</h2>
@@ -114,10 +114,7 @@ function DealNetworkStatus() {
         {items.map((item) => (
           <div className="deals-network__item" key={item.label}>
             <span className={`deals-network__item-icon deals-network__item-icon--${item.tone}`} aria-hidden="true">
-              {item.icon === "sync" && <svg viewBox="0 0 24 24"><path d="M20 7h-6V1M4 17h6v6M20 7a9 9 0 0 0-15 3M4 17a9 9 0 0 0 15-3" /></svg>}
-              {item.icon === "globe" && <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>}
-              {item.icon === "database" && <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" /></svg>}
-              {item.icon === "shield" && <svg viewBox="0 0 24 24"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12l2 2 4-4" /></svg>}
+              {dealNetworkIcons[item.icon]}
             </span>
             <span className="deals-network__item-copy">
               <strong>{item.label}</strong>
@@ -199,7 +196,7 @@ export default function DealsExplorer() {
           <div className="deals-hero__copy">
             <div className="deals-hero__tag"><span aria-hidden="true" /> Intel active</div>
             <h1 id="deals-title">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3s1 4-2 6c-2-3-5-2-5-2s-2 3-1 7c1 5 5 7 8 7 5 0 8-4 7-9-1-4-5-6-5-6s1 4-2 5c1-5 0-8 0-8Z" /></svg>
+              <span className="page-title-emoji" aria-hidden="true">🔥</span>
               <span>Game Deals Intelligence</span>
             </h1>
             <p>
@@ -217,7 +214,7 @@ export default function DealsExplorer() {
 
       <section className="deals-filter-panel" aria-label="Search and filter deals">
         <div className="deals-search">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+          <span className="page-search-icon" aria-hidden="true">🔍</span>
           <label className="sr-only" htmlFor="deal-search">Search deals</label>
           <input
             id="deal-search"
@@ -228,7 +225,7 @@ export default function DealsExplorer() {
           />
           {searchQuery && (
             <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+              <span aria-hidden="true">×</span>
             </button>
           )}
         </div>
@@ -264,7 +261,7 @@ export default function DealsExplorer() {
             ))}
             {filteredDeals.length === 0 && (
               <div className="deals-empty">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg>
+                <span aria-hidden="true">📡</span>
                 <h2>No signals found</h2>
                 <p>No deals match your current search and filters.</p>
                 <button type="button" onClick={resetFilters}>Reset filters</button>

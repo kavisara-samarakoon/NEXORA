@@ -14,16 +14,23 @@ import {
 } from "@/data/settings";
 
 function SettingsGlyph({ name }: { name: SettingsIcon }) {
-  if (name === "user") return <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;
-  if (name === "mail") return <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>;
-  if (name === "globe") return <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>;
-  if (name === "clock") return <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
-  if (name === "bell") return <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 7H3s3 0 3-7ZM10 20h4" /></svg>;
-  if (name === "shield") return <svg viewBox="0 0 24 24"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12l2 2 4-4" /></svg>;
-  if (name === "eye") return <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.5" /></svg>;
-  if (name === "monitor") return <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></svg>;
-  return <svg viewBox="0 0 24 24"><path d="m12 2 1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5zM19 17l.6 2.4L22 20l-2.4.6L19 23l-.6-2.4L16 20l2.4-.6z" /></svg>;
+  if (name === "user") return "👤";
+  if (name === "mail") return "📧";
+  if (name === "globe") return "🌐";
+  if (name === "clock") return "🕒";
+  if (name === "bell") return "🔔";
+  if (name === "shield") return "🔐";
+  if (name === "eye") return "👁️";
+  if (name === "monitor") return "🎨";
+  return "✨";
 }
+
+const accountStatusIcons = {
+  Profile: "👤",
+  Notifications: "🔔",
+  "Platform Links": "🔗",
+  Security: "🛡️",
+} as const;
 
 function PreferenceRows({
   items,
@@ -81,17 +88,17 @@ export default function SettingsCenter() {
     <>
       <section className="st-hero" aria-labelledby="settings-title">
         <div className="st-hero__orb st-hero__orb--orange" />
-        <div className="st-hero__orb st-hero__orb--blue" />
-        <div className="st-hero__grid" />
+        <div className="st-hero__orb st-hero__orb--purple" />
+        <div className="st-hero__scanlines" />
         <div className="st-hero__content">
           <div className="st-hero__tag"><span aria-hidden="true" /> Account control</div>
-          <h1 id="settings-title">Account Control Center</h1>
+          <h1 id="settings-title"><span className="page-title-emoji" aria-hidden="true">⚙️</span><strong>Account Control Center</strong></h1>
           <p>Profile preferences, notification settings, security options, and future connected platform management — all in one place.</p>
         </div>
       </section>
 
       <div className="st-disclaimer">
-        <span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></span>
+        <span aria-hidden="true">ℹ️</span>
         <p><strong>Frontend Settings Demo</strong> — Toggles and fields are visual-only. Persistent account settings will be connected to the future NEXORA backend.</p>
       </div>
 
@@ -105,7 +112,7 @@ export default function SettingsCenter() {
                 <h2 id="profile-title">Kavisara</h2>
                 <p>Demo User <span>•</span> NEXORA Member</p>
               </div>
-              <button className="st-outline-button" type="button" disabled title="Profile editing requires the future backend">Edit Profile</button>
+              <button className="st-outline-button" type="button" disabled title="Profile editing requires the future backend">✏️ Edit Profile</button>
             </div>
             <div className="st-profile__fields">
               {profileFields.map((field) => (
@@ -132,14 +139,18 @@ export default function SettingsCenter() {
             <SectionHeading id="platforms-title" icon="globe" eyebrow="External network" title="Connected Platforms" />
             <div className="st-platforms">
               {connectedPlatforms.map((platform) => (
-                <article className={`st-platform${platform.connected ? " st-platform--connected" : ""}`} key={platform.id}>
+                <article
+                  className={`st-platform st-platform--${platform.id}${platform.connected ? " st-platform--connected" : ""}`}
+                  key={platform.id}
+                >
+                  <span className={`st-platform__accent st-platform__accent--${platform.id}`} aria-hidden="true" />
                   <span className={`st-platform__mark st-platform__mark--${platform.id}`}>{platform.shortName}</span>
                   <div className="st-platform__copy">
                     <h3>{platform.name}</h3>
                     <p>{platform.account ?? "Not connected"}</p>
                   </div>
                   <span className={`st-platform__state${platform.connected ? " st-platform__state--connected" : ""}`}>
-                    <i aria-hidden="true" /> {platform.connected ? "Linked" : "Offline"}
+                    <i aria-hidden="true" /> {platform.connected ? "Linked" : "Connect"}
                   </span>
                   <button type="button" disabled title="Platform management requires the future backend">
                     {platform.connected ? "Manage" : "Connect"}
@@ -150,13 +161,13 @@ export default function SettingsCenter() {
           </section>
 
           <section className="st-card" aria-labelledby="appearance-title">
-            <SectionHeading id="appearance-title" icon="monitor" eyebrow="Interface system" title="Appearance & Theme" />
+            <SectionHeading id="appearance-title" icon="monitor" eyebrow="Interface system" title="Appearance & Liquid Glass Theme" />
             <PreferenceRows items={appearancePreferences} values={preferences} onToggle={togglePreference} />
           </section>
 
           <section className="st-card st-danger" aria-labelledby="danger-title">
             <div className="st-danger__heading">
-              <span aria-hidden="true">!</span>
+              <span aria-hidden="true">⚠️</span>
               <div><small>Restricted actions</small><h2 id="danger-title">Danger Zone</h2></div>
             </div>
             <div className="st-danger__actions">
@@ -170,13 +181,16 @@ export default function SettingsCenter() {
 
         <aside className="st-status" aria-labelledby="account-status-title">
           <div className="st-status__header">
-            <span className="st-status__header-icon" aria-hidden="true"><SettingsGlyph name="user" /></span>
-            <div><span>Account telemetry</span><h2 id="account-status-title">System Status</h2></div>
-            <span className="st-status__live"><i aria-hidden="true" /> Online</span>
+            <span className="st-status__header-icon" aria-hidden="true">📡</span>
+            <div><span>Account telemetry</span><h2 id="account-status-title">Account System Status</h2></div>
+            <span className="st-status__live"><i aria-hidden="true" /> Demo</span>
           </div>
           <div className="st-status__items">
             {accountSystemStatus.map((item) => (
               <div className="st-status__item" key={item.label}>
+                <span className={`st-status__item-icon st-status__item-icon--${item.tone}`} aria-hidden="true">
+                  {accountStatusIcons[item.label]}
+                </span>
                 <div><strong>{item.label}</strong><small>{item.value}</small></div>
                 <span className={`st-status__badge st-status__badge--${item.tone}`}>{item.badge}</span>
               </div>

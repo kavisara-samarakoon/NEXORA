@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import DashboardHero from "@/components/DashboardHero";
 import DealCard from "@/components/DealCard";
 import GiveawayCard from "@/components/GiveawayCard";
@@ -29,13 +30,10 @@ export default function Home() {
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">
-              <div>
-                <span className="section-kicker section-kicker--blue">Live drops</span>
-                <h2 id="giveaways-title">Free right now</h2>
-              </div>
-              <button className="section-heading__action" type="button" disabled>
-                View all <span aria-hidden="true">→</span>
-              </button>
+              <h2 id="giveaways-title">🎁 Live Giveaways</h2>
+              <Link className="section-heading__action" href="/giveaways">
+                View All <span aria-hidden="true">→</span>
+              </Link>
             </div>
             <div className="dashboard-card-grid">
               {dashboardGiveaways.map((giveaway) => (
@@ -46,13 +44,10 @@ export default function Home() {
 
           <section className="dashboard-section" aria-labelledby="deals-title">
             <div className="section-heading">
-              <div>
-                <span className="section-kicker">Curated savings</span>
-                <h2 id="deals-title">Best deals</h2>
-              </div>
-              <button className="section-heading__action section-heading__action--orange" type="button" disabled>
-                View all <span aria-hidden="true">→</span>
-              </button>
+              <h2 id="deals-title">🔥 Best Deals</h2>
+              <Link className="section-heading__action section-heading__action--orange" href="/deals">
+                View All <span aria-hidden="true">→</span>
+              </Link>
             </div>
             <div className="dashboard-card-grid">
               {dashboardDeals.map((deal) => (

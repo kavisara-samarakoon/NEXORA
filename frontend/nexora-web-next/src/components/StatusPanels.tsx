@@ -5,19 +5,10 @@ import {
 } from "@/data/dashboard";
 
 function SecurityIcon({ icon }: Pick<SecurityItem, "icon">) {
-  if (icon === "lock") {
-    return <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></svg>;
-  }
-
-  if (icon === "network") {
-    return <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>;
-  }
-
-  if (icon === "warning") {
-    return <svg viewBox="0 0 24 24"><path d="m12 3 10 18H2zM12 9v5M12 18h.01" /></svg>;
-  }
-
-  return <svg viewBox="0 0 24 24"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12h.01M15 12h.01M10 16h4" /></svg>;
+  if (icon === "lock") return "🔒";
+  if (icon === "network") return "🌐";
+  if (icon === "warning") return "⚠️";
+  return "🤖";
 }
 
 export default function StatusPanels() {
@@ -26,11 +17,10 @@ export default function StatusPanels() {
       <section className="status-panel" aria-labelledby="security-title">
         <div className="status-panel__heading">
           <div className="status-panel__heading-icon status-panel__heading-icon--orange" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7z" /><path d="m9 12 2 2 4-4" /></svg>
+            🛡️
           </div>
           <div>
-            <span>Protection layer</span>
-            <h2 id="security-title">Cyber security status</h2>
+            <h2 id="security-title">Cyber Security Status</h2>
           </div>
         </div>
 
@@ -56,14 +46,13 @@ export default function StatusPanels() {
         <div className="status-panel__heading status-panel__heading--split">
           <div className="status-panel__title-group">
             <div className="status-panel__heading-icon status-panel__heading-icon--blue" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>
+              🌐
             </div>
             <div>
-              <span>Service monitor</span>
-              <h2 id="network-title">Network health</h2>
+              <h2 id="network-title">Network Health</h2>
             </div>
           </div>
-          <span className="network-live"><span aria-hidden="true" /> Monitored</span>
+          <span className="network-live"><span aria-hidden="true" /> All Systems Monitored</span>
         </div>
 
         <div className="network-grid">

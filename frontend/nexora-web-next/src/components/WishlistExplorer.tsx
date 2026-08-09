@@ -10,6 +10,13 @@ import {
   type WishlistStatus,
 } from "@/data/wishlist";
 
+const wishlistNetworkIcons = {
+  bolt: "⚡",
+  globe: "🌐",
+  mail: "📬",
+  shield: "🛡️",
+} as const;
+
 function statusDetails(status: WishlistStatus) {
   if (status === "price-drop") return { label: "Price drop", icon: "down" } as const;
   if (status === "free-now") return { label: "Free now", icon: "gift" } as const;
@@ -22,13 +29,9 @@ function priorityLabel(priority: WishlistPriority) {
 }
 
 function StatusIcon({ icon }: { icon: "down" | "gift" | "signal" }) {
-  if (icon === "down") {
-    return <svg viewBox="0 0 24 24"><path d="M12 4v16M5 13l7 7 7-7" /></svg>;
-  }
-  if (icon === "gift") {
-    return <svg viewBox="0 0 24 24"><path d="M4 10h16v11H4zM3 6h18v4H3zM12 6v15M12 6H8.5a2.5 2.5 0 1 1 0-5C11 1 12 6 12 6Zm0 0h3.5a2.5 2.5 0 1 0 0-5C13 1 12 6 12 6Z" /></svg>;
-  }
-  return <svg viewBox="0 0 24 24"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg>;
+  if (icon === "down") return <span aria-hidden="true">↓</span>;
+  if (icon === "gift") return <span aria-hidden="true">🎁</span>;
+  return <span aria-hidden="true">📡</span>;
 }
 
 function WishlistCard({
@@ -80,8 +83,8 @@ function WishlistCard({
           disabled
           title="Store redirects are planned for a later migration"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" /></svg>
-          View deal
+          <span aria-hidden="true">↗</span>
+          View Deal
         </button>
         <button
           className={alertIsActive ? "wl-card__edit wl-card__edit--active" : "wl-card__edit"}
@@ -89,11 +92,11 @@ function WishlistCard({
           aria-pressed={alertIsActive}
           onClick={() => onToggleAlert(item.id)}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z" /></svg>
-          {alertIsActive ? "Pause alert" : "Enable alert"}
+          <span aria-hidden="true">✏️</span>
+          {alertIsActive ? "Pause Alert" : "Enable Alert"}
         </button>
         <button className="wl-card__remove" type="button" disabled aria-label={`Remove ${item.title}`} title="Removal is planned for a later migration">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          <span aria-hidden="true">✕</span>
         </button>
       </div>
     </article>
@@ -122,9 +125,7 @@ function WishlistAlertPanel({ alerts }: { alerts: Record<number, boolean> }) {
   return (
     <aside className="wl-network" aria-labelledby="wishlist-alert-title">
       <div className="wl-network__header">
-        <span className="wl-network__header-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg>
-        </span>
+        <span className="wl-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Alert telemetry</span><h2 id="wishlist-alert-title">Wishlist Alert Status</h2></div>
         <span className="wl-network__live"><span aria-hidden="true" /> Demo</span>
       </div>
@@ -133,10 +134,7 @@ function WishlistAlertPanel({ alerts }: { alerts: Record<number, boolean> }) {
         {items.map((item) => (
           <div className="wl-network__item" key={item.label}>
             <span className={`wl-network__item-icon wl-network__item-icon--${item.tone}`} aria-hidden="true">
-              {item.icon === "bolt" && <svg viewBox="0 0 24 24"><path d="m13 2-9 12h8l-1 8 9-12h-8z" /></svg>}
-              {item.icon === "globe" && <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>}
-              {item.icon === "mail" && <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>}
-              {item.icon === "shield" && <svg viewBox="0 0 24 24"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12l2 2 4-4" /></svg>}
+              {wishlistNetworkIcons[item.icon]}
             </span>
             <span className="wl-network__item-copy"><strong>{item.label}</strong><small>{item.value}</small></span>
             <span className={`wl-network__badge wl-network__badge--${item.tone}`}>{item.badge}</span>
@@ -217,7 +215,7 @@ export default function WishlistExplorer() {
           <div className="wl-hero__copy">
             <div className="wl-hero__tag"><span aria-hidden="true" /> Smart alerts</div>
             <h1 id="wishlist-title">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM9 4v16M12 8h4M12 12h4M12 16h3" /></svg>
+              <span className="page-title-emoji" aria-hidden="true">📋</span>
               <span>Smart Wishlist Control</span>
             </h1>
             <p>
@@ -229,14 +227,14 @@ export default function WishlistExplorer() {
             <div><strong>{wishlistItems.length}</strong><span>Wishlist items</span></div>
             <div><strong>{priceDropCount}</strong><span>Price drops</span></div>
             <div><strong>{freeCount}</strong><span>Free alerts</span></div>
-            <div className="wl-hero__protected"><strong><svg viewBox="0 0 24 24"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12l2 2 4-4" /></svg></strong><span>Protected</span></div>
+            <div className="wl-hero__protected"><strong aria-hidden="true">🛡️</strong><span>Protected</span></div>
           </div>
         </div>
       </section>
 
       <section className="wl-filter-panel" aria-label="Search and filter wishlist">
         <div className="wl-search">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+          <span className="page-search-icon" aria-hidden="true">🔍</span>
           <label className="sr-only" htmlFor="wishlist-search">Search wishlist</label>
           <input
             id="wishlist-search"
@@ -247,7 +245,7 @@ export default function WishlistExplorer() {
           />
           {searchQuery && (
             <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+              <span aria-hidden="true">×</span>
             </button>
           )}
         </div>
@@ -278,7 +276,7 @@ export default function WishlistExplorer() {
             ))}
             {filteredItems.length === 0 && (
               <div className="wl-empty">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg>
+                <span aria-hidden="true">📡</span>
                 <h2>No wishlist signals found</h2>
                 <p>No games match your current search and filters.</p>
                 <button type="button" onClick={resetFilters}>Reset filters</button>

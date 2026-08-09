@@ -1,7 +1,9 @@
+import Link from "next/link";
+
 const heroStats = [
   { value: "12,847", label: "Deals tracked", tone: "orange" },
   { value: "342", label: "Free games now", tone: "blue" },
-  { value: "98.7%", label: "Platform uptime", tone: "green" },
+  { value: "98.7%", label: "Uptime", tone: "green" },
 ] as const;
 
 export default function DashboardHero() {
@@ -17,7 +19,7 @@ export default function DashboardHero() {
           Live platform
         </div>
         <h1 id="dashboard-title">
-          Every Game. Every Deal.
+          Every Game. Every Deal.<br />
           <span>One Place.</span>
         </h1>
         <p>
@@ -26,18 +28,14 @@ export default function DashboardHero() {
           Sentinel AI engine.
         </p>
         <div className="dashboard-hero__actions" aria-label="Dashboard shortcuts">
-          <button type="button" className="dashboard-button dashboard-button--primary" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M13 3s1 4-2 6c-2-3-5-2-5-2s-2 3-1 7c1 5 5 7 8 7 5 0 8-4 7-9-1-4-5-6-5-6s1 4-2 5c1-5 0-8 0-8Z" />
-            </svg>
-            Explore deals
-          </button>
-          <button type="button" className="dashboard-button dashboard-button--outline" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 10h16v11H4zM3 6h18v4H3zM12 6v15M12 6H8.5a2.5 2.5 0 1 1 0-5C11 1 12 6 12 6Zm0 0h3.5a2.5 2.5 0 1 0 0-5C13 1 12 6 12 6Z" />
-            </svg>
-            View giveaways
-          </button>
+          <Link href="/deals" className="dashboard-button dashboard-button--primary">
+            <span aria-hidden="true">🔥</span>
+            Explore Deals
+          </Link>
+          <Link href="/giveaways" className="dashboard-button dashboard-button--outline">
+            <span aria-hidden="true">🎁</span>
+            View Giveaways
+          </Link>
         </div>
       </div>
 

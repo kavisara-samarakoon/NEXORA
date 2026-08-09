@@ -8,21 +8,22 @@ import {
 } from "@/data/security";
 
 function ProtectionIconGraphic({ icon }: { icon: ProtectionIcon }) {
-  if (icon === "key") return <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" /><path d="m11 12 8-8M15 8l2 2M17 6l2 2" /></svg>;
-  if (icon === "lock" || icon === "tls") return <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></svg>;
-  if (icon === "device") return <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></svg>;
-  if (icon === "eye") return <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.5" /></svg>;
-  if (icon === "bolt") return <svg viewBox="0 0 24 24"><path d="m13 2-9 12h8l-1 8 9-12h-8z" /></svg>;
-  if (icon === "redirect") return <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" /></svg>;
-  return <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>;
+  if (icon === "key") return "🔑";
+  if (icon === "lock") return "🔐";
+  if (icon === "tls") return "🔒";
+  if (icon === "device") return "💻";
+  if (icon === "eye") return "👁️";
+  if (icon === "bolt") return "⚡";
+  if (icon === "redirect") return "↗️";
+  return "🌐";
 }
 
 function TimelineIcon({ icon }: { icon: TimelineEvent["icon"] }) {
-  if (icon === "check") return <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>;
-  if (icon === "warning") return <svg viewBox="0 0 24 24"><path d="m12 3 10 18H2zM12 9v5M12 18h.01" /></svg>;
-  if (icon === "key") return <ProtectionIconGraphic icon="key" />;
-  if (icon === "lock") return <ProtectionIconGraphic icon="lock" />;
-  return <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>;
+  if (icon === "check") return "✅";
+  if (icon === "warning") return "⚠️";
+  if (icon === "key") return "🔑";
+  if (icon === "lock") return "🔐";
+  return "📧";
 }
 
 function ProtectionSection({
@@ -40,11 +41,7 @@ function ProtectionSection({
     <section className="sc-section">
       <div className="sc-section__heading">
         <span className={planned ? "sc-section__icon sc-section__icon--planned" : "sc-section__icon"} aria-hidden="true">
-          {planned ? (
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>
-          ) : (
-            <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-          )}
+          {planned ? "🌐" : "🔐"}
         </span>
         <div><span>{planned ? "Network perimeter" : "Identity perimeter"}</span><h2>{title}</h2></div>
         <span className={planned ? "sc-section__badge sc-section__badge--planned" : "sc-section__badge"}>{badge}</span>
@@ -71,7 +68,7 @@ function SecurityTimeline() {
     <section className="sc-section" aria-labelledby="security-timeline-title">
       <div className="sc-section__heading">
         <span className="sc-section__icon sc-section__icon--blue" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0-9-9" /><path d="M3 4v5h5M12 7v5l3 2" /></svg>
+          📍
         </span>
         <div><span>Audit stream</span><h2 id="security-timeline-title">Security Activity Timeline</h2></div>
         <span className="sc-section__live"><span aria-hidden="true" /> Monitored</span>
@@ -100,7 +97,7 @@ function SecurityOperations() {
   return (
     <aside className="sc-operations" aria-labelledby="security-operations-title">
       <div className="sc-operations__header">
-        <span className="sc-operations__header-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg></span>
+        <span className="sc-operations__header-icon" aria-hidden="true">📡</span>
         <div><span>Defense telemetry</span><h2 id="security-operations-title">Security Ops Status</h2></div>
         <span className="sc-operations__live"><span aria-hidden="true" /> Demo</span>
       </div>
@@ -108,10 +105,10 @@ function SecurityOperations() {
         {operations.map((item) => (
           <div className="sc-operations__item" key={item.label}>
             <span className={`sc-operations__item-icon sc-operations__item-icon--${item.tone}`} aria-hidden="true">
-              {item.icon === "lock" && <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>}
-              {item.icon === "shield" && <svg viewBox="0 0 24 24"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12l2 2 4-4" /></svg>}
-              {item.icon === "chart" && <svg viewBox="0 0 24 24"><path d="M4 20V9M10 20V4M16 20v-7M22 20V7" /></svg>}
-              {item.icon === "alert" && <svg viewBox="0 0 24 24"><path d="m12 3 10 18H2zM12 9v5M12 18h.01" /></svg>}
+              {item.icon === "lock" && "🔐"}
+              {item.icon === "shield" && "🔒"}
+              {item.icon === "chart" && "📊"}
+              {item.icon === "alert" && "🚨"}
             </span>
             <span className="sc-operations__item-copy"><strong>{item.label}</strong><small>{item.value}</small></span>
             <span className={`sc-operations__badge sc-operations__badge--${item.tone}`}>{item.badge}</span>
@@ -144,7 +141,7 @@ export default function SecurityCenter() {
         <div className="sc-hero__content">
           <div className="sc-hero__copy">
             <div className="sc-hero__tag"><span aria-hidden="true" /> Defense active</div>
-            <h1 id="security-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 7v5c0 4 2.7 7.1 7 9 4.3-1.9 7-5 7-9V7zM9 12l2 2 4-4" /></svg><span>Cyber Security Command Center</span></h1>
+            <h1 id="security-title"><span className="page-title-emoji" aria-hidden="true">🛡️</span><span>Cyber Security Command Center</span></h1>
             <p>Account protection, API safety, session monitoring, and secure game platform access — your digital perimeter in one command center.</p>
           </div>
           <div className="sc-hero__stats" aria-label="Security summary">
@@ -157,7 +154,7 @@ export default function SecurityCenter() {
       </section>
 
       <div className="sc-disclaimer">
-        <span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></span>
+        <span aria-hidden="true">ℹ️</span>
         <p><strong>Frontend Security Demo</strong> — This interface demonstrates planned security controls. Authentication, encryption, and session management require future backend implementation.</p>
       </div>
 

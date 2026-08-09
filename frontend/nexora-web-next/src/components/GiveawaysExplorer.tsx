@@ -15,6 +15,12 @@ const platformAvailability = [
   { name: "GOG", value: 45, platform: "gog" },
   { name: "Prime", value: 60, platform: "prime" },
 ] as const;
+const giveawayNetworkIcons = {
+  sync: "🔄",
+  globe: "🌐",
+  link: "🔗",
+  bell: "🔔",
+} as const;
 
 function tagDetails(
   tag: GiveawayTag,
@@ -25,15 +31,9 @@ function tagDetails(
 }
 
 function TagIcon({ icon }: { icon: "clock" | "spark" | "flame" }) {
-  if (icon === "clock") {
-    return <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
-  }
-
-  if (icon === "spark") {
-    return <svg viewBox="0 0 24 24"><path d="m12 2 1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5zM19 17l.6 2.4L22 20l-2.4.6L19 23l-.6-2.4L16 20l2.4-.6z" /></svg>;
-  }
-
-  return <svg viewBox="0 0 24 24"><path d="M13 3s1 4-2 6c-2-3-5-2-5-2s-2 3-1 7c1 5 5 7 8 7 5 0 8-4 7-9-1-4-5-6-5-6s1 4-2 5c1-5 0-8 0-8Z" /></svg>;
+  if (icon === "clock") return <span aria-hidden="true">⏰</span>;
+  if (icon === "spark") return <span aria-hidden="true">✨</span>;
+  return <span aria-hidden="true">🔥</span>;
 }
 
 function GiveawayCard({
@@ -74,7 +74,7 @@ function GiveawayCard({
       </div>
 
       <div className={`ga-card__timer${isEndingSoon ? " ga-card__timer--urgent" : ""}`}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+        <span aria-hidden="true">⏱️</span>
         <span>{giveaway.timer} remaining</span>
         <span className="ga-card__status"><span aria-hidden="true" /> Live</span>
       </div>
@@ -106,8 +106,8 @@ function GiveawayCard({
           aria-expanded={guideIsOpen}
           onClick={() => onToggleGuide(giveaway.id)}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h12v16H8zM4 8h4M4 12h4M4 16h4M11 8h6M11 12h6M11 16h4" /></svg>
-          Claim guide
+          <span aria-hidden="true">📋</span>
+          Claim Guide
         </button>
         <button
           className={reminderIsSet ? "ga-card__reminder ga-card__reminder--active" : "ga-card__reminder"}
@@ -115,8 +115,8 @@ function GiveawayCard({
           aria-pressed={reminderIsSet}
           onClick={() => onToggleReminder(giveaway.id)}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
-          {reminderIsSet ? "Reminder set" : "Add reminder"}
+          <span aria-hidden="true">🔔</span>
+          {reminderIsSet ? "Reminder Set" : "Add Reminder"}
         </button>
       </div>
     </article>
@@ -134,9 +134,7 @@ function GiveawayNetworkStatus() {
   return (
     <aside className="ga-network" aria-labelledby="giveaway-network-title">
       <div className="ga-network__header">
-        <span className="ga-network__header-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg>
-        </span>
+        <span className="ga-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Drop telemetry</span><h2 id="giveaway-network-title">Giveaway Network Status</h2></div>
         <span className="ga-network__live"><span aria-hidden="true" /> Demo</span>
       </div>
@@ -145,10 +143,7 @@ function GiveawayNetworkStatus() {
         {items.map((item) => (
           <div className="ga-network__item" key={item.label}>
             <span className={`ga-network__item-icon ga-network__item-icon--${item.tone}`} aria-hidden="true">
-              {item.icon === "sync" && <svg viewBox="0 0 24 24"><path d="M20 7h-6V1M4 17h6v6M20 7a9 9 0 0 0-15 3M4 17a9 9 0 0 0 15-3" /></svg>}
-              {item.icon === "globe" && <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>}
-              {item.icon === "link" && <svg viewBox="0 0 24 24"><path d="m9 15 6-6M7 18H6a4 4 0 0 1 0-8h3M17 6h1a4 4 0 0 1 0 8h-3" /></svg>}
-              {item.icon === "bell" && <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>}
+              {giveawayNetworkIcons[item.icon]}
             </span>
             <span className="ga-network__item-copy"><strong>{item.label}</strong><small>{item.value}</small></span>
             <span className={`ga-network__badge ga-network__badge--${item.tone}`}>{item.badge}</span>
@@ -224,7 +219,7 @@ export default function GiveawaysExplorer() {
           <div className="ga-hero__copy">
             <div className="ga-hero__tag"><span aria-hidden="true" /> Live tracking</div>
             <h1 id="giveaways-title">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v11H4zM3 6h18v4H3zM12 6v15M12 6H8.5a2.5 2.5 0 1 1 0-5C11 1 12 6 12 6Zm0 0h3.5a2.5 2.5 0 1 0 0-5C13 1 12 6 12 6Z" /></svg>
+              <span className="page-title-emoji" aria-hidden="true">🎁</span>
               <span>Live Giveaway Intelligence</span>
             </h1>
             <p>
@@ -242,7 +237,7 @@ export default function GiveawaysExplorer() {
 
       <section className="ga-filter-panel" aria-label="Search and filter giveaways">
         <div className="ga-search">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+          <span className="page-search-icon" aria-hidden="true">🔍</span>
           <label className="sr-only" htmlFor="giveaway-search">Search giveaways</label>
           <input
             id="giveaway-search"
@@ -253,7 +248,7 @@ export default function GiveawaysExplorer() {
           />
           {searchQuery && (
             <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+              <span aria-hidden="true">×</span>
             </button>
           )}
         </div>
@@ -291,7 +286,7 @@ export default function GiveawaysExplorer() {
             ))}
             {filteredGiveaways.length === 0 && (
               <div className="ga-empty">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M11 8a2 2 0 0 1 2 0M12 20h.01" /></svg>
+                <span aria-hidden="true">📡</span>
                 <h2>No drops found</h2>
                 <p>No giveaways match your current search and filters.</p>
                 <button type="button" onClick={resetFilters}>Reset filters</button>
