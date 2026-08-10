@@ -1,15 +1,17 @@
 # NEXORA API
 
 Spring Boot REST API for NEXORA. The current backend provides health, welcome,
-and static in-memory demo endpoints for the production Next.js frontend.
+and static in-memory demo endpoints for the production Next.js frontend. A
+PostgreSQL/JPA foundation is available through the optional `dev` profile.
 
-No database, authentication, Gemini integration, or external API calls are
-included yet.
+No entities, repositories, migrations, authentication, Gemini integration, or
+external API calls are included yet.
 
 ## Requirements
 
 - Java 17 or newer
 - Maven 3.9 or newer
+- PostgreSQL when using the `dev` profile
 
 ## Run locally
 
@@ -20,6 +22,9 @@ mvn spring-boot:run
 ```
 
 The API starts at [http://localhost:8080](http://localhost:8080).
+
+The default profile does not initialize a datasource, so the demo APIs and
+tests run without PostgreSQL.
 
 ## Endpoints
 
@@ -51,6 +56,45 @@ Run the packaged application with:
 java -jar target/nexora-api-0.0.1-SNAPSHOT.jar
 ```
 
+## PostgreSQL development setup
+
+The local development defaults are:
+
+| Setting | Default |
+| --- | --- |
+| Database | `nexora_db` |
+| Username | `nexora_user` |
+| Password | `nexora_password` |
+| JDBC URL | `jdbc:postgresql://localhost:5432/nexora_db` |
+
+Create the local role and database with a PostgreSQL administrator account:
+
+```sql
+CREATE USER nexora_user WITH PASSWORD 'nexora_password';
+CREATE DATABASE nexora_db OWNER nexora_user;
+```
+
+The defaults can be overridden with environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXORA_DB_URL` | PostgreSQL JDBC connection URL |
+| `NEXORA_DB_USERNAME` | PostgreSQL username |
+| `NEXORA_DB_PASSWORD` | PostgreSQL password |
+
+For example:
+
+```bash
+export NEXORA_DB_URL=jdbc:postgresql://localhost:5432/nexora_db
+export NEXORA_DB_USERNAME=nexora_user
+export NEXORA_DB_PASSWORD=nexora_password
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+The `dev` profile uses `spring.jpa.hibernate.ddl-auto=validate`. Hibernate will
+validate future entity mappings but will not create, update, or drop the
+schema. Real entities, repositories, and migrations will be added later.
+
 ## Frontend connection and CORS
 
 The Next.js frontend reads the backend origin from
@@ -64,7 +108,7 @@ The backend allows browser requests to `/api/**` from these local origins:
 
 ## Future work
 
-- Add database persistence and migrations.
+- Add database entities, repositories, persistence, and migrations.
 - Add authentication, authorization, and session management.
 - Add approved external game-store and pricing APIs.
 - Add real Gemini integration for Sentinel with privacy and safety controls.
