@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { sentinelMessages, sentinelSuggestions } from "@/data/sentinel";
+import type { ChatMessage } from "@/data/sentinel";
 
 function SentinelAvatar() {
   return (
@@ -11,7 +11,13 @@ function SentinelAvatar() {
   );
 }
 
-export default function SentinelChat() {
+export default function SentinelChat({
+  messages,
+  suggestions,
+}: {
+  messages: readonly ChatMessage[];
+  suggestions: readonly string[];
+}) {
   const [draft, setDraft] = useState("");
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
 
@@ -37,7 +43,7 @@ export default function SentinelChat() {
       </div>
 
       <div className="sn-chat__messages" aria-live="polite">
-        {sentinelMessages.map((message) => (
+        {messages.map((message) => (
           <div className={`sn-message sn-message--${message.role}`} key={message.id}>
             {message.role === "ai" && <SentinelAvatar />}
             <p>
@@ -65,7 +71,7 @@ export default function SentinelChat() {
       </div>
 
       <div className="sn-suggestions" aria-label="Quick suggestions">
-        {sentinelSuggestions.map((suggestion) => (
+        {suggestions.map((suggestion) => (
           <button type="button" key={suggestion} onClick={() => setDraft(suggestion)}>
             {suggestion}
           </button>
