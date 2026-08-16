@@ -1,11 +1,13 @@
 package com.nexora.api.giveaways;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class GiveawayService {
+@Profile("!dev")
+public class GiveawayService implements GiveawayCatalogService {
 
     private static final List<Giveaway> GIVEAWAYS = List.of(
             new Giveaway(1, "steam", "Steam", "Cyber Shadow", "Action · Platformer · Indie",
@@ -26,8 +28,8 @@ public class GiveawayService {
                     "7d 00h 00m", 7, 18, "live", "new", "$19.99")
     );
 
+    @Override
     public List<Giveaway> getGiveaways() {
         return GIVEAWAYS;
     }
 }
-

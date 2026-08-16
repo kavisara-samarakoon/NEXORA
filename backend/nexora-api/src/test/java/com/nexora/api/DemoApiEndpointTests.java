@@ -41,10 +41,17 @@ class DemoApiEndpointTests {
         mockMvc.perform(get("/api/giveaways"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].platform").value("steam"))
                 .andExpect(jsonPath("$[0].title").value("Cyber Shadow"))
                 .andExpect(jsonPath("$[0].platformLabel").value("Steam"))
+                .andExpect(jsonPath("$[0].genre").value("Action · Platformer · Indie"))
+                .andExpect(jsonPath("$[0].timer").value("2d 14h 32m"))
+                .andExpect(jsonPath("$[0].daysRemaining").value(2))
                 .andExpect(jsonPath("$[0].claimed").value(78))
-                .andExpect(jsonPath("$[0].status").value("live"));
+                .andExpect(jsonPath("$[0].status").value("live"))
+                .andExpect(jsonPath("$[0].tag").value("popular"))
+                .andExpect(jsonPath("$[0].originalPrice").value("$19.99"));
     }
 
     @Test

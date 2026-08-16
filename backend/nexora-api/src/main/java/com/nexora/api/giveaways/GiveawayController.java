@@ -10,9 +10,9 @@ import java.util.List;
 @RequestMapping("/api/giveaways")
 public class GiveawayController {
 
-    private final GiveawayService giveawayService;
+    private final GiveawayCatalogService giveawayService;
 
-    public GiveawayController(GiveawayService giveawayService) {
+    public GiveawayController(GiveawayCatalogService giveawayService) {
         this.giveawayService = giveawayService;
     }
 
@@ -21,4 +21,3 @@ public class GiveawayController {
         return giveawayService.getGiveaways();
     }
 }
-
