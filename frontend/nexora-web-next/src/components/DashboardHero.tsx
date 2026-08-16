@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { DashboardSummary } from "@/lib/api";
 
 const heroStats = [
   { value: "12,847", label: "Deals tracked", tone: "orange" },
@@ -6,7 +7,19 @@ const heroStats = [
   { value: "98.7%", label: "Uptime", tone: "green" },
 ] as const;
 
-export default function DashboardHero() {
+export default function DashboardHero({
+  summary = null,
+}: {
+  summary?: DashboardSummary | null;
+}) {
+  const stats = summary
+    ? [
+        { value: summary.activeDealsCount.toLocaleString(), label: "Deals tracked", tone: "orange" },
+        { value: summary.activeGiveawaysCount.toLocaleString(), label: "Live giveaways", tone: "blue" },
+        { value: summary.activePriceAlertsCount.toLocaleString(), label: "Active alerts", tone: "green" },
+      ]
+    : heroStats;
+
   return (
     <section className="dashboard-hero" aria-labelledby="dashboard-title">
       <div className="dashboard-hero__orb dashboard-hero__orb--orange" />
@@ -40,7 +53,7 @@ export default function DashboardHero() {
       </div>
 
       <div className="dashboard-hero__stats" aria-label="Platform statistics">
-        {heroStats.map((stat) => (
+        {stats.map((stat) => (
           <div className="hero-stat" key={stat.label}>
             <strong className={`hero-stat__value hero-stat__value--${stat.tone}`}>
               {stat.value}
