@@ -22,10 +22,18 @@ class DemoApiEndpointTests {
         mockMvc.perform(get("/api/deals"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].title").value("Elden Ring: Shadow of the Erdtree"))
                 .andExpect(jsonPath("$[0].store").value("Steam"))
+                .andExpect(jsonPath("$[0].discount").value("-75%"))
                 .andExpect(jsonPath("$[0].priceNew").value("$9.99"))
-                .andExpect(jsonPath("$[0].discountValue").value(75));
+                .andExpect(jsonPath("$[0].priceOld").value("$39.99"))
+                .andExpect(jsonPath("$[0].priceValue").value(9.99))
+                .andExpect(jsonPath("$[0].discountValue").value(75))
+                .andExpect(jsonPath("$[0].rating").value(4.8))
+                .andExpect(jsonPath("$[0].stars").value("★★★★★"))
+                .andExpect(jsonPath("$[0].category").value("Action RPG"))
+                .andExpect(jsonPath("$[0].status").value("Historical Low"));
     }
 
     @Test

@@ -10,9 +10,9 @@ import java.util.List;
 @RequestMapping("/api/deals")
 public class DealController {
 
-    private final DealService dealService;
+    private final DealCatalogService dealService;
 
-    public DealController(DealService dealService) {
+    public DealController(DealCatalogService dealService) {
         this.dealService = dealService;
     }
 
@@ -21,4 +21,3 @@ public class DealController {
         return dealService.getDeals();
     }
 }
-

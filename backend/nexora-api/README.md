@@ -1,11 +1,8 @@
 # NEXORA API
 
 Spring Boot REST API for NEXORA. The current backend provides health, welcome,
-and static in-memory demo endpoints for the production Next.js frontend. A
-PostgreSQL/JPA foundation is available through the optional `dev` profile.
-
-No entities, repositories, authentication, Gemini integration, or external API
-calls are included yet.
+and demo endpoints for the production Next.js frontend. Deals use immutable
+in-memory data by default and PostgreSQL/JPA through the optional `dev` profile.
 
 ## Requirements
 
@@ -32,15 +29,16 @@ tests run without PostgreSQL.
 | --- | --- | --- |
 | `GET` | `/api` | Returns the NEXORA API welcome response |
 | `GET` | `/api/health` | Returns the service health status |
-| `GET` | `/api/deals` | Returns demo game deals |
+| `GET` | `/api/deals` | Returns active game deals (static by default, PostgreSQL in `dev`) |
 | `GET` | `/api/giveaways` | Returns demo game giveaways |
 | `GET` | `/api/wishlist` | Returns demo wishlist items |
 | `GET` | `/api/security/status` | Returns the demo security summary and protection items |
 | `GET` | `/api/sentinel/status` | Returns the Sentinel integration status |
 | `GET` | `/api/sentinel/demo` | Returns Sentinel messages, suggestions, capabilities, and system status |
 
-All feature data is stored in immutable in-memory collections. Restarting the
-application restores the original demo data.
+Except for deals in the `dev` profile, feature data is stored in immutable
+in-memory collections. Restarting the default-profile application restores the
+original demo data.
 
 ## Maven commands
 
@@ -95,7 +93,21 @@ The `dev` profile runs Flyway migrations from `src/main/resources/db/migration`
 before JPA starts. It also uses `spring.jpa.hibernate.ddl-auto=validate`, so
 Hibernate validates future entity mappings without creating, updating, or
 dropping the schema. The default profile still runs without PostgreSQL and does
-not execute Flyway migrations.
+not execute Flyway migrations. In `dev`, `GET /api/deals` reads only rows where
+`deals.is_active = true` and joins their game and store data.
+
+Verify the database-backed endpoint after starting the `dev` profile:
+
+```bash
+curl http://localhost:8080/api/deals
+```
+
+To confirm inactive rows are excluded, update a development row and repeat the
+request:
+
+```sql
+UPDATE deals SET is_active = FALSE WHERE id = 1;
+```
 
 ## Frontend connection and CORS
 
@@ -110,7 +122,7 @@ The backend allows browser requests to `/api/**` from these local origins:
 
 ## Future work
 
-- Add database entities, repositories, and persistence-backed services.
+- Add database-backed catalog write workflows when the API is ready for them.
 - Add authentication, authorization, and session management.
 - Add approved external game-store and pricing APIs.
 - Add real Gemini integration for Sentinel with privacy and safety controls.
