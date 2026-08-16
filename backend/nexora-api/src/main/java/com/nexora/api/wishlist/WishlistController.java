@@ -10,9 +10,9 @@ import java.util.List;
 @RequestMapping("/api/wishlist")
 public class WishlistController {
 
-    private final WishlistService wishlistService;
+    private final WishlistCatalogService wishlistService;
 
-    public WishlistController(WishlistService wishlistService) {
+    public WishlistController(WishlistCatalogService wishlistService) {
         this.wishlistService = wishlistService;
     }
 
@@ -21,4 +21,3 @@ public class WishlistController {
         return wishlistService.getWishlistItems();
     }
 }
-

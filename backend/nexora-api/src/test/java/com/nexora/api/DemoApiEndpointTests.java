@@ -59,10 +59,16 @@ class DemoApiEndpointTests {
         mockMvc.perform(get("/api/wishlist"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].title").value("Ghost of Tsushima: Director's Cut"))
+                .andExpect(jsonPath("$[0].store").value("Steam"))
                 .andExpect(jsonPath("$[0].currentPrice").value("$39.99"))
                 .andExpect(jsonPath("$[0].targetPrice").value("$24.99"))
-                .andExpect(jsonPath("$[0].alertActive").value(true));
+                .andExpect(jsonPath("$[0].lowestEver").value("$29.99"))
+                .andExpect(jsonPath("$[0].discount").value("-25%"))
+                .andExpect(jsonPath("$[0].status").value("price-drop"))
+                .andExpect(jsonPath("$[0].alertActive").value(true))
+                .andExpect(jsonPath("$[0].priority").value("high"));
     }
 
     @Test
