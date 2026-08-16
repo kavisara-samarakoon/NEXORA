@@ -10,10 +10,19 @@ import Topbar from "@/components/Topbar";
 import {
   dashboardDeals,
   dashboardGiveaways,
+  mapDashboardNetworkItems,
   mapDashboardDeals,
   mapDashboardGiveaways,
+  mapDashboardSecurityItems,
+  networkItems,
+  securityItems,
 } from "@/data/dashboard";
-import { getDashboardSummary, getDeals, getGiveaways } from "@/lib/api";
+import {
+  getDashboardSummary,
+  getDeals,
+  getGiveaways,
+  getSecurityStatus,
+} from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -24,10 +33,11 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default async function Home() {
-  const [summaryResult, dealsResult, giveawaysResult] = await Promise.all([
+  const [summaryResult, dealsResult, giveawaysResult, securityResult] = await Promise.all([
     getDashboardSummary(),
     getDeals(),
     getGiveaways(),
+    getSecurityStatus(),
   ]);
   const deals =
     dealsResult.source === "api"
@@ -37,6 +47,14 @@ export default async function Home() {
     giveawaysResult.source === "api"
       ? mapDashboardGiveaways(giveawaysResult.giveaways)
       : dashboardGiveaways;
+  const dashboardSecurityItems =
+    securityResult.source === "api"
+      ? mapDashboardSecurityItems(securityResult.securityStatus)
+      : securityItems;
+  const dashboardNetworkItems =
+    summaryResult.source === "api" && summaryResult.dashboardSummary
+      ? mapDashboardNetworkItems(summaryResult.dashboardSummary)
+      : networkItems;
 
   return (
     <div className="app-shell">
@@ -76,7 +94,10 @@ export default async function Home() {
             </div>
           </section>
 
-          <StatusPanels />
+          <StatusPanels
+            security={dashboardSecurityItems}
+            network={dashboardNetworkItems}
+          />
         </main>
       </div>
 

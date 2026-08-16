@@ -1,6 +1,7 @@
 import {
   networkItems,
   securityItems,
+  type NetworkItem,
   type SecurityItem,
 } from "@/data/dashboard";
 
@@ -11,7 +12,15 @@ function SecurityIcon({ icon }: Pick<SecurityItem, "icon">) {
   return "🤖";
 }
 
-export default function StatusPanels() {
+type StatusPanelsProps = {
+  security?: readonly SecurityItem[];
+  network?: readonly NetworkItem[];
+};
+
+export default function StatusPanels({
+  security = securityItems,
+  network = networkItems,
+}: StatusPanelsProps) {
   return (
     <div className="status-panels">
       <section className="status-panel" aria-labelledby="security-title">
@@ -25,7 +34,7 @@ export default function StatusPanels() {
         </div>
 
         <div className="security-list">
-          {securityItems.map((item) => (
+          {security.map((item) => (
             <div className="security-row" key={item.id}>
               <span className={`security-row__icon security-row__icon--${item.tone}`} aria-hidden="true">
                 <SecurityIcon icon={item.icon} />
@@ -56,7 +65,7 @@ export default function StatusPanels() {
         </div>
 
         <div className="network-grid">
-          {networkItems.map((item) => (
+          {network.map((item) => (
             <article className={`network-card network-card--${item.status}`} key={item.id}>
               <div className="network-card__topline">
                 <strong>{item.name}</strong>

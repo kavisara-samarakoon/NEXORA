@@ -1,5 +1,10 @@
 import type { GameDeal } from "@/data/deals";
 import type { Giveaway as ApiGiveaway } from "@/data/giveaways";
+import type {
+  ProtectionItem,
+  SecurityStatusData,
+} from "@/data/security";
+import type { DashboardSummary } from "@/lib/api";
 
 export type Platform = "steam" | "epic" | "gog";
 
@@ -157,6 +162,65 @@ export function mapDashboardGiveaways(
   }
 
   return dashboardItems;
+}
+
+function mapSecurityIcon(icon: ProtectionItem["icon"]): SecurityItem["icon"] {
+  if (icon === "tls" || icon === "key" || icon === "lock") return "lock";
+  if (icon === "gateway" || icon === "redirect" || icon === "device") {
+    return "network";
+  }
+  if (icon === "eye" || icon === "bolt") return "warning";
+  return "sentinel";
+}
+
+export function mapDashboardSecurityItems(
+  securityStatus: SecurityStatusData,
+): SecurityItem[] {
+  return [
+    ...securityStatus.accountProtection,
+    ...securityStatus.networkProtection,
+  ]
+    .slice(0, 4)
+    .map((item, index) => {
+      const icon = mapSecurityIcon(item.icon);
+      const statusType = item.statusType === "ok" ? "ok" : "warn";
+      const tone =
+        statusType === "warn"
+          ? "orange"
+          : icon === "lock"
+            ? "green"
+            : icon === "network"
+              ? "blue"
+              : icon === "warning"
+                ? "orange"
+                : "purple";
+
+      return {
+        id: index + 1,
+        icon,
+        tone,
+        label: item.label,
+        value: item.description,
+        status: item.status,
+        statusType,
+      };
+    });
+}
+
+export function mapDashboardNetworkItems(
+  summary: DashboardSummary,
+): NetworkItem[] {
+  const statuses: readonly NetworkItem["status"][] = [
+    summary.activeDealsCount > 0 ? "online" : "degraded",
+    summary.activeGiveawaysCount > 0 ? "online" : "degraded",
+    summary.activePriceAlertsCount > 0 ? "online" : "degraded",
+    summary.sentinelStatus === "Demo Mode" ? "degraded" : "online",
+  ];
+
+  return networkItems.map((item, index) => ({
+    ...item,
+    status: statuses[index] ?? item.status,
+  }));
 }
 
 export const securityItems = [
