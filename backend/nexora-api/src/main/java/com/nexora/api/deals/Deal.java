@@ -1,5 +1,7 @@
 package com.nexora.api.deals;
 
+import java.math.BigDecimal;
+
 public record Deal(
         long id,
         String store,
@@ -8,11 +10,10 @@ public record Deal(
         String title,
         String priceOld,
         String priceNew,
-        double priceValue,
-        double rating,
+        BigDecimal priceValue,
+        BigDecimal rating,
         String stars,
         String category,
         String status
 ) {
 }
-
