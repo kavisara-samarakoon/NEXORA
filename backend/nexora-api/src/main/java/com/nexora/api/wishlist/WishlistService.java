@@ -1,11 +1,13 @@
 package com.nexora.api.wishlist;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class WishlistService {
+@Profile("!dev")
+public class WishlistService implements WishlistCatalogService {
 
     private static final List<WishlistItem> WISHLIST_ITEMS = List.of(
             new WishlistItem(1, "Ghost of Tsushima: Director's Cut", "Steam", "$39.99", "$24.99",
@@ -26,8 +28,8 @@ public class WishlistService {
                     "FREE", "-100%", "free-now", false, "high")
     );
 
+    @Override
     public List<WishlistItem> getWishlistItems() {
         return WISHLIST_ITEMS;
     }
 }
-
