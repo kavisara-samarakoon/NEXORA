@@ -1,4 +1,13 @@
+import type { GameDeal } from "@/data/deals";
+import type { Giveaway as ApiGiveaway } from "@/data/giveaways";
+
 export type Platform = "steam" | "epic" | "gog";
+
+function isDashboardPlatform(
+  platform: ApiGiveaway["platform"],
+): platform is Platform {
+  return platform === "steam" || platform === "epic" || platform === "gog";
+}
 
 export type Giveaway = {
   id: number;
@@ -106,6 +115,49 @@ export const dashboardDeals = [
     status: "Lowest ever",
   },
 ] satisfies readonly Deal[];
+
+export function mapDashboardDeals(deals: readonly GameDeal[]): Deal[] {
+  return deals.slice(0, 3).map((deal) => ({
+    id: deal.id,
+    store: deal.store,
+    discount: deal.discount,
+    title: deal.title,
+    priceOld: deal.priceOld,
+    priceNew: deal.priceNew,
+    rating: deal.rating,
+    stars: Math.min(
+      5,
+      Array.from(deal.stars).filter((star) => star === "★").length,
+    ),
+    status: deal.status,
+  }));
+}
+
+export function mapDashboardGiveaways(
+  giveaways: readonly ApiGiveaway[],
+): Giveaway[] {
+  const dashboardItems: Giveaway[] = [];
+
+  for (const giveaway of giveaways) {
+    if (!isDashboardPlatform(giveaway.platform)) {
+      continue;
+    }
+
+    dashboardItems.push({
+      id: giveaway.id,
+      platform: giveaway.platform,
+      platformLabel: giveaway.platformLabel,
+      title: giveaway.title,
+      genre: giveaway.genre,
+      timer: giveaway.timer,
+      claimed: giveaway.claimed,
+    });
+
+    if (dashboardItems.length === 3) break;
+  }
+
+  return dashboardItems;
+}
 
 export const securityItems = [
   {
