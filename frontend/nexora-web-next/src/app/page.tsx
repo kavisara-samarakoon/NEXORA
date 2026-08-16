@@ -7,8 +7,13 @@ import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import StatusPanels from "@/components/StatusPanels";
 import Topbar from "@/components/Topbar";
-import { dashboardDeals, dashboardGiveaways } from "@/data/dashboard";
-import { getDashboardSummary } from "@/lib/api";
+import {
+  dashboardDeals,
+  dashboardGiveaways,
+  mapDashboardDeals,
+  mapDashboardGiveaways,
+} from "@/data/dashboard";
+import { getDashboardSummary, getDeals, getGiveaways } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -19,7 +24,19 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default async function Home() {
-  const { dashboardSummary } = await getDashboardSummary();
+  const [summaryResult, dealsResult, giveawaysResult] = await Promise.all([
+    getDashboardSummary(),
+    getDeals(),
+    getGiveaways(),
+  ]);
+  const deals =
+    dealsResult.source === "api"
+      ? mapDashboardDeals(dealsResult.deals)
+      : dashboardDeals;
+  const giveaways =
+    giveawaysResult.source === "api"
+      ? mapDashboardGiveaways(giveawaysResult.giveaways)
+      : dashboardGiveaways;
 
   return (
     <div className="app-shell">
@@ -29,7 +46,7 @@ export default async function Home() {
         <Topbar />
 
         <main className="dashboard dashboard-home">
-          <DashboardHero summary={dashboardSummary} />
+          <DashboardHero summary={summaryResult.dashboardSummary} />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">
@@ -39,7 +56,7 @@ export default async function Home() {
               </Link>
             </div>
             <div className="dashboard-card-grid">
-              {dashboardGiveaways.map((giveaway) => (
+              {giveaways.map((giveaway) => (
                 <GiveawayCard giveaway={giveaway} key={giveaway.id} />
               ))}
             </div>
@@ -53,7 +70,7 @@ export default async function Home() {
               </Link>
             </div>
             <div className="dashboard-card-grid">
-              {dashboardDeals.map((deal) => (
+              {deals.map((deal) => (
                 <DealCard deal={deal} key={deal.id} />
               ))}
             </div>
