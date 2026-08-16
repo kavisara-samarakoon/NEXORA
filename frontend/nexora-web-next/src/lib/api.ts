@@ -143,6 +143,43 @@ export type SentinelResult = {
   source: "api" | "fallback";
 };
 
+export type DashboardSummary = {
+  activeDealsCount: number;
+  activeGiveawaysCount: number;
+  wishlistItemsCount: number;
+  activePriceAlertsCount: number;
+  bestDiscountValue: number;
+  bestDiscountTitle: string;
+  databaseStatus: string;
+  sentinelStatus: string;
+};
+
+export type DashboardSummaryResult = {
+  dashboardSummary: DashboardSummary | null;
+  source: "api" | "fallback";
+};
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function isDashboardSummary(value: unknown): value is DashboardSummary {
+  if (typeof value !== "object" || value === null) return false;
+
+  const summary = value as Record<string, unknown>;
+
+  return (
+    isNonNegativeInteger(summary.activeDealsCount) &&
+    isNonNegativeInteger(summary.activeGiveawaysCount) &&
+    isNonNegativeInteger(summary.wishlistItemsCount) &&
+    isNonNegativeInteger(summary.activePriceAlertsCount) &&
+    isNonNegativeInteger(summary.bestDiscountValue) &&
+    typeof summary.bestDiscountTitle === "string" &&
+    typeof summary.databaseStatus === "string" &&
+    typeof summary.sentinelStatus === "string"
+  );
+}
+
 function isGameDeal(value: unknown): value is GameDeal {
   if (typeof value !== "object" || value === null) return false;
 
@@ -352,6 +389,33 @@ export async function getDeals(): Promise<DealsResult> {
     return { deals: data, source: "api" };
   } catch {
     return { deals: fallbackDeals, source: "fallback" };
+  }
+}
+
+export async function getDashboardSummary(): Promise<DashboardSummaryResult> {
+  const apiBaseUrl = (
+    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
+  ).replace(/\/+$/, "");
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/dashboard/summary`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Dashboard summary API returned ${response.status}`);
+    }
+
+    const data: unknown = await response.json();
+
+    if (!isDashboardSummary(data)) {
+      throw new Error("Dashboard summary API returned an unexpected response");
+    }
+
+    return { dashboardSummary: data, source: "api" };
+  } catch {
+    return { dashboardSummary: null, source: "fallback" };
   }
 }
 

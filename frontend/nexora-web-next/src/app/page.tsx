@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import StatusPanels from "@/components/StatusPanels";
 import Topbar from "@/components/Topbar";
 import { dashboardDeals, dashboardGiveaways } from "@/data/dashboard";
+import { getDashboardSummary } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -17,7 +18,9 @@ export const metadata: Metadata = createPageMetadata({
   keywords: ["gaming dashboard", "game discovery", "game deals", "free games"],
 });
 
-export default function Home() {
+export default async function Home() {
+  const { dashboardSummary } = await getDashboardSummary();
+
   return (
     <div className="app-shell">
       <Sidebar />
@@ -26,7 +29,7 @@ export default function Home() {
         <Topbar />
 
         <main className="dashboard dashboard-home">
-          <DashboardHero />
+          <DashboardHero summary={dashboardSummary} />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">
