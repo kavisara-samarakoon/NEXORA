@@ -18,6 +18,16 @@ import {
   type SecurityStatusData,
 } from "@/data/security";
 import {
+  sentinelDemo as fallbackSentinelDemo,
+  sentinelStatus as fallbackSentinelStatus,
+  type ChatMessage,
+  type ChatMessageSegment,
+  type SentinelCapability,
+  type SentinelDemoData,
+  type SentinelStatus,
+  type SentinelSystemStatusItem,
+} from "@/data/sentinel";
+import {
   wishlistItems as fallbackWishlistItems,
   type WishlistItem,
   type WishlistPriority,
@@ -73,6 +83,24 @@ const PROTECTION_STATUSES: readonly ProtectionStatus[] = [
   "warn",
   "planned",
 ];
+const SENTINEL_CAPABILITY_ICONS: readonly SentinelCapability["icon"][] = [
+  "gamepad",
+  "deal",
+  "shield",
+  "lock",
+];
+const SENTINEL_TONES: readonly SentinelCapability["tone"][] = [
+  "blue",
+  "orange",
+  "green",
+  "purple",
+];
+const SENTINEL_STATUS_ICONS: readonly SentinelSystemStatusItem["icon"][] = [
+  "bot",
+  "network",
+  "spark",
+  "lock",
+];
 const WISHLIST_STORES: readonly WishlistStore[] = [
   "Steam",
   "Epic Games",
@@ -106,6 +134,12 @@ export type WishlistResult = {
 
 export type SecurityStatusResult = {
   securityStatus: SecurityStatusData;
+  source: "api" | "fallback";
+};
+
+export type SentinelResult = {
+  demo: SentinelDemoData;
+  status: SentinelStatus;
   source: "api" | "fallback";
 };
 
@@ -203,6 +237,94 @@ function isSecurityStatus(value: unknown): value is SecurityStatusData {
     securityStatus.accountProtection.every(isProtectionItem) &&
     Array.isArray(securityStatus.networkProtection) &&
     securityStatus.networkProtection.every(isProtectionItem)
+  );
+}
+
+function isChatMessageSegment(value: unknown): value is ChatMessageSegment {
+  if (typeof value !== "object" || value === null) return false;
+
+  const segment = value as Record<string, unknown>;
+
+  return (
+    typeof segment.text === "string" &&
+    (segment.emphasis === undefined || typeof segment.emphasis === "boolean")
+  );
+}
+
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (typeof value !== "object" || value === null) return false;
+
+  const message = value as Record<string, unknown>;
+
+  return (
+    typeof message.id === "number" &&
+    (message.role === "user" || message.role === "ai") &&
+    Array.isArray(message.segments) &&
+    message.segments.every(isChatMessageSegment)
+  );
+}
+
+function isSentinelCapability(value: unknown): value is SentinelCapability {
+  if (typeof value !== "object" || value === null) return false;
+
+  const capability = value as Record<string, unknown>;
+
+  return (
+    typeof capability.id === "number" &&
+    SENTINEL_CAPABILITY_ICONS.includes(
+      capability.icon as SentinelCapability["icon"],
+    ) &&
+    typeof capability.title === "string" &&
+    typeof capability.description === "string" &&
+    SENTINEL_TONES.includes(capability.tone as SentinelCapability["tone"])
+  );
+}
+
+function isSentinelSystemStatusItem(
+  value: unknown,
+): value is SentinelSystemStatusItem {
+  if (typeof value !== "object" || value === null) return false;
+
+  const item = value as Record<string, unknown>;
+
+  return (
+    typeof item.label === "string" &&
+    typeof item.value === "string" &&
+    typeof item.badge === "string" &&
+    SENTINEL_TONES.includes(item.tone as SentinelSystemStatusItem["tone"]) &&
+    SENTINEL_STATUS_ICONS.includes(
+      item.icon as SentinelSystemStatusItem["icon"],
+    )
+  );
+}
+
+function isSentinelStatus(value: unknown): value is SentinelStatus {
+  if (typeof value !== "object" || value === null) return false;
+
+  const status = value as Record<string, unknown>;
+
+  return (
+    typeof status.aiStatus === "string" &&
+    typeof status.backend === "string" &&
+    typeof status.geminiApi === "string" &&
+    typeof status.privacy === "string"
+  );
+}
+
+function isSentinelDemo(value: unknown): value is SentinelDemoData {
+  if (typeof value !== "object" || value === null) return false;
+
+  const demo = value as Record<string, unknown>;
+
+  return (
+    Array.isArray(demo.messages) &&
+    demo.messages.every(isChatMessage) &&
+    Array.isArray(demo.suggestions) &&
+    demo.suggestions.every((suggestion) => typeof suggestion === "string") &&
+    Array.isArray(demo.capabilities) &&
+    demo.capabilities.every(isSentinelCapability) &&
+    Array.isArray(demo.systemStatus) &&
+    demo.systemStatus.every(isSentinelSystemStatusItem)
   );
 }
 
@@ -311,5 +433,47 @@ export async function getSecurityStatus(): Promise<SecurityStatusResult> {
     return { securityStatus: data, source: "api" };
   } catch {
     return { securityStatus: fallbackSecurityStatus, source: "fallback" };
+  }
+}
+
+export async function getSentinel(): Promise<SentinelResult> {
+  const apiBaseUrl = (
+    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
+  ).replace(/\/+$/, "");
+
+  try {
+    const [statusResponse, demoResponse] = await Promise.all([
+      fetch(`${apiBaseUrl}/api/sentinel/status`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(3000),
+      }),
+      fetch(`${apiBaseUrl}/api/sentinel/demo`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(3000),
+      }),
+    ]);
+
+    if (!statusResponse.ok || !demoResponse.ok) {
+      throw new Error(
+        `Sentinel API returned status ${statusResponse.status}/${demoResponse.status}`,
+      );
+    }
+
+    const [statusData, demoData]: [unknown, unknown] = await Promise.all([
+      statusResponse.json(),
+      demoResponse.json(),
+    ]);
+
+    if (!isSentinelStatus(statusData) || !isSentinelDemo(demoData)) {
+      throw new Error("Sentinel API returned an unexpected response");
+    }
+
+    return { demo: demoData, status: statusData, source: "api" };
+  } catch {
+    return {
+      demo: fallbackSentinelDemo,
+      status: fallbackSentinelStatus,
+      source: "fallback",
+    };
   }
 }

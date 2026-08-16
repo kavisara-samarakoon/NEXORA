@@ -1,7 +1,12 @@
 export type ChatMessage = {
   id: number;
   role: "user" | "ai";
-  segments: readonly { text: string; emphasis?: boolean }[];
+  segments: readonly ChatMessageSegment[];
+};
+
+export type ChatMessageSegment = {
+  text: string;
+  emphasis?: boolean;
 };
 
 export type SentinelCapability = {
@@ -10,6 +15,28 @@ export type SentinelCapability = {
   title: string;
   description: string;
   tone: "blue" | "orange" | "green" | "purple";
+};
+
+export type SentinelSystemStatusItem = {
+  label: string;
+  value: string;
+  badge: string;
+  tone: "blue" | "orange" | "green" | "purple";
+  icon: "bot" | "network" | "spark" | "lock";
+};
+
+export type SentinelStatus = {
+  aiStatus: string;
+  backend: string;
+  geminiApi: string;
+  privacy: string;
+};
+
+export type SentinelDemoData = {
+  messages: readonly ChatMessage[];
+  suggestions: readonly string[];
+  capabilities: readonly SentinelCapability[];
+  systemStatus: readonly SentinelSystemStatusItem[];
 };
 
 export const sentinelMessages = [
@@ -95,4 +122,18 @@ export const sentinelSystemStatus = [
   { label: "Backend", value: "Not Connected Yet", badge: "Offline", tone: "orange", icon: "network" },
   { label: "Gemini API", value: "Future Integration", badge: "Future", tone: "purple", icon: "spark" },
   { label: "Privacy", value: "No real messages saved", badge: "Safe", tone: "green", icon: "lock" },
-] as const;
+] satisfies readonly SentinelSystemStatusItem[];
+
+export const sentinelStatus = {
+  aiStatus: "Demo Mode",
+  backend: "Not Connected Yet",
+  geminiApi: "Future Integration",
+  privacy: "No real messages saved",
+} satisfies SentinelStatus;
+
+export const sentinelDemo = {
+  messages: sentinelMessages,
+  suggestions: sentinelSuggestions,
+  capabilities: sentinelCapabilities,
+  systemStatus: sentinelSystemStatus,
+} satisfies SentinelDemoData;

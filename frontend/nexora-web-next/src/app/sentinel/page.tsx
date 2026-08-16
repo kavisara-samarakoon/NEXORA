@@ -3,6 +3,7 @@ import SentinelButton from "@/components/SentinelButton";
 import SentinelExperience from "@/components/SentinelExperience";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import { getSentinel } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -12,14 +13,16 @@ export const metadata: Metadata = createPageMetadata({
   keywords: ["gaming AI assistant", "game recommendations", "deal assistant", "account safety guidance"],
 });
 
-export default function SentinelPage() {
+export default async function SentinelPage() {
+  const sentinel = await getSentinel();
+
   return (
     <div className="app-shell">
       <Sidebar />
       <div className="main-shell">
         <Topbar />
         <main className="dashboard sentinel-page">
-          <SentinelExperience />
+          <SentinelExperience {...sentinel} />
         </main>
       </div>
       <SentinelButton />

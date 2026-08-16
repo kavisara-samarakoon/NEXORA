@@ -1,9 +1,6 @@
 import SentinelChat from "@/components/SentinelChat";
-import {
-  sentinelCapabilities,
-  sentinelSystemStatus,
-  type SentinelCapability,
-} from "@/data/sentinel";
+import type { SentinelCapability, SentinelStatus } from "@/data/sentinel";
+import type { SentinelResult } from "@/lib/api";
 
 function CapabilityIcon({ icon }: { icon: SentinelCapability["icon"] }) {
   if (icon === "gamepad") return "🎮";
@@ -12,17 +9,31 @@ function CapabilityIcon({ icon }: { icon: SentinelCapability["icon"] }) {
   return "🔐";
 }
 
-function SentinelSystemStatus() {
+function statusValue(label: string, status: SentinelStatus) {
+  if (label === "AI Status") return status.aiStatus;
+  if (label === "Backend") return status.backend;
+  if (label === "Gemini API") return status.geminiApi;
+  if (label === "Privacy") return status.privacy;
+  return null;
+}
+
+function SentinelSystemStatus({
+  source,
+  status,
+  systemStatus,
+}: Pick<SentinelResult, "source" | "status"> & {
+  systemStatus: SentinelResult["demo"]["systemStatus"];
+}) {
   return (
     <aside className="sn-status" aria-labelledby="sentinel-status-title">
       <div className="sn-status__header">
         <span className="sn-status__header-icon" aria-hidden="true">📡</span>
         <div><span>Assistant telemetry</span><h2 id="sentinel-status-title">Sentinel System Status</h2></div>
-        <span className="sn-status__live"><span aria-hidden="true" /> Demo</span>
+        <span className="sn-status__live"><span aria-hidden="true" /> {source === "api" ? "API" : "Demo"}</span>
       </div>
 
       <div className="sn-status__items">
-        {sentinelSystemStatus.map((item) => (
+        {systemStatus.map((item) => (
           <div className="sn-status__item" key={item.label}>
             <span className={`sn-status__item-icon sn-status__item-icon--${item.tone}`} aria-hidden="true">
               {item.icon === "bot" && "🤖"}
@@ -30,7 +41,7 @@ function SentinelSystemStatus() {
               {item.icon === "spark" && "✨"}
               {item.icon === "lock" && "🔒"}
             </span>
-            <span className="sn-status__item-copy"><strong>{item.label}</strong><small>{item.value}</small></span>
+            <span className="sn-status__item-copy"><strong>{item.label}</strong><small>{statusValue(item.label, status) ?? item.value}</small></span>
             <span className={`sn-status__badge sn-status__badge--${item.tone}`}>{item.badge}</span>
           </div>
         ))}
@@ -52,7 +63,13 @@ function SentinelSystemStatus() {
   );
 }
 
-export default function SentinelExperience() {
+export default function SentinelExperience({
+  demo,
+  source,
+  status,
+}: SentinelResult) {
+  const { capabilities, messages, suggestions, systemStatus } = demo;
+
   return (
     <>
       <section className="sn-hero" aria-labelledby="sentinel-title">
@@ -73,11 +90,11 @@ export default function SentinelExperience() {
 
       <div className="sn-layout">
         <div className="sn-content">
-          <SentinelChat />
+          <SentinelChat messages={messages} suggestions={suggestions} />
           <section className="sn-capability-section" aria-labelledby="sentinel-capabilities-title">
             <div className="sn-section-heading"><span aria-hidden="true">⚡</span><div><small>Knowledge modules</small><h2 id="sentinel-capabilities-title">Sentinel Capabilities</h2></div></div>
             <div className="sn-capabilities">
-              {sentinelCapabilities.map((capability) => (
+              {capabilities.map((capability) => (
                 <article className={`sn-capability sn-capability--${capability.tone}`} key={capability.id}>
                   <div className={`sn-capability__accent sn-capability__accent--${capability.tone}`} />
                   <span className={`sn-capability__icon sn-capability__icon--${capability.tone}`} aria-hidden="true"><CapabilityIcon icon={capability.icon} /></span>
@@ -87,7 +104,7 @@ export default function SentinelExperience() {
             </div>
           </section>
         </div>
-        <SentinelSystemStatus />
+        <SentinelSystemStatus source={source} status={status} systemStatus={systemStatus} />
       </div>
     </>
   );
