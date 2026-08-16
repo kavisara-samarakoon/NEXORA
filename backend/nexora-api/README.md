@@ -30,6 +30,7 @@ tests run without PostgreSQL.
 | --- | --- | --- |
 | `GET` | `/api` | Returns the NEXORA API welcome response |
 | `GET` | `/api/health` | Returns the service health status |
+| `GET` | `/api/dashboard/summary` | Aggregates current deal, giveaway, wishlist, database, and Sentinel status |
 | `GET` | `/api/deals` | Returns active game deals (static by default, PostgreSQL in `dev`) |
 | `GET` | `/api/giveaways` | Returns active giveaways (static by default, PostgreSQL in `dev`) |
 | `GET` | `/api/wishlist` | Returns active wishlist items (static by default, PostgreSQL in `dev`) |
@@ -105,6 +106,7 @@ Verify the database-backed endpoint after starting the `dev` profile:
 curl http://localhost:8080/api/deals
 curl http://localhost:8080/api/giveaways
 curl http://localhost:8080/api/wishlist
+curl http://localhost:8080/api/dashboard/summary
 ```
 
 To confirm inactive rows are excluded, update a development row and repeat the
