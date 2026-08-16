@@ -4,8 +4,8 @@ Spring Boot REST API for NEXORA. The current backend provides health, welcome,
 and static in-memory demo endpoints for the production Next.js frontend. A
 PostgreSQL/JPA foundation is available through the optional `dev` profile.
 
-No entities, repositories, migrations, authentication, Gemini integration, or
-external API calls are included yet.
+No entities, repositories, authentication, Gemini integration, or external API
+calls are included yet.
 
 ## Requirements
 
@@ -91,9 +91,11 @@ export NEXORA_DB_PASSWORD=nexora_password
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-The `dev` profile uses `spring.jpa.hibernate.ddl-auto=validate`. Hibernate will
-validate future entity mappings but will not create, update, or drop the
-schema. Real entities, repositories, and migrations will be added later.
+The `dev` profile runs Flyway migrations from `src/main/resources/db/migration`
+before JPA starts. It also uses `spring.jpa.hibernate.ddl-auto=validate`, so
+Hibernate validates future entity mappings without creating, updating, or
+dropping the schema. The default profile still runs without PostgreSQL and does
+not execute Flyway migrations.
 
 ## Frontend connection and CORS
 
@@ -108,7 +110,7 @@ The backend allows browser requests to `/api/**` from these local origins:
 
 ## Future work
 
-- Add database entities, repositories, persistence, and migrations.
+- Add database entities, repositories, and persistence-backed services.
 - Add authentication, authorization, and session management.
 - Add approved external game-store and pricing APIs.
 - Add real Gemini integration for Sentinel with privacy and safety controls.
