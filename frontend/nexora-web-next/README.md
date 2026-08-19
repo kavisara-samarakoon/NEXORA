@@ -93,6 +93,14 @@ shows a friendly warning and continues displaying the server-provided curated
 deals. External results are not persisted. Stores without an expanded frontend
 lookup can appear as `Store {id}` and remain available under **All Stores**.
 
+Authenticated users can save any visible curated or live external deal to
+their personal wishlist from its deal card. External store labels such as
+Fanatical, Gamesplanet, and GameBillet are accepted. The current deal price is
+used as a provisional target and lowest-ever price until the real alert engine
+is implemented. Saved-state feedback prevents repeat clicks for the same card
+during the current page session, but the backend does not prevent duplicate
+wishlist items across sessions or result sets yet.
+
 ## Authentication foundation
 
 Login and registration call the Spring Boot authentication endpoints directly

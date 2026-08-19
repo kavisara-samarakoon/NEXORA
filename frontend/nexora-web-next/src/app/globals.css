@@ -2240,6 +2240,7 @@ input:focus-visible {
 
 .deals-card__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 18px;
 }
@@ -2276,6 +2277,66 @@ input:focus-visible {
   border-color: rgba(88, 245, 165, 0.22) !important;
   color: var(--nx-success);
   background: rgba(88, 245, 165, 0.07);
+}
+
+.deals-card__save {
+  flex-basis: 100% !important;
+  border-color: rgba(0, 212, 255, 0.2) !important;
+  color: var(--nx-blue);
+  background: rgba(0, 212, 255, 0.055);
+}
+
+.deals-card__save:disabled { cursor: wait; opacity: 0.72; }
+
+.deals-card__save--saved,
+.deals-card__save--saved:disabled {
+  border-color: rgba(88, 245, 165, 0.26) !important;
+  color: var(--nx-success);
+  background: rgba(88, 245, 165, 0.08);
+  cursor: default;
+  opacity: 1;
+}
+
+.deals-card__save-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.deals-card__save-message--success { color: var(--nx-success); }
+.deals-card__save-message--error,
+.deals-card__save-message--auth { color: #ff9c8f; }
+
+.deals-card__auth-links,
+.deals-auth-notice > span:last-child {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.deals-card__auth-links a,
+.deals-auth-notice a {
+  color: var(--nx-blue);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.deals-auth-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 122, 0, 0.18);
+  border-radius: 10px;
+  color: var(--nx-muted);
+  background: rgba(255, 122, 0, 0.055);
+  font-size: 11px;
 }
 
 .deals-card__view--steam { color: var(--nx-blue); border-color: rgba(0, 212, 255, 0.2) !important; background: rgba(0, 212, 255, 0.055); }
@@ -3956,6 +4017,7 @@ input:focus-visible {
 .wl-card__accent--steam { background: linear-gradient(90deg, var(--nx-blue), #70e8ff); }
 .wl-card__accent--epic { background: linear-gradient(90deg, var(--nx-orange), #ffb15c); }
 .wl-card__accent--gog { background: linear-gradient(90deg, #a855f7, #d09aff); }
+.wl-card__accent--external { background: linear-gradient(90deg, var(--nx-blue), var(--nx-success)); }
 
 .wl-card__header {
   display: flex;
@@ -3978,6 +4040,7 @@ input:focus-visible {
 .wl-card__store--steam { color: var(--nx-blue); background: var(--nx-blue-soft); }
 .wl-card__store--epic { color: var(--nx-orange); background: var(--nx-orange-soft); }
 .wl-card__store--gog { color: #bd7aff; background: rgba(168, 85, 247, 0.11); }
+.wl-card__store--external { color: #70e8ff; background: rgba(0, 212, 255, 0.08); }
 .wl-card__priority--high { color: #ff6b6b; background: rgba(239, 68, 68, 0.1); }
 .wl-card__priority--medium { color: var(--nx-orange); background: rgba(255, 122, 0, 0.09); }
 .wl-card__priority--low { color: var(--nx-muted); background: rgba(146, 153, 169, 0.08); }
@@ -4128,6 +4191,7 @@ input:focus-visible {
 .wl-card__view--steam { color: var(--nx-blue); border-color: rgba(0, 212, 255, 0.2) !important; background: rgba(0, 212, 255, 0.055); }
 .wl-card__view--epic { color: var(--nx-orange); border-color: rgba(255, 122, 0, 0.2) !important; background: rgba(255, 122, 0, 0.055); }
 .wl-card__view--gog { color: #bd7aff; border-color: rgba(168, 85, 247, 0.2) !important; background: rgba(168, 85, 247, 0.055); }
+.wl-card__view--external { color: #70e8ff; border-color: rgba(0, 212, 255, 0.2) !important; background: rgba(0, 212, 255, 0.055); }
 
 .wl-card__edit {
   color: var(--nx-muted);

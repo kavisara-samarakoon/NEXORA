@@ -1,4 +1,4 @@
-export type WishlistStore = "Steam" | "Epic Games" | "GOG";
+export type WishlistStore = string;
 export type WishlistStatus = "price-drop" | "free-now" | "tracking";
 export type WishlistPriority = "high" | "medium" | "low";
 
