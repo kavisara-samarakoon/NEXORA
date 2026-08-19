@@ -74,7 +74,7 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 | `/` | NEXORA dashboard | Static dashboard demo data |
 | `/deals` | Game Deals Intelligence | `/api/deals` with static fallback |
 | `/giveaways` | Live Giveaway Intelligence | `/api/giveaways` with static fallback |
-| `/wishlist` | Smart Wishlist Control | `/api/wishlist` with static fallback |
+| `/wishlist` | Smart Wishlist Control | Personal `/api/me/wishlist` with public `/api/wishlist` preview/fallback |
 | `/security` | Cyber Security Command Center | `/api/security/status` with static fallback |
 | `/sentinel` | NEXORA Sentinel demo | `/api/sentinel/status` and `/api/sentinel/demo` with static fallback |
 | `/settings` | Account Control Center | Local demo state |
@@ -89,10 +89,17 @@ using `NEXT_PUBLIC_API_BASE_URL`. The access token is stored in browser
 the current user through `GET /api/auth/me`. Existing dashboard and feature-page
 data fetching remains server-side.
 
-This is a basic authentication foundation. Browser storage is intentionally a
-temporary approach and is more exposed to cross-site scripting than an
-HttpOnly-cookie design. Route protection, refresh tokens, roles, OAuth, and
-per-user wishlist data are not included yet.
+The Wishlist page uses that stored token to load, add, and delete items through
+the authenticated `/api/me/wishlist` endpoints. It requires the backend and a
+signed-in user for personal data. Logged-out users, unavailable personal
+requests, and backend outages retain the public demo wishlist as a
+preview/fallback, so the route remains usable.
+
+This is a basic authentication and personal-wishlist foundation. Browser
+storage is intentionally a temporary approach and is more exposed to
+cross-site scripting than an HttpOnly-cookie design. Route protection, refresh
+tokens, roles, OAuth, price history, and a backend-powered alert toggle/alert
+engine are not included yet; wishlist alert controls remain local UI state.
 
 ## Production environment
 
