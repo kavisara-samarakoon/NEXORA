@@ -44,6 +44,9 @@ public class WishlistItem {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
+    @Column(name = "user_id")
+    private Long userId;
+
     protected WishlistItem() {
     }
 
@@ -51,6 +54,14 @@ public class WishlistItem {
                         String targetPrice, String lowestEver, String discount,
                         String status, boolean alertActive, String priority,
                         boolean active) {
+        this(id, title, store, currentPrice, targetPrice, lowestEver, discount,
+                status, alertActive, priority, active, null);
+    }
+
+    public WishlistItem(Long id, String title, String store, String currentPrice,
+                        String targetPrice, String lowestEver, String discount,
+                        String status, boolean alertActive, String priority,
+                        boolean active, Long userId) {
         this.id = id;
         this.title = title;
         this.store = store;
@@ -62,6 +73,7 @@ public class WishlistItem {
         this.alertActive = alertActive;
         this.priority = priority;
         this.active = active;
+        this.userId = userId;
     }
 
     public Long getId() {
@@ -106,5 +118,13 @@ public class WishlistItem {
 
     public boolean isActive() {
         return active;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void deactivate() {
+        active = false;
     }
 }

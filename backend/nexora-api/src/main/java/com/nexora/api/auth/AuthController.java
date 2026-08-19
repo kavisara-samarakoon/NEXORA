@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthenticatedUserIdResolver userIdResolver;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AuthenticatedUserIdResolver userIdResolver) {
         this.authService = authService;
+        this.userIdResolver = userIdResolver;
     }
 
     @PostMapping("/register")
@@ -32,10 +34,6 @@ public class AuthController {
 
     @GetMapping("/me")
     public AuthUserResponse me(Authentication authentication) {
-        try {
-            return authService.currentUser(Long.parseLong(authentication.getName()));
-        } catch (NumberFormatException exception) {
-            throw new AuthenticationFailedException("Authentication is required");
-        }
+        return authService.currentUser(userIdResolver.resolve(authentication));
     }
 }

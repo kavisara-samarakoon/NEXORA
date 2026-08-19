@@ -33,13 +33,16 @@ tests run without PostgreSQL.
 | `GET` | `/api/dashboard/summary` | Aggregates current deal, giveaway, wishlist, database, and Sentinel status |
 | `GET` | `/api/deals` | Returns active game deals (static by default, PostgreSQL in `dev`) |
 | `GET` | `/api/giveaways` | Returns active giveaways (static by default, PostgreSQL in `dev`) |
-| `GET` | `/api/wishlist` | Returns active wishlist items (static by default, PostgreSQL in `dev`) |
+| `GET` | `/api/wishlist` | Returns public demo/global wishlist items only |
 | `GET` | `/api/security/status` | Returns the demo security summary and protection items |
 | `GET` | `/api/sentinel/status` | Returns the Sentinel integration status |
 | `GET` | `/api/sentinel/demo` | Returns Sentinel messages, suggestions, capabilities, and system status |
 | `POST` | `/api/auth/register` | Creates an account and returns a JWT access token |
 | `POST` | `/api/auth/login` | Accepts an email or username and returns a JWT access token |
 | `GET` | `/api/auth/me` | Returns the authenticated user's safe account fields |
+| `GET` | `/api/me/wishlist` | Returns the authenticated user's active wishlist items |
+| `POST` | `/api/me/wishlist` | Adds an item to the authenticated user's wishlist |
+| `DELETE` | `/api/me/wishlist/{id}` | Soft deletes an item owned by the authenticated user |
 
 Except for deals, giveaways, and wishlist items in the `dev` profile, feature
 data is stored in immutable in-memory collections. Restarting the
@@ -103,7 +106,8 @@ dropping the schema. The default profile still runs without PostgreSQL and does
 not execute Flyway migrations. In `dev`, `GET /api/deals` reads only rows where
 `deals.is_active = true`, `GET /api/giveaways` reads only rows where
 `giveaways.is_active = true`, and `GET /api/wishlist` reads only rows where
-`wishlist_items.is_active = true`.
+`wishlist_items.is_active = true AND wishlist_items.user_id IS NULL`. User-owned
+rows are intentionally excluded from the public demo response.
 
 Verify the database-backed endpoint after starting the `dev` profile:
 
@@ -153,6 +157,61 @@ export NEXORA_TOKEN='<token-from-register-or-login>'
 curl -i http://localhost:8080/api/auth/me \
   -H "Authorization: Bearer ${NEXORA_TOKEN}"
 ```
+
+## Per-user wishlist foundation
+
+Flyway V5 adds nullable ownership to `wishlist_items`. Existing seeded rows keep
+`user_id = NULL` and continue to power public `GET /api/wishlist`. Authenticated
+wishlist endpoints derive the user id exclusively from the JWT principal; they
+never accept a client-supplied user id.
+
+After registering or logging in, capture a token:
+
+```bash
+export NEXORA_TOKEN="$(
+  curl -sS -X POST http://localhost:8080/api/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"emailOrUsername":"player@example.com","password":"change-me-123"}' \
+  | jq -r '.token'
+)"
+```
+
+Add an item and capture its id:
+
+```bash
+export NEXORA_WISHLIST_ID="$(
+  curl -sS -X POST http://localhost:8080/api/me/wishlist \
+    -H "Authorization: Bearer ${NEXORA_TOKEN}" \
+    -H 'Content-Type: application/json' \
+    -d '{"title":"Hades II — Personal","store":"Steam","currentPrice":"$29.99","targetPrice":"$19.99","status":"tracking","alertActive":true,"priority":"high"}' \
+  | jq -r '.id'
+)"
+```
+
+List the current user's items:
+
+```bash
+curl -i http://localhost:8080/api/me/wishlist \
+  -H "Authorization: Bearer ${NEXORA_TOKEN}"
+```
+
+Confirm the personal item is absent from the public demo wishlist:
+
+```bash
+curl -sS http://localhost:8080/api/wishlist \
+  | jq '[.[] | select(.title == "Hades II — Personal")]'
+```
+
+Soft delete the personal item:
+
+```bash
+curl -i -X DELETE "http://localhost:8080/api/me/wishlist/${NEXORA_WISHLIST_ID}" \
+  -H "Authorization: Bearer ${NEXORA_TOKEN}"
+```
+
+This is a per-user wishlist ownership and CRUD foundation only. It does not yet
+include price history, live price alerts, external game data, sharing, or team
+features.
 
 This is an authentication foundation, not production-complete identity
 management. Before deployment, use a generated secret from a secret manager,
