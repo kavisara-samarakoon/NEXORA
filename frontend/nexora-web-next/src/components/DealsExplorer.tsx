@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   dealFilters,
   type DealFilter,
   type DealStatus,
   type GameDeal,
 } from "@/data/deals";
-import type { DealsResult } from "@/lib/api";
+import { getExternalDeals, type DealsResult } from "@/lib/api";
+
+type DealsMode = "curated" | "external";
+type ExternalDealsStatus = "idle" | "loading" | "ready" | "fallback";
 
 const networkActivity = [35, 58, 42, 75, 52, 90, 68, 45, 82, 60, 38, 72];
 const dealNetworkIcons = {
@@ -18,7 +21,12 @@ const dealNetworkIcons = {
 } as const;
 
 function storeClass(store: GameDeal["store"]) {
-  return store.toLowerCase().replace(" games", "");
+  if (store === "Steam") return "steam";
+  if (store === "Epic Games") return "epic";
+  if (store === "GOG") return "gog";
+  if (store === "Humble") return "humble";
+  if (store === "Ubisoft") return "ubisoft";
+  return "external";
 }
 
 function statusClass(status: DealStatus) {
@@ -91,13 +99,55 @@ function DealCard({
   );
 }
 
-function DealNetworkStatus({ source }: { source: DealsResult["source"] }) {
-  const isApiSource = source === "api";
+function DealNetworkStatus({
+  curatedSource,
+  externalStatus,
+  mode,
+}: {
+  curatedSource: DealsResult["source"];
+  externalStatus: ExternalDealsStatus;
+  mode: DealsMode;
+}) {
+  const isExternalLive = mode === "external" && externalStatus === "ready";
+  const isExternalLoading = mode === "external" && externalStatus === "loading";
+  const isExternalFallback = mode === "external" && externalStatus === "fallback";
+  const isCuratedApi = curatedSource === "api";
+  const stateLabel = isExternalLive
+    ? "Live"
+    : isExternalLoading
+      ? "Loading"
+      : isExternalFallback
+        ? "Fallback"
+        : "Curated";
   const items = [
-    { label: "Price Sync", value: isApiSource ? "Backend API" : "Demo mode", badge: isApiSource ? "Live" : "Demo", tone: "orange", icon: "sync" },
-    { label: "Data Source", value: isApiSource ? "Spring Boot" : "Static dataset", badge: isApiSource ? "API" : "Static", tone: "blue", icon: "globe" },
-    { label: "Cache", value: isApiSource ? "Fresh response" : "Fallback ready", badge: "Ready", tone: "green", icon: "database" },
-    { label: "Security", value: "Safe redirects planned", badge: "Planned", tone: "purple", icon: "shield" },
+    {
+      label: "Price Sync",
+      value: isExternalLive ? "CheapShark via backend" : isExternalLoading ? "Requesting live deals" : isExternalFallback ? "Curated fallback active" : "Curated NEXORA feed",
+      badge: stateLabel,
+      tone: "orange",
+      icon: "sync",
+    },
+    {
+      label: "Data Source",
+      value: isExternalLive ? "External deal API" : isCuratedApi ? "Spring Boot curated data" : "Static curated dataset",
+      badge: isExternalLive ? "External" : isCuratedApi ? "API" : "Static",
+      tone: "blue",
+      icon: "globe",
+    },
+    {
+      label: "Persistence",
+      value: isExternalLive ? "Live results are not stored" : "Curated fallback ready",
+      badge: isExternalLive ? "Session" : "Ready",
+      tone: "green",
+      icon: "database",
+    },
+    {
+      label: "Access",
+      value: "Public deals endpoint",
+      badge: "Public",
+      tone: "purple",
+      icon: "shield",
+    },
   ] as const;
 
   return (
@@ -109,7 +159,7 @@ function DealNetworkStatus({ source }: { source: DealsResult["source"] }) {
           <h2 id="deal-network-title">Deal Network Status</h2>
         </div>
         <span className="deals-network__live">
-          <span aria-hidden="true" /> {isApiSource ? "Live" : "Demo"}
+          <span aria-hidden="true" /> {stateLabel}
         </span>
       </div>
 
@@ -133,7 +183,7 @@ function DealNetworkStatus({ source }: { source: DealsResult["source"] }) {
       <div className="deals-network__graph">
         <div className="deals-network__graph-label">
           <span>Network activity</span>
-          <strong>Stable</strong>
+          <strong>{stateLabel}</strong>
         </div>
         <div className="deals-network__bars" aria-hidden="true">
           {networkActivity.map((height, index) => (
@@ -149,14 +199,21 @@ function DealNetworkStatus({ source }: { source: DealsResult["source"] }) {
 }
 
 export default function DealsExplorer({ deals, source }: DealsResult) {
+  const [mode, setMode] = useState<DealsMode>("curated");
+  const [externalStatus, setExternalStatus] = useState<ExternalDealsStatus>("idle");
+  const [externalDeals, setExternalDeals] = useState<readonly GameDeal[]>([]);
+  const [externalTitle, setExternalTitle] = useState("");
+  const [activeExternalTitle, setActiveExternalTitle] = useState("");
   const [activeFilter, setActiveFilter] = useState<DealFilter>("All Stores");
   const [searchQuery, setSearchQuery] = useState("");
-  const [alerts, setAlerts] = useState<Set<number>>(() => new Set());
+  const [alerts, setAlerts] = useState<Set<string>>(() => new Set());
+  const requestVersion = useRef(0);
 
+  const visibleDeals = mode === "external" && externalStatus === "ready" ? externalDeals : deals;
   const filteredDeals = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    return deals.filter((deal) => {
+    return visibleDeals.filter((deal) => {
       const matchesSearch =
         !normalizedQuery ||
         deal.title.toLowerCase().includes(normalizedQuery) ||
@@ -170,13 +227,61 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       if (activeFilter === "Free Weekend") return deal.status === "Free Weekend";
       return deal.store === activeFilter;
     });
-  }, [activeFilter, deals, searchQuery]);
+  }, [activeFilter, searchQuery, visibleDeals]);
+
+  async function loadExternalDeals(title: string) {
+    const currentRequest = ++requestVersion.current;
+    const normalizedTitle = title.trim();
+    setExternalStatus("loading");
+    setActiveExternalTitle(normalizedTitle);
+    setActiveFilter("All Stores");
+    setSearchQuery("");
+
+    const result = await getExternalDeals({
+      pageSize: 12,
+      title: normalizedTitle || undefined,
+    });
+    if (currentRequest !== requestVersion.current) return;
+
+    if (result.source === "external-api") {
+      setExternalDeals(result.deals);
+      setExternalStatus("ready");
+    } else {
+      setExternalDeals([]);
+      setExternalStatus("fallback");
+    }
+  }
+
+  function selectMode(nextMode: DealsMode) {
+    if (nextMode === "curated") {
+      requestVersion.current += 1;
+      setMode("curated");
+      setActiveFilter("All Stores");
+      setSearchQuery("");
+      return;
+    }
+
+    setMode("external");
+    void loadExternalDeals(externalTitle);
+  }
+
+  function submitExternalSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void loadExternalDeals(externalTitle);
+  }
+
+  function clearExternalSearch() {
+    setExternalTitle("");
+    void loadExternalDeals("");
+  }
 
   function toggleAlert(dealId: number) {
+    const scope = mode === "external" && externalStatus === "ready" ? "external" : "curated";
+    const key = `${scope}:${dealId}`;
     setAlerts((current) => {
       const next = new Set(current);
-      if (next.has(dealId)) next.delete(dealId);
-      else next.add(dealId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -186,8 +291,19 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     setSearchQuery("");
   }
 
-  const deepDiscountCount = deals.filter((deal) => deal.discountValue >= 50).length;
-  const freeCount = deals.filter((deal) => deal.priceValue === 0).length;
+  const deepDiscountCount = visibleDeals.filter((deal) => deal.discountValue >= 50).length;
+  const freeCount = visibleDeals.filter((deal) => deal.priceValue === 0).length;
+  const isExternalReady = mode === "external" && externalStatus === "ready";
+  const isExternalLoading = mode === "external" && externalStatus === "loading";
+  const isExternalFallback = mode === "external" && externalStatus === "fallback";
+  const displayedDealScope = isExternalReady ? "external" : "curated";
+  const sourceLabel = isExternalReady
+    ? "Live external deals"
+    : isExternalFallback
+      ? "Live deals unavailable — showing curated fallback"
+      : isExternalLoading
+        ? "Loading live external deals — curated deals remain available"
+        : "Curated NEXORA deals";
 
   return (
     <>
@@ -197,37 +313,98 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         <div className="deals-hero__scanlines" />
         <div className="deals-hero__content">
           <div className="deals-hero__copy">
-            <div className="deals-hero__tag"><span aria-hidden="true" /> Intel active</div>
+            <div className="deals-hero__tag"><span aria-hidden="true" /> {isExternalReady ? "Live external deals" : "Curated intelligence"}</div>
             <h1 id="deals-title">
               <span className="page-title-emoji" aria-hidden="true">🔥</span>
               <span>Game Deals Intelligence</span>
             </h1>
             <p>
-              Real-time price tracking, discount intelligence, and safe store
-              redirects — all in one command center. Never overpay again.
+              Compare NEXORA&apos;s curated deal set or request current external
+              offers on demand. Curated deals remain ready whenever live data is unavailable.
             </p>
           </div>
           <div className="deals-hero__stats" aria-label="Deal statistics">
-            <div><strong>{deals.length}</strong><span>Active deals</span></div>
+            <div><strong>{visibleDeals.length}</strong><span>Active deals</span></div>
             <div><strong>{deepDiscountCount}</strong><span>50%+ off</span></div>
             <div><strong>{freeCount}</strong><span>Free now</span></div>
           </div>
         </div>
       </section>
 
-      <section className="deals-filter-panel" aria-label="Search and filter deals">
+      <section className={`deals-mode-panel deals-mode-panel--${isExternalFallback ? "warning" : mode}`} aria-label="Deal source selection">
+        <div className="deals-mode-panel__topline">
+          <div className="deals-mode-switch" role="group" aria-label="Choose deal source">
+            <button
+              className={mode === "curated" ? "deals-mode-switch__button deals-mode-switch__button--active" : "deals-mode-switch__button"}
+              type="button"
+              aria-pressed={mode === "curated"}
+              onClick={() => selectMode("curated")}
+            >
+              Curated Deals
+            </button>
+            <button
+              className={mode === "external" ? "deals-mode-switch__button deals-mode-switch__button--active" : "deals-mode-switch__button"}
+              type="button"
+              aria-pressed={mode === "external"}
+              disabled={isExternalLoading}
+              onClick={() => selectMode("external")}
+            >
+              {isExternalLoading ? "Loading Live Deals…" : "Live External Deals"}
+            </button>
+          </div>
+          <div className="deals-mode-panel__status" role="status" aria-live="polite">
+            <span aria-hidden="true" />
+            <strong>{sourceLabel}</strong>
+          </div>
+        </div>
+
+        {mode === "external" && (
+          <form className="deals-live-search" onSubmit={submitExternalSearch}>
+            <label htmlFor="external-deal-title">Search the live external feed</label>
+            <div>
+              <input
+                id="external-deal-title"
+                type="search"
+                value={externalTitle}
+                maxLength={80}
+                placeholder="Game title, e.g. elden"
+                disabled={isExternalLoading}
+                onChange={(event) => setExternalTitle(event.target.value)}
+              />
+              <button type="submit" disabled={isExternalLoading}>
+                {isExternalLoading ? "Searching…" : "Search live deals"}
+              </button>
+              {activeExternalTitle && (
+                <button className="deals-live-search__clear" type="button" disabled={isExternalLoading} onClick={clearExternalSearch}>
+                  Clear live search
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+
+        {isExternalFallback && (
+          <div className="deals-mode-panel__warning" role="alert">
+            <span aria-hidden="true">⚠️</span>
+            <p>Live deals are unavailable right now. Your curated deals are still shown.</p>
+            <button type="button" onClick={() => void loadExternalDeals(externalTitle)}>Retry</button>
+          </div>
+        )}
+      </section>
+
+      <section className="deals-filter-panel" aria-label="Search and filter displayed deals">
         <div className="deals-search">
           <span className="page-search-icon" aria-hidden="true">🔍</span>
-          <label className="sr-only" htmlFor="deal-search">Search deals</label>
+          <label className="sr-only" htmlFor="deal-search">Filter displayed deals</label>
           <input
             id="deal-search"
             type="search"
-            placeholder="Search deals, stores, games…"
+            placeholder={isExternalReady ? "Filter loaded live deals…" : "Search curated deals, stores, games…"}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
           {searchQuery && (
-            <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")}>
+            <button type="button" aria-label="Clear displayed deal filter" onClick={() => setSearchQuery("")}>
               <span aria-hidden="true">×</span>
             </button>
           )}
@@ -248,31 +425,39 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       </section>
 
       <div className="deals-layout">
-        <section aria-label="Available game deals">
+        <section aria-label={isExternalReady ? "Live external game deals" : "Curated game deals"}>
           <div className="deals-results-bar">
             <span><strong>{filteredDeals.length}</strong> deals detected</span>
-            <span>{source === "api" ? "Backend intelligence feed" : "Static fallback feed"}</span>
+            <span>{sourceLabel}</span>
           </div>
-          <div className="deals-grid">
+          <div className="deals-grid" aria-busy={isExternalLoading}>
             {filteredDeals.map((deal) => (
               <DealCard
                 deal={deal}
-                alertIsSet={alerts.has(deal.id)}
-                key={deal.id}
+                alertIsSet={alerts.has(`${displayedDealScope}:${deal.id}`)}
+                key={`${displayedDealScope}-${deal.id}`}
                 onToggleAlert={toggleAlert}
               />
             ))}
-            {filteredDeals.length === 0 && (
+            {isExternalReady && externalDeals.length === 0 && (
+              <div className="deals-empty">
+                <span aria-hidden="true">🌐</span>
+                <h2>No live external deals found</h2>
+                <p>Try another title or clear the live search.</p>
+                <button type="button" onClick={clearExternalSearch}>Clear live search</button>
+              </div>
+            )}
+            {visibleDeals.length > 0 && filteredDeals.length === 0 && (
               <div className="deals-empty">
                 <span aria-hidden="true">📡</span>
                 <h2>No signals found</h2>
-                <p>No deals match your current search and filters.</p>
+                <p>No deals match your current display filters.</p>
                 <button type="button" onClick={resetFilters}>Reset filters</button>
               </div>
             )}
           </div>
         </section>
-        <DealNetworkStatus source={source} />
+        <DealNetworkStatus curatedSource={source} externalStatus={externalStatus} mode={mode} />
       </div>
     </>
   );

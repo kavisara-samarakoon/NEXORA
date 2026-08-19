@@ -1,7 +1,6 @@
 import {
   deals as fallbackDeals,
   type DealStatus,
-  type DealStore,
   type GameDeal,
 } from "@/data/deals";
 import {
@@ -36,13 +35,6 @@ import {
 } from "@/data/wishlist";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8080";
-const DEAL_STORES: readonly DealStore[] = [
-  "Steam",
-  "Epic Games",
-  "GOG",
-  "Humble",
-  "Ubisoft",
-];
 const DEAL_STATUSES: readonly DealStatus[] = [
   "Historical Low",
   "Lowest Ever",
@@ -122,6 +114,16 @@ export type DealsResult = {
   source: "api" | "fallback";
 };
 
+export type ExternalDealsOptions = {
+  title?: string;
+  pageSize?: number;
+};
+
+export type ExternalDealsResult = {
+  deals: readonly GameDeal[];
+  source: "external-api" | "fallback";
+};
+
 export type GiveawaysResult = {
   giveaways: readonly Giveaway[];
   source: "api" | "fallback";
@@ -187,16 +189,33 @@ function isGameDeal(value: unknown): value is GameDeal {
 
   return (
     typeof deal.id === "number" &&
-    DEAL_STORES.includes(deal.store as DealStore) &&
+    Number.isInteger(deal.id) &&
+    deal.id > 0 &&
+    typeof deal.store === "string" &&
+    deal.store.trim().length > 0 &&
     typeof deal.discount === "string" &&
+    deal.discount.trim().length > 0 &&
     typeof deal.discountValue === "number" &&
+    Number.isFinite(deal.discountValue) &&
+    deal.discountValue >= 0 &&
+    deal.discountValue <= 100 &&
     typeof deal.title === "string" &&
+    deal.title.trim().length > 0 &&
     typeof deal.priceOld === "string" &&
+    deal.priceOld.trim().length > 0 &&
     typeof deal.priceNew === "string" &&
+    deal.priceNew.trim().length > 0 &&
     typeof deal.priceValue === "number" &&
+    Number.isFinite(deal.priceValue) &&
+    deal.priceValue >= 0 &&
     typeof deal.rating === "number" &&
+    Number.isFinite(deal.rating) &&
+    deal.rating >= 0 &&
+    deal.rating <= 5 &&
     typeof deal.stars === "string" &&
+    deal.stars.trim().length > 0 &&
     typeof deal.category === "string" &&
+    deal.category.trim().length > 0 &&
     DEAL_STATUSES.includes(deal.status as DealStatus)
   );
 }
@@ -387,6 +406,49 @@ export async function getDeals(): Promise<DealsResult> {
     }
 
     return { deals: data, source: "api" };
+  } catch {
+    return { deals: fallbackDeals, source: "fallback" };
+  }
+}
+
+export async function getExternalDeals(
+  options: ExternalDealsOptions = {},
+): Promise<ExternalDealsResult> {
+  const apiBaseUrl = (
+    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
+  ).replace(/\/+$/, "");
+  const requestedPageSize = Number.isFinite(options.pageSize)
+    ? Math.floor(options.pageSize as number)
+    : 12;
+  const pageSize = Math.min(24, Math.max(1, requestedPageSize));
+  const title = options.title?.trim().slice(0, 80);
+  const query = new URLSearchParams({ pageSize: String(pageSize) });
+
+  if (title) query.set("title", title);
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/deals/external?${query}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`External deals API returned ${response.status}`);
+    }
+
+    const data: unknown = await response.json();
+
+    if (!Array.isArray(data) || !data.every(isGameDeal)) {
+      throw new Error("External deals API returned an unexpected response");
+    }
+
+    const isExternalResponse =
+      data.length === 0 || data.every((deal) => deal.category === "External Deal");
+    if (!isExternalResponse) {
+      return { deals: fallbackDeals, source: "fallback" };
+    }
+
+    return { deals: data, source: "external-api" };
   } catch {
     return { deals: fallbackDeals, source: "fallback" };
   }
