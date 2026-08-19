@@ -12,8 +12,8 @@ required to run this application.
 
 - Node.js 20.9 or newer
 - npm
-- The Spring Boot backend for live demo API data (optional because static
-  fallbacks are included)
+- The Spring Boot backend for authentication and live API data (content pages
+  retain static fallbacks when it is unavailable)
 
 ## Backend connection
 
@@ -78,6 +78,21 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 | `/security` | Cyber Security Command Center | `/api/security/status` with static fallback |
 | `/sentinel` | NEXORA Sentinel demo | `/api/sentinel/status` and `/api/sentinel/demo` with static fallback |
 | `/settings` | Account Control Center | Local demo state |
+| `/login` | Account login | `POST /api/auth/login` |
+| `/register` | Account registration | `POST /api/auth/register` |
+
+## Authentication foundation
+
+Login and registration call the Spring Boot authentication endpoints directly
+using `NEXT_PUBLIC_API_BASE_URL`. The access token is stored in browser
+`localStorage`, and the small client-side account status in the Topbar resolves
+the current user through `GET /api/auth/me`. Existing dashboard and feature-page
+data fetching remains server-side.
+
+This is a basic authentication foundation. Browser storage is intentionally a
+temporary approach and is more exposed to cross-site scripting than an
+HttpOnly-cookie design. Route protection, refresh tokens, roles, OAuth, and
+per-user wishlist data are not included yet.
 
 ## Production environment
 
@@ -86,5 +101,5 @@ Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend origin and
 variable is a secret; values prefixed with `NEXT_PUBLIC_` are exposed to the
 browser by design.
 
-Authentication, persistent accounts, external store APIs, and real Gemini AI
-responses remain future work.
+Production-grade token lifecycle and route protection, external store APIs,
+and real Gemini AI responses remain future work.

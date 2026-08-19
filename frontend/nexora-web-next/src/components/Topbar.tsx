@@ -1,4 +1,4 @@
-import Link from "next/link";
+import AuthStatus from "@/components/AuthStatus";
 
 export default function Topbar() {
   return (
@@ -29,7 +29,7 @@ export default function Topbar() {
         <button className="icon-button icon-button--emoji" type="button" aria-label="Messages">
           <span aria-hidden="true">💬</span>
         </button>
-        <Link className="topbar__avatar" href="/settings" aria-label="Open account settings">KS</Link>
+        <AuthStatus />
       </div>
     </header>
   );
