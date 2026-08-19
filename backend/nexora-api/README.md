@@ -32,6 +32,7 @@ tests run without PostgreSQL.
 | `GET` | `/api/health` | Returns the service health status |
 | `GET` | `/api/dashboard/summary` | Aggregates current deal, giveaway, wishlist, database, and Sentinel status |
 | `GET` | `/api/deals` | Returns active game deals (static by default, PostgreSQL in `dev`) |
+| `GET` | `/api/deals/external` | Returns live CheapShark deals mapped to the NEXORA deal contract, with local fallback |
 | `GET` | `/api/giveaways` | Returns active giveaways (static by default, PostgreSQL in `dev`) |
 | `GET` | `/api/wishlist` | Returns public demo/global wishlist items only |
 | `GET` | `/api/security/status` | Returns the demo security summary and protection items |
@@ -47,6 +48,51 @@ tests run without PostgreSQL.
 Except for deals, giveaways, and wishlist items in the `dev` profile, feature
 data is stored in immutable in-memory collections. Restarting the
 default-profile application restores the original demo data.
+
+## External deals foundation
+
+`GET /api/deals/external` requests current on-sale results from the public
+[CheapShark API](https://apidocs.cheapshark.com/) and maps them into the same
+`Deal` response shape used by NEXORA. This is separate from `GET /api/deals`;
+the existing local/database-backed endpoint remains unchanged.
+
+Supported query parameters:
+
+| Parameter | Behavior |
+| --- | --- |
+| `title` | Optional title search, trimmed and limited to 80 characters |
+| `pageSize` | Defaults to `12`, must be at least `1`, and is capped at the configured maximum (`24` by default) |
+| `upperPrice` | Optional positive maximum price in USD |
+
+Examples:
+
+```bash
+curl -i http://localhost:8080/api/deals
+curl -i http://localhost:8080/api/deals/external
+curl -i 'http://localhost:8080/api/deals/external?pageSize=5'
+curl -i 'http://localhost:8080/api/deals/external?title=elden'
+```
+
+The external request defaults to page zero, `DealRating` descending, and
+on-sale results only. It has a five-second connect/request timeout. Provider
+errors, timeouts, non-success responses, invalid JSON, or structurally invalid
+deal data produce a concise server warning and return the current
+`DealCatalogService` results instead of failing the endpoint.
+
+Configuration defaults:
+
+```properties
+nexora.external-deals.enabled=true
+nexora.external-deals.cheapshark.base-url=https://www.cheapshark.com/api/1.0
+nexora.external-deals.timeout-seconds=5
+nexora.external-deals.default-page-size=12
+nexora.external-deals.max-page-size=24
+```
+
+This first integration performs requests on demand only. CheapShark results
+are not persisted, the store ID mapping currently covers only Steam, Epic
+Games, and GOG explicitly, and there is no scheduled synchronization or cache
+yet. No API key is required.
 
 ## Maven commands
 
