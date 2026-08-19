@@ -18,18 +18,21 @@ public class ExternalDealService {
     private final CheapSharkStoreDirectory cheapSharkStoreDirectory;
     private final DealCatalogService localDeals;
     private final ExternalDealsProperties properties;
+    private final ExternalDealsCache cache;
 
     public ExternalDealService(
             CheapSharkDealClient cheapSharkDealClient,
             CheapSharkDealMapper cheapSharkDealMapper,
             CheapSharkStoreDirectory cheapSharkStoreDirectory,
             DealCatalogService localDeals,
-            ExternalDealsProperties properties) {
+            ExternalDealsProperties properties,
+            ExternalDealsCache cache) {
         this.cheapSharkDealClient = cheapSharkDealClient;
         this.cheapSharkDealMapper = cheapSharkDealMapper;
         this.cheapSharkStoreDirectory = cheapSharkStoreDirectory;
         this.localDeals = localDeals;
         this.properties = properties;
+        this.cache = cache;
     }
 
     public List<Deal> getDeals(String title, Integer pageSize, BigDecimal upperPrice) {
@@ -42,8 +45,19 @@ public class ExternalDealService {
         int effectivePageSize = Math.max(1, Math.min(requestedPageSize, maxPageSize));
         String effectiveTitle = normalizeTitle(title);
 
+        if (!properties.getCache().isEnabled()) {
+            return getDealsWithoutCache(effectivePageSize, effectiveTitle, upperPrice);
+        }
+
+        ExternalDealsCacheKey cacheKey = ExternalDealsCacheKey.of(
+                effectivePageSize,
+                effectiveTitle,
+                upperPrice
+        );
+
         try {
-            List<CheapSharkDealResponse> responses = cheapSharkDealClient.getDeals(
+            List<CheapSharkDealResponse> responses = getDealResponses(
+                    cacheKey,
                     effectivePageSize,
                     effectiveTitle,
                     upperPrice
@@ -51,24 +65,93 @@ public class ExternalDealService {
             Map<String, String> storeLookup = getStoreLookup();
             return cheapSharkDealMapper.toDeals(responses, storeLookup);
         } catch (RuntimeException exception) {
-            LOGGER.warn(
-                    "CheapShark deals unavailable; serving the local deals fallback ({})",
-                    exception.getMessage()
+            return localFallback(exception);
+        }
+    }
+
+    private List<Deal> getDealsWithoutCache(
+            int effectivePageSize,
+            String effectiveTitle,
+            BigDecimal upperPrice) {
+        try {
+            List<CheapSharkDealResponse> responses = cheapSharkDealClient.getDeals(
+                    effectivePageSize,
+                    effectiveTitle,
+                    upperPrice
             );
-            return localDeals.getDeals();
+            Map<String, String> storeLookup = getStoreLookupWithoutCache();
+            return cheapSharkDealMapper.toDeals(responses, storeLookup);
+        } catch (RuntimeException exception) {
+            return localFallback(exception);
+        }
+    }
+
+    private List<CheapSharkDealResponse> getDealResponses(
+            ExternalDealsCacheKey cacheKey,
+            int effectivePageSize,
+            String effectiveTitle,
+            BigDecimal upperPrice) {
+        ExternalDealsCacheEntry<List<CheapSharkDealResponse>> cached = cache.getDeals(cacheKey);
+        if (cache.isFresh(cached)) {
+            LOGGER.debug("Using cached CheapShark deals");
+            return cached.value();
+        }
+
+        try {
+            List<CheapSharkDealResponse> responses = cheapSharkDealClient.getDeals(
+                    effectivePageSize,
+                    effectiveTitle,
+                    upperPrice
+            );
+            cache.putDeals(cacheKey, responses);
+            return responses;
+        } catch (RuntimeException exception) {
+            if (cached != null) {
+                LOGGER.warn("CheapShark deals refresh failed; serving stale cached deals");
+                return cached.value();
+            }
+            throw exception;
         }
     }
 
     private Map<String, String> getStoreLookup() {
+        ExternalDealsCacheEntry<Map<String, String>> cached = cache.getStoreLookup();
+        if (cache.isFresh(cached)) {
+            LOGGER.debug("Using cached CheapShark store lookup");
+            return cached.value();
+        }
+
+        try {
+            Map<String, String> lookup = cheapSharkStoreDirectory.toLookup(
+                    cheapSharkDealClient.getStores()
+            );
+            cache.putStoreLookup(lookup);
+            return lookup;
+        } catch (RuntimeException exception) {
+            if (cached != null) {
+                LOGGER.warn("CheapShark stores refresh failed; serving stale cached store lookup");
+                return cached.value();
+            }
+            LOGGER.warn("CheapShark stores unavailable; using fallback store labels");
+            return Map.of();
+        }
+    }
+
+    private Map<String, String> getStoreLookupWithoutCache() {
         try {
             return cheapSharkStoreDirectory.toLookup(cheapSharkDealClient.getStores());
         } catch (RuntimeException exception) {
-            LOGGER.warn(
-                    "CheapShark stores unavailable; using fallback store labels ({})",
-                    exception.getMessage()
-            );
+            LOGGER.warn("CheapShark stores unavailable; using fallback store labels");
             return Map.of();
         }
+    }
+
+    private List<Deal> localFallback(RuntimeException exception) {
+        LOGGER.warn(
+                "CheapShark deals unavailable; serving the local deals fallback ({})",
+                exception.getMessage()
+        );
+        return localDeals.getDeals();
     }
 
     private static String normalizeTitle(String title) {
