@@ -2339,6 +2339,19 @@ input:focus-visible {
   font-size: 11px;
 }
 
+.deals-wishlist-sync-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 122, 0, 0.16);
+  border-radius: 9px;
+  color: #ffc078;
+  background: rgba(255, 122, 0, 0.045);
+  font-size: 10px;
+}
+
 .deals-card__view--steam { color: var(--nx-blue); border-color: rgba(0, 212, 255, 0.2) !important; background: rgba(0, 212, 255, 0.055); }
 .deals-card__view--epic { color: var(--nx-orange); border-color: rgba(255, 122, 0, 0.2) !important; background: rgba(255, 122, 0, 0.055); }
 .deals-card__view--gog { color: #bd7aff; border-color: rgba(168, 85, 247, 0.2) !important; background: rgba(168, 85, 247, 0.055); }

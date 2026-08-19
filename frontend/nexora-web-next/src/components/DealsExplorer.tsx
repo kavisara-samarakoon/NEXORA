@@ -8,6 +8,7 @@ import {
   type DealStatus,
   type GameDeal,
 } from "@/data/deals";
+import type { WishlistItem } from "@/data/wishlist";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
 import {
   AUTH_STATE_EVENT,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/auth-client";
 import {
   addMyWishlistItem,
+  getMyWishlist,
   normalizeUserWishlistError,
   type AddWishlistItemPayload,
 } from "@/lib/user-wishlist";
@@ -53,6 +55,30 @@ function statusClass(status: DealStatus) {
 
 function dealStateKey(scope: "curated" | "external", deal: GameDeal) {
   return `${scope}:${deal.id}:${deal.title}`;
+}
+
+function normalizedWishlistValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function findMatchingWishlistItem(
+  deal: GameDeal,
+  wishlistItems: readonly WishlistItem[],
+): WishlistItem | undefined {
+  const normalizedTitle = normalizedWishlistValue(deal.title);
+  const normalizedStore = normalizedWishlistValue(deal.store);
+  const identityMatches = wishlistItems.filter(
+    (item) =>
+      normalizedWishlistValue(item.title) === normalizedTitle &&
+      normalizedWishlistValue(item.store) === normalizedStore,
+  );
+
+  // Prefer the exact observed price, but keep title + store as the stable
+  // identity when a live provider changes its price between refreshes.
+  const normalizedPrice = normalizedWishlistValue(deal.priceNew);
+  return identityMatches.find(
+    (item) => normalizedWishlistValue(item.currentPrice) === normalizedPrice,
+  ) ?? identityMatches[0];
 }
 
 function wishlistPayloadFor(deal: GameDeal): AddWishlistItemPayload {
@@ -278,13 +304,24 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const [authChecked, setAuthChecked] = useState(false);
   const [savingDeals, setSavingDeals] = useState<Set<string>>(() => new Set());
   const [savedDeals, setSavedDeals] = useState<Set<string>>(() => new Set());
+  const [savedWishlistItems, setSavedWishlistItems] = useState<readonly WishlistItem[]>([]);
+  const [wishlistSyncWarning, setWishlistSyncWarning] = useState<string | null>(null);
   const [saveMessages, setSaveMessages] = useState<Record<string, SaveMessage>>({});
   const savingDealKeys = useRef(new Set<string>());
+  const previousAuthToken = useRef<string | null>(null);
   const requestVersion = useRef(0);
 
   useEffect(() => {
     function refreshToken() {
-      setAuthToken(readAuthToken());
+      const token = readAuthToken();
+      if (previousAuthToken.current !== token) {
+        previousAuthToken.current = token;
+        setSavedDeals(new Set());
+        setSavedWishlistItems([]);
+        setSaveMessages({});
+        setWishlistSyncWarning(null);
+      }
+      setAuthToken(token);
       setAuthChecked(true);
     }
 
@@ -298,7 +335,51 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!authChecked || !authToken) return;
+
+    let active = true;
+    const token = authToken;
+
+    async function syncSavedWishlist() {
+      setWishlistSyncWarning(null);
+      try {
+        const items = await getMyWishlist(token);
+        if (!active) return;
+        setSavedWishlistItems(items);
+      } catch (error) {
+        if (!active) return;
+        const details = normalizeUserWishlistError(error);
+        if (details.status === 401) {
+          clearAuthToken();
+          setAuthToken(null);
+          setSavedWishlistItems([]);
+          setWishlistSyncWarning("Please sign in again to sync saved deals.");
+          return;
+        }
+        setWishlistSyncWarning(`Saved-deal sync unavailable. ${details.message}`);
+      }
+    }
+
+    void syncSavedWishlist();
+    return () => {
+      active = false;
+    };
+  }, [authChecked, authToken, externalDeals, externalStatus, mode]);
+
   const visibleDeals = mode === "external" && externalStatus === "ready" ? externalDeals : deals;
+  const isExternalReady = mode === "external" && externalStatus === "ready";
+  const isExternalLoading = mode === "external" && externalStatus === "loading";
+  const isExternalFallback = mode === "external" && externalStatus === "fallback";
+  const displayedDealScope = isExternalReady ? "external" : "curated";
+  const syncedSavedDealKeys = useMemo(
+    () => new Set(
+      visibleDeals
+        .filter((deal) => findMatchingWishlistItem(deal, savedWishlistItems))
+        .map((deal) => dealStateKey(displayedDealScope, deal)),
+    ),
+    [displayedDealScope, savedWishlistItems, visibleDeals],
+  );
   const filteredDeals = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -377,7 +458,11 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
   async function saveDeal(deal: GameDeal) {
     const key = dealStateKey(displayedDealScope, deal);
-    if (savingDealKeys.current.has(key) || savedDeals.has(key)) return;
+    if (
+      savingDealKeys.current.has(key) ||
+      savedDeals.has(key) ||
+      syncedSavedDealKeys.has(key)
+    ) return;
 
     const token = readAuthToken();
     if (!token) {
@@ -405,6 +490,11 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     try {
       const savedItem = await addMyWishlistItem(token, wishlistPayloadFor(deal));
       setSavedDeals((current) => new Set(current).add(key));
+      setSavedWishlistItems((current) =>
+        current.some((item) => item.id === savedItem.id)
+          ? current
+          : [...current, savedItem],
+      );
       setSaveMessages((current) => ({
         ...current,
         [key]: {
@@ -414,6 +504,17 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       }));
     } catch (error) {
       const details = normalizeUserWishlistError(error);
+      if (details.status === 409) {
+        setSavedDeals((current) => new Set(current).add(key));
+        setSaveMessages((current) => ({
+          ...current,
+          [key]: {
+            tone: "success",
+            text: `${deal.title} is already in your personal wishlist.`,
+          },
+        }));
+        return;
+      }
       if (details.status === 401) {
         clearAuthToken();
         setAuthToken(null);
@@ -442,10 +543,6 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
   const deepDiscountCount = visibleDeals.filter((deal) => deal.discountValue >= 50).length;
   const freeCount = visibleDeals.filter((deal) => deal.priceValue === 0).length;
-  const isExternalReady = mode === "external" && externalStatus === "ready";
-  const isExternalLoading = mode === "external" && externalStatus === "loading";
-  const isExternalFallback = mode === "external" && externalStatus === "fallback";
-  const displayedDealScope = isExternalReady ? "external" : "curated";
   const sourceLabel = isExternalReady
     ? "Live external deals"
     : isExternalFallback
@@ -584,6 +681,12 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               </span>
             </div>
           )}
+          {wishlistSyncWarning && (
+            <div className="deals-wishlist-sync-warning" role="status">
+              <span aria-hidden="true">⚠</span>
+              <span>{wishlistSyncWarning}</span>
+            </div>
+          )}
           <div className="deals-results-bar">
             <span><strong>{filteredDeals.length}</strong> deals detected</span>
             <span>{sourceLabel}</span>
@@ -593,7 +696,10 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               <DealCard
                 deal={deal}
                 alertIsSet={alerts.has(`${displayedDealScope}:${deal.id}`)}
-                isSaved={savedDeals.has(dealStateKey(displayedDealScope, deal))}
+                isSaved={
+                  savedDeals.has(dealStateKey(displayedDealScope, deal)) ||
+                  syncedSavedDealKeys.has(dealStateKey(displayedDealScope, deal))
+                }
                 isSaving={savingDeals.has(dealStateKey(displayedDealScope, deal))}
                 key={dealStateKey(displayedDealScope, deal)}
                 saveMessage={saveMessages[dealStateKey(displayedDealScope, deal)]}

@@ -29,6 +29,17 @@ public class DatabaseUserWishlistService implements UserWishlistService {
     @Transactional
     public WishlistItem addWishlistItem(long userId, AddWishlistItemRequest request) {
         WishlistItemValues values = WishlistItemValues.from(request);
+        return wishlistItemRepository
+                .findFirstByUserIdAndActiveTrueAndTitleIgnoreCaseAndStoreIgnoreCaseOrderByIdAsc(
+                        userId,
+                        values.title(),
+                        values.store()
+                )
+                .map(WishlistItemMapper::toResponse)
+                .orElseGet(() -> saveWishlistItem(userId, values));
+    }
+
+    private WishlistItem saveWishlistItem(long userId, WishlistItemValues values) {
         com.nexora.api.wishlist.persistence.WishlistItem savedItem =
                 wishlistItemRepository.saveAndFlush(
                         new com.nexora.api.wishlist.persistence.WishlistItem(

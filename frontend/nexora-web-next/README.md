@@ -97,9 +97,13 @@ Authenticated users can save any visible curated or live external deal to
 their personal wishlist from its deal card. External store labels such as
 Fanatical, Gamesplanet, and GameBillet are accepted. The current deal price is
 used as a provisional target and lowest-ever price until the real alert engine
-is implemented. Saved-state feedback prevents repeat clicks for the same card
-during the current page session, but the backend does not prevent duplicate
-wishlist items across sessions or result sets yet.
+is implemented. The page synchronizes active personal wishlist items after
+authentication and when deal sources change, so matching cards remain marked
+as saved after refresh. Matching prefers normalized title, store, and current
+price, with title plus store as the stable fallback when a live price changes.
+The backend also returns an existing active item for repeat saves with the same
+case-insensitive title and store. Real price-alert processing and store
+redirects are still planned and are not activated by this workflow.
 
 ## Authentication foundation
 
