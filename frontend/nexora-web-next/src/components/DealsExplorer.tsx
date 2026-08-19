@@ -53,6 +53,26 @@ function statusClass(status: DealStatus) {
   return "neutral";
 }
 
+function safeCheapSharkDealUrl(value: string | null | undefined) {
+  if (typeof value !== "string" || !value.trim()) return null;
+
+  const candidate = value.trim();
+  try {
+    const url = new URL(candidate);
+    const isCheapSharkRedirect =
+      url.protocol === "https:" &&
+      url.hostname === "www.cheapshark.com" &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      url.pathname === "/redirect" &&
+      Boolean(url.searchParams.get("dealID")?.trim());
+    return isCheapSharkRedirect ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
 function dealStateKey(scope: "curated" | "external", deal: GameDeal) {
   return `${scope}:${deal.id}:${deal.title}`;
 }
@@ -115,6 +135,7 @@ function DealCard({
   onToggleAlert: (dealId: number) => void;
 }) {
   const color = storeClass(deal.store);
+  const dealUrl = safeCheapSharkDealUrl(deal.dealUrl);
 
   return (
     <article className={`deals-card deals-card--${color}`}>
@@ -164,15 +185,28 @@ function DealCard({
           <span aria-hidden="true">🔔</span>
           {alertIsSet ? "Alert Set" : "Set Alert"}
         </button>
-        <button
-          className={`deals-card__view deals-card__view--${color}`}
-          type="button"
-          aria-disabled="true"
-          title="Store redirects are planned for a later migration"
-        >
-          <span aria-hidden="true">↗</span>
-          View Deal
-        </button>
+        {dealUrl ? (
+          <a
+            className={`deals-card__view deals-card__view--${color} deals-card__view--active`}
+            href={dealUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            aria-label={`View ${deal.title} deal from ${deal.store} in a new tab`}
+          >
+            <span aria-hidden="true">↗</span>
+            View Deal
+          </a>
+        ) : (
+          <button
+            className={`deals-card__view deals-card__view--${color}`}
+            type="button"
+            disabled
+            title="Store redirects are planned for curated deals"
+          >
+            <span aria-hidden="true">↗</span>
+            View Deal
+          </button>
+        )}
       </div>
       {saveMessage && (
         <div

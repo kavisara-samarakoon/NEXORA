@@ -210,7 +210,10 @@ function isGameDeal(value: unknown): value is GameDeal {
     deal.stars.trim().length > 0 &&
     typeof deal.category === "string" &&
     deal.category.trim().length > 0 &&
-    DEAL_STATUSES.includes(deal.status as DealStatus)
+    DEAL_STATUSES.includes(deal.status as DealStatus) &&
+    (deal.dealUrl === undefined ||
+      deal.dealUrl === null ||
+      (typeof deal.dealUrl === "string" && deal.dealUrl.trim().length > 0))
   );
 }
 

@@ -76,7 +76,8 @@ class DashboardSummaryServiceTests {
                 new BigDecimal("4.5"),
                 "★★★★★",
                 "RPG",
-                "Great Deal"
+                "Great Deal",
+                null
         );
     }
 

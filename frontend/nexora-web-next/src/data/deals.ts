@@ -21,6 +21,7 @@ export type GameDeal = {
   stars: string;
   category: string;
   status: DealStatus;
+  dealUrl?: string | null;
 };
 
 type CuratedGameDeal = Omit<GameDeal, "store"> & { store: KnownDealStore };

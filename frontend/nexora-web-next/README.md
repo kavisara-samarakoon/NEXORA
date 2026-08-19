@@ -92,6 +92,9 @@ If the backend, CheapShark, or the external response is unavailable, the page
 shows a friendly warning and continues displaying the server-provided curated
 deals. External results are not persisted. Stores without an expanded frontend
 lookup can appear as `Store {id}` and remain available under **All Stores**.
+Live results with a valid CheapShark redirect URL expose an active **View
+Deal** link that opens through CheapShark in a new tab. Curated deal redirects
+remain disabled and planned.
 
 Authenticated users can save any visible curated or live external deal to
 their personal wishlist from its deal card. External store labels such as
