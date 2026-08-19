@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -36,7 +37,8 @@ class ExternalDealApiEndpointTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(8))
                 .andExpect(jsonPath("$[0].title").value("Elden Ring: Shadow of the Erdtree"))
-                .andExpect(jsonPath("$[0].category").value("Action RPG"));
+                .andExpect(jsonPath("$[0].category").value("Action RPG"))
+                .andExpect(jsonPath("$[0].dealUrl").value(nullValue()));
 
         verifyNoInteractions(cheapSharkDealClient);
     }
@@ -44,7 +46,7 @@ class ExternalDealApiEndpointTests {
     @Test
     void externalDealsEndpointMapsCheapSharkDealsToNexoraContract() throws Exception {
         when(cheapSharkDealClient.getDeals(12, null, null)).thenReturn(List.of(
-                response("Deus Ex", "27", "2.99", "19.99", "85.04", "92", "9.6")
+                response("Deus Ex", "27", "2.99", "19.99", "85.04", "92", "9.6", "deal%2F123")
         ));
         when(cheapSharkDealClient.getStores()).thenReturn(List.of(
                 store("27", "Fanatical", 1)
@@ -64,7 +66,9 @@ class ExternalDealApiEndpointTests {
                 .andExpect(jsonPath("$[0].rating").value(4.6))
                 .andExpect(jsonPath("$[0].stars").value("★★★★★"))
                 .andExpect(jsonPath("$[0].category").value("External Deal"))
-                .andExpect(jsonPath("$[0].status").value("Lowest Ever"));
+                .andExpect(jsonPath("$[0].status").value("Lowest Ever"))
+                .andExpect(jsonPath("$[0].dealUrl").value(
+                        "https://www.cheapshark.com/redirect?dealID=deal%2F123"));
     }
 
     @Test
@@ -76,7 +80,8 @@ class ExternalDealApiEndpointTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(8))
                 .andExpect(jsonPath("$[0].title").value("Elden Ring: Shadow of the Erdtree"))
-                .andExpect(jsonPath("$[0].category").value("Action RPG"));
+                .andExpect(jsonPath("$[0].category").value("Action RPG"))
+                .andExpect(jsonPath("$[0].dealUrl").value(nullValue()));
 
         verify(cheapSharkDealClient, never()).getStores();
     }
@@ -84,7 +89,7 @@ class ExternalDealApiEndpointTests {
     @Test
     void externalDealsEndpointKeepsLiveDealsWhenStoreLookupFails() throws Exception {
         when(cheapSharkDealClient.getDeals(12, null, null)).thenReturn(List.of(
-                response("Store fallback", "27", "7.50", "15.00", "50", "80", "8")
+                response("Store fallback", "27", "7.50", "15.00", "50", "80", "8", "fallback-id")
         ));
         when(cheapSharkDealClient.getStores())
                 .thenThrow(new IllegalStateException("simulated stores failure"));
@@ -100,7 +105,7 @@ class ExternalDealApiEndpointTests {
     @Test
     void externalDealsEndpointCapsPageSizeAtConfiguredMaximum() throws Exception {
         when(cheapSharkDealClient.getDeals(24, null, null)).thenReturn(List.of(
-                response("Capped result", "7", "5.00", "10.00", "50", null, "8")
+                response("Capped result", "7", "5.00", "10.00", "50", null, "8", "capped-id")
         ));
         when(cheapSharkDealClient.getStores()).thenReturn(List.of(
                 store("7", "GOG", "1")
@@ -121,7 +126,8 @@ class ExternalDealApiEndpointTests {
             String normalPrice,
             String savings,
             String steamRatingPercent,
-            String dealRating) {
+            String dealRating,
+            String dealId) {
         return new CheapSharkDealResponse(
                 title,
                 storeId,
@@ -129,7 +135,8 @@ class ExternalDealApiEndpointTests {
                 normalPrice,
                 savings,
                 steamRatingPercent,
-                dealRating
+                dealRating,
+                dealId
         );
     }
 

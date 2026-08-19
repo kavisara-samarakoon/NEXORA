@@ -45,7 +45,8 @@ public class DatabaseDealService implements DealCatalogService {
                 rating,
                 starsFor(rating),
                 deal.getGame().getCategory(),
-                deal.getStatus()
+                deal.getStatus(),
+                null
         );
     }
 

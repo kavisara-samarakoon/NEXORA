@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -15,6 +16,9 @@ public class CheapSharkDealMapper {
     private static final BigDecimal FIVE = new BigDecimal("5");
     private static final BigDecimal TEN = new BigDecimal("10");
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
+    private static final String CHEAPSHARK_REDIRECT_URL =
+            "https://www.cheapshark.com/redirect?dealID=";
+    private static final char[] HEX = "0123456789ABCDEF".toCharArray();
 
     private final CheapSharkStoreDirectory storeDirectory;
 
@@ -56,8 +60,60 @@ public class CheapSharkDealMapper {
                 rating,
                 DatabaseDealService.starsFor(rating),
                 "External Deal",
-                status(discountValue)
+                status(discountValue),
+                dealUrl(response.dealID())
         );
+    }
+
+    static String dealUrl(String dealId) {
+        if (dealId == null || dealId.isBlank()) return null;
+        return CHEAPSHARK_REDIRECT_URL + encodeDealId(dealId.trim());
+    }
+
+    private static String encodeDealId(String dealId) {
+        StringBuilder encoded = new StringBuilder(dealId.length());
+        for (int index = 0; index < dealId.length();) {
+            char character = dealId.charAt(index);
+            if (character == '%' && index + 2 < dealId.length()
+                    && isHex(dealId.charAt(index + 1))
+                    && isHex(dealId.charAt(index + 2))) {
+                encoded.append(dealId, index, index + 3);
+                index += 3;
+                continue;
+            }
+
+            int codePoint = dealId.codePointAt(index);
+            if (isUnreserved(codePoint)) {
+                encoded.appendCodePoint(codePoint);
+            } else {
+                byte[] bytes = new String(Character.toChars(codePoint))
+                        .getBytes(StandardCharsets.UTF_8);
+                for (byte value : bytes) {
+                    int unsigned = value & 0xff;
+                    encoded.append('%')
+                            .append(HEX[unsigned >>> 4])
+                            .append(HEX[unsigned & 0x0f]);
+                }
+            }
+            index += Character.charCount(codePoint);
+        }
+        return encoded.toString();
+    }
+
+    private static boolean isUnreserved(int codePoint) {
+        return codePoint >= 'a' && codePoint <= 'z'
+                || codePoint >= 'A' && codePoint <= 'Z'
+                || codePoint >= '0' && codePoint <= '9'
+                || codePoint == '-'
+                || codePoint == '.'
+                || codePoint == '_'
+                || codePoint == '~';
+    }
+
+    private static boolean isHex(char character) {
+        return character >= '0' && character <= '9'
+                || character >= 'a' && character <= 'f'
+                || character >= 'A' && character <= 'F';
     }
 
     private static int discountValue(String savings) {

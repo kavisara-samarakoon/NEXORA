@@ -8,6 +8,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class CheapSharkDealMapperTests {
 
@@ -18,8 +19,8 @@ class CheapSharkDealMapperTests {
     @Test
     void handlesInvalidAndMissingNumericFieldsSafely() {
         List<Deal> deals = mapper.toDeals(List.of(
-                response("Invalid numbers", "99", "not-a-price", "-20", "unknown", "bad", "8.4"),
-                response("Missing numbers", "25", null, null, null, null, null)
+                response("Invalid numbers", "99", "not-a-price", "-20", "unknown", "bad", "8.4", null),
+                response("Missing numbers", "25", null, null, null, null, null, "   ")
         ), Map.of("25", "Epic Games"));
 
         Deal invalidNumbers = deals.get(0);
@@ -35,16 +36,18 @@ class CheapSharkDealMapperTests {
                 () -> assertEquals(new BigDecimal("4.2"), invalidNumbers.rating()),
                 () -> assertEquals("★★★★☆", invalidNumbers.stars()),
                 () -> assertEquals("Average", invalidNumbers.status()),
+                () -> assertNull(invalidNumbers.dealUrl()),
                 () -> assertEquals(2L, missingNumbers.id()),
                 () -> assertEquals("Epic Games", missingNumbers.store()),
-                () -> assertEquals(new BigDecimal("0.0"), missingNumbers.rating())
+                () -> assertEquals(new BigDecimal("0.0"), missingNumbers.rating()),
+                () -> assertNull(missingNumbers.dealUrl())
         );
     }
 
     @Test
     void roundsAndClampsSavingsAndRatings() {
         Deal deal = mapper.toDeals(List.of(
-                response("Clamped", "1", "0", "59.999", "250.6", "120", "10")
+                response("Clamped", "1", "0", "59.999", "250.6", "120", "10", "encoded%2Fdeal")
         ), Map.of("1", "Steam")).get(0);
 
         assertAll(
@@ -54,17 +57,25 @@ class CheapSharkDealMapperTests {
                 () -> assertEquals("FREE", deal.priceNew()),
                 () -> assertEquals(new BigDecimal("5.0"), deal.rating()),
                 () -> assertEquals("★★★★★", deal.stars()),
-                () -> assertEquals("Lowest Ever", deal.status())
+                () -> assertEquals("Lowest Ever", deal.status()),
+                () -> assertEquals(
+                        "https://www.cheapshark.com/redirect?dealID=encoded%2Fdeal",
+                        deal.dealUrl())
         );
     }
 
     @Test
     void mapsBlankStoreIdToUnknownStore() {
         Deal deal = mapper.toDeals(List.of(
-                response("Unknown store", "  ", "1", "2", "50", null, null)
+                response("Unknown store", "  ", "1", "2", "50", null, null, "raw deal&offer")
         ), Map.of()).get(0);
 
-        assertEquals("Unknown Store", deal.store());
+        assertAll(
+                () -> assertEquals("Unknown Store", deal.store()),
+                () -> assertEquals(
+                        "https://www.cheapshark.com/redirect?dealID=raw%20deal%26offer",
+                        deal.dealUrl())
+        );
     }
 
     private static CheapSharkDealResponse response(
@@ -74,7 +85,8 @@ class CheapSharkDealMapperTests {
             String normalPrice,
             String savings,
             String steamRatingPercent,
-            String dealRating) {
+            String dealRating,
+            String dealId) {
         return new CheapSharkDealResponse(
                 title,
                 storeId,
@@ -82,7 +94,8 @@ class CheapSharkDealMapperTests {
                 normalPrice,
                 savings,
                 steamRatingPercent,
-                dealRating
+                dealRating,
+                dealId
         );
     }
 }

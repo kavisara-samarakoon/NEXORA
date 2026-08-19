@@ -10,6 +10,7 @@ public record CheapSharkDealResponse(
         String normalPrice,
         String savings,
         String steamRatingPercent,
-        String dealRating
+        String dealRating,
+        String dealID
 ) {
 }

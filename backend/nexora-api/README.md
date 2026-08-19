@@ -85,6 +85,11 @@ that lookup is unavailable, live deals are still returned: unknown IDs use
 does not trigger the local-deals fallback; only a deals request or deal-mapping
 failure does.
 
+When CheapShark supplies a non-blank `dealID`, the mapped response includes a
+`dealUrl` using `https://www.cheapshark.com/redirect?dealID={id}`. These URLs
+are emitted only for browser/user navigation and are never fetched by the
+backend. Curated and database-backed deals currently return `dealUrl: null`.
+
 Configuration defaults:
 
 ```properties

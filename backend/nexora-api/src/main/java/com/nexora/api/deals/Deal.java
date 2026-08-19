@@ -14,6 +14,7 @@ public record Deal(
         BigDecimal rating,
         String stars,
         String category,
-        String status
+        String status,
+        String dealUrl
 ) {
 }

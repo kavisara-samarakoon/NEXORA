@@ -2245,7 +2245,8 @@ input:focus-visible {
   margin-top: 18px;
 }
 
-.deals-card__actions button {
+.deals-card__actions button,
+.deals-card__actions a {
   display: inline-flex;
   min-height: 37px;
   flex: 1;
@@ -2257,6 +2258,7 @@ input:focus-visible {
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .deals-card__actions svg {
@@ -2358,6 +2360,8 @@ input:focus-visible {
 .deals-card__view--humble { color: #ff7070; border-color: rgba(239, 68, 68, 0.2) !important; background: rgba(239, 68, 68, 0.055); }
 .deals-card__view--ubisoft { color: #9193ff; border-color: rgba(99, 102, 241, 0.2) !important; background: rgba(99, 102, 241, 0.055); }
 .deals-card__view--external { color: #70e8ff; border-color: rgba(0, 212, 255, 0.2) !important; background: rgba(0, 212, 255, 0.055); }
+.deals-card__view--active { cursor: pointer; }
+.deals-card__view:disabled { cursor: not-allowed; opacity: 0.62; }
 
 .deals-grid[aria-busy="true"] { opacity: 0.72; }
 
@@ -2575,6 +2579,7 @@ input:focus-visible {
   }
 
   .deals-card__actions button:hover,
+  .deals-card__actions a:hover,
   .deals-live-search button:hover:not(:disabled),
   .deals-mode-panel__warning button:hover,
   .deals-mode-switch__button:hover:not(:disabled),
@@ -7273,7 +7278,8 @@ body::before {
 .deals-card__prices del { font-size: 14px; }
 .deals-card__prices strong { font-size: 24px; }
 .deals-card__actions { gap: 10px; }
-.deals-card__actions button { min-height: 0; padding: 10px 14px; font-size: 12px; font-weight: 600; }
+.deals-card__actions button,
+.deals-card__actions a { min-height: 0; padding: 10px 14px; font-size: 12px; font-weight: 600; }
 
 .ga-card__tag { padding: 3px 8px; font-size: 10px; }
 .ga-card__price strong { font-size: 18px; letter-spacing: 1px; }

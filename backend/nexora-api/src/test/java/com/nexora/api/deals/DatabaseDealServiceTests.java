@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,6 +46,7 @@ class DatabaseDealServiceTests {
                 () -> assertEquals("★★★★★", firstDeal.stars()),
                 () -> assertEquals("RPG", firstDeal.category()),
                 () -> assertEquals("Great Deal", firstDeal.status()),
+                () -> assertNull(firstDeal.dealUrl()),
                 () -> assertEquals("★★★★☆", deals.get(1).stars()),
                 () -> assertEquals("★★★☆☆", deals.get(2).stars()),
                 () -> assertEquals("★★☆☆☆", deals.get(3).stars())
