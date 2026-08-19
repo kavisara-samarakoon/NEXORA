@@ -176,7 +176,7 @@ export default function SecurityCenter({ securityStatus, source }: SecurityStatu
 
       <div className="sc-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Frontend Security Demo</strong> — This interface demonstrates planned security controls. Authentication, encryption, and session management require future backend implementation.</p>
+        <p><strong>Authentication foundation active</strong> — Basic account registration, login, and access-token identity are connected. The remaining security controls shown here are roadmap demonstrations, not production guarantees.</p>
       </div>
 
       <div className="sc-layout">
