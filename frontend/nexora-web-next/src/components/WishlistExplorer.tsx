@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import AddWishlistItemForm from "@/components/AddWishlistItemForm";
 import {
   wishlistFilters,
   type WishlistFilter,
@@ -9,6 +11,14 @@ import {
   type WishlistStatus,
 } from "@/data/wishlist";
 import type { WishlistResult } from "@/lib/api";
+import { AUTH_STATE_EVENT, clearAuthToken, readAuthToken } from "@/lib/auth-client";
+import {
+  deleteMyWishlistItem,
+  getMyWishlist,
+  normalizeUserWishlistError,
+} from "@/lib/user-wishlist";
+
+type WishlistView = "checking" | "public" | "personal" | "offline";
 
 const wishlistNetworkIcons = {
   bolt: "⚡",
@@ -16,6 +26,10 @@ const wishlistNetworkIcons = {
   mail: "📬",
   shield: "🛡️",
 } as const;
+
+function alertsFor(items: readonly WishlistItem[]): Record<number, boolean> {
+  return Object.fromEntries(items.map((item) => [item.id, item.alertActive]));
+}
 
 function statusDetails(status: WishlistStatus) {
   if (status === "price-drop") return { label: "Price drop", icon: "down" } as const;
@@ -36,18 +50,24 @@ function StatusIcon({ icon }: { icon: "down" | "gift" | "signal" }) {
 
 function WishlistCard({
   alertIsActive,
+  canDelete,
+  isDeleting,
   item,
+  onDelete,
   onToggleAlert,
 }: {
   alertIsActive: boolean;
+  canDelete: boolean;
+  isDeleting: boolean;
   item: WishlistItem;
+  onDelete: (item: WishlistItem) => void;
   onToggleAlert: (itemId: number) => void;
 }) {
   const status = statusDetails(item.status);
   const storeClass = item.store.toLowerCase().replace(" games", "");
 
   return (
-    <article className={`wl-card wl-card--${storeClass}`}>
+    <article className={`wl-card wl-card--${storeClass}`} aria-busy={isDeleting}>
       <div className={`wl-card__accent wl-card__accent--${storeClass}`} />
       <div className="wl-card__header">
         <span className={`wl-card__store wl-card__store--${storeClass}`}>{item.store}</span>
@@ -91,14 +111,23 @@ function WishlistCard({
           type="button"
           aria-pressed={alertIsActive}
           onClick={() => onToggleAlert(item.id)}
+          title="This toggle is local only; the backend alert engine is not connected yet"
         >
           <span aria-hidden="true">✏️</span>
           {alertIsActive ? "Pause Alert" : "Enable Alert"}
         </button>
-        <button className="wl-card__remove" type="button" disabled aria-label={`Remove ${item.title}`} title="Removal is planned for a later migration">
-          <span aria-hidden="true">✕</span>
+        <button
+          className="wl-card__remove"
+          type="button"
+          disabled={!canDelete || isDeleting}
+          aria-label={`Remove ${item.title}`}
+          title={canDelete ? `Remove ${item.title} from your personal wishlist` : "Sign in to manage personal wishlist items"}
+          onClick={() => onDelete(item)}
+        >
+          <span aria-hidden="true">{isDeleting ? "…" : "✕"}</span>
         </button>
       </div>
+      <small className="wl-card__local-note">Local alert toggle · alert engine later</small>
     </article>
   );
 }
@@ -106,13 +135,14 @@ function WishlistCard({
 function WishlistAlertPanel({
   alerts,
   source,
+  view,
   wishlistItems,
 }: {
   alerts: Record<number, boolean>;
   source: WishlistResult["source"];
+  view: WishlistView;
   wishlistItems: readonly WishlistItem[];
 }) {
-  const isApiSource = source === "api";
   const activeAlerts = wishlistItems.filter((item) => alerts[item.id]).length;
   const pausedAlerts = wishlistItems.length - activeAlerts;
   const priceDrops = wishlistItems.filter((item) => item.status === "price-drop").length;
@@ -123,12 +153,15 @@ function WishlistAlertPanel({
     { store: "GOG", count: wishlistItems.filter((item) => item.store === "GOG").length, tone: "gog" },
   ] as const;
   const maxStoreCount = Math.max(1, ...storeCounts.map((store) => store.count));
+  const dataSource = view === "personal"
+    ? { value: "Account wishlist API", badge: "Personal" }
+    : { value: source === "api" ? "Public Spring Boot preview" : "Static public preview", badge: source === "api" ? "API" : "Static" };
 
   const items = [
-    { label: "Alert Engine", value: "Local demo state", badge: "Demo", tone: "orange", icon: "bolt" },
-    { label: "Data Source", value: isApiSource ? "Spring Boot" : "Static dataset", badge: isApiSource ? "API" : "Static", tone: "blue", icon: "globe" },
-    { label: "Notification Queue", value: "Backend support later", badge: "Future", tone: "purple", icon: "mail" },
-    { label: "Security", value: "Account-safe alerts planned", badge: "Planned", tone: "green", icon: "shield" },
+    { label: "Alert Engine", value: "Local toggle only", badge: "Local", tone: "orange", icon: "bolt" },
+    { label: "Data Source", value: dataSource.value, badge: dataSource.badge, tone: "blue", icon: "globe" },
+    { label: "Notification Queue", value: "Alert engine later", badge: "Future", tone: "purple", icon: "mail" },
+    { label: "Security", value: view === "personal" ? "JWT account access" : "Public preview data", badge: view === "personal" ? "Auth" : "Public", tone: "green", icon: "shield" },
   ] as const;
 
   return (
@@ -136,7 +169,7 @@ function WishlistAlertPanel({
       <div className="wl-network__header">
         <span className="wl-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Alert telemetry</span><h2 id="wishlist-alert-title">Wishlist Alert Status</h2></div>
-        <span className="wl-network__live"><span aria-hidden="true" /> Demo</span>
+        <span className="wl-network__live"><span aria-hidden="true" /> Local</span>
       </div>
 
       <div className="wl-network__items">
@@ -180,14 +213,83 @@ function WishlistAlertPanel({
 export default function WishlistExplorer({ wishlistItems, source }: WishlistResult) {
   const [activeFilter, setActiveFilter] = useState<WishlistFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [alerts, setAlerts] = useState<Record<number, boolean>>(() =>
-    Object.fromEntries(wishlistItems.map((item) => [item.id, item.alertActive])),
-  );
+  const [view, setView] = useState<WishlistView>("checking");
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [personalItems, setPersonalItems] = useState<WishlistItem[]>([]);
+  const [alerts, setAlerts] = useState<Record<number, boolean>>(() => alertsFor(wishlistItems));
+  const [serviceMessage, setServiceMessage] = useState<string | null>(null);
+  const [operationMessage, setOperationMessage] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(() => new Set());
+  const [refreshKey, setRefreshKey] = useState(0);
 
+  useEffect(() => {
+    let active = true;
+    let requestVersion = 0;
+
+    async function refreshWishlist() {
+      const currentVersion = ++requestVersion;
+      const token = readAuthToken();
+
+      if (!token) {
+        if (!active || currentVersion !== requestVersion) return;
+        setAuthToken(null);
+        setPersonalItems([]);
+        setAlerts(alertsFor(wishlistItems));
+        setServiceMessage(null);
+        setOperationMessage(null);
+        setView("public");
+        return;
+      }
+
+      setAuthToken(token);
+      setServiceMessage(null);
+      setView("checking");
+
+      try {
+        const items = await getMyWishlist(token);
+        if (!active || currentVersion !== requestVersion) return;
+        setPersonalItems(items);
+        setAlerts(alertsFor(items));
+        setOperationMessage(null);
+        setView("personal");
+      } catch (error) {
+        if (!active || currentVersion !== requestVersion) return;
+        const details = normalizeUserWishlistError(error);
+
+        if (details.status === 401) {
+          clearAuthToken();
+          setAuthToken(null);
+          setServiceMessage(details.message);
+          setView("public");
+          return;
+        }
+
+        setServiceMessage(details.message);
+        setAlerts(alertsFor(wishlistItems));
+        setView("offline");
+      }
+    }
+
+    function handleAuthChange() {
+      void refreshWishlist();
+    }
+
+    void refreshWishlist();
+    window.addEventListener("storage", handleAuthChange);
+    window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
+
+    return () => {
+      active = false;
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
+    };
+  }, [refreshKey, wishlistItems]);
+
+  const displayedItems = view === "personal" ? personalItems : wishlistItems;
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return wishlistItems.filter((item) => {
+    return displayedItems.filter((item) => {
       const matchesSearch =
         !query ||
         item.title.toLowerCase().includes(query) ||
@@ -200,19 +302,73 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       if (activeFilter === "High Priority") return item.priority === "high";
       return item.store === activeFilter;
     });
-  }, [activeFilter, searchQuery, wishlistItems]);
-
-  function toggleAlert(itemId: number) {
-    setAlerts((current) => ({ ...current, [itemId]: !current[itemId] }));
-  }
+  }, [activeFilter, displayedItems, searchQuery]);
 
   function resetFilters() {
     setActiveFilter("All");
     setSearchQuery("");
   }
 
-  const priceDropCount = wishlistItems.filter((item) => item.status === "price-drop").length;
-  const freeCount = wishlistItems.filter((item) => item.status === "free-now").length;
+  function handleAuthenticationRequired() {
+    clearAuthToken();
+    setAuthToken(null);
+    setPersonalItems([]);
+    setAlerts(alertsFor(wishlistItems));
+    setServiceMessage("Please sign in again.");
+    setView("public");
+  }
+
+  function handleItemAdded(item: WishlistItem) {
+    setPersonalItems((current) => [item, ...current]);
+    setAlerts((current) => ({ ...current, [item.id]: item.alertActive }));
+    setOperationMessage(null);
+    resetFilters();
+  }
+
+  async function handleDelete(item: WishlistItem) {
+    if (view !== "personal" || !authToken || deletingIds.has(item.id)) return;
+
+    setDeletingIds((current) => new Set(current).add(item.id));
+    setOperationMessage(null);
+
+    try {
+      await deleteMyWishlistItem(authToken, item.id);
+      setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
+      setAlerts((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      setOperationMessage(`${item.title} was removed from your personal wishlist.`);
+    } catch (error) {
+      const details = normalizeUserWishlistError(error);
+      if (details.status === 401) {
+        handleAuthenticationRequired();
+      } else {
+        setOperationMessage(details.message);
+      }
+    } finally {
+      setDeletingIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
+    }
+  }
+
+  function toggleAlert(itemId: number) {
+    setAlerts((current) => ({ ...current, [itemId]: !current[itemId] }));
+  }
+
+  const priceDropCount = displayedItems.filter((item) => item.status === "price-drop").length;
+  const freeCount = displayedItems.filter((item) => item.status === "free-now").length;
+  const isPersonal = view === "personal";
+  const heroTag = isPersonal ? "Personal wishlist" : view === "offline" ? "Wishlist service offline" : "Public wishlist preview";
+  const heroCopy = isPersonal
+    ? "Your games are stored with your NEXORA account. Price alerts remain a local UI preview for now."
+    : view === "offline"
+      ? "Wishlist service offline — showing the public preview so this page stays useful."
+      : "Explore the public wishlist preview. Sign in to manage a wishlist stored with your NEXORA account.";
 
   return (
     <>
@@ -222,24 +378,55 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         <div className="wl-hero__scanlines" />
         <div className="wl-hero__content">
           <div className="wl-hero__copy">
-            <div className="wl-hero__tag"><span aria-hidden="true" /> Smart alerts</div>
+            <div className="wl-hero__tag"><span aria-hidden="true" /> {heroTag}</div>
             <h1 id="wishlist-title">
               <span className="page-title-emoji" aria-hidden="true">📋</span>
               <span>Smart Wishlist Control</span>
             </h1>
-            <p>
-              Track wanted games, price drops, and free giveaways — get
-              intelligent alerts and safe store redirects in one command center.
-            </p>
+            <p>{heroCopy}</p>
           </div>
           <div className="wl-hero__stats" aria-label="Wishlist summary">
-            <div><strong>{wishlistItems.length}</strong><span>Wishlist items</span></div>
+            <div><strong>{displayedItems.length}</strong><span>Wishlist items</span></div>
             <div><strong>{priceDropCount}</strong><span>Price drops</span></div>
-            <div><strong>{freeCount}</strong><span>Free alerts</span></div>
-            <div className="wl-hero__protected"><strong aria-hidden="true">🛡️</strong><span>Protected</span></div>
+            <div><strong>{freeCount}</strong><span>Free listings</span></div>
+            <div className="wl-hero__protected"><strong aria-hidden="true">{isPersonal ? "🔐" : "👁️"}</strong><span>{isPersonal ? "Account" : "Preview"}</span></div>
           </div>
         </div>
       </section>
+
+      <section className={`wl-access-banner wl-access-banner--${view}`} aria-live="polite">
+        <div>
+          <strong>
+            {isPersonal ? "Personal wishlist" : view === "offline" ? "Wishlist service offline — showing public preview" : view === "checking" ? "Checking your account" : "Public wishlist preview"}
+          </strong>
+          <span>
+            {isPersonal
+              ? "Stored with your NEXORA account. The public demo wishlist remains the page fallback."
+              : view === "offline"
+                ? serviceMessage || "Cannot reach the NEXORA wishlist service."
+                : view === "checking"
+                  ? "The public preview remains available while your personal wishlist loads."
+                  : serviceMessage || "Sign in to manage your personal wishlist."}
+          </span>
+        </div>
+        {view === "public" && (
+          <nav className="wl-access-banner__actions" aria-label="Wishlist account actions">
+            <Link href="/login">Sign in</Link>
+            <Link href="/register">Register</Link>
+          </nav>
+        )}
+        {view === "offline" && (
+          <button type="button" onClick={() => setRefreshKey((current) => current + 1)}>Retry personal wishlist</button>
+        )}
+      </section>
+
+      {isPersonal && authToken && (
+        <AddWishlistItemForm
+          token={authToken}
+          onAdded={handleItemAdded}
+          onAuthenticationRequired={handleAuthenticationRequired}
+        />
+      )}
 
       <section className="wl-filter-panel" aria-label="Search and filter wishlist">
         <div className="wl-search">
@@ -273,17 +460,35 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         </div>
       </section>
 
+      {operationMessage && <p className="wl-operation-message" role="status">{operationMessage}</p>}
+
       <div className="wl-layout">
-        <section aria-label="Tracked wishlist games">
+        <section aria-label={isPersonal ? "Personal wishlist games" : "Public wishlist preview games"}>
           <div className="wl-results-bar">
             <span><strong>{filteredItems.length}</strong> tracked games</span>
-            <span>{source === "api" ? "Backend intelligence feed" : "Static fallback feed"}</span>
+            <span>{isPersonal ? "Personal account feed" : source === "api" ? "Public backend preview" : "Static fallback preview"}</span>
           </div>
           <div className="wl-grid">
             {filteredItems.map((item) => (
-              <WishlistCard alertIsActive={alerts[item.id]} item={item} key={item.id} onToggleAlert={toggleAlert} />
+              <WishlistCard
+                alertIsActive={alerts[item.id] ?? item.alertActive}
+                canDelete={isPersonal}
+                isDeleting={deletingIds.has(item.id)}
+                item={item}
+                key={item.id}
+                onDelete={(candidate) => void handleDelete(candidate)}
+                onToggleAlert={toggleAlert}
+              />
             ))}
-            {filteredItems.length === 0 && (
+            {isPersonal && displayedItems.length === 0 && (
+              <div className="wl-empty">
+                <span aria-hidden="true">➕</span>
+                <h2>Your personal wishlist is empty</h2>
+                <p>Add a game to start your account collection.</p>
+                <a href="#add-personal-wishlist-item">Add your first game</a>
+              </div>
+            )}
+            {displayedItems.length > 0 && filteredItems.length === 0 && (
               <div className="wl-empty">
                 <span aria-hidden="true">📡</span>
                 <h2>No wishlist signals found</h2>
@@ -293,7 +498,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             )}
           </div>
         </section>
-        <WishlistAlertPanel alerts={alerts} source={source} wishlistItems={wishlistItems} />
+        <WishlistAlertPanel alerts={alerts} source={source} view={view} wishlistItems={displayedItems} />
       </div>
     </>
   );
