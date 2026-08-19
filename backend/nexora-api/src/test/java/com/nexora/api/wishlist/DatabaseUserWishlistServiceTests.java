@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,8 @@ class DatabaseUserWishlistServiceTests {
                 "New Game", "Steam", "$30.00", "$20.00",
                 null, null, null, null, null);
         com.nexora.api.wishlist.persistence.WishlistItem savedItem = databaseItem(42L, 7L, true);
+        when(repository.findFirstByUserIdAndActiveTrueAndTitleIgnoreCaseAndStoreIgnoreCaseOrderByIdAsc(
+                7L, "New Game", "Steam")).thenReturn(Optional.empty());
         when(repository.saveAndFlush(org.mockito.ArgumentMatchers.any())).thenReturn(savedItem);
 
         WishlistItem response = service.addWishlistItem(7L, request);
@@ -39,6 +42,28 @@ class DatabaseUserWishlistServiceTests {
                 () -> assertEquals("$30.00", createdItem.getLowestEver()),
                 () -> assertEquals(42L, response.id())
         );
+    }
+
+    @Test
+    void returnsExistingActiveItemForNormalizedDuplicate() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        DatabaseUserWishlistService service = new DatabaseUserWishlistService(repository);
+        AddWishlistItemRequest request = new AddWishlistItemRequest(
+                "  new game ", " steam ", "$15.00", "$10.00",
+                null, null, null, null, null);
+        com.nexora.api.wishlist.persistence.WishlistItem existingItem =
+                databaseItem(42L, 7L, true);
+        when(repository.findFirstByUserIdAndActiveTrueAndTitleIgnoreCaseAndStoreIgnoreCaseOrderByIdAsc(
+                7L, "new game", "steam")).thenReturn(Optional.of(existingItem));
+
+        WishlistItem response = service.addWishlistItem(7L, request);
+
+        assertAll(
+                () -> assertEquals(42L, response.id()),
+                () -> assertEquals("New Game", response.title()),
+                () -> assertEquals("Steam", response.store())
+        );
+        verify(repository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
     }
 
     @Test

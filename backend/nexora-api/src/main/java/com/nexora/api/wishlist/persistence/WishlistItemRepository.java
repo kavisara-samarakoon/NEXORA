@@ -21,5 +21,10 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
 
     List<WishlistItem> findByUserIdAndActiveTrueOrderById(long userId);
 
+    Optional<WishlistItem> findFirstByUserIdAndActiveTrueAndTitleIgnoreCaseAndStoreIgnoreCaseOrderByIdAsc(
+            long userId,
+            String title,
+            String store);
+
     Optional<WishlistItem> findByIdAndUserIdAndActiveTrue(long id, long userId);
 }

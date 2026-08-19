@@ -216,6 +216,12 @@ Flyway V5 adds nullable ownership to `wishlist_items`. Existing seeded rows keep
 wishlist endpoints derive the user id exclusively from the JWT principal; they
 never accept a client-supplied user id.
 
+Saving is idempotent-like for active items: if the same user already has an
+active item with the same trimmed title and store (compared case-insensitively),
+`POST /api/me/wishlist` returns that existing item with the current `201`
+response instead of inserting another row. Different users or stores remain
+independent, and a soft-deleted item can be added again.
+
 After registering or logging in, capture a token:
 
 ```bash

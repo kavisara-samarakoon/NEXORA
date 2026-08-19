@@ -12,7 +12,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -87,6 +89,52 @@ class UserWishlistApiEndpointTests {
     }
 
     @Test
+    void repeatedNormalizedSaveReturnsExistingItemWithoutCreatingDuplicate() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        String title = "Duplicate title " + UUID.randomUUID();
+        long firstId = createdItemId(token, title, "Fanatical");
+
+        MvcResult duplicate = mockMvc.perform(authenticatedPost(
+                        token,
+                        "  " + title.toUpperCase() + "  ",
+                        "  fanatical  "))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(firstId))
+                .andExpect(jsonPath("$.title").value(title))
+                .andExpect(jsonPath("$.store").value("Fanatical"))
+                .andReturn();
+
+        long duplicateId = objectMapper.readTree(duplicate.getResponse().getContentAsString())
+                .path("id")
+                .longValue();
+        mockMvc.perform(authenticatedGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        assertEquals(firstId, duplicateId);
+    }
+
+    @Test
+    void duplicateIdentityIsScopedByUserAndStore() throws Exception {
+        String firstUserToken = registerAndLogin(uniqueUser());
+        String secondUserToken = registerAndLogin(uniqueUser());
+        String title = "Shared title " + UUID.randomUUID();
+
+        long steamId = createdItemId(firstUserToken, title, "Steam");
+        long gogId = createdItemId(firstUserToken, title, "GOG");
+        long secondUserId = createdItemId(secondUserToken, title, "Steam");
+
+        assertNotEquals(steamId, gogId);
+        assertNotEquals(steamId, secondUserId);
+        mockMvc.perform(authenticatedGet(firstUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+        mockMvc.perform(authenticatedGet(secondUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
     void onlyTheOwnerCanSeeAndSoftDeleteAnItem() throws Exception {
         String ownerToken = registerAndLogin(uniqueUser());
         String secondUserToken = registerAndLogin(uniqueUser());
@@ -140,10 +188,28 @@ class UserWishlistApiEndpointTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("validation_failed"))
                 .andExpect(jsonPath("$.message").isNotEmpty());
+
+        mockMvc.perform(post("/api/me/wishlist")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Valid title",
+                                  "store": "   ",
+                                  "currentPrice": "$39.99",
+                                  "targetPrice": "$24.99"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"));
     }
 
     private long createdItemId(String token, String title) throws Exception {
-        MvcResult result = mockMvc.perform(authenticatedPost(token, title))
+        return createdItemId(token, title, "Steam");
+    }
+
+    private long createdItemId(String token, String title, String store) throws Exception {
+        MvcResult result = mockMvc.perform(authenticatedPost(token, title, store))
                 .andExpect(status().isCreated())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("id").longValue();
@@ -170,17 +236,22 @@ class UserWishlistApiEndpointTests {
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
     authenticatedPost(String token, String title) {
+        return authenticatedPost(token, title, "Steam");
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    authenticatedPost(String token, String title, String store) {
         return post("/api/me/wishlist")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
                           "title": "%s",
-                          "store": "Steam",
+                          "store": "%s",
                           "currentPrice": "$39.99",
                           "targetPrice": "$24.99"
                         }
-                        """.formatted(title));
+                        """.formatted(title, store));
     }
 
     private static Credentials uniqueUser() {

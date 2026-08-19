@@ -27,8 +27,18 @@ public class InMemoryUserWishlistService implements UserWishlistService {
 
     @Override
     public synchronized WishlistItem addWishlistItem(long userId, AddWishlistItemRequest request) {
+        WishlistItemValues values = WishlistItemValues.from(request);
+        WishlistItem existingItem = items.values().stream()
+                .filter(item -> item.userId() == userId && item.active())
+                .map(StoredWishlistItem::item)
+                .filter(item -> item.title().equalsIgnoreCase(values.title()))
+                .filter(item -> item.store().equalsIgnoreCase(values.store()))
+                .min(Comparator.comparingLong(WishlistItem::id))
+                .orElse(null);
+        if (existingItem != null) return existingItem;
+
         long id = ids.incrementAndGet();
-        WishlistItem item = WishlistItemMapper.toResponse(id, WishlistItemValues.from(request));
+        WishlistItem item = WishlistItemMapper.toResponse(id, values);
         items.put(id, new StoredWishlistItem(userId, item, true));
         return item;
     }
