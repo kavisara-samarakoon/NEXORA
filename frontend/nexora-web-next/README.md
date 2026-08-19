@@ -72,7 +72,7 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 | Route | Experience | Data source |
 | --- | --- | --- |
 | `/` | NEXORA dashboard | Static dashboard demo data |
-| `/deals` | Game Deals Intelligence | `/api/deals` with static fallback |
+| `/deals` | Game Deals Intelligence | Curated `/api/deals` plus optional live `/api/deals/external` |
 | `/giveaways` | Live Giveaway Intelligence | `/api/giveaways` with static fallback |
 | `/wishlist` | Smart Wishlist Control | Personal `/api/me/wishlist` with public `/api/wishlist` preview/fallback |
 | `/security` | Cyber Security Command Center | `/api/security/status` with static fallback |
@@ -80,6 +80,18 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 | `/settings` | Account Control Center | Local demo state |
 | `/login` | Account login | `POST /api/auth/login` |
 | `/register` | Account registration | `POST /api/auth/register` |
+
+## Curated and external deals
+
+The Deals page initially renders the curated NEXORA feed from `GET /api/deals`
+with the existing typed static fallback. Live external deals are optional and
+are requested from `GET /api/deals/external?pageSize=12` only after the user
+selects **Live External Deals** or submits a live title search.
+
+If the backend, CheapShark, or the external response is unavailable, the page
+shows a friendly warning and continues displaying the server-provided curated
+deals. External results are not persisted. Stores without an expanded frontend
+lookup can appear as `Store {id}` and remain available under **All Stores**.
 
 ## Authentication foundation
 

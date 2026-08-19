@@ -1,4 +1,5 @@
-export type DealStore = "Steam" | "Epic Games" | "GOG" | "Humble" | "Ubisoft";
+export type KnownDealStore = "Steam" | "Epic Games" | "GOG" | "Humble" | "Ubisoft";
+export type DealStore = string;
 export type DealStatus =
   | "Historical Low"
   | "Lowest Ever"
@@ -21,6 +22,8 @@ export type GameDeal = {
   category: string;
   status: DealStatus;
 };
+
+type CuratedGameDeal = Omit<GameDeal, "store"> & { store: KnownDealStore };
 
 export const dealFilters = [
   "All Stores",
@@ -149,4 +152,4 @@ export const deals = [
     category: "Action Adventure",
     status: "Good Price",
   },
-] satisfies readonly GameDeal[];
+] satisfies readonly CuratedGameDeal[];
