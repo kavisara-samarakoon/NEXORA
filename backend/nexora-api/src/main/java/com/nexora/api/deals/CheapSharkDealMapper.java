@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 @Component
@@ -15,22 +16,27 @@ public class CheapSharkDealMapper {
     private static final BigDecimal TEN = new BigDecimal("10");
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
 
-    public List<Deal> toDeals(List<CheapSharkDealResponse> responses) {
+    private final CheapSharkStoreDirectory storeDirectory;
+
+    public CheapSharkDealMapper(CheapSharkStoreDirectory storeDirectory) {
+        this.storeDirectory = storeDirectory;
+    }
+
+    public List<Deal> toDeals(
+            List<CheapSharkDealResponse> responses,
+            Map<String, String> storeLookup) {
         if (responses == null) {
             throw new IllegalArgumentException("CheapShark response list is missing");
         }
 
         return IntStream.range(0, responses.size())
-                .mapToObj(index -> toDeal(responses.get(index), index + 1L))
+                .mapToObj(index -> toDeal(responses.get(index), index + 1L, storeLookup))
                 .toList();
     }
 
-    Deal toDeal(CheapSharkDealResponse response, long id) {
+    Deal toDeal(CheapSharkDealResponse response, long id, Map<String, String> storeLookup) {
         if (response == null || response.title() == null || response.title().isBlank()) {
             throw new IllegalArgumentException("CheapShark deal title is missing");
-        }
-        if (response.storeID() == null || response.storeID().isBlank()) {
-            throw new IllegalArgumentException("CheapShark deal store is missing");
         }
 
         BigDecimal salePrice = nonNegativeDecimal(response.salePrice()).setScale(2, RoundingMode.HALF_UP);
@@ -40,7 +46,7 @@ public class CheapSharkDealMapper {
 
         return new Deal(
                 id,
-                storeName(response.storeID().trim()),
+                storeDirectory.storeName(storeLookup, response.storeID()),
                 "-" + discountValue + "%",
                 discountValue,
                 response.title().trim(),
@@ -52,15 +58,6 @@ public class CheapSharkDealMapper {
                 "External Deal",
                 status(discountValue)
         );
-    }
-
-    private static String storeName(String storeId) {
-        return switch (storeId) {
-            case "1" -> "Steam";
-            case "25" -> "Epic Games";
-            case "7" -> "GOG";
-            default -> "Store " + storeId;
-        };
     }
 
     private static int discountValue(String savings) {
