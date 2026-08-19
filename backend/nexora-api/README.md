@@ -37,6 +37,9 @@ tests run without PostgreSQL.
 | `GET` | `/api/security/status` | Returns the demo security summary and protection items |
 | `GET` | `/api/sentinel/status` | Returns the Sentinel integration status |
 | `GET` | `/api/sentinel/demo` | Returns Sentinel messages, suggestions, capabilities, and system status |
+| `POST` | `/api/auth/register` | Creates an account and returns a JWT access token |
+| `POST` | `/api/auth/login` | Accepts an email or username and returns a JWT access token |
+| `GET` | `/api/auth/me` | Returns the authenticated user's safe account fields |
 
 Except for deals, giveaways, and wishlist items in the `dev` profile, feature
 data is stored in immutable in-memory collections. Restarting the
@@ -81,6 +84,8 @@ The defaults can be overridden with environment variables:
 | `NEXORA_DB_URL` | PostgreSQL JDBC connection URL |
 | `NEXORA_DB_USERNAME` | PostgreSQL username |
 | `NEXORA_DB_PASSWORD` | PostgreSQL password |
+| `NEXORA_JWT_SECRET` | JWT signing secret (required outside local development) |
+| `NEXORA_JWT_EXPIRATION_MINUTES` | Access-token lifetime in minutes (default: `60`) |
 
 For example:
 
@@ -109,6 +114,53 @@ curl http://localhost:8080/api/wishlist
 curl http://localhost:8080/api/dashboard/summary
 ```
 
+## Basic authentication
+
+Authentication uses BCrypt password hashes and stateless HS256 JWT access
+tokens. The `dev` profile persists accounts in PostgreSQL through Flyway V4.
+The database-free default profile uses an in-memory account store so local demo
+APIs and tests continue to run without PostgreSQL; those accounts are lost when
+the process restarts.
+
+Start PostgreSQL and the database-backed API, overriding the local-only signing
+secret:
+
+```bash
+export NEXORA_JWT_SECRET='replace-this-with-at-least-32-random-bytes'
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+Register an account:
+
+```bash
+curl -i -X POST http://localhost:8080/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"player@example.com","username":"player_one","displayName":"Player One","password":"change-me-123"}'
+```
+
+Log in with either the email or username:
+
+```bash
+curl -i -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"emailOrUsername":"player@example.com","password":"change-me-123"}'
+```
+
+Copy the `token` value from either response, then request the protected account:
+
+```bash
+export NEXORA_TOKEN='<token-from-register-or-login>'
+curl -i http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer ${NEXORA_TOKEN}"
+```
+
+This is an authentication foundation, not production-complete identity
+management. Before deployment, use a generated secret from a secret manager,
+serve only over HTTPS, and add rate limiting, email verification, password-reset
+flows, token revocation/rotation, and operational audit controls. Refresh
+tokens, roles, admin authorization, and OAuth login are intentionally not part
+of this change.
+
 To confirm inactive rows are excluded, update a development row and repeat the
 request:
 
@@ -132,7 +184,7 @@ The backend allows browser requests to `/api/**` from these local origins:
 ## Future work
 
 - Add database-backed catalog write workflows when the API is ready for them.
-- Add authentication, authorization, and session management.
+- Expand the authentication foundation with approved account-recovery and token lifecycle workflows.
 - Add approved external game-store and pricing APIs.
 - Add real Gemini integration for Sentinel with privacy and safety controls.
 - Add production configuration, observability, and deployment support.
