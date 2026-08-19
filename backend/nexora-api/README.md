@@ -79,6 +79,12 @@ errors, timeouts, non-success responses, invalid JSON, or structurally invalid
 deal data produce a concise server warning and return the current
 `DealCatalogService` results instead of failing the endpoint.
 
+Store names are resolved on demand from CheapShark's `/stores` endpoint. If
+that lookup is unavailable, live deals are still returned: unknown IDs use
+`Store {id}` and a missing ID uses `Unknown Store`. A store-directory failure
+does not trigger the local-deals fallback; only a deals request or deal-mapping
+failure does.
+
 Configuration defaults:
 
 ```properties
@@ -89,10 +95,9 @@ nexora.external-deals.default-page-size=12
 nexora.external-deals.max-page-size=24
 ```
 
-This first integration performs requests on demand only. CheapShark results
-are not persisted, the store ID mapping currently covers only Steam, Epic
-Games, and GOG explicitly, and there is no scheduled synchronization or cache
-yet. No API key is required.
+This integration fetches deals and store data on demand. Neither is persisted,
+and there is no scheduled synchronization or store-directory cache yet. No API
+key is required.
 
 ## Maven commands
 

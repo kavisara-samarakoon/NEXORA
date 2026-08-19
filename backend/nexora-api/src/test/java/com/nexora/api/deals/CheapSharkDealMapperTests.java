@@ -4,20 +4,23 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class CheapSharkDealMapperTests {
 
-    private final CheapSharkDealMapper mapper = new CheapSharkDealMapper();
+    private final CheapSharkDealMapper mapper = new CheapSharkDealMapper(
+            new CheapSharkStoreDirectory()
+    );
 
     @Test
     void handlesInvalidAndMissingNumericFieldsSafely() {
         List<Deal> deals = mapper.toDeals(List.of(
                 response("Invalid numbers", "99", "not-a-price", "-20", "unknown", "bad", "8.4"),
                 response("Missing numbers", "25", null, null, null, null, null)
-        ));
+        ), Map.of("25", "Epic Games"));
 
         Deal invalidNumbers = deals.get(0);
         Deal missingNumbers = deals.get(1);
@@ -42,7 +45,7 @@ class CheapSharkDealMapperTests {
     void roundsAndClampsSavingsAndRatings() {
         Deal deal = mapper.toDeals(List.of(
                 response("Clamped", "1", "0", "59.999", "250.6", "120", "10")
-        )).get(0);
+        ), Map.of("1", "Steam")).get(0);
 
         assertAll(
                 () -> assertEquals("-100%", deal.discount()),
@@ -53,6 +56,15 @@ class CheapSharkDealMapperTests {
                 () -> assertEquals("★★★★★", deal.stars()),
                 () -> assertEquals("Lowest Ever", deal.status())
         );
+    }
+
+    @Test
+    void mapsBlankStoreIdToUnknownStore() {
+        Deal deal = mapper.toDeals(List.of(
+                response("Unknown store", "  ", "1", "2", "50", null, null)
+        ), Map.of()).get(0);
+
+        assertEquals("Unknown Store", deal.store());
     }
 
     private static CheapSharkDealResponse response(

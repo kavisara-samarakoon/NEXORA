@@ -36,7 +36,23 @@ public class CheapSharkDealClient {
             int pageSize,
             String title,
             BigDecimal upperPrice) {
-        HttpRequest request = HttpRequest.newBuilder(buildDealsUri(pageSize, title, upperPrice))
+        return getArray(
+                buildDealsUri(pageSize, title, upperPrice),
+                CheapSharkDealResponse[].class,
+                "deals"
+        );
+    }
+
+    public List<CheapSharkStoreResponse> getStores() {
+        return getArray(
+                URI.create(normalizedBaseUrl() + "/stores"),
+                CheapSharkStoreResponse[].class,
+                "stores"
+        );
+    }
+
+    private <T> List<T> getArray(URI uri, Class<T[]> responseType, String resourceName) {
+        HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(properties.timeout())
                 .header("Accept", "application/json")
                 .header("User-Agent", USER_AGENT)
@@ -55,19 +71,24 @@ public class CheapSharkDealClient {
                 );
             }
 
-            CheapSharkDealResponse[] deals = objectMapper.readValue(
-                    response.body(),
-                    CheapSharkDealResponse[].class
-            );
-            if (deals == null) {
-                throw new CheapSharkClientException("CheapShark returned an empty response body");
+            T[] records = objectMapper.readValue(response.body(), responseType);
+            if (records == null) {
+                throw new CheapSharkClientException(
+                        "CheapShark " + resourceName + " response body is null"
+                );
             }
-            return Arrays.asList(deals);
+            return Arrays.asList(records);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new CheapSharkClientException("CheapShark request was interrupted", exception);
+            throw new CheapSharkClientException(
+                    "CheapShark " + resourceName + " request was interrupted",
+                    exception
+            );
         } catch (IOException | JacksonException exception) {
-            throw new CheapSharkClientException("CheapShark request failed", exception);
+            throw new CheapSharkClientException(
+                    "CheapShark " + resourceName + " request failed",
+                    exception
+            );
         }
     }
 

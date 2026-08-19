@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ExternalDealService {
@@ -14,16 +15,19 @@ public class ExternalDealService {
 
     private final CheapSharkDealClient cheapSharkDealClient;
     private final CheapSharkDealMapper cheapSharkDealMapper;
+    private final CheapSharkStoreDirectory cheapSharkStoreDirectory;
     private final DealCatalogService localDeals;
     private final ExternalDealsProperties properties;
 
     public ExternalDealService(
             CheapSharkDealClient cheapSharkDealClient,
             CheapSharkDealMapper cheapSharkDealMapper,
+            CheapSharkStoreDirectory cheapSharkStoreDirectory,
             DealCatalogService localDeals,
             ExternalDealsProperties properties) {
         this.cheapSharkDealClient = cheapSharkDealClient;
         this.cheapSharkDealMapper = cheapSharkDealMapper;
+        this.cheapSharkStoreDirectory = cheapSharkStoreDirectory;
         this.localDeals = localDeals;
         this.properties = properties;
     }
@@ -44,13 +48,26 @@ public class ExternalDealService {
                     effectiveTitle,
                     upperPrice
             );
-            return cheapSharkDealMapper.toDeals(responses);
+            Map<String, String> storeLookup = getStoreLookup();
+            return cheapSharkDealMapper.toDeals(responses, storeLookup);
         } catch (RuntimeException exception) {
             LOGGER.warn(
                     "CheapShark deals unavailable; serving the local deals fallback ({})",
                     exception.getMessage()
             );
             return localDeals.getDeals();
+        }
+    }
+
+    private Map<String, String> getStoreLookup() {
+        try {
+            return cheapSharkStoreDirectory.toLookup(cheapSharkDealClient.getStores());
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "CheapShark stores unavailable; using fallback store labels ({})",
+                    exception.getMessage()
+            );
+            return Map.of();
         }
     }
 
