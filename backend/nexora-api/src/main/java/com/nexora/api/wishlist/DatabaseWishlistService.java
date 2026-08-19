@@ -21,23 +21,7 @@ public class DatabaseWishlistService implements WishlistCatalogService {
     @Transactional(readOnly = true)
     public List<WishlistItem> getWishlistItems() {
         return wishlistItemRepository.findActiveWishlistItems().stream()
-                .map(DatabaseWishlistService::toApiWishlistItem)
+                .map(WishlistItemMapper::toResponse)
                 .toList();
-    }
-
-    private static WishlistItem toApiWishlistItem(
-            com.nexora.api.wishlist.persistence.WishlistItem wishlistItem) {
-        return new WishlistItem(
-                wishlistItem.getId(),
-                wishlistItem.getTitle(),
-                wishlistItem.getStore(),
-                wishlistItem.getCurrentPrice(),
-                wishlistItem.getTargetPrice(),
-                wishlistItem.getLowestEver(),
-                wishlistItem.getDiscount(),
-                wishlistItem.getStatus(),
-                wishlistItem.isAlertActive(),
-                wishlistItem.getPriority()
-        );
     }
 }
