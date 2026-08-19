@@ -74,16 +74,21 @@ curl -i 'http://localhost:8080/api/deals/external?title=elden'
 ```
 
 The external request defaults to page zero, `DealRating` descending, and
-on-sale results only. It has a five-second connect/request timeout. Provider
-errors, timeouts, non-success responses, invalid JSON, or structurally invalid
-deal data produce a concise server warning and return the current
-`DealCatalogService` results instead of failing the endpoint.
+on-sale results only. It has a five-second connect/request timeout. Successful
+provider responses are cached in memory for five minutes by default. Identical
+requests reuse the cached CheapShark response. If a refresh fails after that
+entry expires, stale cached external deals are served. If there is no cached
+external response, provider errors, timeouts, non-success responses, invalid
+JSON, or structurally invalid deal data produce a concise server warning and
+return the current `DealCatalogService` results instead of failing the
+endpoint. Local fallback results are never stored in the external deals cache.
 
-Store names are resolved on demand from CheapShark's `/stores` endpoint. If
-that lookup is unavailable, live deals are still returned: unknown IDs use
-`Store {id}` and a missing ID uses `Unknown Store`. A store-directory failure
-does not trigger the local-deals fallback; only a deals request or deal-mapping
-failure does.
+Store names are resolved from CheapShark's `/stores` endpoint and cached in
+memory for six hours by default. If a refresh fails, a stale store lookup is
+used when available. With no cached lookup, live deals are still returned:
+unknown IDs use `Store {id}` and a missing ID uses `Unknown Store`. A
+store-directory failure does not trigger the local-deals fallback; only a
+deals request or deal-mapping failure does.
 
 When CheapShark supplies a non-blank `dealID`, the mapped response includes a
 `dealUrl` using `https://www.cheapshark.com/redirect?dealID={id}`. These URLs
@@ -98,11 +103,17 @@ nexora.external-deals.cheapshark.base-url=https://www.cheapshark.com/api/1.0
 nexora.external-deals.timeout-seconds=5
 nexora.external-deals.default-page-size=12
 nexora.external-deals.max-page-size=24
+nexora.external-deals.cache.enabled=true
+nexora.external-deals.cache.deals-ttl-seconds=300
+nexora.external-deals.cache.stores-ttl-seconds=21600
 ```
 
-This integration fetches deals and store data on demand. Neither is persisted,
-and there is no scheduled synchronization or store-directory cache yet. No API
-key is required.
+TTL values are seconds and values below one are clamped to one second. Setting
+`nexora.external-deals.cache.enabled=false` restores uncached, on-demand
+provider calls. The cache is local to one application process, resets whenever
+the application restarts, and is not shared between instances. External deals
+and stores are not persisted, and there is no scheduled synchronization or
+background refresh yet. No API key is required.
 
 ## Maven commands
 

@@ -3,6 +3,8 @@ package com.nexora.api;
 import com.nexora.api.deals.CheapSharkDealClient;
 import com.nexora.api.deals.CheapSharkDealResponse;
 import com.nexora.api.deals.CheapSharkStoreResponse;
+import com.nexora.api.deals.ExternalDealsCache;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +17,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,6 +33,14 @@ class ExternalDealApiEndpointTests {
 
     @MockitoBean
     private CheapSharkDealClient cheapSharkDealClient;
+
+    @Autowired
+    private ExternalDealsCache externalDealsCache;
+
+    @BeforeEach
+    void clearExternalDealsCache() {
+        externalDealsCache.clear();
+    }
 
     @Test
     void existingDealsEndpointRemainsUnchangedAndDoesNotCallCheapShark() throws Exception {
@@ -69,6 +80,39 @@ class ExternalDealApiEndpointTests {
                 .andExpect(jsonPath("$[0].status").value("Lowest Ever"))
                 .andExpect(jsonPath("$[0].dealUrl").value(
                         "https://www.cheapshark.com/redirect?dealID=deal%2F123"));
+
+        mockMvc.perform(get("/api/deals/external"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Deus Ex"))
+                .andExpect(jsonPath("$[0].store").value("Fanatical"));
+
+        verify(cheapSharkDealClient, times(1)).getDeals(12, null, null);
+        verify(cheapSharkDealClient, times(1)).getStores();
+    }
+
+    @Test
+    void externalDealsEndpointUsesDifferentCacheEntriesForDifferentTitles() throws Exception {
+        when(cheapSharkDealClient.getDeals(12, "Portal", null)).thenReturn(List.of(
+                response("Portal", "1", "1.99", "9.99", "80", "95", "9", "portal")
+        ));
+        when(cheapSharkDealClient.getDeals(12, "Hades", null)).thenReturn(List.of(
+                response("Hades", "1", "9.99", "24.99", "60", "97", "9", "hades")
+        ));
+        when(cheapSharkDealClient.getStores()).thenReturn(List.of(
+                store("1", "Steam", 1)
+        ));
+
+        mockMvc.perform(get("/api/deals/external").queryParam("title", "  Portal  "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Portal"));
+
+        mockMvc.perform(get("/api/deals/external").queryParam("title", "Hades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Hades"));
+
+        verify(cheapSharkDealClient).getDeals(12, "Portal", null);
+        verify(cheapSharkDealClient).getDeals(12, "Hades", null);
+        verify(cheapSharkDealClient, times(1)).getStores();
     }
 
     @Test
