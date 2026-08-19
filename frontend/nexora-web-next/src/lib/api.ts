@@ -31,7 +31,6 @@ import {
   type WishlistItem,
   type WishlistPriority,
   type WishlistStatus,
-  type WishlistStore,
 } from "@/data/wishlist";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8080";
@@ -92,11 +91,6 @@ const SENTINEL_STATUS_ICONS: readonly SentinelSystemStatusItem["icon"][] = [
   "network",
   "spark",
   "lock",
-];
-const WISHLIST_STORES: readonly WishlistStore[] = [
-  "Steam",
-  "Epic Games",
-  "GOG",
 ];
 const WISHLIST_STATUSES: readonly WishlistStatus[] = [
   "price-drop",
@@ -250,7 +244,8 @@ function isWishlistItem(value: unknown): value is WishlistItem {
   return (
     typeof item.id === "number" &&
     typeof item.title === "string" &&
-    WISHLIST_STORES.includes(item.store as WishlistStore) &&
+    typeof item.store === "string" &&
+    item.store.trim().length > 0 &&
     typeof item.currentPrice === "string" &&
     typeof item.targetPrice === "string" &&
     typeof item.lowestEver === "string" &&

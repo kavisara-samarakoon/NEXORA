@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   dealFilters,
   type DealFilter,
@@ -8,9 +9,23 @@ import {
   type GameDeal,
 } from "@/data/deals";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
+import {
+  AUTH_STATE_EVENT,
+  clearAuthToken,
+  readAuthToken,
+} from "@/lib/auth-client";
+import {
+  addMyWishlistItem,
+  normalizeUserWishlistError,
+  type AddWishlistItemPayload,
+} from "@/lib/user-wishlist";
 
 type DealsMode = "curated" | "external";
 type ExternalDealsStatus = "idle" | "loading" | "ready" | "fallback";
+type SaveMessage = {
+  tone: "auth" | "error" | "success";
+  text: string;
+};
 
 const networkActivity = [35, 58, 42, 75, 52, 90, 68, 45, 82, 60, 38, 72];
 const dealNetworkIcons = {
@@ -36,13 +51,41 @@ function statusClass(status: DealStatus) {
   return "neutral";
 }
 
+function dealStateKey(scope: "curated" | "external", deal: GameDeal) {
+  return `${scope}:${deal.id}:${deal.title}`;
+}
+
+function wishlistPayloadFor(deal: GameDeal): AddWishlistItemPayload {
+  const isFree = deal.priceNew === "FREE" || deal.priceValue === 0;
+
+  return {
+    title: deal.title,
+    store: deal.store,
+    currentPrice: deal.priceNew,
+    targetPrice: deal.priceNew,
+    lowestEver: deal.priceNew,
+    discount: deal.discount,
+    status: isFree ? "free-now" : deal.discountValue >= 50 ? "price-drop" : "tracking",
+    priority: deal.discountValue >= 80 ? "high" : deal.discountValue >= 50 ? "medium" : "low",
+    alertActive: true,
+  };
+}
+
 function DealCard({
   deal,
   alertIsSet,
+  isSaved,
+  isSaving,
+  saveMessage,
+  onSave,
   onToggleAlert,
 }: {
   deal: GameDeal;
   alertIsSet: boolean;
+  isSaved: boolean;
+  isSaving: boolean;
+  saveMessage?: SaveMessage;
+  onSave: (deal: GameDeal) => void;
   onToggleAlert: (dealId: number) => void;
 }) {
   const color = storeClass(deal.store);
@@ -77,6 +120,16 @@ function DealCard({
 
       <div className="deals-card__actions">
         <button
+          className={isSaved ? "deals-card__save deals-card__save--saved" : "deals-card__save"}
+          type="button"
+          disabled={isSaving || isSaved}
+          aria-busy={isSaving}
+          onClick={() => onSave(deal)}
+        >
+          <span aria-hidden="true">{isSaved ? "✓" : "♡"}</span>
+          {isSaved ? "Saved" : isSaving ? "Saving…" : "Save to Wishlist"}
+        </button>
+        <button
           className={alertIsSet ? "deals-card__alert deals-card__alert--active" : "deals-card__alert"}
           type="button"
           aria-pressed={alertIsSet}
@@ -95,6 +148,20 @@ function DealCard({
           View Deal
         </button>
       </div>
+      {saveMessage && (
+        <div
+          className={`deals-card__save-message deals-card__save-message--${saveMessage.tone}`}
+          role={saveMessage.tone === "error" || saveMessage.tone === "auth" ? "alert" : "status"}
+        >
+          <span>{saveMessage.text}</span>
+          {saveMessage.tone === "auth" && (
+            <span className="deals-card__auth-links">
+              <Link href="/login">Login</Link>
+              <Link href="/register">Register</Link>
+            </span>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -207,7 +274,29 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const [activeFilter, setActiveFilter] = useState<DealFilter>("All Stores");
   const [searchQuery, setSearchQuery] = useState("");
   const [alerts, setAlerts] = useState<Set<string>>(() => new Set());
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [savingDeals, setSavingDeals] = useState<Set<string>>(() => new Set());
+  const [savedDeals, setSavedDeals] = useState<Set<string>>(() => new Set());
+  const [saveMessages, setSaveMessages] = useState<Record<string, SaveMessage>>({});
+  const savingDealKeys = useRef(new Set<string>());
   const requestVersion = useRef(0);
+
+  useEffect(() => {
+    function refreshToken() {
+      setAuthToken(readAuthToken());
+      setAuthChecked(true);
+    }
+
+    refreshToken();
+    window.addEventListener("storage", refreshToken);
+    window.addEventListener(AUTH_STATE_EVENT, refreshToken);
+
+    return () => {
+      window.removeEventListener("storage", refreshToken);
+      window.removeEventListener(AUTH_STATE_EVENT, refreshToken);
+    };
+  }, []);
 
   const visibleDeals = mode === "external" && externalStatus === "ready" ? externalDeals : deals;
   const filteredDeals = useMemo(() => {
@@ -284,6 +373,66 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       else next.add(key);
       return next;
     });
+  }
+
+  async function saveDeal(deal: GameDeal) {
+    const key = dealStateKey(displayedDealScope, deal);
+    if (savingDealKeys.current.has(key) || savedDeals.has(key)) return;
+
+    const token = readAuthToken();
+    if (!token) {
+      setAuthToken(null);
+      setAuthChecked(true);
+      setSaveMessages((current) => ({
+        ...current,
+        [key]: {
+          tone: "auth",
+          text: "Sign in to save deals to your wishlist.",
+        },
+      }));
+      return;
+    }
+
+    setAuthToken(token);
+    savingDealKeys.current.add(key);
+    setSavingDeals((current) => new Set(current).add(key));
+    setSaveMessages((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+
+    try {
+      const savedItem = await addMyWishlistItem(token, wishlistPayloadFor(deal));
+      setSavedDeals((current) => new Set(current).add(key));
+      setSaveMessages((current) => ({
+        ...current,
+        [key]: {
+          tone: "success",
+          text: `${savedItem.title} was saved to your personal wishlist.`,
+        },
+      }));
+    } catch (error) {
+      const details = normalizeUserWishlistError(error);
+      if (details.status === 401) {
+        clearAuthToken();
+        setAuthToken(null);
+      }
+      setSaveMessages((current) => ({
+        ...current,
+        [key]: {
+          tone: details.status === 401 ? "auth" : "error",
+          text: details.message,
+        },
+      }));
+    } finally {
+      savingDealKeys.current.delete(key);
+      setSavingDeals((current) => {
+        const next = new Set(current);
+        next.delete(key);
+        return next;
+      });
+    }
   }
 
   function resetFilters() {
@@ -426,6 +575,15 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
       <div className="deals-layout">
         <section aria-label={isExternalReady ? "Live external game deals" : "Curated game deals"}>
+          {authChecked && !authToken && (
+            <div className="deals-auth-notice">
+              <span>Sign in to save deals to your wishlist.</span>
+              <span>
+                <Link href="/login">Login</Link>
+                <Link href="/register">Register</Link>
+              </span>
+            </div>
+          )}
           <div className="deals-results-bar">
             <span><strong>{filteredDeals.length}</strong> deals detected</span>
             <span>{sourceLabel}</span>
@@ -435,7 +593,11 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               <DealCard
                 deal={deal}
                 alertIsSet={alerts.has(`${displayedDealScope}:${deal.id}`)}
-                key={`${displayedDealScope}-${deal.id}`}
+                isSaved={savedDeals.has(dealStateKey(displayedDealScope, deal))}
+                isSaving={savingDeals.has(dealStateKey(displayedDealScope, deal))}
+                key={dealStateKey(displayedDealScope, deal)}
+                saveMessage={saveMessages[dealStateKey(displayedDealScope, deal)]}
+                onSave={saveDeal}
                 onToggleAlert={toggleAlert}
               />
             ))}

@@ -2,18 +2,16 @@ import {
   type WishlistItem,
   type WishlistPriority,
   type WishlistStatus,
-  type WishlistStore,
 } from "@/data/wishlist";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const WISHLIST_REQUEST_TIMEOUT_MS = 8000;
-const WISHLIST_STORES: readonly WishlistStore[] = ["Steam", "Epic Games", "GOG"];
 const WISHLIST_STATUSES: readonly WishlistStatus[] = ["price-drop", "free-now", "tracking"];
 const WISHLIST_PRIORITIES: readonly WishlistPriority[] = ["high", "medium", "low"];
 
 export type AddWishlistItemPayload = {
   title: string;
-  store: WishlistStore;
+  store: string;
   currentPrice: string;
   targetPrice: string;
   lowestEver?: string;
@@ -52,7 +50,8 @@ function isWishlistItem(value: unknown): value is WishlistItem {
     Number.isInteger(item.id) &&
     item.id > 0 &&
     typeof item.title === "string" &&
-    WISHLIST_STORES.includes(item.store as WishlistStore) &&
+    typeof item.store === "string" &&
+    item.store.trim().length > 0 &&
     typeof item.currentPrice === "string" &&
     typeof item.targetPrice === "string" &&
     typeof item.lowestEver === "string" &&

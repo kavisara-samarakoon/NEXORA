@@ -42,6 +42,13 @@ function priorityLabel(priority: WishlistPriority) {
   return priority;
 }
 
+function wishlistStoreClass(store: string) {
+  if (store === "Steam") return "steam";
+  if (store === "Epic Games") return "epic";
+  if (store === "GOG") return "gog";
+  return "external";
+}
+
 function StatusIcon({ icon }: { icon: "down" | "gift" | "signal" }) {
   if (icon === "down") return <span aria-hidden="true">↓</span>;
   if (icon === "gift") return <span aria-hidden="true">🎁</span>;
@@ -64,7 +71,7 @@ function WishlistCard({
   onToggleAlert: (itemId: number) => void;
 }) {
   const status = statusDetails(item.status);
-  const storeClass = item.store.toLowerCase().replace(" games", "");
+  const storeClass = wishlistStoreClass(item.store);
 
   return (
     <article className={`wl-card wl-card--${storeClass}`} aria-busy={isDeleting}>
