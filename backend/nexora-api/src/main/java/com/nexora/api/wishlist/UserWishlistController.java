@@ -35,6 +35,13 @@ public class UserWishlistController {
         return userWishlistService.getWishlistItems(userIdResolver.resolve(authentication));
     }
 
+    @GetMapping("/alert-events")
+    public List<WishlistAlertEventResponse> getWishlistAlertEvents(
+            Authentication authentication) {
+        return userWishlistService.getWishlistAlertEvents(
+                userIdResolver.resolve(authentication));
+    }
+
     @PostMapping
     public ResponseEntity<WishlistItem> addWishlistItem(
             Authentication authentication,

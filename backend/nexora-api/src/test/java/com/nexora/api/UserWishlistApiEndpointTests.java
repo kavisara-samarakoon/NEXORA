@@ -57,10 +57,148 @@ class UserWishlistApiEndpointTests {
     }
 
     @Test
+    void wishlistAlertHistoryRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/me/wishlist/alert-events"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("authentication_required"));
+    }
+
+    @Test
     void newlyAuthenticatedUserStartsWithAnEmptyWishlist() throws Exception {
         String token = registerAndLogin(uniqueUser());
 
         mockMvc.perform(authenticatedGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void newlyAuthenticatedUserStartsWithEmptyAlertHistory() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+
+        mockMvc.perform(authenticatedAlertEventsGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void creatingTargetReachedItemRecordsOneAlertEvent() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        String title = "Reached title " + UUID.randomUUID();
+
+        MvcResult created = mockMvc.perform(authenticatedPost(
+                        token, title, "Steam", "$8.88", "$9.99", true))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.alertEvaluation.state").value("target-reached"))
+                .andReturn();
+        long itemId = objectMapper.readTree(created.getResponse().getContentAsString())
+                .path("id")
+                .longValue();
+
+        mockMvc.perform(authenticatedAlertEventsGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").isNumber())
+                .andExpect(jsonPath("$[0].wishlistItemId").value(itemId))
+                .andExpect(jsonPath("$[0].itemTitle").value(title))
+                .andExpect(jsonPath("$[0].store").value("Steam"))
+                .andExpect(jsonPath("$[0].currentPrice").value("$8.88"))
+                .andExpect(jsonPath("$[0].targetPrice").value("$9.99"))
+                .andExpect(jsonPath("$[0].evaluationState").value("target-reached"))
+                .andExpect(jsonPath("$[0].targetReached").value(true))
+                .andExpect(jsonPath("$[0].message").value("Target price reached."))
+                .andExpect(jsonPath("$[0].createdAt").isNotEmpty());
+    }
+
+    @Test
+    void creatingWatchingItemDoesNotRecordAlertEvent() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+
+        mockMvc.perform(authenticatedPost(token, "Watching title " + UUID.randomUUID()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.alertEvaluation.state").value("watching"));
+
+        mockMvc.perform(authenticatedAlertEventsGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void alertHistoryRecordsOnlyTransitionsToTargetReached() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Transition title " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"targetPrice\":\"$49.99\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alertEvaluation.state").value("target-reached"));
+        mockMvc.perform(authenticatedAlertEventsGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].wishlistItemId").value(itemId));
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"targetPrice\":\"$59.99\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alertEvaluation.state").value("target-reached"));
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"priority\":\"high\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(authenticatedAlertEventsGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"alertActive\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alertEvaluation.state").value("paused"));
+        mockMvc.perform(authenticatedAlertEventsGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void pausingWatchingItemDoesNotRecordAlertEvent() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Paused title " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"alertActive\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alertEvaluation.state").value("paused"));
+
+        mockMvc.perform(authenticatedAlertEventsGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void alertHistoryIsPrivateToAuthenticatedOwner() throws Exception {
+        String ownerToken = registerAndLogin(uniqueUser());
+        String secondUserToken = registerAndLogin(uniqueUser());
+        mockMvc.perform(authenticatedPost(
+                        ownerToken,
+                        "Private reached title " + UUID.randomUUID(),
+                        "Steam",
+                        "$8.88",
+                        "$9.99",
+                        true))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(authenticatedAlertEventsGet(ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+        mockMvc.perform(authenticatedAlertEventsGet(secondUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void softDeletedItemCannotCreateOrExposeANewAlertEvent() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Deleted watching title " + UUID.randomUUID());
+
+        mockMvc.perform(delete("/api/me/wishlist/{id}", itemId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"targetPrice\":\"$49.99\"}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(authenticatedAlertEventsGet(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
@@ -356,6 +494,17 @@ class UserWishlistApiEndpointTests {
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
     authenticatedPost(String token, String title, String store) {
+        return authenticatedPost(token, title, store, "$39.99", "$24.99", true);
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    authenticatedPost(
+            String token,
+            String title,
+            String store,
+            String currentPrice,
+            String targetPrice,
+            boolean alertActive) {
         return post("/api/me/wishlist")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -363,10 +512,16 @@ class UserWishlistApiEndpointTests {
                         {
                           "title": "%s",
                           "store": "%s",
-                          "currentPrice": "$39.99",
-                          "targetPrice": "$24.99"
+                          "currentPrice": "%s",
+                          "targetPrice": "%s",
+                          "alertActive": %s
                         }
-                        """.formatted(title, store));
+                        """.formatted(
+                                title,
+                                store,
+                                currentPrice,
+                                targetPrice,
+                                alertActive));
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -375,6 +530,12 @@ class UserWishlistApiEndpointTests {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(content);
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    authenticatedAlertEventsGet(String token) {
+        return get("/api/me/wishlist/alert-events")
+                .header("Authorization", "Bearer " + token);
     }
 
     private static Credentials uniqueUser() {

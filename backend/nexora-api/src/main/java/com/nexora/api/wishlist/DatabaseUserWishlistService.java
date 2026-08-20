@@ -1,5 +1,7 @@
 package com.nexora.api.wishlist;
 
+import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
+import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -12,9 +14,13 @@ import java.util.List;
 public class DatabaseUserWishlistService implements UserWishlistService {
 
     private final WishlistItemRepository wishlistItemRepository;
+    private final WishlistAlertEventRepository wishlistAlertEventRepository;
 
-    public DatabaseUserWishlistService(WishlistItemRepository wishlistItemRepository) {
+    public DatabaseUserWishlistService(
+            WishlistItemRepository wishlistItemRepository,
+            WishlistAlertEventRepository wishlistAlertEventRepository) {
         this.wishlistItemRepository = wishlistItemRepository;
+        this.wishlistAlertEventRepository = wishlistAlertEventRepository;
     }
 
     @Override
@@ -22,6 +28,14 @@ public class DatabaseUserWishlistService implements UserWishlistService {
     public List<WishlistItem> getWishlistItems(long userId) {
         return wishlistItemRepository.findByUserIdAndActiveTrueOrderById(userId).stream()
                 .map(WishlistItemMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WishlistAlertEventResponse> getWishlistAlertEvents(long userId) {
+        return wishlistAlertEventRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(WishlistAlertEventMapper::toResponse)
                 .toList();
     }
 
@@ -57,6 +71,10 @@ public class DatabaseUserWishlistService implements UserWishlistService {
                                 userId
                         )
                 );
+        WishlistAlertEvaluation evaluation = evaluate(savedItem);
+        if (evaluation.targetReached()) {
+            recordAlertEvent(userId, savedItem, evaluation);
+        }
         return WishlistItemMapper.toResponse(savedItem);
     }
 
@@ -67,12 +85,19 @@ public class DatabaseUserWishlistService implements UserWishlistService {
         com.nexora.api.wishlist.persistence.WishlistItem item = wishlistItemRepository
                 .findByIdAndUserIdAndActiveTrue(itemId, userId)
                 .orElseThrow(WishlistItemNotFoundException::new);
+        WishlistAlertEvaluation previousEvaluation = evaluate(item);
         item.updateAlertSettings(
                 trimmed(request.targetPrice()),
                 request.alertActive(),
                 trimmed(request.priority())
         );
-        return WishlistItemMapper.toResponse(wishlistItemRepository.saveAndFlush(item));
+        com.nexora.api.wishlist.persistence.WishlistItem savedItem =
+                wishlistItemRepository.saveAndFlush(item);
+        WishlistAlertEvaluation newEvaluation = evaluate(savedItem);
+        if (!previousEvaluation.targetReached() && newEvaluation.targetReached()) {
+            recordAlertEvent(userId, savedItem, newEvaluation);
+        }
+        return WishlistItemMapper.toResponse(savedItem);
     }
 
     @Override
@@ -87,5 +112,33 @@ public class DatabaseUserWishlistService implements UserWishlistService {
 
     private static String trimmed(String value) {
         return value == null ? null : value.trim();
+    }
+
+    private static WishlistAlertEvaluation evaluate(
+            com.nexora.api.wishlist.persistence.WishlistItem item) {
+        return WishlistAlertEvaluator.evaluate(
+                item.getCurrentPrice(),
+                item.getTargetPrice(),
+                item.isAlertActive()
+        );
+    }
+
+    private void recordAlertEvent(
+            long userId,
+            com.nexora.api.wishlist.persistence.WishlistItem item,
+            WishlistAlertEvaluation evaluation) {
+        wishlistAlertEventRepository.saveAndFlush(new WishlistAlertEvent(
+                null,
+                userId,
+                item.getId(),
+                item.getTitle(),
+                item.getStore(),
+                item.getCurrentPrice(),
+                item.getTargetPrice(),
+                evaluation.state(),
+                evaluation.targetReached(),
+                evaluation.message(),
+                null
+        ));
     }
 }
