@@ -68,7 +68,11 @@ class DemoApiEndpointTests {
                 .andExpect(jsonPath("$[0].discount").value("-25%"))
                 .andExpect(jsonPath("$[0].status").value("price-drop"))
                 .andExpect(jsonPath("$[0].alertActive").value(true))
-                .andExpect(jsonPath("$[0].priority").value("high"));
+                .andExpect(jsonPath("$[0].priority").value("high"))
+                .andExpect(jsonPath("$[0].alertEvaluation.targetReached").value(false))
+                .andExpect(jsonPath("$[0].alertEvaluation.state").value("watching"))
+                .andExpect(jsonPath("$[0].alertEvaluation.message")
+                        .value("Still above target price."));
     }
 
     @Test

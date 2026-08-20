@@ -81,12 +81,15 @@ class UserWishlistApiEndpointTests {
                 .andExpect(jsonPath("$.discount").doesNotExist())
                 .andExpect(jsonPath("$.status").value("tracking"))
                 .andExpect(jsonPath("$.alertActive").value(true))
-                .andExpect(jsonPath("$.priority").value("medium"));
+                .andExpect(jsonPath("$.priority").value("medium"))
+                .andExpect(jsonPath("$.alertEvaluation.targetReached").value(false))
+                .andExpect(jsonPath("$.alertEvaluation.state").value("watching"));
 
         mockMvc.perform(authenticatedGet(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].title").value(title));
+                .andExpect(jsonPath("$[0].title").value(title))
+                .andExpect(jsonPath("$[0].alertEvaluation.state").value("watching"));
 
         MvcResult publicWishlist = mockMvc.perform(get("/api/wishlist"))
                 .andExpect(status().isOk())
@@ -214,6 +217,24 @@ class UserWishlistApiEndpointTests {
                 .andExpect(jsonPath("$.targetPrice").value("$24.99"))
                 .andExpect(jsonPath("$.alertActive").value(false))
                 .andExpect(jsonPath("$.priority").value("medium"));
+    }
+
+    @Test
+    void alertUpdateRecalculatesEvaluation() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Evaluation update " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"targetPrice\":\"$49.99\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alertEvaluation.targetReached").value(true))
+                .andExpect(jsonPath("$.alertEvaluation.state").value("target-reached"))
+                .andExpect(jsonPath("$.alertEvaluation.message").value("Target price reached."));
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"alertActive\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alertEvaluation.targetReached").value(false))
+                .andExpect(jsonPath("$.alertEvaluation.state").value("paused"))
+                .andExpect(jsonPath("$.alertEvaluation.message").value("Alert is paused."));
     }
 
     @Test

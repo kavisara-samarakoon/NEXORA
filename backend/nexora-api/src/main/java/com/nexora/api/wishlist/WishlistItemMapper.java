@@ -17,7 +17,12 @@ final class WishlistItemMapper {
                 item.getDiscount(),
                 item.getStatus(),
                 item.isAlertActive(),
-                item.getPriority()
+                item.getPriority(),
+                WishlistAlertEvaluator.evaluate(
+                        item.getCurrentPrice(),
+                        item.getTargetPrice(),
+                        item.isAlertActive()
+                )
         );
     }
 
@@ -32,7 +37,12 @@ final class WishlistItemMapper {
                 values.discount(),
                 values.status(),
                 values.alertActive(),
-                values.priority()
+                values.priority(),
+                WishlistAlertEvaluator.evaluate(
+                        values.currentPrice(),
+                        values.targetPrice(),
+                        values.alertActive()
+                )
         );
     }
 }
