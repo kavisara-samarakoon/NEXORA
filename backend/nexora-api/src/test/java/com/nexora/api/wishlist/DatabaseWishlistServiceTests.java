@@ -65,6 +65,7 @@ class DatabaseWishlistServiceTests {
                 () -> assertEquals("price-drop", item.status()),
                 () -> assertTrue(item.alertActive()),
                 () -> assertEquals("high", item.priority()),
+                () -> assertEquals("watching", item.alertEvaluation().state()),
                 () -> assertNull(wishlistItems.get(1).discount())
         );
         verify(repository).findActiveWishlistItems();
