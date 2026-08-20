@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,6 +43,15 @@ class UserWishlistApiEndpointTests {
     @Test
     void userWishlistRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/me/wishlist"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("authentication_required"));
+    }
+
+    @Test
+    void updatingWishlistAlertRequiresAuthentication() throws Exception {
+        mockMvc.perform(patch("/api/me/wishlist/1/alert")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"alertActive\":false}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("authentication_required"));
     }
@@ -169,6 +179,90 @@ class UserWishlistApiEndpointTests {
     }
 
     @Test
+    void ownerCanUpdateAllAlertSettingsAndValuesAreTrimmed() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Alert update " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPatch(token, itemId, """
+                        {
+                          "targetPrice": "  $9.99  ",
+                          "alertActive": false,
+                          "priority": "  high  "
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(itemId))
+                .andExpect(jsonPath("$.targetPrice").value("$9.99"))
+                .andExpect(jsonPath("$.alertActive").value(false))
+                .andExpect(jsonPath("$.priority").value("high"));
+
+        mockMvc.perform(authenticatedGet(token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(itemId))
+                .andExpect(jsonPath("$[0].targetPrice").value("$9.99"))
+                .andExpect(jsonPath("$[0].alertActive").value(false))
+                .andExpect(jsonPath("$[0].priority").value("high"));
+    }
+
+    @Test
+    void partialAlertUpdateKeepsOmittedValues() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Partial alert " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"alertActive\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.targetPrice").value("$24.99"))
+                .andExpect(jsonPath("$.alertActive").value(false))
+                .andExpect(jsonPath("$.priority").value("medium"));
+    }
+
+    @Test
+    void invalidAlertUpdatesReturnValidationFailed() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Invalid alert " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"priority\":\"urgent\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"));
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"targetPrice\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"));
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"));
+    }
+
+    @Test
+    void anotherUserCannotUpdateWishlistAlert() throws Exception {
+        String ownerToken = registerAndLogin(uniqueUser());
+        String secondUserToken = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(ownerToken, "Owned alert " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPatch(secondUserToken, itemId, "{\"alertActive\":false}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("wishlist_item_not_found"));
+
+        mockMvc.perform(authenticatedGet(ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].alertActive").value(true));
+    }
+
+    @Test
+    void softDeletedWishlistItemAlertCannotBeUpdated() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Deleted alert " + UUID.randomUUID());
+        mockMvc.perform(delete("/api/me/wishlist/{id}", itemId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(authenticatedPatch(token, itemId, "{\"priority\":\"low\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("wishlist_item_not_found"));
+    }
+
+    @Test
     void invalidWishlistValuesReturnCleanValidationError() throws Exception {
         String token = registerAndLogin(uniqueUser());
 
@@ -252,6 +346,14 @@ class UserWishlistApiEndpointTests {
                           "targetPrice": "$24.99"
                         }
                         """.formatted(title, store));
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    authenticatedPatch(String token, long itemId, String content) {
+        return patch("/api/me/wishlist/{id}/alert", itemId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content);
     }
 
     private static Credentials uniqueUser() {

@@ -52,6 +52,35 @@ public class InMemoryUserWishlistService implements UserWishlistService {
         items.put(itemId, new StoredWishlistItem(userId, storedItem.item(), false));
     }
 
+    @Override
+    public synchronized WishlistItem updateWishlistAlert(
+            long userId, long itemId, UpdateWishlistAlertRequest request) {
+        StoredWishlistItem storedItem = items.get(itemId);
+        if (storedItem == null || storedItem.userId() != userId || !storedItem.active()) {
+            throw new WishlistItemNotFoundException();
+        }
+
+        WishlistItem current = storedItem.item();
+        WishlistItem updated = new WishlistItem(
+                current.id(),
+                current.title(),
+                current.store(),
+                current.currentPrice(),
+                valueOrExisting(request.targetPrice(), current.targetPrice()),
+                current.lowestEver(),
+                current.discount(),
+                current.status(),
+                request.alertActive() == null ? current.alertActive() : request.alertActive(),
+                valueOrExisting(request.priority(), current.priority())
+        );
+        items.put(itemId, new StoredWishlistItem(userId, updated, true));
+        return updated;
+    }
+
+    private static String valueOrExisting(String value, String existingValue) {
+        return value == null ? existingValue : value.trim();
+    }
+
     private record StoredWishlistItem(long userId, WishlistItem item, boolean active) {
     }
 }

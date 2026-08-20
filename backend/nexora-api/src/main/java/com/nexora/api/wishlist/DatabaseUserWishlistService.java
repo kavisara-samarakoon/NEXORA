@@ -62,11 +62,30 @@ public class DatabaseUserWishlistService implements UserWishlistService {
 
     @Override
     @Transactional
+    public WishlistItem updateWishlistAlert(
+            long userId, long itemId, UpdateWishlistAlertRequest request) {
+        com.nexora.api.wishlist.persistence.WishlistItem item = wishlistItemRepository
+                .findByIdAndUserIdAndActiveTrue(itemId, userId)
+                .orElseThrow(WishlistItemNotFoundException::new);
+        item.updateAlertSettings(
+                trimmed(request.targetPrice()),
+                request.alertActive(),
+                trimmed(request.priority())
+        );
+        return WishlistItemMapper.toResponse(wishlistItemRepository.saveAndFlush(item));
+    }
+
+    @Override
+    @Transactional
     public void deleteWishlistItem(long userId, long itemId) {
         com.nexora.api.wishlist.persistence.WishlistItem item = wishlistItemRepository
                 .findByIdAndUserIdAndActiveTrue(itemId, userId)
                 .orElseThrow(WishlistItemNotFoundException::new);
         item.deactivate();
         wishlistItemRepository.saveAndFlush(item);
+    }
+
+    private static String trimmed(String value) {
+        return value == null ? null : value.trim();
     }
 }

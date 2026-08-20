@@ -43,6 +43,7 @@ tests run without PostgreSQL.
 | `GET` | `/api/auth/me` | Returns the authenticated user's safe account fields |
 | `GET` | `/api/me/wishlist` | Returns the authenticated user's active wishlist items |
 | `POST` | `/api/me/wishlist` | Adds an item to the authenticated user's wishlist |
+| `PATCH` | `/api/me/wishlist/{id}/alert` | Updates target price, alert active state, and priority for an owned active item |
 | `DELETE` | `/api/me/wishlist/{id}` | Soft deletes an item owned by the authenticated user |
 
 Except for deals, giveaways, and wishlist items in the `dev` profile, feature
@@ -268,6 +269,19 @@ curl -i http://localhost:8080/api/me/wishlist \
   -H "Authorization: Bearer ${NEXORA_TOKEN}"
 ```
 
+Update any combination of the item's alert settings:
+
+```bash
+curl -i -X PATCH "http://localhost:8080/api/me/wishlist/${NEXORA_WISHLIST_ID}/alert" \
+  -H "Authorization: Bearer ${NEXORA_TOKEN}" \
+  -H 'Content-Type: application/json' \
+  -d '{"targetPrice":"$9.99","alertActive":true,"priority":"high"}'
+```
+
+`targetPrice`, `alertActive`, and `priority` are individually optional, but at
+least one must be present. Omitted settings retain their current values.
+Priorities are limited to `high`, `medium`, and `low`.
+
 Confirm the personal item is absent from the public demo wishlist:
 
 ```bash
@@ -282,9 +296,11 @@ curl -i -X DELETE "http://localhost:8080/api/me/wishlist/${NEXORA_WISHLIST_ID}" 
   -H "Authorization: Bearer ${NEXORA_TOKEN}"
 ```
 
-This is a per-user wishlist ownership and CRUD foundation only. It does not yet
-include price history, live price alerts, external game data, sharing, or team
-features.
+This is a per-user wishlist ownership and alert-settings foundation only. The
+PATCH endpoint stores alert preferences; it does not deliver email, push,
+Slack, Discord, AI, or other notifications, and there is no scheduled price
+checking engine yet. It also does not include price history, external game
+data, sharing, or team features.
 
 This is an authentication foundation, not production-complete identity
 management. Before deployment, use a generated secret from a secret manager,

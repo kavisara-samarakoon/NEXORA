@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,6 +42,15 @@ public class UserWishlistController {
         WishlistItem item = userWishlistService.addWishlistItem(
                 userIdResolver.resolve(authentication), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(item);
+    }
+
+    @PatchMapping("/{id}/alert")
+    public WishlistItem updateWishlistAlert(
+            Authentication authentication,
+            @PathVariable long id,
+            @Valid @RequestBody UpdateWishlistAlertRequest request) {
+        return userWishlistService.updateWishlistAlert(
+                userIdResolver.resolve(authentication), id, request);
     }
 
     @DeleteMapping("/{id}")
