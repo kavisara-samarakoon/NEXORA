@@ -116,17 +116,19 @@ using `NEXT_PUBLIC_API_BASE_URL`. The access token is stored in browser
 the current user through `GET /api/auth/me`. Existing dashboard and feature-page
 data fetching remains server-side.
 
-The Wishlist page uses that stored token to load, add, and delete items through
-the authenticated `/api/me/wishlist` endpoints. It requires the backend and a
-signed-in user for personal data. Logged-out users, unavailable personal
-requests, and backend outages retain the public demo wishlist as a
+The Wishlist page uses that stored token to load, add, update, and delete items
+through the authenticated `/api/me/wishlist` endpoints. Signed-in users can
+update a personal item's target price, alert active state, and priority through
+`PATCH /api/me/wishlist/{id}/alert`. Logged-out users, unavailable personal
+requests, and backend outages retain the public demo wishlist as a read-only
 preview/fallback, so the route remains usable.
 
 This is a basic authentication and personal-wishlist foundation. Browser
 storage is intentionally a temporary approach and is more exposed to
 cross-site scripting than an HttpOnly-cookie design. Route protection, refresh
-tokens, roles, OAuth, price history, and a backend-powered alert toggle/alert
-engine are not included yet; wishlist alert controls remain local UI state.
+tokens, roles, OAuth, and price history are not included yet. Alert settings are
+persisted, but real notification delivery and scheduled price checking remain
+future work.
 
 ## Production environment
 
