@@ -8,5 +8,7 @@ public interface UserWishlistService {
 
     WishlistItem addWishlistItem(long userId, AddWishlistItemRequest request);
 
+    WishlistItem updateWishlistAlert(long userId, long itemId, UpdateWishlistAlertRequest request);
+
     void deleteWishlistItem(long userId, long itemId);
 }

@@ -127,4 +127,16 @@ public class WishlistItem {
     public void deactivate() {
         active = false;
     }
+
+    public void updateAlertSettings(String targetPrice, Boolean alertActive, String priority) {
+        if (targetPrice != null) {
+            this.targetPrice = targetPrice;
+        }
+        if (alertActive != null) {
+            this.alertActive = alertActive;
+        }
+        if (priority != null) {
+            this.priority = priority;
+        }
+    }
 }

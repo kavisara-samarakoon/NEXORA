@@ -10,6 +10,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -89,6 +90,35 @@ class DatabaseUserWishlistServiceTests {
 
         assertFalse(item.isActive());
         verify(repository).saveAndFlush(item);
+    }
+
+    @Test
+    void updatesOnlyProvidedAlertSettingsForOwnedActiveItem() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
+        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
+        when(repository.saveAndFlush(item)).thenReturn(item);
+
+        WishlistItem response = new DatabaseUserWishlistService(repository).updateWishlistAlert(
+                7L, 42L, new UpdateWishlistAlertRequest("  $12.00  ", null, " low "));
+
+        assertAll(
+                () -> assertEquals("$12.00", response.targetPrice()),
+                () -> assertEquals(true, response.alertActive()),
+                () -> assertEquals("low", response.priority())
+        );
+        verify(repository).saveAndFlush(item);
+    }
+
+    @Test
+    void rejectsAlertUpdateWhenOwnedActiveItemIsMissing() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.empty());
+
+        assertThrows(WishlistItemNotFoundException.class, () ->
+                new DatabaseUserWishlistService(repository).updateWishlistAlert(
+                        7L, 42L, new UpdateWishlistAlertRequest(null, false, null)));
+        verify(repository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
     }
 
     private static com.nexora.api.wishlist.persistence.WishlistItem databaseItem(
