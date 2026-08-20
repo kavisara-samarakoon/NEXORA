@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import AddWishlistItemForm from "@/components/AddWishlistItemForm";
 import {
   wishlistFilters,
@@ -16,9 +16,14 @@ import {
   deleteMyWishlistItem,
   getMyWishlist,
   normalizeUserWishlistError,
+  updateMyWishlistAlert,
+  type UpdateWishlistAlertPayload,
 } from "@/lib/user-wishlist";
 
 type WishlistView = "checking" | "public" | "personal" | "offline";
+type ItemMessage = { kind: "success" | "error"; text: string };
+
+const wishlistPriorities: readonly WishlistPriority[] = ["high", "medium", "low"];
 
 const wishlistNetworkIcons = {
   bolt: "⚡",
@@ -57,24 +62,52 @@ function StatusIcon({ icon }: { icon: "down" | "gift" | "signal" }) {
 
 function WishlistCard({
   alertIsActive,
-  canDelete,
+  canManage,
   isDeleting,
+  isUpdating,
   item,
+  message,
   onDelete,
-  onToggleAlert,
+  onUpdateAlert,
 }: {
   alertIsActive: boolean;
-  canDelete: boolean;
+  canManage: boolean;
   isDeleting: boolean;
+  isUpdating: boolean;
   item: WishlistItem;
+  message?: ItemMessage;
   onDelete: (item: WishlistItem) => void;
-  onToggleAlert: (itemId: number) => void;
+  onUpdateAlert: (
+    item: WishlistItem,
+    payload: UpdateWishlistAlertPayload,
+    successMessage: string,
+  ) => Promise<void>;
 }) {
   const status = statusDetails(item.status);
   const storeClass = wishlistStoreClass(item.store);
+  const [targetPrice, setTargetPrice] = useState(item.targetPrice);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+
+  function handleTargetPriceSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedTargetPrice = targetPrice.trim();
+
+    if (!trimmedTargetPrice) {
+      setValidationMessage("Enter a target price before saving.");
+      return;
+    }
+
+    setValidationMessage(null);
+    setTargetPrice(trimmedTargetPrice);
+    void onUpdateAlert(
+      item,
+      { targetPrice: trimmedTargetPrice },
+      `Target price for ${item.title} was updated.`,
+    );
+  }
 
   return (
-    <article className={`wl-card wl-card--${storeClass}`} aria-busy={isDeleting}>
+    <article className={`wl-card wl-card--${storeClass}`} aria-busy={isDeleting || isUpdating}>
       <div className={`wl-card__accent wl-card__accent--${storeClass}`} />
       <div className="wl-card__header">
         <span className={`wl-card__store wl-card__store--${storeClass}`}>{item.store}</span>
@@ -103,6 +136,45 @@ function WishlistCard({
         <div><span>Lowest</span><strong>{item.lowestEver}</strong></div>
       </div>
 
+      {canManage && (
+        <div className="wl-card__alert-settings">
+          <form className="wl-card__target-form" onSubmit={handleTargetPriceSubmit}>
+            <label htmlFor={`wishlist-target-price-${item.id}`}>Target price</label>
+            <div>
+              <input
+                id={`wishlist-target-price-${item.id}`}
+                type="text"
+                maxLength={255}
+                value={targetPrice}
+                disabled={isUpdating}
+                onChange={(event) => {
+                  setTargetPrice(event.target.value);
+                  if (validationMessage) setValidationMessage(null);
+                }}
+              />
+              <button type="submit" disabled={isUpdating}>Save</button>
+            </div>
+          </form>
+          <label className="wl-card__priority-field" htmlFor={`wishlist-priority-${item.id}`}>
+            <span>Priority</span>
+            <select
+              id={`wishlist-priority-${item.id}`}
+              value={item.priority}
+              disabled={isUpdating}
+              onChange={(event) => void onUpdateAlert(
+                item,
+                { priority: event.target.value as WishlistPriority },
+                `Priority for ${item.title} was updated.`,
+              )}
+            >
+              {wishlistPriorities.map((priority) => (
+                <option key={priority} value={priority}>{priority}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
       <div className="wl-card__actions">
         <button
           className={`wl-card__view wl-card__view--${storeClass}`}
@@ -113,28 +185,46 @@ function WishlistCard({
           <span aria-hidden="true">↗</span>
           View Deal
         </button>
-        <button
-          className={alertIsActive ? "wl-card__edit wl-card__edit--active" : "wl-card__edit"}
-          type="button"
-          aria-pressed={alertIsActive}
-          onClick={() => onToggleAlert(item.id)}
-          title="This toggle is local only; the backend alert engine is not connected yet"
-        >
-          <span aria-hidden="true">✏️</span>
-          {alertIsActive ? "Pause Alert" : "Enable Alert"}
-        </button>
+        {canManage && (
+          <button
+            className={alertIsActive ? "wl-card__edit wl-card__edit--active" : "wl-card__edit"}
+            type="button"
+            aria-pressed={alertIsActive}
+            disabled={isUpdating}
+            onClick={() => void onUpdateAlert(
+              item,
+              { alertActive: !alertIsActive },
+              `Alert for ${item.title} was ${alertIsActive ? "paused" : "enabled"}.`,
+            )}
+            title="Update this alert setting"
+          >
+            <span aria-hidden="true">{isUpdating ? "…" : "✏️"}</span>
+            {isUpdating ? "Saving" : alertIsActive ? "Pause Alert" : "Enable Alert"}
+          </button>
+        )}
         <button
           className="wl-card__remove"
           type="button"
-          disabled={!canDelete || isDeleting}
+          disabled={!canManage || isDeleting || isUpdating}
           aria-label={`Remove ${item.title}`}
-          title={canDelete ? `Remove ${item.title} from your personal wishlist` : "Sign in to manage personal wishlist items"}
+          title={canManage ? `Remove ${item.title} from your personal wishlist` : "Sign in to manage personal wishlist items"}
           onClick={() => onDelete(item)}
         >
           <span aria-hidden="true">{isDeleting ? "…" : "✕"}</span>
         </button>
       </div>
-      <small className="wl-card__local-note">Local alert toggle · alert engine later</small>
+      <small
+        className={validationMessage || message?.kind === "error"
+          ? "wl-card__settings-message wl-card__settings-message--error"
+          : message?.kind === "success"
+            ? "wl-card__settings-message wl-card__settings-message--success"
+            : "wl-card__settings-message"}
+        role={validationMessage || message?.kind === "error" ? "alert" : "status"}
+      >
+        {validationMessage
+          || (isUpdating ? "Saving alert settings…" : message?.text)
+          || (canManage ? "Alert settings sync with your account." : "Sign in to manage alert settings.")}
+      </small>
     </article>
   );
 }
@@ -165,7 +255,7 @@ function WishlistAlertPanel({
     : { value: source === "api" ? "Public Spring Boot preview" : "Static public preview", badge: source === "api" ? "API" : "Static" };
 
   const items = [
-    { label: "Alert Engine", value: "Local toggle only", badge: "Local", tone: "orange", icon: "bolt" },
+    { label: "Alert Settings", value: view === "personal" ? "Saved with your account" : "Preview only", badge: view === "personal" ? "API" : "Public", tone: "orange", icon: "bolt" },
     { label: "Data Source", value: dataSource.value, badge: dataSource.badge, tone: "blue", icon: "globe" },
     { label: "Notification Queue", value: "Alert engine later", badge: "Future", tone: "purple", icon: "mail" },
     { label: "Security", value: view === "personal" ? "JWT account access" : "Public preview data", badge: view === "personal" ? "Auth" : "Public", tone: "green", icon: "shield" },
@@ -176,7 +266,7 @@ function WishlistAlertPanel({
       <div className="wl-network__header">
         <span className="wl-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Alert telemetry</span><h2 id="wishlist-alert-title">Wishlist Alert Status</h2></div>
-        <span className="wl-network__live"><span aria-hidden="true" /> Local</span>
+        <span className="wl-network__live"><span aria-hidden="true" /> {view === "personal" ? "Saved" : "Preview"}</span>
       </div>
 
       <div className="wl-network__items">
@@ -192,7 +282,7 @@ function WishlistAlertPanel({
       </div>
 
       <div className="wl-network__summary">
-        <div className="wl-network__section-label"><span>Alert summary</span><strong>Local</strong></div>
+        <div className="wl-network__section-label"><span>Alert summary</span><strong>{view === "personal" ? "Account" : "Preview"}</strong></div>
         <div className="wl-network__summary-rows">
           <div><span className="wl-network__dot wl-network__dot--active" /><span>Active alerts</span><strong>{activeAlerts}</strong></div>
           <div><span className="wl-network__dot wl-network__dot--paused" /><span>Paused</span><strong>{pausedAlerts}</strong></div>
@@ -227,6 +317,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [serviceMessage, setServiceMessage] = useState<string | null>(null);
   const [operationMessage, setOperationMessage] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<number>>(() => new Set());
+  const [updatingIds, setUpdatingIds] = useState<Set<number>>(() => new Set());
+  const [itemMessages, setItemMessages] = useState<Record<number, ItemMessage>>({});
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -244,6 +336,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         setAlerts(alertsFor(wishlistItems));
         setServiceMessage(null);
         setOperationMessage(null);
+        setItemMessages({});
         setView("public");
         return;
       }
@@ -258,6 +351,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         setPersonalItems(items);
         setAlerts(alertsFor(items));
         setOperationMessage(null);
+        setItemMessages({});
         setView("personal");
       } catch (error) {
         if (!active || currentVersion !== requestVersion) return;
@@ -321,6 +415,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setAuthToken(null);
     setPersonalItems([]);
     setAlerts(alertsFor(wishlistItems));
+    setUpdatingIds(new Set());
+    setItemMessages({});
     setServiceMessage("Please sign in again.");
     setView("public");
   }
@@ -329,7 +425,54 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setPersonalItems((current) => [item, ...current]);
     setAlerts((current) => ({ ...current, [item.id]: item.alertActive }));
     setOperationMessage(null);
+    setItemMessages((current) => {
+      const next = { ...current };
+      delete next[item.id];
+      return next;
+    });
     resetFilters();
+  }
+
+  async function handleAlertUpdate(
+    item: WishlistItem,
+    payload: UpdateWishlistAlertPayload,
+    successMessage: string,
+  ) {
+    if (view !== "personal" || !authToken || updatingIds.has(item.id)) return;
+
+    setUpdatingIds((current) => new Set(current).add(item.id));
+    setItemMessages((current) => {
+      const next = { ...current };
+      delete next[item.id];
+      return next;
+    });
+
+    try {
+      const updatedItem = await updateMyWishlistAlert(authToken, item.id, payload);
+      setPersonalItems((current) => current.map((candidate) =>
+        candidate.id === updatedItem.id ? updatedItem : candidate));
+      setAlerts((current) => ({ ...current, [updatedItem.id]: updatedItem.alertActive }));
+      setItemMessages((current) => ({
+        ...current,
+        [updatedItem.id]: { kind: "success", text: successMessage },
+      }));
+    } catch (error) {
+      const details = normalizeUserWishlistError(error);
+      if (details.status === 401) {
+        handleAuthenticationRequired();
+      } else {
+        setItemMessages((current) => ({
+          ...current,
+          [item.id]: { kind: "error", text: details.message },
+        }));
+      }
+    } finally {
+      setUpdatingIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
+    }
   }
 
   async function handleDelete(item: WishlistItem) {
@@ -342,6 +485,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       await deleteMyWishlistItem(authToken, item.id);
       setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
       setAlerts((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      setItemMessages((current) => {
         const next = { ...current };
         delete next[item.id];
         return next;
@@ -363,16 +511,12 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     }
   }
 
-  function toggleAlert(itemId: number) {
-    setAlerts((current) => ({ ...current, [itemId]: !current[itemId] }));
-  }
-
   const priceDropCount = displayedItems.filter((item) => item.status === "price-drop").length;
   const freeCount = displayedItems.filter((item) => item.status === "free-now").length;
   const isPersonal = view === "personal";
   const heroTag = isPersonal ? "Personal wishlist" : view === "offline" ? "Wishlist service offline" : "Public wishlist preview";
   const heroCopy = isPersonal
-    ? "Your games are stored with your NEXORA account. Price alerts remain a local UI preview for now."
+    ? "Manage target prices, alert states, and priorities stored with your NEXORA account. Notification delivery is planned for later."
     : view === "offline"
       ? "Wishlist service offline — showing the public preview so this page stays useful."
       : "Explore the public wishlist preview. Sign in to manage a wishlist stored with your NEXORA account.";
@@ -408,7 +552,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           </strong>
           <span>
             {isPersonal
-              ? "Stored with your NEXORA account. The public demo wishlist remains the page fallback."
+              ? "Alert settings are saved with your account. The public demo wishlist remains the page fallback."
               : view === "offline"
                 ? serviceMessage || "Cannot reach the NEXORA wishlist service."
                 : view === "checking"
@@ -479,12 +623,14 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             {filteredItems.map((item) => (
               <WishlistCard
                 alertIsActive={alerts[item.id] ?? item.alertActive}
-                canDelete={isPersonal}
+                canManage={isPersonal}
                 isDeleting={deletingIds.has(item.id)}
+                isUpdating={updatingIds.has(item.id)}
                 item={item}
+                message={itemMessages[item.id]}
                 key={item.id}
                 onDelete={(candidate) => void handleDelete(candidate)}
-                onToggleAlert={toggleAlert}
+                onUpdateAlert={handleAlertUpdate}
               />
             ))}
             {isPersonal && displayedItems.length === 0 && (

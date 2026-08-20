@@ -21,6 +21,12 @@ export type AddWishlistItemPayload = {
   priority?: WishlistPriority;
 };
 
+export type UpdateWishlistAlertPayload = {
+  targetPrice?: string;
+  alertActive?: boolean;
+  priority?: WishlistPriority;
+};
+
 export type UserWishlistError = {
   status: number | null;
   code: "authentication_required" | "validation_failed" | "not_found" | "service_unavailable" | "invalid_response" | "request_failed" | "unknown_error";
@@ -152,6 +158,26 @@ export async function addMyWishlistItem(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  const data = await readJson(response);
+
+  if (!isWishlistItem(data)) throw invalidResponseError();
+  return data;
+}
+
+export async function updateMyWishlistAlert(
+  token: string,
+  id: number,
+  payload: UpdateWishlistAlertPayload,
+): Promise<WishlistItem> {
+  const response = await wishlistRequest(
+    `/api/me/wishlist/${encodeURIComponent(id)}/alert`,
+    token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
   const data = await readJson(response);
 
   if (!isWishlistItem(data)) throw invalidResponseError();

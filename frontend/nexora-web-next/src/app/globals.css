@@ -4175,6 +4175,76 @@ input:focus-visible {
   -webkit-background-clip: text;
 }
 
+.wl-card__alert-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 104px;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.wl-card__target-form,
+.wl-card__priority-field {
+  display: grid;
+  gap: 6px;
+}
+
+.wl-card__target-form > label,
+.wl-card__priority-field > span {
+  color: var(--nx-subtle);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wl-card__target-form > div {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+}
+
+.wl-card__target-form input,
+.wl-card__priority-field select,
+.wl-card__target-form button {
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--nx-border);
+  border-radius: 8px;
+  color: var(--nx-text);
+  background: rgba(255, 255, 255, 0.028);
+  font-size: 9px;
+}
+
+.wl-card__target-form input,
+.wl-card__priority-field select {
+  width: 100%;
+  padding: 0 9px;
+  outline: 0;
+}
+
+.wl-card__target-form input:focus,
+.wl-card__priority-field select:focus {
+  border-color: rgba(255, 122, 0, 0.38);
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.065);
+}
+
+.wl-card__target-form button {
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border-color: rgba(255, 122, 0, 0.22);
+  color: var(--nx-orange);
+  background: rgba(255, 122, 0, 0.07);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wl-card__target-form button:disabled,
+.wl-card__target-form input:disabled,
+.wl-card__priority-field select:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .wl-card__actions {
   display: flex;
   gap: 7px;
@@ -4233,12 +4303,16 @@ input:focus-visible {
 
 .wl-card[aria-busy="true"] { opacity: 0.62; }
 
-.wl-card__local-note {
+.wl-card__local-note,
+.wl-card__settings-message {
   margin-top: 9px;
   color: var(--nx-subtle);
   font-size: 8px;
   text-align: right;
 }
+
+.wl-card__settings-message--success { color: var(--nx-success); }
+.wl-card__settings-message--error { color: #ff8d8d; }
 
 .wl-empty {
   display: grid;
@@ -4506,6 +4580,7 @@ input:focus-visible {
   .wl-access-banner a:hover,
   .wl-access-banner button:hover,
   .wl-add-form__actions > button:hover:not(:disabled),
+  .wl-card__target-form button:hover:not(:disabled),
   .wl-empty a:hover,
   .wl-empty button:hover { filter: brightness(1.25); }
 }
@@ -4562,6 +4637,7 @@ input:focus-visible {
 
 @media (max-width: 430px) {
   .wl-card { padding: 21px 18px; }
+  .wl-card__alert-settings { grid-template-columns: 1fr; }
   .wl-card__actions { flex-wrap: wrap; }
   .wl-card__actions .wl-card__remove { display: none; }
   .wl-network { padding: 19px 16px; }
