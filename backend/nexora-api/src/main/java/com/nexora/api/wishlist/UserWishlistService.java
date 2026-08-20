@@ -6,6 +6,8 @@ public interface UserWishlistService {
 
     List<WishlistItem> getWishlistItems(long userId);
 
+    List<WishlistAlertEventResponse> getWishlistAlertEvents(long userId);
+
     WishlistItem addWishlistItem(long userId, AddWishlistItemRequest request);
 
     WishlistItem updateWishlistAlert(long userId, long itemId, UpdateWishlistAlertRequest request);

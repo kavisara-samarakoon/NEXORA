@@ -1,5 +1,7 @@
 package com.nexora.api.wishlist;
 
+import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
+import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -11,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,7 +24,9 @@ class DatabaseUserWishlistServiceTests {
     @Test
     void createsAnOwnedItemWithSafeDefaults() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
-        DatabaseUserWishlistService service = new DatabaseUserWishlistService(repository);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
+        DatabaseUserWishlistService service =
+                new DatabaseUserWishlistService(repository, eventRepository);
         AddWishlistItemRequest request = new AddWishlistItemRequest(
                 "New Game", "Steam", "$30.00", "$20.00",
                 null, null, null, null, null);
@@ -35,6 +40,7 @@ class DatabaseUserWishlistServiceTests {
         ArgumentCaptor<com.nexora.api.wishlist.persistence.WishlistItem> captor =
                 ArgumentCaptor.forClass(com.nexora.api.wishlist.persistence.WishlistItem.class);
         verify(repository).saveAndFlush(captor.capture());
+        verify(eventRepository, never()).saveAndFlush(any());
         com.nexora.api.wishlist.persistence.WishlistItem createdItem = captor.getValue();
         assertAll(
                 () -> assertEquals(7L, createdItem.getUserId()),
@@ -48,12 +54,14 @@ class DatabaseUserWishlistServiceTests {
     @Test
     void returnsExistingActiveItemForNormalizedDuplicate() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
-        DatabaseUserWishlistService service = new DatabaseUserWishlistService(repository);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
+        DatabaseUserWishlistService service =
+                new DatabaseUserWishlistService(repository, eventRepository);
         AddWishlistItemRequest request = new AddWishlistItemRequest(
                 "  new game ", " steam ", "$15.00", "$10.00",
                 null, null, null, null, null);
-        com.nexora.api.wishlist.persistence.WishlistItem existingItem =
-                databaseItem(42L, 7L, true);
+        com.nexora.api.wishlist.persistence.WishlistItem existingItem = databaseItem(
+                42L, 7L, true, "$30.00", "$40.00", true);
         when(repository.findFirstByUserIdAndActiveTrueAndTitleIgnoreCaseAndStoreIgnoreCaseOrderByIdAsc(
                 7L, "new game", "steam")).thenReturn(Optional.of(existingItem));
 
@@ -64,16 +72,50 @@ class DatabaseUserWishlistServiceTests {
                 () -> assertEquals("New Game", response.title()),
                 () -> assertEquals("Steam", response.store())
         );
-        verify(repository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
+        verify(repository, never()).saveAndFlush(any());
+        verify(eventRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void createsAnAlertEventWhenNewItemAlreadyReachedTarget() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
+        DatabaseUserWishlistService service =
+                new DatabaseUserWishlistService(repository, eventRepository);
+        AddWishlistItemRequest request = new AddWishlistItemRequest(
+                "Reached Game", "Steam", "$8.88", "$9.99",
+                null, null, null, true, null);
+        com.nexora.api.wishlist.persistence.WishlistItem savedItem = databaseItem(
+                42L, 7L, true, "$8.88", "$9.99", true);
+        when(repository.findFirstByUserIdAndActiveTrueAndTitleIgnoreCaseAndStoreIgnoreCaseOrderByIdAsc(
+                7L, "Reached Game", "Steam")).thenReturn(Optional.empty());
+        when(repository.saveAndFlush(any())).thenReturn(savedItem);
+
+        WishlistItem response = service.addWishlistItem(7L, request);
+
+        ArgumentCaptor<WishlistAlertEvent> eventCaptor =
+                ArgumentCaptor.forClass(WishlistAlertEvent.class);
+        verify(eventRepository).saveAndFlush(eventCaptor.capture());
+        WishlistAlertEvent event = eventCaptor.getValue();
+        assertAll(
+                () -> assertEquals("target-reached", response.alertEvaluation().state()),
+                () -> assertEquals(7L, event.getUserId()),
+                () -> assertEquals(42L, event.getWishlistItemId()),
+                () -> assertEquals("target-reached", event.getEvaluationState()),
+                () -> assertEquals(true, event.isTargetReached()),
+                () -> assertEquals("Target price reached.", event.getMessage())
+        );
     }
 
     @Test
     void listsOnlyRepositoryItemsForTheRequestedUser() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         when(repository.findByUserIdAndActiveTrueOrderById(7L))
                 .thenReturn(List.of(databaseItem(42L, 7L, true)));
 
-        List<WishlistItem> items = new DatabaseUserWishlistService(repository).getWishlistItems(7L);
+        List<WishlistItem> items = new DatabaseUserWishlistService(
+                repository, eventRepository).getWishlistItems(7L);
 
         assertEquals(1, items.size());
         assertEquals(42L, items.get(0).id());
@@ -83,24 +125,30 @@ class DatabaseUserWishlistServiceTests {
     @Test
     void softDeletesOnlyAnOwnedActiveItem() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
 
-        new DatabaseUserWishlistService(repository).deleteWishlistItem(7L, 42L);
+        new DatabaseUserWishlistService(repository, eventRepository)
+                .deleteWishlistItem(7L, 42L);
 
         assertFalse(item.isActive());
         verify(repository).saveAndFlush(item);
+        verify(eventRepository, never()).saveAndFlush(any());
     }
 
     @Test
     void updatesOnlyProvidedAlertSettingsForOwnedActiveItem() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
-        WishlistItem response = new DatabaseUserWishlistService(repository).updateWishlistAlert(
-                7L, 42L, new UpdateWishlistAlertRequest("  $12.00  ", null, " low "));
+        WishlistItem response = new DatabaseUserWishlistService(repository, eventRepository)
+                .updateWishlistAlert(
+                        7L, 42L,
+                        new UpdateWishlistAlertRequest("  $12.00  ", null, " low "));
 
         assertAll(
                 () -> assertEquals("$12.00", response.targetPrice()),
@@ -108,31 +156,85 @@ class DatabaseUserWishlistServiceTests {
                 () -> assertEquals("low", response.priority())
         );
         verify(repository).saveAndFlush(item);
+        verify(eventRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void createsAnAlertEventWhenUpdateTransitionsToTargetReached() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
+        com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
+        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
+        when(repository.saveAndFlush(item)).thenReturn(item);
+
+        WishlistItem response = new DatabaseUserWishlistService(repository, eventRepository)
+                .updateWishlistAlert(
+                        7L, 42L,
+                        new UpdateWishlistAlertRequest("$40.00", null, null));
+
+        ArgumentCaptor<WishlistAlertEvent> eventCaptor =
+                ArgumentCaptor.forClass(WishlistAlertEvent.class);
+        verify(eventRepository).saveAndFlush(eventCaptor.capture());
+        assertAll(
+                () -> assertEquals("target-reached", response.alertEvaluation().state()),
+                () -> assertEquals("$40.00", eventCaptor.getValue().getTargetPrice()),
+                () -> assertEquals(42L, eventCaptor.getValue().getWishlistItemId())
+        );
+    }
+
+    @Test
+    void doesNotCreateDuplicateEventWhenItemWasAlreadyTargetReached() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
+        com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(
+                42L, 7L, true, "$8.88", "$9.99", true);
+        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
+        when(repository.saveAndFlush(item)).thenReturn(item);
+
+        WishlistItem response = new DatabaseUserWishlistService(repository, eventRepository)
+                .updateWishlistAlert(
+                        7L, 42L,
+                        new UpdateWishlistAlertRequest(null, null, "high"));
+
+        assertEquals("target-reached", response.alertEvaluation().state());
+        verify(eventRepository, never()).saveAndFlush(any());
     }
 
     @Test
     void rejectsAlertUpdateWhenOwnedActiveItemIsMissing() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.empty());
 
         assertThrows(WishlistItemNotFoundException.class, () ->
-                new DatabaseUserWishlistService(repository).updateWishlistAlert(
+                new DatabaseUserWishlistService(repository, eventRepository).updateWishlistAlert(
                         7L, 42L, new UpdateWishlistAlertRequest(null, false, null)));
-        verify(repository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
+        verify(repository, never()).saveAndFlush(any());
+        verify(eventRepository, never()).saveAndFlush(any());
     }
 
     private static com.nexora.api.wishlist.persistence.WishlistItem databaseItem(
             long id, long userId, boolean active) {
+        return databaseItem(id, userId, active, "$30.00", "$20.00", true);
+    }
+
+    private static com.nexora.api.wishlist.persistence.WishlistItem databaseItem(
+            long id,
+            long userId,
+            boolean active,
+            String currentPrice,
+            String targetPrice,
+            boolean alertActive) {
         return new com.nexora.api.wishlist.persistence.WishlistItem(
                 id,
                 "New Game",
                 "Steam",
-                "$30.00",
-                "$20.00",
+                currentPrice,
+                targetPrice,
                 "$25.00",
                 null,
                 "tracking",
-                true,
+                alertActive,
                 "medium",
                 active,
                 userId

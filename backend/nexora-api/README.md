@@ -42,6 +42,7 @@ tests run without PostgreSQL.
 | `POST` | `/api/auth/login` | Accepts an email or username and returns a JWT access token |
 | `GET` | `/api/auth/me` | Returns the authenticated user's safe account fields |
 | `GET` | `/api/me/wishlist` | Returns the authenticated user's active wishlist items |
+| `GET` | `/api/me/wishlist/alert-events` | Returns the authenticated user's target-reached alert history, newest first |
 | `POST` | `/api/me/wishlist` | Adds an item to the authenticated user's wishlist |
 | `PATCH` | `/api/me/wishlist/{id}/alert` | Updates target price, alert active state, and priority for an owned active item |
 | `DELETE` | `/api/me/wishlist/{id}` | Soft deletes an item owned by the authenticated user |
@@ -308,6 +309,36 @@ Example response fragment:
 }
 ```
 
+### Alert history foundation
+
+Flyway V6 adds `wishlist_alert_events` for authenticated personal wishlist
+items. NEXORA records an event when a newly created active item is already in
+the computed `target-reached` state, or when an alert-settings PATCH changes an
+owned active item from any non-reached state to `target-reached`.
+
+Repeated saves of an existing duplicate item do not create events. Updating an
+item that is already reached, pausing an alert, or deleting an item also does
+not create another event. Public demo wishlist items never create personal
+alert history.
+
+List the current user's events, newest first:
+
+```bash
+curl -i http://localhost:8080/api/me/wishlist/alert-events \
+  -H "Authorization: Bearer ${NEXORA_TOKEN}"
+```
+
+Each event stores a snapshot of the item title, store, current and target
+prices, computed evaluation state, message, and creation time. Events are
+scoped to the user id derived from the JWT; clients cannot request another
+user's history.
+
+This is an event-recording foundation, not notification delivery. There is no
+email, push, Slack, Discord, or other delivery channel, no scheduled or
+background price checking, and no external price refresh yet. Events are
+created only during authenticated POST and PATCH operations handled by this
+API.
+
 Confirm the personal item is absent from the public demo wishlist:
 
 ```bash
@@ -324,10 +355,10 @@ curl -i -X DELETE "http://localhost:8080/api/me/wishlist/${NEXORA_WISHLIST_ID}" 
 
 This is a per-user wishlist ownership, alert-settings, and on-response
 evaluation foundation only. Evaluation runs when a wishlist response is
-created; it does not deliver email, push, Slack, Discord, AI, or other
-notifications, and there is no scheduled or background price-checking job yet.
-It also does not include price history, external game data, sharing, or team
-features.
+created, and target-reached transitions are recorded as alert history. It does
+not deliver email, push, Slack, Discord, AI, or other notifications, and there
+is no scheduled or background price-checking job yet. It also does not include
+continuous price history, external game data, sharing, or team features.
 
 This is an authentication foundation, not production-complete identity
 management. Before deployment, use a generated secret from a secret manager,
