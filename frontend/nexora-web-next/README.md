@@ -74,7 +74,7 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 | `/` | NEXORA dashboard | Static dashboard demo data |
 | `/deals` | Game Deals Intelligence | Curated `/api/deals` plus optional live `/api/deals/external` |
 | `/giveaways` | Live Giveaway Intelligence | `/api/giveaways` with static fallback |
-| `/wishlist` | Smart Wishlist Control | Personal `/api/me/wishlist` with public `/api/wishlist` preview/fallback |
+| `/wishlist` | Smart Wishlist Control | Personal `/api/me/wishlist` and alert history with public `/api/wishlist` preview/fallback |
 | `/security` | Cyber Security Command Center | `/api/security/status` with static fallback |
 | `/sentinel` | NEXORA Sentinel demo | `/api/sentinel/status` and `/api/sentinel/demo` with static fallback |
 | `/settings` | Account Control Center | Local demo state |
@@ -125,6 +125,12 @@ update a personal item's target price, alert active state, and priority through
 `alertEvaluation`, including `target-reached`, `watching`, `paused`, and
 `not-evaluable` states. The evaluation updates immediately from successful
 PATCH responses and remains visible after the personal wishlist reloads.
+The alert-status panel also requests the signed-in user's recent target-reached
+events from `GET /api/me/wishlist/alert-events`. Backend POST and PATCH
+transitions create those event snapshots, and the panel refreshes after
+successful wishlist additions and alert-setting updates. Public preview and
+offline modes do not show personal history, and an unavailable history request
+does not prevent the personal wishlist from loading or being edited.
 Logged-out users, unavailable personal requests, and backend outages retain the
 public demo wishlist as a read-only preview/fallback, so the route remains
 usable.
@@ -134,7 +140,8 @@ storage is intentionally a temporary approach and is more exposed to
 cross-site scripting than an HttpOnly-cookie design. Route protection, refresh
 tokens, roles, OAuth, and price history are not included yet. Alert settings are
 persisted and basic current-versus-target evaluation is available, but real
-notification delivery and scheduled price checking remain future work.
+notification delivery, scheduled price checking, and automatic external price
+refreshing remain future work.
 
 ## Production environment
 

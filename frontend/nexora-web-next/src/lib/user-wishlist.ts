@@ -2,6 +2,7 @@ import {
   wishlistAlertEvaluationStates,
   type WishlistAlertEvaluation,
   type WishlistAlertEvaluationState,
+  type WishlistAlertEvent,
   type WishlistItem,
   type WishlistPriority,
   type WishlistStatus,
@@ -23,6 +24,34 @@ function isWishlistAlertEvaluation(value: unknown): value is WishlistAlertEvalua
     ) &&
     typeof evaluation.message === "string" &&
     evaluation.message.trim().length > 0
+  );
+}
+
+function isWishlistAlertEvent(value: unknown): value is WishlistAlertEvent {
+  if (typeof value !== "object" || value === null) return false;
+
+  const event = value as Record<string, unknown>;
+  return (
+    typeof event.id === "number" &&
+    Number.isInteger(event.id) &&
+    event.id > 0 &&
+    typeof event.wishlistItemId === "number" &&
+    Number.isInteger(event.wishlistItemId) &&
+    event.wishlistItemId > 0 &&
+    typeof event.itemTitle === "string" &&
+    event.itemTitle.trim().length > 0 &&
+    typeof event.store === "string" &&
+    event.store.trim().length > 0 &&
+    typeof event.currentPrice === "string" &&
+    typeof event.targetPrice === "string" &&
+    wishlistAlertEvaluationStates.includes(
+      event.evaluationState as WishlistAlertEvaluationState,
+    ) &&
+    typeof event.targetReached === "boolean" &&
+    typeof event.message === "string" &&
+    event.message.trim().length > 0 &&
+    typeof event.createdAt === "string" &&
+    event.createdAt.trim().length > 0
   );
 }
 
@@ -165,6 +194,22 @@ export async function getMyWishlist(token: string): Promise<WishlistItem[]> {
   const data = await readJson(response);
 
   if (!Array.isArray(data) || !data.every(isWishlistItem)) throw invalidResponseError();
+  return data;
+}
+
+export async function getMyWishlistAlertEvents(
+  token: string,
+): Promise<WishlistAlertEvent[]> {
+  const response = await wishlistRequest(
+    "/api/me/wishlist/alert-events",
+    token,
+    { method: "GET" },
+  );
+  const data = await readJson(response);
+
+  if (!Array.isArray(data) || !data.every(isWishlistAlertEvent)) {
+    throw invalidResponseError();
+  }
   return data;
 }
 
