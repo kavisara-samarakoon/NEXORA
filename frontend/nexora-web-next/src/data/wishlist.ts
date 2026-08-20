@@ -15,6 +15,19 @@ export type WishlistAlertEvaluation = {
   message: string;
 };
 
+export type WishlistAlertEvent = {
+  id: number;
+  wishlistItemId: number;
+  itemTitle: string;
+  store: WishlistStore;
+  currentPrice: string;
+  targetPrice: string;
+  evaluationState: WishlistAlertEvaluationState;
+  targetReached: boolean;
+  message: string;
+  createdAt: string;
+};
+
 export type WishlistItem = {
   id: number;
   title: string;

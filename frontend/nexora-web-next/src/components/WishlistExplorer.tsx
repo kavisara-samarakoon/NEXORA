@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import AddWishlistItemForm from "@/components/AddWishlistItemForm";
 import {
   wishlistFilters,
   type WishlistAlertEvaluation,
+  type WishlistAlertEvent,
   type WishlistFilter,
   type WishlistItem,
   type WishlistPriority,
@@ -16,6 +17,7 @@ import { AUTH_STATE_EVENT, clearAuthToken, readAuthToken } from "@/lib/auth-clie
 import {
   deleteMyWishlistItem,
   getMyWishlist,
+  getMyWishlistAlertEvents,
   normalizeUserWishlistError,
   updateMyWishlistAlert,
   type UpdateWishlistAlertPayload,
@@ -69,6 +71,19 @@ function evaluationIcon(state: WishlistAlertEvaluation["state"]) {
   if (state === "watching") return "↗";
   if (state === "paused") return "Ⅱ";
   return "?";
+}
+
+function formatAlertEventTime(createdAt: string) {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "Recent";
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function wishlistStoreClass(store: string) {
@@ -264,11 +279,17 @@ function WishlistCard({
 }
 
 function WishlistAlertPanel({
+  alertEvents,
+  alertEventsLoading,
+  alertEventsMessage,
   alerts,
   source,
   view,
   wishlistItems,
 }: {
+  alertEvents: readonly WishlistAlertEvent[];
+  alertEventsLoading: boolean;
+  alertEventsMessage: string | null;
   alerts: Record<number, boolean>;
   source: WishlistResult["source"];
   view: WishlistView;
@@ -329,6 +350,56 @@ function WishlistAlertPanel({
         </div>
       </div>
 
+      <section className="wl-alert-history" aria-labelledby="wishlist-alert-history-title">
+        <div className="wl-alert-history__header">
+          <span id="wishlist-alert-history-title">Recent alert events</span>
+          {view === "personal" && alertEvents.length > 0 && (
+            <strong>{alertEvents.length}</strong>
+          )}
+        </div>
+
+        {view === "checking" && (
+          <p className="wl-alert-history__empty" role="status">Loading alert history…</p>
+        )}
+        {view === "public" && (
+          <p className="wl-alert-history__empty">Sign in to view your alert history.</p>
+        )}
+        {view === "offline" && (
+          <p className="wl-alert-history__empty">Alert history unavailable while offline.</p>
+        )}
+        {view === "personal" && alertEventsMessage && (
+          <p className="wl-alert-history__empty wl-alert-history__empty--warning" role="status">
+            {alertEventsMessage}
+          </p>
+        )}
+        {view === "personal" && alertEventsLoading && alertEvents.length === 0 && !alertEventsMessage && (
+          <p className="wl-alert-history__empty" role="status">Loading alert history…</p>
+        )}
+        {view === "personal" && !alertEventsLoading && alertEvents.length === 0 && !alertEventsMessage && (
+          <p className="wl-alert-history__empty">No target-reached events yet.</p>
+        )}
+        {view === "personal" && alertEvents.length > 0 && (
+          <ol className="wl-alert-history__list">
+            {alertEvents.slice(0, 4).map((event) => (
+              <li className="wl-alert-history__item" key={event.id}>
+                <div>
+                  <strong>{event.itemTitle}</strong>
+                  <span>{event.store}</span>
+                </div>
+                <p>{event.message}</p>
+                <div className="wl-alert-history__prices">
+                  <span>Current <strong>{event.currentPrice}</strong></span>
+                  <span>Target <strong>{event.targetPrice}</strong></span>
+                </div>
+                <time className="wl-alert-history__meta" dateTime={event.createdAt}>
+                  {formatAlertEventTime(event.createdAt)}
+                </time>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
       <div className="wl-network__stores">
         <div className="wl-network__section-label"><span>Tracked stores</span><strong>{storeCounts.length}</strong></div>
         <div className="wl-network__store-rows">
@@ -351,6 +422,9 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [view, setView] = useState<WishlistView>("checking");
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [personalItems, setPersonalItems] = useState<WishlistItem[]>([]);
+  const [alertEvents, setAlertEvents] = useState<WishlistAlertEvent[]>([]);
+  const [alertEventsLoading, setAlertEventsLoading] = useState(false);
+  const [alertEventsMessage, setAlertEventsMessage] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Record<number, boolean>>(() => alertsFor(wishlistItems));
   const [serviceMessage, setServiceMessage] = useState<string | null>(null);
   const [operationMessage, setOperationMessage] = useState<string | null>(null);
@@ -358,6 +432,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(() => new Set());
   const [itemMessages, setItemMessages] = useState<Record<number, ItemMessage>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const alertEventsRequestVersion = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -369,8 +444,12 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
 
       if (!token) {
         if (!active || currentVersion !== requestVersion) return;
+        alertEventsRequestVersion.current += 1;
         setAuthToken(null);
         setPersonalItems([]);
+        setAlertEvents([]);
+        setAlertEventsLoading(false);
+        setAlertEventsMessage(null);
         setAlerts(alertsFor(wishlistItems));
         setServiceMessage(null);
         setOperationMessage(null);
@@ -381,19 +460,23 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
 
       setAuthToken(token);
       setServiceMessage(null);
+      setAlertEvents([]);
+      setAlertEventsMessage(null);
+      setAlertEventsLoading(true);
       setView("checking");
 
-      try {
-        const items = await getMyWishlist(token);
-        if (!active || currentVersion !== requestVersion) return;
-        setPersonalItems(items);
-        setAlerts(alertsFor(items));
-        setOperationMessage(null);
-        setItemMessages({});
-        setView("personal");
-      } catch (error) {
-        if (!active || currentVersion !== requestVersion) return;
-        const details = normalizeUserWishlistError(error);
+      const eventRequestVersion = ++alertEventsRequestVersion.current;
+      const [wishlistResult, alertEventsResult] = await Promise.allSettled([
+        getMyWishlist(token),
+        getMyWishlistAlertEvents(token),
+      ]);
+      if (!active || currentVersion !== requestVersion) return;
+
+      if (wishlistResult.status === "rejected") {
+        const details = normalizeUserWishlistError(wishlistResult.reason);
+        setAlertEvents([]);
+        setAlertEventsLoading(false);
+        setAlertEventsMessage(null);
 
         if (details.status === 401) {
           clearAuthToken();
@@ -406,7 +489,40 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         setServiceMessage(details.message);
         setAlerts(alertsFor(wishlistItems));
         setView("offline");
+        return;
       }
+
+      if (alertEventsResult.status === "rejected") {
+        const details = normalizeUserWishlistError(alertEventsResult.reason);
+
+        if (details.status === 401) {
+          clearAuthToken();
+          setAuthToken(null);
+          setPersonalItems([]);
+          setAlertEvents([]);
+          setAlertEventsLoading(false);
+          setServiceMessage(details.message);
+          setView("public");
+          return;
+        }
+
+        setAlertEvents([]);
+        setAlertEventsMessage(
+          "Alert history could not be loaded. Your wishlist is still available.",
+        );
+      } else if (eventRequestVersion === alertEventsRequestVersion.current) {
+        setAlertEvents(alertEventsResult.value);
+        setAlertEventsMessage(null);
+      }
+
+      if (eventRequestVersion === alertEventsRequestVersion.current) {
+        setAlertEventsLoading(false);
+      }
+      setPersonalItems(wishlistResult.value);
+      setAlerts(alertsFor(wishlistResult.value));
+      setOperationMessage(null);
+      setItemMessages({});
+      setView("personal");
     }
 
     function handleAuthChange() {
@@ -449,14 +565,44 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }
 
   function handleAuthenticationRequired() {
+    alertEventsRequestVersion.current += 1;
     clearAuthToken();
     setAuthToken(null);
     setPersonalItems([]);
+    setAlertEvents([]);
+    setAlertEventsLoading(false);
+    setAlertEventsMessage(null);
     setAlerts(alertsFor(wishlistItems));
     setUpdatingIds(new Set());
     setItemMessages({});
     setServiceMessage("Please sign in again.");
     setView("public");
+  }
+
+  async function refreshAlertEvents(token: string) {
+    const requestVersion = ++alertEventsRequestVersion.current;
+    setAlertEventsLoading(true);
+    setAlertEventsMessage(null);
+
+    try {
+      const events = await getMyWishlistAlertEvents(token);
+      if (requestVersion !== alertEventsRequestVersion.current) return;
+      setAlertEvents(events);
+    } catch (error) {
+      if (requestVersion !== alertEventsRequestVersion.current) return;
+      const details = normalizeUserWishlistError(error);
+      if (details.status === 401) {
+        handleAuthenticationRequired();
+      } else {
+        setAlertEventsMessage(
+          "Alert history could not be refreshed. Your wishlist changes were saved.",
+        );
+      }
+    } finally {
+      if (requestVersion === alertEventsRequestVersion.current) {
+        setAlertEventsLoading(false);
+      }
+    }
   }
 
   function handleItemAdded(item: WishlistItem) {
@@ -469,6 +615,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       return next;
     });
     resetFilters();
+    if (authToken) void refreshAlertEvents(authToken);
   }
 
   async function handleAlertUpdate(
@@ -494,6 +641,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         ...current,
         [updatedItem.id]: { kind: "success", text: successMessage },
       }));
+      void refreshAlertEvents(authToken);
     } catch (error) {
       const details = normalizeUserWishlistError(error);
       if (details.status === 401) {
@@ -554,7 +702,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const isPersonal = view === "personal";
   const heroTag = isPersonal ? "Personal wishlist" : view === "offline" ? "Wishlist service offline" : "Public wishlist preview";
   const heroCopy = isPersonal
-    ? "See backend-computed alert status while managing target prices, alert states, and priorities. Notification delivery is planned for later."
+    ? "See backend-computed alert status and recent target events while managing alert settings. Notification delivery is planned for later."
     : view === "offline"
       ? "Wishlist service offline — showing the public preview so this page stays useful."
       : "Explore the public wishlist preview. Sign in to manage a wishlist stored with your NEXORA account.";
@@ -590,7 +738,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           </strong>
           <span>
             {isPersonal
-              ? "Alert settings and computed evaluations update with your account. The public demo wishlist remains the page fallback."
+              ? "Alert settings, computed evaluations, and recent history update with your account. The public demo wishlist remains the page fallback."
               : view === "offline"
                 ? serviceMessage || "Cannot reach the NEXORA wishlist service."
                 : view === "checking"
@@ -689,7 +837,15 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             )}
           </div>
         </section>
-        <WishlistAlertPanel alerts={alerts} source={source} view={view} wishlistItems={displayedItems} />
+        <WishlistAlertPanel
+          alertEvents={alertEvents}
+          alertEventsLoading={alertEventsLoading}
+          alertEventsMessage={alertEventsMessage}
+          alerts={alerts}
+          source={source}
+          view={view}
+          wishlistItems={displayedItems}
+        />
       </div>
     </>
   );
