@@ -99,14 +99,16 @@ remain disabled and planned.
 Authenticated users can save any visible curated or live external deal to
 their personal wishlist from its deal card. External store labels such as
 Fanatical, Gamesplanet, and GameBillet are accepted. The current deal price is
-used as a provisional target and lowest-ever price until the real alert engine
-is implemented. The page synchronizes active personal wishlist items after
-authentication and when deal sources change, so matching cards remain marked
-as saved after refresh. Matching prefers normalized title, store, and current
-price, with title plus store as the stable fallback when a live price changes.
-The backend also returns an existing active item for repeat saves with the same
-case-insensitive title and store. Real price-alert processing and store
-redirects are still planned and are not activated by this workflow.
+used as a provisional target and lowest-ever price until scheduled price
+refreshing is implemented. The page synchronizes active personal wishlist
+items after authentication and when deal sources change, so matching cards
+remain marked as saved after refresh. Matching prefers normalized title, store,
+and current price, with title plus store as the stable fallback when a live
+price changes. The backend also returns an existing active item for repeat
+saves with the same case-insensitive title and store. Scheduled price monitoring
+and store redirects are still planned and are not activated by this workflow.
+Basic alert evaluation exists for saved current and target values, but it does
+not fetch new prices automatically.
 
 ## Authentication foundation
 
@@ -119,16 +121,20 @@ data fetching remains server-side.
 The Wishlist page uses that stored token to load, add, update, and delete items
 through the authenticated `/api/me/wishlist` endpoints. Signed-in users can
 update a personal item's target price, alert active state, and priority through
-`PATCH /api/me/wishlist/{id}/alert`. Logged-out users, unavailable personal
-requests, and backend outages retain the public demo wishlist as a read-only
-preview/fallback, so the route remains usable.
+`PATCH /api/me/wishlist/{id}/alert`. Cards display the backend-computed optional
+`alertEvaluation`, including `target-reached`, `watching`, `paused`, and
+`not-evaluable` states. The evaluation updates immediately from successful
+PATCH responses and remains visible after the personal wishlist reloads.
+Logged-out users, unavailable personal requests, and backend outages retain the
+public demo wishlist as a read-only preview/fallback, so the route remains
+usable.
 
 This is a basic authentication and personal-wishlist foundation. Browser
 storage is intentionally a temporary approach and is more exposed to
 cross-site scripting than an HttpOnly-cookie design. Route protection, refresh
 tokens, roles, OAuth, and price history are not included yet. Alert settings are
-persisted, but real notification delivery and scheduled price checking remain
-future work.
+persisted and basic current-versus-target evaluation is available, but real
+notification delivery and scheduled price checking remain future work.
 
 ## Production environment
 

@@ -1,6 +1,19 @@
 export type WishlistStore = string;
 export type WishlistStatus = "price-drop" | "free-now" | "tracking";
 export type WishlistPriority = "high" | "medium" | "low";
+export const wishlistAlertEvaluationStates = [
+  "target-reached",
+  "watching",
+  "paused",
+  "not-evaluable",
+] as const;
+export type WishlistAlertEvaluationState = (typeof wishlistAlertEvaluationStates)[number];
+
+export type WishlistAlertEvaluation = {
+  targetReached: boolean;
+  state: WishlistAlertEvaluationState;
+  message: string;
+};
 
 export type WishlistItem = {
   id: number;
@@ -13,6 +26,7 @@ export type WishlistItem = {
   status: WishlistStatus;
   alertActive: boolean;
   priority: WishlistPriority;
+  alertEvaluation?: WishlistAlertEvaluation;
 };
 
 export const wishlistFilters = [
@@ -39,6 +53,11 @@ export const wishlistItems = [
     status: "price-drop",
     alertActive: true,
     priority: "high",
+    alertEvaluation: {
+      targetReached: false,
+      state: "watching",
+      message: "Still above target price.",
+    },
   },
   {
     id: 2,
@@ -51,6 +70,11 @@ export const wishlistItems = [
     status: "price-drop",
     alertActive: true,
     priority: "high",
+    alertEvaluation: {
+      targetReached: false,
+      state: "watching",
+      message: "Still above target price.",
+    },
   },
   {
     id: 3,
@@ -63,6 +87,11 @@ export const wishlistItems = [
     status: "tracking",
     alertActive: true,
     priority: "medium",
+    alertEvaluation: {
+      targetReached: false,
+      state: "watching",
+      message: "Still above target price.",
+    },
   },
   {
     id: 4,
@@ -75,6 +104,11 @@ export const wishlistItems = [
     status: "tracking",
     alertActive: true,
     priority: "low",
+    alertEvaluation: {
+      targetReached: false,
+      state: "not-evaluable",
+      message: "Price cannot be evaluated yet.",
+    },
   },
   {
     id: 5,
@@ -87,6 +121,11 @@ export const wishlistItems = [
     status: "free-now",
     alertActive: false,
     priority: "high",
+    alertEvaluation: {
+      targetReached: false,
+      state: "paused",
+      message: "Alert is paused.",
+    },
   },
   {
     id: 6,
@@ -99,6 +138,11 @@ export const wishlistItems = [
     status: "price-drop",
     alertActive: true,
     priority: "medium",
+    alertEvaluation: {
+      targetReached: false,
+      state: "watching",
+      message: "Still above target price.",
+    },
   },
   {
     id: 7,
@@ -111,6 +155,11 @@ export const wishlistItems = [
     status: "tracking",
     alertActive: false,
     priority: "low",
+    alertEvaluation: {
+      targetReached: false,
+      state: "paused",
+      message: "Alert is paused.",
+    },
   },
   {
     id: 8,
@@ -123,5 +172,10 @@ export const wishlistItems = [
     status: "free-now",
     alertActive: false,
     priority: "high",
+    alertEvaluation: {
+      targetReached: false,
+      state: "paused",
+      message: "Alert is paused.",
+    },
   },
 ] satisfies readonly WishlistItem[];

@@ -5,6 +5,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import AddWishlistItemForm from "@/components/AddWishlistItemForm";
 import {
   wishlistFilters,
+  type WishlistAlertEvaluation,
   type WishlistFilter,
   type WishlistItem,
   type WishlistPriority,
@@ -47,6 +48,29 @@ function priorityLabel(priority: WishlistPriority) {
   return priority;
 }
 
+function alertEvaluationFor(item: WishlistItem): WishlistAlertEvaluation {
+  if (item.alertEvaluation) return item.alertEvaluation;
+  if (!item.alertActive) {
+    return {
+      targetReached: false,
+      state: "paused",
+      message: "Alert is paused.",
+    };
+  }
+  return {
+    targetReached: false,
+    state: "not-evaluable",
+    message: "Alert status will appear after backend evaluation.",
+  };
+}
+
+function evaluationIcon(state: WishlistAlertEvaluation["state"]) {
+  if (state === "target-reached") return "✓";
+  if (state === "watching") return "↗";
+  if (state === "paused") return "Ⅱ";
+  return "?";
+}
+
 function wishlistStoreClass(store: string) {
   if (store === "Steam") return "steam";
   if (store === "Epic Games") return "epic";
@@ -84,6 +108,7 @@ function WishlistCard({
   ) => Promise<void>;
 }) {
   const status = statusDetails(item.status);
+  const alertEvaluation = alertEvaluationFor(item);
   const storeClass = wishlistStoreClass(item.store);
   const [targetPrice, setTargetPrice] = useState(item.targetPrice);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -134,6 +159,15 @@ function WishlistCard({
         <div><span>Current</span><strong className={item.currentPrice === "FREE" ? "wl-card__price--free" : undefined}>{item.currentPrice}</strong></div>
         <div><span>Target</span><strong className="wl-card__price--target">{item.targetPrice}</strong></div>
         <div><span>Lowest</span><strong>{item.lowestEver}</strong></div>
+      </div>
+
+      <div
+        className={`wl-card__evaluation wl-card__evaluation--${alertEvaluation.state}`}
+        aria-label={`Alert evaluation: ${alertEvaluation.message}`}
+        aria-live="polite"
+      >
+        <span aria-hidden="true">{evaluationIcon(alertEvaluation.state)}</span>
+        <strong>{alertEvaluation.message}</strong>
       </div>
 
       {canManage && (
@@ -242,6 +276,9 @@ function WishlistAlertPanel({
 }) {
   const activeAlerts = wishlistItems.filter((item) => alerts[item.id]).length;
   const pausedAlerts = wishlistItems.length - activeAlerts;
+  const targetsReached = wishlistItems.filter(
+    (item) => item.alertEvaluation?.targetReached,
+  ).length;
   const priceDrops = wishlistItems.filter((item) => item.status === "price-drop").length;
   const freeNow = wishlistItems.filter((item) => item.status === "free-now").length;
   const storeCounts = [
@@ -255,9 +292,9 @@ function WishlistAlertPanel({
     : { value: source === "api" ? "Public Spring Boot preview" : "Static public preview", badge: source === "api" ? "API" : "Static" };
 
   const items = [
-    { label: "Alert Settings", value: view === "personal" ? "Saved with your account" : "Preview only", badge: view === "personal" ? "API" : "Public", tone: "orange", icon: "bolt" },
+    { label: "Alert Evaluation", value: view === "personal" ? "Computed by the backend" : "Evaluation preview", badge: view === "personal" ? "API" : "Public", tone: "orange", icon: "bolt" },
     { label: "Data Source", value: dataSource.value, badge: dataSource.badge, tone: "blue", icon: "globe" },
-    { label: "Notification Queue", value: "Alert engine later", badge: "Future", tone: "purple", icon: "mail" },
+    { label: "Notification Queue", value: "Delivery planned for later", badge: "Future", tone: "purple", icon: "mail" },
     { label: "Security", value: view === "personal" ? "JWT account access" : "Public preview data", badge: view === "personal" ? "Auth" : "Public", tone: "green", icon: "shield" },
   ] as const;
 
@@ -284,6 +321,7 @@ function WishlistAlertPanel({
       <div className="wl-network__summary">
         <div className="wl-network__section-label"><span>Alert summary</span><strong>{view === "personal" ? "Account" : "Preview"}</strong></div>
         <div className="wl-network__summary-rows">
+          <div><span className="wl-network__dot wl-network__dot--reached" /><span>Targets reached</span><strong>{targetsReached}</strong></div>
           <div><span className="wl-network__dot wl-network__dot--active" /><span>Active alerts</span><strong>{activeAlerts}</strong></div>
           <div><span className="wl-network__dot wl-network__dot--paused" /><span>Paused</span><strong>{pausedAlerts}</strong></div>
           <div><span className="wl-network__dot wl-network__dot--drop" /><span>Price drops</span><strong>{priceDrops}</strong></div>
@@ -516,7 +554,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const isPersonal = view === "personal";
   const heroTag = isPersonal ? "Personal wishlist" : view === "offline" ? "Wishlist service offline" : "Public wishlist preview";
   const heroCopy = isPersonal
-    ? "Manage target prices, alert states, and priorities stored with your NEXORA account. Notification delivery is planned for later."
+    ? "See backend-computed alert status while managing target prices, alert states, and priorities. Notification delivery is planned for later."
     : view === "offline"
       ? "Wishlist service offline — showing the public preview so this page stays useful."
       : "Explore the public wishlist preview. Sign in to manage a wishlist stored with your NEXORA account.";
@@ -552,7 +590,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           </strong>
           <span>
             {isPersonal
-              ? "Alert settings are saved with your account. The public demo wishlist remains the page fallback."
+              ? "Alert settings and computed evaluations update with your account. The public demo wishlist remains the page fallback."
               : view === "offline"
                 ? serviceMessage || "Cannot reach the NEXORA wishlist service."
                 : view === "checking"

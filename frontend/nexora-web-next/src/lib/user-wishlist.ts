@@ -1,4 +1,7 @@
 import {
+  wishlistAlertEvaluationStates,
+  type WishlistAlertEvaluation,
+  type WishlistAlertEvaluationState,
   type WishlistItem,
   type WishlistPriority,
   type WishlistStatus,
@@ -8,6 +11,20 @@ const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const WISHLIST_REQUEST_TIMEOUT_MS = 8000;
 const WISHLIST_STATUSES: readonly WishlistStatus[] = ["price-drop", "free-now", "tracking"];
 const WISHLIST_PRIORITIES: readonly WishlistPriority[] = ["high", "medium", "low"];
+
+function isWishlistAlertEvaluation(value: unknown): value is WishlistAlertEvaluation {
+  if (typeof value !== "object" || value === null) return false;
+
+  const evaluation = value as Record<string, unknown>;
+  return (
+    typeof evaluation.targetReached === "boolean" &&
+    wishlistAlertEvaluationStates.includes(
+      evaluation.state as WishlistAlertEvaluationState,
+    ) &&
+    typeof evaluation.message === "string" &&
+    evaluation.message.trim().length > 0
+  );
+}
 
 export type AddWishlistItemPayload = {
   title: string;
@@ -64,7 +81,9 @@ function isWishlistItem(value: unknown): value is WishlistItem {
     (typeof item.discount === "string" || item.discount === null) &&
     WISHLIST_STATUSES.includes(item.status as WishlistStatus) &&
     typeof item.alertActive === "boolean" &&
-    WISHLIST_PRIORITIES.includes(item.priority as WishlistPriority)
+    WISHLIST_PRIORITIES.includes(item.priority as WishlistPriority) &&
+    (item.alertEvaluation === undefined ||
+      isWishlistAlertEvaluation(item.alertEvaluation))
   );
 }
 
