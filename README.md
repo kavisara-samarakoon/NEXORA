@@ -46,7 +46,7 @@ Not deployed as a production service
 | `dev` backend profile | PostgreSQL, Flyway V1–V6, and JPA-backed catalog, account, wishlist, and alert data |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
-| Continuous integration | GitHub Actions for backend tests and frontend lint/build |
+| Continuous integration | GitHub Actions for backend tests, PostgreSQL dev-profile validation, and frontend lint/build |
 
 The public `GET /api/wishlist` contract remains separate from authenticated
 personal wishlist endpoints under `/api/me/wishlist`.
@@ -178,12 +178,12 @@ requests targeting `main`:
 
 | Workflow | Validation |
 | --- | --- |
-| `backend-ci.yml` | Sets up Temurin Java 17 with Maven caching and runs `mvn test` in `backend/nexora-api` |
+| `backend-ci.yml` | Runs database-free backend tests and a separate PostgreSQL 16 job that validates the `dev` profile, Flyway migrations, and JPA schema |
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
 
-The frontend workflow does not build the retained Vite prototype. CI does not
-deploy NEXORA and does not currently start PostgreSQL or validate the backend
-`dev` profile.
+The frontend workflow does not build the retained Vite prototype. Backend CI
+keeps the normal test suite database-free and runs PostgreSQL validation in a
+separate service-backed job. CI does not deploy NEXORA.
 
 ## API overview
 
@@ -215,8 +215,8 @@ These are development milestones, not claims of deployed production releases.
 - No production deployment or continuous-delivery pipeline is documented yet.
 - Docker Compose covers local PostgreSQL only; there are no backend/frontend
   application images, production container workflow, or devcontainer.
-- CI does not yet run PostgreSQL integration tests, container builds, secret
-  scanning, or broader security scanning.
+- CI does not build application containers or run secret scanning or broader
+  security scanning.
 - Browser `localStorage` token storage is temporary and not production-grade;
   there is no refresh-token or HttpOnly-cookie lifecycle.
 - Security hardening such as rate limiting, account verification, recovery,
@@ -237,8 +237,8 @@ These are development milestones, not claims of deployed production releases.
 
 1. Harden authentication and move browser sessions to an approved secure token
    lifecycle.
-2. Expand CI with PostgreSQL integration and security checks, then add optional
-   application containerization, observability, and deployment documentation.
+2. Expand CI with security checks, then add optional application
+   containerization, observability, and deployment documentation.
 3. Add persistent notification delivery status, retry/outbox processing, and
    user preferences.
 4. Add production-grade scheduling/locking and price history.

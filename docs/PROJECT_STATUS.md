@@ -18,6 +18,8 @@ or production-ready service.
 - Backend tests plus frontend lint and production-build checks.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
+- GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
+  Flyway V1–V6, JPA schema validation, required tables, and seed data.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
 
@@ -43,7 +45,6 @@ or production-ready service.
 
 - No deployed production environment or production operations guide.
 - No deployment or continuous-delivery pipeline.
-- No PostgreSQL service or `dev`-profile integration tests in CI.
 - No backend/frontend application container images, production container
   workflow, or devcontainer. Compose currently runs local PostgreSQL only.
 - No CI secret scanning, dependency review, code scanning, or other dedicated
@@ -56,8 +57,7 @@ or production-ready service.
 
 ## Recommended next milestones
 
-1. Add PostgreSQL integration validation and appropriate security scanning to
-   CI.
+1. Add appropriate secret, dependency, and code security scanning to CI.
 2. Add optional backend/frontend development containerization without implying
    production deployment readiness.
 3. Design a secure browser session and refresh-token lifecycle.

@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — PostgreSQL CI integration validation
+
+- Added PostgreSQL `dev`-profile integration validation for Flyway migrations,
+  JPA schema startup, required tables, and seed data in backend CI.
+
 ## Unreleased — wishlist price input polish
 
 - Polished wishlist target-price input normalization and validation, including

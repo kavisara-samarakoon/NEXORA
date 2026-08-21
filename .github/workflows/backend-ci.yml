@@ -35,3 +35,43 @@ jobs:
 
       - name: Run backend tests
         run: mvn test
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nexora_db
+          POSTGRES_USER: nexora_user
+          POSTGRES_PASSWORD: nexora_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexora_user -d nexora_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend/nexora-api
+    env:
+      NEXORA_POSTGRES_INTEGRATION_TESTS: "true"
+      NEXORA_DB_URL: jdbc:postgresql://localhost:5432/nexora_db
+      NEXORA_DB_USERNAME: nexora_user
+      NEXORA_DB_PASSWORD: nexora_password
+      NEXORA_JWT_SECRET: ci-only-integration-test-secret-at-least-thirty-two-bytes
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Validate PostgreSQL dev profile
+        run: mvn test -Dtest=PostgresDevProfileIntegrationTests
