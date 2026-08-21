@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — security scanning CI foundation
+
+- Added lightweight security CI, weekly Dependabot configuration, and a
+  repository security policy without requiring GitHub Advanced Security.
+
 ## Unreleased — PostgreSQL CI integration validation
 
 - Added PostgreSQL `dev`-profile integration validation for Flyway migrations,

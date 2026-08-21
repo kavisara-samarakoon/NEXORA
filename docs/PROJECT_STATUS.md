@@ -20,6 +20,10 @@ or production-ready service.
   dependency installation, lint, and production build.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
   Flyway V1–V6, JPA schema validation, required tables, and seed data.
+- Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
+  frontend npm dependencies.
+- Lightweight security CI for high-severity production npm auditing and backend
+  Maven dependency-resolution visibility, plus a repository security policy.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
 
@@ -47,8 +51,10 @@ or production-ready service.
 - No deployment or continuous-delivery pipeline.
 - No backend/frontend application container images, production container
   workflow, or devcontainer. Compose currently runs local PostgreSQL only.
-- No CI secret scanning, dependency review, code scanning, or other dedicated
-  security-scanning workflow.
+- No CodeQL/full code scanning, repository-configured secret scanning, or
+  Dependency Review Action workflow.
+- No full Maven vulnerability scanner; the current Maven check verifies
+  dependency resolution only.
 - No refresh-token/HttpOnly-cookie authentication lifecycle.
 - No complete rate limiting, account verification, password recovery, token
   revocation, or security monitoring controls.
@@ -57,7 +63,8 @@ or production-ready service.
 
 ## Recommended next milestones
 
-1. Add appropriate secret, dependency, and code security scanning to CI.
+1. Evaluate CodeQL, secret scanning, dependency review, and a dedicated Maven
+   vulnerability scanner without making plan-limited features mandatory.
 2. Add optional backend/frontend development containerization without implying
    production deployment readiness.
 3. Design a secure browser session and refresh-token lifecycle.

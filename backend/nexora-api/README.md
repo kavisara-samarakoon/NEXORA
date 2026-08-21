@@ -376,6 +376,11 @@ The PostgreSQL integration test is enabled only when
 `NEXORA_POSTGRES_INTEGRATION_TESTS=true`, so local `mvn test` does not require a
 database.
 
+The separate `Security CI` workflow runs `mvn -q -DskipTests dependency:tree`
+to verify dependency resolution and provide a lightweight dependency baseline.
+This is not a Maven vulnerability scan; a dedicated scanner remains future
+work.
+
 With a compatible local PostgreSQL instance running, execute it explicitly:
 
 ```bash
@@ -392,8 +397,8 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 - This repository does not document a production deployment,
   continuous-delivery pipeline, application-container build workflow, or
   operational runbook.
-- Backend CI does not build application containers or run dedicated security
-  scanning.
+- Backend CI does not build application containers. Security CI does not yet
+  include a full Maven vulnerability scanner or CodeQL analysis.
 - Docker Compose provides local PostgreSQL only; there is no backend application
   image or production container workflow.
 - JWT authentication has no refresh-token lifecycle, revocation, account
