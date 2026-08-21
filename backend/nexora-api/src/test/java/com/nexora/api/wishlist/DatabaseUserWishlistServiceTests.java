@@ -25,8 +25,7 @@ class DatabaseUserWishlistServiceTests {
     void createsAnOwnedItemWithSafeDefaults() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
-        DatabaseUserWishlistService service =
-                new DatabaseUserWishlistService(repository, eventRepository);
+        DatabaseUserWishlistService service = service(repository, eventRepository);
         AddWishlistItemRequest request = new AddWishlistItemRequest(
                 "New Game", "Steam", "$30.00", "$20.00",
                 null, null, null, null, null);
@@ -55,8 +54,7 @@ class DatabaseUserWishlistServiceTests {
     void returnsExistingActiveItemForNormalizedDuplicate() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
-        DatabaseUserWishlistService service =
-                new DatabaseUserWishlistService(repository, eventRepository);
+        DatabaseUserWishlistService service = service(repository, eventRepository);
         AddWishlistItemRequest request = new AddWishlistItemRequest(
                 "  new game ", " steam ", "$15.00", "$10.00",
                 null, null, null, null, null);
@@ -80,8 +78,7 @@ class DatabaseUserWishlistServiceTests {
     void createsAnAlertEventWhenNewItemAlreadyReachedTarget() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
-        DatabaseUserWishlistService service =
-                new DatabaseUserWishlistService(repository, eventRepository);
+        DatabaseUserWishlistService service = service(repository, eventRepository);
         AddWishlistItemRequest request = new AddWishlistItemRequest(
                 "Reached Game", "Steam", "$8.88", "$9.99",
                 null, null, null, true, null);
@@ -114,8 +111,8 @@ class DatabaseUserWishlistServiceTests {
         when(repository.findByUserIdAndActiveTrueOrderById(7L))
                 .thenReturn(List.of(databaseItem(42L, 7L, true)));
 
-        List<WishlistItem> items = new DatabaseUserWishlistService(
-                repository, eventRepository).getWishlistItems(7L);
+        List<WishlistItem> items = service(repository, eventRepository)
+                .getWishlistItems(7L);
 
         assertEquals(1, items.size());
         assertEquals(42L, items.get(0).id());
@@ -129,7 +126,7 @@ class DatabaseUserWishlistServiceTests {
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
 
-        new DatabaseUserWishlistService(repository, eventRepository)
+        service(repository, eventRepository)
                 .deleteWishlistItem(7L, 42L);
 
         assertFalse(item.isActive());
@@ -145,7 +142,7 @@ class DatabaseUserWishlistServiceTests {
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
-        WishlistItem response = new DatabaseUserWishlistService(repository, eventRepository)
+        WishlistItem response = service(repository, eventRepository)
                 .updateWishlistAlert(
                         7L, 42L,
                         new UpdateWishlistAlertRequest("  $12.00  ", null, " low "));
@@ -167,7 +164,7 @@ class DatabaseUserWishlistServiceTests {
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
-        WishlistItem response = new DatabaseUserWishlistService(repository, eventRepository)
+        WishlistItem response = service(repository, eventRepository)
                 .updateWishlistAlert(
                         7L, 42L,
                         new UpdateWishlistAlertRequest("$40.00", null, null));
@@ -191,7 +188,7 @@ class DatabaseUserWishlistServiceTests {
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
-        WishlistItem response = new DatabaseUserWishlistService(repository, eventRepository)
+        WishlistItem response = service(repository, eventRepository)
                 .updateWishlistAlert(
                         7L, 42L,
                         new UpdateWishlistAlertRequest(null, null, "high"));
@@ -207,7 +204,7 @@ class DatabaseUserWishlistServiceTests {
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.empty());
 
         assertThrows(WishlistItemNotFoundException.class, () ->
-                new DatabaseUserWishlistService(repository, eventRepository).updateWishlistAlert(
+                service(repository, eventRepository).updateWishlistAlert(
                         7L, 42L, new UpdateWishlistAlertRequest(null, false, null)));
         verify(repository, never()).saveAndFlush(any());
         verify(eventRepository, never()).saveAndFlush(any());
@@ -238,6 +235,16 @@ class DatabaseUserWishlistServiceTests {
                 "medium",
                 active,
                 userId
+        );
+    }
+
+    private static DatabaseUserWishlistService service(
+            WishlistItemRepository repository,
+            WishlistAlertEventRepository eventRepository) {
+        return new DatabaseUserWishlistService(
+                repository,
+                eventRepository,
+                new WishlistAlertEventRecorder(eventRepository)
         );
     }
 }

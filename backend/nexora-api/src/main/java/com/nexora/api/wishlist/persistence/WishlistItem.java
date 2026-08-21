@@ -128,6 +128,17 @@ public class WishlistItem {
         active = false;
     }
 
+    public void updateCurrentPrice(String currentPrice) {
+        if (currentPrice == null) {
+            return;
+        }
+
+        String trimmedCurrentPrice = currentPrice.trim();
+        if (!trimmedCurrentPrice.isEmpty()) {
+            this.currentPrice = trimmedCurrentPrice;
+        }
+    }
+
     public void updateAlertSettings(String targetPrice, Boolean alertActive, String priority) {
         if (targetPrice != null) {
             this.targetPrice = targetPrice;

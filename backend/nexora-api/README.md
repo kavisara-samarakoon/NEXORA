@@ -334,10 +334,43 @@ scoped to the user id derived from the JWT; clients cannot request another
 user's history.
 
 This is an event-recording foundation, not notification delivery. There is no
-email, push, Slack, Discord, or other delivery channel, no scheduled or
-background price checking, and no external price refresh yet. Events are
-created only during authenticated POST and PATCH operations handled by this
-API.
+email, push, Slack, Discord, SMS, or other delivery channel. Events are created
+during authenticated POST and PATCH operations and by the opt-in price refresh
+job when a stored item newly crosses its target.
+
+### Wishlist price refresh job foundation
+
+The `dev` profile includes an opt-in scheduled job for active, user-owned
+wishlist items whose alerts are enabled. The scheduler is disabled by default:
+
+```properties
+nexora.wishlist.price-refresh.enabled=false
+nexora.wishlist.price-refresh.fixed-delay-ms=3600000
+```
+
+Set `nexora.wishlist.price-refresh.enabled=true` to enable it. The default fixed
+delay is one hour, measured after each completed run. The scheduler logs a
+small summary containing scanned, refreshed, event-created, and skipped item
+counts. Failures are logged so the scheduling loop can continue on a future
+run. The job remains unavailable in the database-free default profile because
+there are no persisted personal wishlist rows to refresh there.
+
+Each run obtains a price through `WishlistPriceSnapshotProvider`, updates the
+stored `currentPrice` only when a changed nonblank value is returned, and
+re-evaluates the alert. A target-reached history event is recorded only for a
+transition from not reached to reached, so repeated runs at the same reached
+price do not create duplicate event spam. Inactive rows, public demo rows,
+paused alerts, and rows without an owner are excluded.
+
+`StoredWishlistPriceSnapshotProvider` is deliberately a placeholder: it
+returns the item's already stored current price and makes no external request.
+The provider abstraction allows a later CheapShark or other approved price
+source to replace it. Consequently, enabling the current scheduler is harmless
+but will normally report no refreshed items unless a different provider is
+wired in or the refresh service is tested with simulated provider prices.
+
+This foundation does not integrate a real external price API, deliver email,
+push, Slack, Discord, or SMS notifications, or use Sentinel AI.
 
 Confirm the personal item is absent from the public demo wishlist:
 
@@ -353,12 +386,12 @@ curl -i -X DELETE "http://localhost:8080/api/me/wishlist/${NEXORA_WISHLIST_ID}" 
   -H "Authorization: Bearer ${NEXORA_TOKEN}"
 ```
 
-This is a per-user wishlist ownership, alert-settings, and on-response
-evaluation foundation only. Evaluation runs when a wishlist response is
-created, and target-reached transitions are recorded as alert history. It does
-not deliver email, push, Slack, Discord, AI, or other notifications, and there
-is no scheduled or background price-checking job yet. It also does not include
-continuous price history, external game data, sharing, or team features.
+This is a per-user wishlist ownership, alert-settings, evaluation, and optional
+scheduled-refresh foundation. Target-reached transitions are recorded as alert
+history. It does not deliver email, push, Slack, Discord, SMS, AI, or other
+notifications, and the placeholder price provider does not fetch external
+prices. It also does not include continuous price history, external game data,
+sharing, or team features.
 
 This is an authentication foundation, not production-complete identity
 management. Before deployment, use a generated secret from a secret manager,
