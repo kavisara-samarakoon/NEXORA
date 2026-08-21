@@ -1,22 +1,29 @@
 package com.nexora.api;
 
+import com.nexora.api.notifications.LogNotificationSender;
+import com.nexora.api.notifications.NotificationProperties;
+import com.nexora.api.notifications.NotificationSender;
 import com.nexora.api.wishlist.StoredWishlistPriceSnapshotProvider;
 import com.nexora.api.wishlist.WishlistPriceRefreshScheduler;
 import com.nexora.api.wishlist.WishlistPriceSnapshotProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,6 +37,19 @@ class NexoraApiApplicationTests {
 
     @Autowired
     private ApplicationContext applicationContext;
+
+    @Autowired
+    private NotificationProperties notificationProperties;
+
+    @Autowired
+    private List<NotificationSender> notificationSenders;
+
+    @Test
+    void notificationsAreDisabledWithOneLogSenderByDefault() {
+        assertFalse(notificationProperties.isEnabled());
+        assertEquals(1, notificationSenders.size());
+        assertInstanceOf(LogNotificationSender.class, notificationSenders.get(0));
+    }
 
     @Test
     void storedWishlistPriceProviderIsTheSafeDefaultAndSchedulerIsDisabled() {

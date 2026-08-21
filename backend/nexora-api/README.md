@@ -333,10 +333,10 @@ prices, computed evaluation state, message, and creation time. Events are
 scoped to the user id derived from the JWT; clients cannot request another
 user's history.
 
-This is an event-recording foundation, not notification delivery. There is no
-email, push, Slack, Discord, SMS, or other delivery channel. Events are created
-during authenticated POST and PATCH operations and by the opt-in price refresh
-job when a stored item newly crosses its target.
+This event history does not send email, push, Slack, Discord, SMS, or another
+external delivery channel. Events are created during authenticated POST and
+PATCH operations and by the opt-in price refresh job when a stored item newly
+crosses its target.
 
 ### Wishlist price refresh job foundation
 
@@ -399,7 +399,33 @@ item fields are skipped.
 CheapShark or store-directory failures produce warnings and an empty snapshot;
 they do not fail the entire refresh run. One unexpected provider failure is
 also isolated to that wishlist item so later candidates can still be scanned.
-There is no notification delivery and no Sentinel AI integration.
+There is no external notification delivery and no Sentinel AI integration.
+
+### Notification delivery foundation
+
+Notification dispatch is disabled by default. The only current sender prepares
+a structured target-reached request and writes a safe application log; it does
+not contact an external service:
+
+```properties
+nexora.notifications.enabled=false
+nexora.notifications.provider=log
+```
+
+Set `nexora.notifications.enabled=true` to enable the log sender. A notification
+request contains the user id, wishlist item id, item title, store, current and
+target prices, evaluation state, and evaluation message. It does not require a
+user account or email lookup.
+
+Dispatch occurs only after a target-reached alert event has been persisted and
+flushed. Disabled notifications return without invoking the sender. Sender and
+unexpected dispatcher failures are logged and contained so they cannot roll
+back alert-event persistence. Watching, paused, and not-evaluable states do not
+create an event or dispatch a notification.
+
+There is no real email, SMS, push, Slack, or Discord provider yet. Future work
+can add verified-recipient lookup, user preferences, persisted delivery status,
+retry handling, and real provider integrations.
 
 Confirm the personal item is absent from the public demo wishlist:
 
