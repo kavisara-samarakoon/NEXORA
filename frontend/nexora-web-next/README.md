@@ -1,37 +1,50 @@
-# NEXORA Next.js Frontend
+# NEXORA Next.js frontend
 
-This directory contains the production frontend for NEXORA: a dark Liquid
-Glass gaming command center for deals, giveaways, wishlists, account safety,
-and Sentinel assistance.
+This directory contains NEXORA's primary frontend: a Next.js App Router
+application for game deals, giveaways, personal wishlists, alert intelligence,
+account safety, and the Sentinel demo experience.
 
-The application uses Next.js App Router, React, and TypeScript. The earlier
-Vite prototype is retained in `../nexora-web` as a backup/reference and is not
+**Status:** Local/development MVP · Production builds are validated locally ·
+No production deployment is documented
+
+The earlier Vite prototype remains in `../nexora-web` for reference and is not
 required to run this application.
 
 ## Requirements
 
 - Node.js 20.9 or newer
 - npm
-- The Spring Boot backend for authentication and live API data (content pages
-  retain static fallbacks when it is unavailable)
+- The Spring Boot backend for authentication, personal wishlist operations, and
+  live API data
 
-## Backend connection
+Public content pages retain typed local fallbacks, so linting and production
+builds do not require a running backend.
 
-Start the API from the project root in a separate terminal:
+## Install and run
+
+From `frontend/nexora-web-next`:
+
+```bash
+cp .env.example .env.local
+npm install
+npm run lint
+npm run build
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+Start the backend in a separate terminal:
 
 ```bash
 cd backend/nexora-api
 mvn spring-boot:run
 ```
 
-The backend runs at `http://localhost:8080` by default.
+The backend runs at [http://localhost:8080](http://localhost:8080). Confirm it
+at [http://localhost:8080/api/health](http://localhost:8080/api/health).
 
-From `frontend/nexora-web-next`, create a local environment file from the safe
-example:
-
-```bash
-cp .env.example .env.local
-```
+## Environment variables
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
@@ -40,115 +53,138 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 | Variable | Purpose | Local fallback |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | Base URL used for Spring Boot API requests | `http://localhost:8080` |
-| `NEXT_PUBLIC_SITE_URL` | Site origin used for canonical URLs, Open Graph metadata, `robots.txt`, and `sitemap.xml` | `http://localhost:3000` |
+| `NEXT_PUBLIC_API_BASE_URL` | Base URL for Spring Boot API requests | `http://localhost:8080` |
+| `NEXT_PUBLIC_SITE_URL` | Origin used for canonical URLs, Open Graph metadata, `robots.txt`, and `sitemap.xml` | `http://localhost:3000` |
 
-Deals, Giveaways, Wishlist, Security, and Sentinel use backend demo data when
-it is available. Each page validates its response and falls back to the typed
-static data in `src/data` if the backend is offline or returns an unexpected
-response. A production build therefore does not require a running backend.
-
-## Install and run
-
-```bash
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
+These values are public by design because Next.js exposes variables prefixed
+with `NEXT_PUBLIC_` to the browser. Do not place secrets in them.
 
 ## Commands
 
 ```bash
 npm run dev       # Start the development server
-npm run build     # Create an optimized production build
-npm run start     # Run the production build
 npm run lint      # Run ESLint
+npm run build     # Create an optimized production build
+npm run start     # Run a completed production build locally
 npx tsc --noEmit  # Run TypeScript checks without emitting files
 ```
 
 ## Current routes
 
-| Route | Experience | Data source |
+| Route | Experience | Current data source |
 | --- | --- | --- |
-| `/` | NEXORA dashboard | Static dashboard demo data |
-| `/deals` | Game Deals Intelligence | Curated `/api/deals` plus optional live `/api/deals/external` |
-| `/giveaways` | Live Giveaway Intelligence | `/api/giveaways` with static fallback |
-| `/wishlist` | Smart Wishlist Control | Personal `/api/me/wishlist` and alert history with public `/api/wishlist` preview/fallback |
-| `/security` | Cyber Security Command Center | `/api/security/status` with static fallback |
-| `/sentinel` | NEXORA Sentinel demo | `/api/sentinel/status` and `/api/sentinel/demo` with static fallback |
-| `/settings` | Account Control Center | Local demo state |
+| `/` | NEXORA dashboard | Local dashboard presentation data |
+| `/deals` | Curated and live deal discovery | `/api/deals`, optional `/api/deals/external`, and typed fallback data |
+| `/giveaways` | Giveaway discovery | `/api/giveaways` with typed fallback data |
+| `/wishlist` | Personal wishlist and alert intelligence | Authenticated `/api/me/wishlist`, alert history, and public/fallback preview |
+| `/security` | Account-safety presentation | `/api/security/status` with typed fallback data |
+| `/sentinel` | Sentinel demo/status experience | `/api/sentinel/status` and `/api/sentinel/demo` with typed fallback data |
+| `/settings` | Account-control presentation | Local demo state; not connected to notification preferences |
 | `/login` | Account login | `POST /api/auth/login` |
 | `/register` | Account registration | `POST /api/auth/register` |
 
-## Curated and external deals
+## Data and fallback behavior
 
-The Deals page initially renders the curated NEXORA feed from `GET /api/deals`
-with the existing typed static fallback. Live external deals are optional and
-are requested from `GET /api/deals/external?pageSize=12` only after the user
-selects **Live External Deals** or submits a live title search.
+Deals, Giveaways, public Wishlist, Security, and Sentinel responses are
+validated before rendering. If the backend is unavailable or a public response
+is invalid, the page uses typed fallback data from `src/data` and displays the
+appropriate network state.
 
-If the backend, CheapShark, or the external response is unavailable, the page
-shows a friendly warning and continues displaying the server-provided curated
-deals. External results are not persisted. Stores without an expanded frontend
-lookup can appear as `Store {id}` and remain available under **All Stores**.
-Live results with a valid CheapShark redirect URL expose an active **View
-Deal** link that opens through CheapShark in a new tab. Curated deal redirects
-remain disabled and planned.
+Authenticated account and personal wishlist operations do not pretend to
+succeed offline. They show an error or fall back to a read-only public wishlist
+preview where appropriate.
 
-Authenticated users can save any visible curated or live external deal to
-their personal wishlist from its deal card. External store labels such as
-Fanatical, Gamesplanet, and GameBillet are accepted. The current deal price is
-used as a provisional target and lowest-ever price until scheduled price
-refreshing is implemented. The page synchronizes active personal wishlist
-items after authentication and when deal sources change, so matching cards
-remain marked as saved after refresh. Matching prefers normalized title, store,
-and current price, with title plus store as the stable fallback when a live
-price changes. The backend also returns an existing active item for repeat
-saves with the same case-insensitive title and store. Scheduled price monitoring
-and store redirects are still planned and are not activated by this workflow.
-Basic alert evaluation exists for saved current and target values, but it does
-not fetch new prices automatically.
+## Deals experience
 
-## Authentication foundation
+The Deals page starts with the curated NEXORA feed from `GET /api/deals`. Users
+can explicitly switch to **Live External Deals** or submit a live title search,
+which requests `GET /api/deals/external`.
 
-Login and registration call the Spring Boot authentication endpoints directly
-using `NEXT_PUBLIC_API_BASE_URL`. The access token is stored in browser
-`localStorage`, and the small client-side account status in the Topbar resolves
-the current user through `GET /api/auth/me`. Existing dashboard and feature-page
-data fetching remains server-side.
+CheapShark-backed results can include a **View Deal** link through a CheapShark
+redirect URL. Curated deals without a verified redirect keep that action
+disabled. If external results fail, the interface keeps curated results
+available and reports the fallback state.
 
-The Wishlist page uses that stored token to load, add, update, and delete items
-through the authenticated `/api/me/wishlist` endpoints. Signed-in users can
-update a personal item's target price, alert active state, and priority through
-`PATCH /api/me/wishlist/{id}/alert`. Cards display the backend-computed optional
-`alertEvaluation`, including `target-reached`, `watching`, `paused`, and
-`not-evaluable` states. The evaluation updates immediately from successful
-PATCH responses and remains visible after the personal wishlist reloads.
-The alert-status panel also requests the signed-in user's recent target-reached
-events from `GET /api/me/wishlist/alert-events`. Backend POST and PATCH
-transitions create those event snapshots, and the panel refreshes after
-successful wishlist additions and alert-setting updates. Public preview and
-offline modes do not show personal history, and an unavailable history request
-does not prevent the personal wishlist from loading or being edited.
-Logged-out users, unavailable personal requests, and backend outages retain the
-public demo wishlist as a read-only preview/fallback, so the route remains
-usable.
+Authenticated users can save visible curated or external deals to their
+personal wishlist. The frontend synchronizes saved items and recognizes
+existing entries by normalized title/store identity, with price-aware matching
+where useful.
 
-This is a basic authentication and personal-wishlist foundation. Browser
-storage is intentionally a temporary approach and is more exposed to
-cross-site scripting than an HttpOnly-cookie design. Route protection, refresh
-tokens, roles, OAuth, and price history are not included yet. Alert settings are
-persisted and basic current-versus-target evaluation is available, but real
-notification delivery, scheduled price checking, and automatic external price
-refreshing remain future work.
+## Authentication and personal wishlist
 
-## Production environment
+Login and registration call the Spring Boot authentication endpoints through
+`NEXT_PUBLIC_API_BASE_URL`. The top bar resolves the signed-in account through
+`GET /api/auth/me`.
 
-Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend origin and
-`NEXT_PUBLIC_SITE_URL` to the public frontend origin before building. Neither
-variable is a secret; values prefixed with `NEXT_PUBLIC_` are exposed to the
-browser by design.
+The Wishlist page supports:
 
-Production-grade token lifecycle and route protection, external store APIs,
-and real Gemini AI responses remain future work.
+- loading authenticated personal items;
+- saving deals from the Deals page;
+- editing target price, alert enabled state, and priority;
+- deleting owned active items;
+- displaying backend-computed `target-reached`, `watching`, `paused`, and
+  `not-evaluable` evaluations;
+- displaying recent target-reached events from
+  `GET /api/me/wishlist/alert-events`.
+
+Logged-out users see a read-only public demo wishlist. Public preview data never
+exposes another user's personal items or alert history.
+
+## Backend-only alert and notification foundations
+
+The backend now contains opt-in foundations for scheduled wishlist price
+refresh, CheapShark wishlist price snapshots, notification dispatch, and email
+delivery. Those capabilities are not controlled by this frontend:
+
+- Automatic price refresh is configured and scheduled in the backend `dev`
+  profile; it is disabled by default.
+- The stored price provider remains the backend default. CheapShark wishlist
+  snapshots are optional and use conservative matching.
+- Notifications are disabled by default, with a log-only default provider.
+- The optional email provider requires explicit backend SMTP configuration for
+  real delivery.
+- There is no frontend notification-provider, recipient, or preference UI yet.
+- There is no frontend delivery-status, retry, or email-history view.
+
+The frontend displays alert evaluations and history returned by the backend; it
+does not run scheduled checks or send notifications itself.
+
+## Security notes
+
+The current JWT access token is stored in browser `localStorage`. This is a
+temporary MVP design and is more exposed to cross-site scripting than an
+HttpOnly-cookie approach. A production-grade refresh-token lifecycle, secure
+cookie strategy, token revocation, stronger route protection, and related
+hardening remain future work.
+
+`NEXT_PUBLIC_*` configuration is visible to users. SMTP credentials, JWT
+secrets, and database credentials belong only in backend/deployment
+configuration.
+
+## Current limitations
+
+- No production frontend deployment or CI/CD workflow is documented.
+- Settings is local demo state and does not manage backend notification
+  preferences.
+- Automatic refresh scheduling and notification providers are backend-only
+  configuration.
+- Real email delivery requires backend SMTP configuration.
+- Browser `localStorage` authentication is not the final production design.
+- There is no price-history chart or long-term price-history interface.
+- Sentinel is a demo/status experience; no real Gemini or other AI integration
+  exists.
+- Public content fallbacks are intentionally demo data, not guaranteed live
+  provider results.
+
+## Verification
+
+```bash
+npm run lint
+npm run build
+```
+
+Optional standalone type check:
+
+```bash
+npx tsc --noEmit
+```
