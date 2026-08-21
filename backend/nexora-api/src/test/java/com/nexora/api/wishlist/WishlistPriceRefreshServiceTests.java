@@ -135,6 +135,32 @@ class WishlistPriceRefreshServiceTests {
     }
 
     @Test
+    void providerFailureSkipsItemAndContinuesRefreshingRemainingItems() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistPriceSnapshotProvider provider = mock(WishlistPriceSnapshotProvider.class);
+        WishlistAlertEventRecorder recorder = mock(WishlistAlertEventRecorder.class);
+        WishlistItem failedItem = item(1L, 7L, true, true, "$30.00", "$20.00");
+        WishlistItem nextItem = item(2L, 7L, true, true, "$40.00", "$20.00");
+        when(repository.findActiveUserAlertItemsForRefresh())
+                .thenReturn(List.of(failedItem, nextItem));
+        when(provider.findCurrentPrice(failedItem))
+                .thenThrow(new IllegalStateException("provider unavailable"));
+        when(provider.findCurrentPrice(nextItem)).thenReturn(Optional.of("$25.00"));
+
+        WishlistPriceRefreshSummary summary = service(repository, provider, recorder)
+                .refreshActiveWishlistAlerts();
+
+        assertAll(
+                () -> assertEquals("$30.00", failedItem.getCurrentPrice()),
+                () -> assertEquals("$25.00", nextItem.getCurrentPrice()),
+                () -> assertEquals(new WishlistPriceRefreshSummary(2, 1, 0, 1), summary)
+        );
+        verify(repository, never()).save(failedItem);
+        verify(repository).save(nextItem);
+        verifyNoInteractions(recorder);
+    }
+
+    @Test
     void defensivelySkipsPausedInactiveAndPublicItems() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistPriceSnapshotProvider provider = mock(WishlistPriceSnapshotProvider.class);

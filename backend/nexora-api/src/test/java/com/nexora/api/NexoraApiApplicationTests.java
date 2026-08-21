@@ -1,8 +1,12 @@
 package com.nexora.api;
 
+import com.nexora.api.wishlist.StoredWishlistPriceSnapshotProvider;
+import com.nexora.api.wishlist.WishlistPriceRefreshScheduler;
+import com.nexora.api.wishlist.WishlistPriceSnapshotProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -11,6 +15,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -18,6 +24,22 @@ class NexoraApiApplicationTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private WishlistPriceSnapshotProvider wishlistPriceSnapshotProvider;
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Test
+    void storedWishlistPriceProviderIsTheSafeDefaultAndSchedulerIsDisabled() {
+        assertInstanceOf(
+                StoredWishlistPriceSnapshotProvider.class,
+                wishlistPriceSnapshotProvider
+        );
+        assertTrue(applicationContext.getBeansOfType(
+                WishlistPriceRefreshScheduler.class).isEmpty());
+    }
 
     @Test
     void healthEndpointReturnsServiceStatus() throws Exception {
@@ -54,4 +76,3 @@ class NexoraApiApplicationTests {
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
     }
 }
-

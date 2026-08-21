@@ -2,6 +2,8 @@ package com.nexora.api.wishlist;
 
 import com.nexora.api.wishlist.persistence.WishlistItem;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +13,9 @@ import java.util.Optional;
 @Service
 @Profile("dev")
 public class WishlistPriceRefreshService {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(WishlistPriceRefreshService.class);
 
     private final WishlistItemRepository wishlistItemRepository;
     private final WishlistPriceSnapshotProvider priceSnapshotProvider;
@@ -44,7 +49,18 @@ public class WishlistPriceRefreshService {
             }
 
             WishlistAlertEvaluation previousEvaluation = evaluate(item);
-            Optional<String> providedPrice = priceSnapshotProvider.findCurrentPrice(item);
+            Optional<String> providedPrice;
+            try {
+                providedPrice = priceSnapshotProvider.findCurrentPrice(item);
+            } catch (RuntimeException exception) {
+                LOGGER.warn(
+                        "Wishlist price provider failed for item {}; skipping it ({})",
+                        item.getId(),
+                        exception.getMessage()
+                );
+                skippedItems++;
+                continue;
+            }
             if (providedPrice == null || providedPrice.isEmpty()
                     || providedPrice.get() == null || providedPrice.get().isBlank()) {
                 skippedItems++;
