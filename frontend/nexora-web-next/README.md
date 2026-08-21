@@ -161,9 +161,15 @@ hardening remain future work.
 secrets, and database credentials belong only in backend/deployment
 configuration.
 
+The repository's `Frontend CI` GitHub Actions workflow runs `npm ci`, lint, and
+the production build with Node.js 20 for pushes to `main` and pull requests
+targeting `main`. It validates this Next.js application only, not the retained
+Vite prototype.
+
 ## Current limitations
 
-- No production frontend deployment or CI/CD workflow is documented.
+- No production frontend deployment or continuous-delivery workflow is
+  documented. CI performs validation only.
 - Settings is local demo state and does not manage backend notification
   preferences.
 - Automatic refresh scheduling and notification providers are backend-only

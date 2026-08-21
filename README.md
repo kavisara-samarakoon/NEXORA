@@ -1,5 +1,8 @@
 # NEXORA
 
+[![Backend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml)
+
 NEXORA is a secure, network-aware game deals, giveaways, wishlist, and alert
 intelligence platform. It combines a Next.js interface with a Spring Boot API,
 optional PostgreSQL persistence, and conservative CheapShark integrations.
@@ -43,6 +46,7 @@ Not deployed as a production service
 | `dev` backend profile | PostgreSQL, Flyway V1–V6, and JPA-backed catalog, account, wishlist, and alert data |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
+| Continuous integration | GitHub Actions for backend tests and frontend lint/build |
 
 The public `GET /api/wishlist` contract remains separate from authenticated
 personal wishlist endpoints under `/api/me/wishlist`.
@@ -54,10 +58,11 @@ personal wishlist endpoints under `/api/me/wishlist`.
 | `frontend/nexora-web-next` | Primary Next.js frontend |
 | `frontend/nexora-web` | Earlier Vite prototype retained for reference |
 | `backend/nexora-api` | Spring Boot API, tests, JPA entities, and Flyway migrations |
+| `.github/workflows` | Backend and primary frontend continuous-integration workflows |
 | `docs` | Requirements, architecture, design, security, research, and project-status notes |
 | `database` | Supporting schema and database-design workspace |
 | `assets` | Shared logos, images, and UI references |
-| `devops` | Reserved deployment, Docker, and CI/CD workspace; no production foundation yet |
+| `devops` | Reserved deployment and Docker workspace; no production foundation yet |
 | `research` | Final-year project and research material |
 
 See [RELEASES.md](RELEASES.md) for concise development milestones and
@@ -142,6 +147,20 @@ CheapShark wishlist snapshots and the email provider must be selected
 explicitly. Real email delivery additionally requires external Spring mail/SMTP
 configuration; no SMTP credentials are committed.
 
+## Continuous integration
+
+GitHub Actions validates both primary applications on pushes to `main` and pull
+requests targeting `main`:
+
+| Workflow | Validation |
+| --- | --- |
+| `backend-ci.yml` | Sets up Temurin Java 17 with Maven caching and runs `mvn test` in `backend/nexora-api` |
+| `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
+
+The frontend workflow does not build the retained Vite prototype. CI does not
+deploy NEXORA and does not currently start PostgreSQL or validate the backend
+`dev` profile.
+
 ## API overview
 
 | Area | Endpoints |
@@ -169,8 +188,10 @@ These are development milestones, not claims of deployed production releases.
 
 ## Current limitations
 
-- No production deployment, CI/CD pipeline, Docker workflow, or devcontainer is
-  documented yet.
+- No production deployment or continuous-delivery pipeline, Docker workflow,
+  or devcontainer is documented yet.
+- CI does not yet run PostgreSQL integration tests, container builds, secret
+  scanning, or broader security scanning.
 - Browser `localStorage` token storage is temporary and not production-grade;
   there is no refresh-token or HttpOnly-cookie lifecycle.
 - Security hardening such as rate limiting, account verification, recovery,
@@ -191,7 +212,8 @@ These are development milestones, not claims of deployed production releases.
 
 1. Harden authentication and move browser sessions to an approved secure token
    lifecycle.
-2. Add CI/CD, reproducible local infrastructure, observability, and deployment
+2. Expand CI with PostgreSQL integration and security checks, then add
+   reproducible local infrastructure, observability, and deployment
    documentation.
 3. Add persistent notification delivery status, retry/outbox processing, and
    user preferences.
