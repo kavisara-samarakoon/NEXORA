@@ -3,6 +3,13 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — local PostgreSQL infrastructure
+
+- Added a PostgreSQL 16 Docker Compose service with safe local defaults, a
+  health check, and named-volume persistence.
+- Kept backend/frontend application containers and production deployment out of
+  scope.
+
 ## Unreleased — CI foundation
 
 - Added independent GitHub Actions workflows for backend Maven tests and

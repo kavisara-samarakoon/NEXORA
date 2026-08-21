@@ -62,7 +62,7 @@ personal wishlist endpoints under `/api/me/wishlist`.
 | `docs` | Requirements, architecture, design, security, research, and project-status notes |
 | `database` | Supporting schema and database-design workspace |
 | `assets` | Shared logos, images, and UI references |
-| `devops` | Reserved deployment and Docker workspace; no production foundation yet |
+| `devops` | Local PostgreSQL Compose setup plus reserved deployment workspace |
 | `research` | Final-year project and research material |
 
 See [RELEASES.md](RELEASES.md) for concise development milestones and
@@ -84,7 +84,7 @@ Requirements:
 - Node.js 20.9 or newer and npm
 - Java 17 or newer
 - Maven 3.9 or newer
-- PostgreSQL only when running the backend `dev` profile
+- PostgreSQL or Docker Compose when running the backend `dev` profile
 
 Run the backend and frontend in separate terminals.
 
@@ -100,14 +100,38 @@ The default profile starts without PostgreSQL at
 [http://localhost:8080](http://localhost:8080). Verify it at
 [http://localhost:8080/api/health](http://localhost:8080/api/health).
 
-For persisted development data, create the PostgreSQL database described in
-[backend/nexora-api/README.md](backend/nexora-api/README.md), then run:
+For persisted development data, use either a manual PostgreSQL installation or
+the local Docker setup described below, then run:
 
 ```bash
 cd backend/nexora-api
 export NEXORA_JWT_SECRET="$(openssl rand -base64 48)"
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
+
+### Docker PostgreSQL local setup
+
+Docker Compose can start PostgreSQL without installing it directly on the host:
+
+```bash
+docker compose \
+  --env-file devops/docker/postgres.env.example \
+  -f devops/docker/postgres.compose.yml \
+  up -d
+```
+
+The database uses the backend's existing local defaults at `localhost:5432`.
+Flyway migrations run when the backend `dev` profile starts; Compose starts only
+PostgreSQL. Stop it without deleting data using:
+
+```bash
+docker compose -f devops/docker/postgres.compose.yml down
+```
+
+Manual PostgreSQL setup remains available in the
+[backend README](backend/nexora-api/README.md). Full Docker usage, logs, health,
+and reset commands are in the
+[Docker README](devops/docker/README.md).
 
 ### Frontend
 
@@ -188,8 +212,9 @@ These are development milestones, not claims of deployed production releases.
 
 ## Current limitations
 
-- No production deployment or continuous-delivery pipeline, Docker workflow,
-  or devcontainer is documented yet.
+- No production deployment or continuous-delivery pipeline is documented yet.
+- Docker Compose covers local PostgreSQL only; there are no backend/frontend
+  application images, production container workflow, or devcontainer.
 - CI does not yet run PostgreSQL integration tests, container builds, secret
   scanning, or broader security scanning.
 - Browser `localStorage` token storage is temporary and not production-grade;
@@ -212,9 +237,8 @@ These are development milestones, not claims of deployed production releases.
 
 1. Harden authentication and move browser sessions to an approved secure token
    lifecycle.
-2. Expand CI with PostgreSQL integration and security checks, then add
-   reproducible local infrastructure, observability, and deployment
-   documentation.
+2. Expand CI with PostgreSQL integration and security checks, then add optional
+   application containerization, observability, and deployment documentation.
 3. Add persistent notification delivery status, retry/outbox processing, and
    user preferences.
 4. Add production-grade scheduling/locking and price history.
