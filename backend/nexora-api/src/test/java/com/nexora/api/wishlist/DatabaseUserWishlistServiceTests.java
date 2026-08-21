@@ -1,5 +1,6 @@
 package com.nexora.api.wishlist;
 
+import com.nexora.api.notifications.NotificationDispatcher;
 import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
 import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
@@ -241,10 +242,15 @@ class DatabaseUserWishlistServiceTests {
     private static DatabaseUserWishlistService service(
             WishlistItemRepository repository,
             WishlistAlertEventRepository eventRepository) {
+        when(eventRepository.saveAndFlush(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         return new DatabaseUserWishlistService(
                 repository,
                 eventRepository,
-                new WishlistAlertEventRecorder(eventRepository)
+                new WishlistAlertEventRecorder(
+                        eventRepository,
+                        mock(NotificationDispatcher.class)
+                )
         );
     }
 }
