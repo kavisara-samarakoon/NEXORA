@@ -48,6 +48,39 @@ Local defaults:
 | Password | `nexora_password` |
 | JDBC URL | `jdbc:postgresql://localhost:5432/nexora_db` |
 
+Use the Docker Compose option or the manual PostgreSQL option below. Both expose
+the same local database values expected by the backend.
+
+### Docker Compose option
+
+From the repository root:
+
+```bash
+docker compose \
+  --env-file devops/docker/postgres.env.example \
+  -f devops/docker/postgres.compose.yml \
+  up -d
+```
+
+Check that the database is healthy:
+
+```bash
+docker compose -f devops/docker/postgres.compose.yml ps
+```
+
+The named volume preserves local data across `down` and subsequent `up`
+commands. To stop the service and permanently reset this Compose database:
+
+```bash
+docker compose -f devops/docker/postgres.compose.yml down -v
+```
+
+See the [Docker README](../../devops/docker/README.md) for log, stop, reset, and
+customization details. The Compose file runs PostgreSQL only; it does not
+containerize this API or the frontend.
+
+### Manual PostgreSQL option
+
 Create the role and database with a PostgreSQL administrator account:
 
 ```sql
@@ -55,24 +88,23 @@ CREATE USER nexora_user WITH PASSWORD 'nexora_password';
 CREATE DATABASE nexora_db OWNER nexora_user;
 ```
 
-Start the persisted profile with a generated local JWT secret:
+### Start the backend
+
+After either PostgreSQL option is ready, start the persisted profile with the
+matching environment values:
 
 ```bash
 export NEXORA_JWT_SECRET="$(openssl rand -base64 48)"
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-Override database defaults when needed:
-
-```bash
 export NEXORA_DB_URL=jdbc:postgresql://localhost:5432/nexora_db
 export NEXORA_DB_USERNAME=nexora_user
 export NEXORA_DB_PASSWORD=nexora_password
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Flyway migrations live in `src/main/resources/db/migration`. In `dev`, public
-catalog endpoints return active rows only. `GET /api/wishlist` additionally
-requires `user_id IS NULL`, keeping personal rows out of the public response.
+Flyway migrations live in `src/main/resources/db/migration` and are applied
+during backend startup before JPA validates the schema. In `dev`, public catalog
+endpoints return active rows only. `GET /api/wishlist` additionally requires
+`user_id IS NULL`, keeping personal rows out of the public response.
 
 ## Endpoint reference
 
@@ -343,9 +375,12 @@ the database-free default profile and does not start PostgreSQL.
   pipeline, container workflow, or operational runbook.
 - Backend CI does not yet run PostgreSQL/`dev`-profile integration tests,
   container builds, or dedicated security scanning.
+- Docker Compose provides local PostgreSQL only; there is no backend application
+  image or production container workflow.
 - JWT authentication has no refresh-token lifecycle, revocation, account
   verification, password recovery, roles, OAuth, or complete rate limiting.
-- The default profile is ephemeral; the `dev` profile requires local PostgreSQL.
+- The default profile is ephemeral; the `dev` profile requires PostgreSQL,
+  either from Docker Compose or a compatible manual installation.
 - External data and caches are process-local, and CheapShark coverage is not
   complete.
 - Scheduled refresh has no distributed lock or production multi-instance
