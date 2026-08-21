@@ -365,16 +365,35 @@ Run the packaged application with:
 java -jar target/nexora-api-0.0.1-SNAPSHOT.jar
 ```
 
-The repository's `Backend CI` GitHub Actions workflow runs `mvn test` with
-Temurin Java 17 for pushes to `main` and pull requests targeting `main`. It uses
-the database-free default profile and does not start PostgreSQL.
+The repository's `Backend CI` GitHub Actions workflow uses Temurin Java 17 for
+pushes to `main` and pull requests targeting `main`. One job runs the normal
+database-free `mvn test` suite. A separate job starts a PostgreSQL 16 service
+and explicitly runs `PostgresDevProfileIntegrationTests` to confirm the `dev`
+profile connects, applies Flyway V1–V6, validates the JPA schema, and exposes
+the expected tables and seed data.
+
+The PostgreSQL integration test is enabled only when
+`NEXORA_POSTGRES_INTEGRATION_TESTS=true`, so local `mvn test` does not require a
+database.
+
+With a compatible local PostgreSQL instance running, execute it explicitly:
+
+```bash
+NEXORA_POSTGRES_INTEGRATION_TESTS=true \
+NEXORA_DB_URL=jdbc:postgresql://localhost:5432/nexora_db \
+NEXORA_DB_USERNAME=nexora_user \
+NEXORA_DB_PASSWORD=nexora_password \
+NEXORA_JWT_SECRET=local-integration-test-secret-at-least-thirty-two-bytes \
+mvn test -Dtest=PostgresDevProfileIntegrationTests
+```
 
 ## Current limitations
 
-- This repository does not document a production deployment, continuous-delivery
-  pipeline, container workflow, or operational runbook.
-- Backend CI does not yet run PostgreSQL/`dev`-profile integration tests,
-  container builds, or dedicated security scanning.
+- This repository does not document a production deployment,
+  continuous-delivery pipeline, application-container build workflow, or
+  operational runbook.
+- Backend CI does not build application containers or run dedicated security
+  scanning.
 - Docker Compose provides local PostgreSQL only; there is no backend application
   image or production container workflow.
 - JWT authentication has no refresh-token lifecycle, revocation, account
