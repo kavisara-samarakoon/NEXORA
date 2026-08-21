@@ -333,10 +333,16 @@ Run the packaged application with:
 java -jar target/nexora-api-0.0.1-SNAPSHOT.jar
 ```
 
+The repository's `Backend CI` GitHub Actions workflow runs `mvn test` with
+Temurin Java 17 for pushes to `main` and pull requests targeting `main`. It uses
+the database-free default profile and does not start PostgreSQL.
+
 ## Current limitations
 
-- This repository does not document a production deployment, CI/CD pipeline,
-  container workflow, or operational runbook.
+- This repository does not document a production deployment, continuous-delivery
+  pipeline, container workflow, or operational runbook.
+- Backend CI does not yet run PostgreSQL/`dev`-profile integration tests,
+  container builds, or dedicated security scanning.
 - JWT authentication has no refresh-token lifecycle, revocation, account
   verification, password recovery, roles, OAuth, or complete rate limiting.
 - The default profile is ephemeral; the `dev` profile requires local PostgreSQL.

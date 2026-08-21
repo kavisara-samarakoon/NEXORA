@@ -16,6 +16,8 @@ or production-ready service.
 - Disabled-by-default notification dispatcher with log and optional email
   providers.
 - Backend tests plus frontend lint and production-build checks.
+- GitHub Actions validation for backend Maven tests and primary frontend
+  dependency installation, lint, and production build.
 
 ## Active limitations
 
@@ -38,8 +40,11 @@ or production-ready service.
 ## Production-readiness gaps
 
 - No deployed production environment or production operations guide.
-- No CI/CD pipeline.
+- No deployment or continuous-delivery pipeline.
+- No PostgreSQL service or `dev`-profile integration tests in CI.
 - No Docker Compose, container image, or devcontainer workflow.
+- No CI secret scanning, dependency review, code scanning, or other dedicated
+  security-scanning workflow.
 - No refresh-token/HttpOnly-cookie authentication lifecycle.
 - No complete rate limiting, account verification, password recovery, token
   revocation, or security monitoring controls.
@@ -48,7 +53,8 @@ or production-ready service.
 
 ## Recommended next milestones
 
-1. Add CI validation for backend tests and frontend lint/build.
+1. Add PostgreSQL integration validation and appropriate security scanning to
+   CI.
 2. Provide reproducible PostgreSQL development infrastructure without implying
    production readiness.
 3. Design a secure browser session and refresh-token lifecycle.

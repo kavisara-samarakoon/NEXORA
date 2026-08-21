@@ -3,6 +3,13 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — CI foundation
+
+- Added independent GitHub Actions workflows for backend Maven tests and
+  frontend dependency installation, lint, and production builds.
+- Kept deployment, PostgreSQL integration services, container builds, and
+  release automation out of scope.
+
 ## v0.6.0-email-notification-foundation
 
 - Added an optional account-aware email notification sender.
