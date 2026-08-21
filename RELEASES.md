@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — wishlist price input polish
+
+- Polished wishlist target-price input normalization and validation, including
+  common trailing-dollar formats.
+
 ## Unreleased — local PostgreSQL infrastructure
 
 - Added a PostgreSQL 16 Docker Compose service with safe local defaults, a

@@ -120,7 +120,8 @@ The Wishlist page supports:
 
 - loading authenticated personal items;
 - saving deals from the Deals page;
-- editing target price, alert enabled state, and priority;
+- editing target price, alert enabled state, and priority; common target-price
+  inputs such as `15`, `$15`, `15$`, and `FREE` are normalized before saving;
 - deleting owned active items;
 - displaying backend-computed `target-reached`, `watching`, `paused`, and
   `not-evaluable` evaluations;
