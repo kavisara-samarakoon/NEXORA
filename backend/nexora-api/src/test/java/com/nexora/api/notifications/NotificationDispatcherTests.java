@@ -35,6 +35,7 @@ class NotificationDispatcherTests {
     @Test
     void senderFailureIsCaught() {
         NotificationProperties properties = properties(true);
+        properties.setProvider("email");
         NotificationSender sender = mock(NotificationSender.class);
         AlertNotificationRequest request = request();
         doThrow(new IllegalStateException("sender unavailable")).when(sender).send(request);

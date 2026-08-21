@@ -1,7 +1,9 @@
 package com.nexora.api.wishlist;
 
 import com.nexora.api.notifications.AlertNotificationRequest;
+import com.nexora.api.notifications.EmailNotificationSender;
 import com.nexora.api.notifications.NotificationDispatcher;
+import com.nexora.api.notifications.NotificationProperties;
 import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
 import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItem;
@@ -98,6 +100,30 @@ class WishlistAlertEventRecorderTests {
 
         verify(repository).saveAndFlush(any());
         verify(dispatcher).dispatchTargetReached(any());
+    }
+
+    @Test
+    void emailSenderFailureDoesNotPreventEventSave() {
+        WishlistAlertEventRepository repository = mock(WishlistAlertEventRepository.class);
+        when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        EmailNotificationSender emailSender = mock(EmailNotificationSender.class);
+        doThrow(new IllegalStateException("SMTP unavailable")).when(emailSender).send(any());
+        NotificationProperties properties = new NotificationProperties();
+        properties.setEnabled(true);
+        properties.setProvider("email");
+        NotificationDispatcher dispatcher = new NotificationDispatcher(properties, emailSender);
+        WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
+                repository, dispatcher);
+
+        assertDoesNotThrow(() -> recorder.recordTargetReachedEvent(
+                7L,
+                item(),
+                new WishlistAlertEvaluation(
+                        true, "target-reached", "Target price reached.")));
+
+        InOrder inOrder = inOrder(repository, emailSender);
+        inOrder.verify(repository).saveAndFlush(any());
+        inOrder.verify(emailSender).send(any());
     }
 
     private static WishlistItem item() {
