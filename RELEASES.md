@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — Dependabot policy polish
+
+- Suppressed routine major version-update PRs while keeping grouped minor and
+  patch dependency maintenance active.
+
 ## Unreleased — security scanning CI foundation
 
 - Added lightweight security CI, weekly Dependabot configuration, and a

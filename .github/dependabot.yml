@@ -7,8 +7,12 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
-      minor-and-patch:
+      actions-minor-patch:
         patterns:
           - "*"
         update-types:
@@ -22,8 +26,12 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
-      minor-and-patch:
+      backend-minor-patch:
         patterns:
           - "*"
         update-types:
@@ -37,8 +45,12 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
-      minor-and-patch:
+      frontend-minor-patch:
         patterns:
           - "*"
         update-types:
