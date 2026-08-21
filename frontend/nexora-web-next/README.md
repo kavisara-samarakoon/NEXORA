@@ -165,7 +165,9 @@ configuration.
 The repository's `Frontend CI` GitHub Actions workflow runs `npm ci`, lint, and
 the production build with Node.js 20 for pushes to `main` and pull requests
 targeting `main`. It validates this Next.js application only, not the retained
-Vite prototype.
+Vite prototype. The separate `Security CI` workflow runs
+`npm audit --omit=dev --audit-level=high` against this application's production
+dependency graph; it never applies automatic audit fixes.
 
 ## Current limitations
 
