@@ -399,13 +399,14 @@ item fields are skipped.
 CheapShark or store-directory failures produce warnings and an empty snapshot;
 they do not fail the entire refresh run. One unexpected provider failure is
 also isolated to that wishlist item so later candidates can still be scanned.
-There is no external notification delivery and no Sentinel AI integration.
+External notification delivery remains disabled by default, and there is no
+Sentinel AI integration.
 
 ### Notification delivery foundation
 
-Notification dispatch is disabled by default. The only current sender prepares
+Notification dispatch is disabled by default. The default sender prepares
 a structured target-reached request and writes a safe application log; it does
-not contact an external service:
+not contact an external service by default:
 
 ```properties
 nexora.notifications.enabled=false
@@ -414,8 +415,8 @@ nexora.notifications.provider=log
 
 Set `nexora.notifications.enabled=true` to enable the log sender. A notification
 request contains the user id, wishlist item id, item title, store, current and
-target prices, evaluation state, and evaluation message. It does not require a
-user account or email lookup.
+target prices, evaluation state, and evaluation message. The request itself
+does not expose a recipient or change any public API.
 
 Dispatch occurs only after a target-reached alert event has been persisted and
 flushed. Disabled notifications return without invoking the sender. Sender and
@@ -423,9 +424,36 @@ unexpected dispatcher failures are logged and contained so they cannot roll
 back alert-event persistence. Watching, paused, and not-evaluable states do not
 create an event or dispatch a notification.
 
-There is no real email, SMS, push, Slack, or Discord provider yet. Future work
-can add verified-recipient lookup, user preferences, persisted delivery status,
-retry handling, and real provider integrations.
+### Email notification provider foundation
+
+The email provider is optional and is never selected by default. It can be
+selected independently of SMTP configuration:
+
+```properties
+nexora.notifications.enabled=true
+nexora.notifications.provider=email
+nexora.notifications.email.from=no-reply@nexora.local
+nexora.notifications.email.subject-prefix=[NEXORA Alert]
+nexora.notifications.email.fail-on-missing-recipient=false
+```
+
+When selected, the email sender resolves the active account through the existing
+`UserAccountStore` using the notification request's user id. A missing user or
+blank email address is logged and skipped by default. The sender builds a
+target-reached subject and plain-text body containing the item, store, current
+price, target price, and alert message.
+
+`SpringMailGateway` is the low-level adapter to Spring's mail sender. No SMTP
+host, credentials, or recipients are committed. The application can start with
+the email provider selected and no SMTP configuration; if delivery is attempted
+before Spring mail is configured, the gateway failure is contained by the
+notification dispatcher and cannot break alert-event persistence. Tests use
+mocks and send no real email.
+
+Future work includes verified-recipient handling, notification preferences,
+persistent delivery status, retry/outbox processing, and asynchronous
+after-commit delivery. There is no SMS, push, Slack, Discord, or Sentinel AI
+integration.
 
 Confirm the personal item is absent from the public demo wishlist:
 
@@ -443,10 +471,11 @@ curl -i -X DELETE "http://localhost:8080/api/me/wishlist/${NEXORA_WISHLIST_ID}" 
 
 This is a per-user wishlist ownership, alert-settings, evaluation, and optional
 scheduled-refresh foundation. Target-reached transitions are recorded as alert
-history. It does not deliver email, push, Slack, Discord, SMS, AI, or other
-notifications. CheapShark matching cannot guarantee coverage for every game or
-store, and unmatched items keep their existing price. It also does not include
-continuous price history, sharing, or team features.
+history. External email delivery is opt-in and requires separate SMTP
+configuration; push, Slack, Discord, SMS, AI, and other notification channels
+are not implemented. CheapShark matching cannot guarantee coverage for every
+game or store, and unmatched items keep their existing price. It also does not
+include continuous price history, sharing, or team features.
 
 This is an authentication foundation, not production-complete identity
 management. Before deployment, use a generated secret from a secret manager,
