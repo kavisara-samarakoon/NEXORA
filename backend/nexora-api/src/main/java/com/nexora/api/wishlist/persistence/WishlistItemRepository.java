@@ -19,6 +19,16 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
             """)
     List<WishlistItem> findActiveWishlistItems();
 
+    @Query("""
+            select item
+            from WishlistItem item
+            where item.active = true
+              and item.userId is not null
+              and item.alertActive = true
+            order by item.id
+            """)
+    List<WishlistItem> findActiveUserAlertItemsForRefresh();
+
     List<WishlistItem> findByUserIdAndActiveTrueOrderById(long userId);
 
     Optional<WishlistItem> findFirstByUserIdAndActiveTrueAndTitleIgnoreCaseAndStoreIgnoreCaseOrderByIdAsc(

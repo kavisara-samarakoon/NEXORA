@@ -1,6 +1,5 @@
 package com.nexora.api.wishlist;
 
-import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
 import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
 import org.springframework.context.annotation.Profile;
@@ -15,12 +14,15 @@ public class DatabaseUserWishlistService implements UserWishlistService {
 
     private final WishlistItemRepository wishlistItemRepository;
     private final WishlistAlertEventRepository wishlistAlertEventRepository;
+    private final WishlistAlertEventRecorder wishlistAlertEventRecorder;
 
     public DatabaseUserWishlistService(
             WishlistItemRepository wishlistItemRepository,
-            WishlistAlertEventRepository wishlistAlertEventRepository) {
+            WishlistAlertEventRepository wishlistAlertEventRepository,
+            WishlistAlertEventRecorder wishlistAlertEventRecorder) {
         this.wishlistItemRepository = wishlistItemRepository;
         this.wishlistAlertEventRepository = wishlistAlertEventRepository;
+        this.wishlistAlertEventRecorder = wishlistAlertEventRecorder;
     }
 
     @Override
@@ -73,7 +75,8 @@ public class DatabaseUserWishlistService implements UserWishlistService {
                 );
         WishlistAlertEvaluation evaluation = evaluate(savedItem);
         if (evaluation.targetReached()) {
-            recordAlertEvent(userId, savedItem, evaluation);
+            wishlistAlertEventRecorder.recordTargetReachedEvent(
+                    userId, savedItem, evaluation);
         }
         return WishlistItemMapper.toResponse(savedItem);
     }
@@ -95,7 +98,8 @@ public class DatabaseUserWishlistService implements UserWishlistService {
                 wishlistItemRepository.saveAndFlush(item);
         WishlistAlertEvaluation newEvaluation = evaluate(savedItem);
         if (!previousEvaluation.targetReached() && newEvaluation.targetReached()) {
-            recordAlertEvent(userId, savedItem, newEvaluation);
+            wishlistAlertEventRecorder.recordTargetReachedEvent(
+                    userId, savedItem, newEvaluation);
         }
         return WishlistItemMapper.toResponse(savedItem);
     }
@@ -123,22 +127,4 @@ public class DatabaseUserWishlistService implements UserWishlistService {
         );
     }
 
-    private void recordAlertEvent(
-            long userId,
-            com.nexora.api.wishlist.persistence.WishlistItem item,
-            WishlistAlertEvaluation evaluation) {
-        wishlistAlertEventRepository.saveAndFlush(new WishlistAlertEvent(
-                null,
-                userId,
-                item.getId(),
-                item.getTitle(),
-                item.getStore(),
-                item.getCurrentPrice(),
-                item.getTargetPrice(),
-                evaluation.state(),
-                evaluation.targetReached(),
-                evaluation.message(),
-                null
-        ));
-    }
 }
