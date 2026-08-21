@@ -49,7 +49,11 @@ public final class WishlistAlertEvaluator {
         String normalized = value.trim();
         if (normalized.isEmpty()) return Optional.empty();
         if (normalized.equalsIgnoreCase("FREE")) return Optional.of(BigDecimal.ZERO);
-        if (normalized.startsWith("$")) normalized = normalized.substring(1);
+        if (normalized.startsWith("$")) {
+            normalized = normalized.substring(1);
+        } else if (normalized.endsWith("$")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
         if (!NUMERIC_PRICE.matcher(normalized).matches()) return Optional.empty();
 
         try {

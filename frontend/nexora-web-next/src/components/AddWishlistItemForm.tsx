@@ -7,6 +7,7 @@ import {
   normalizeUserWishlistError,
   type AddWishlistItemPayload,
 } from "@/lib/user-wishlist";
+import { normalizeTargetPriceInput } from "@/lib/target-price";
 
 type AddWishlistItemFormProps = {
   token: string;
@@ -32,10 +33,15 @@ export default function AddWishlistItemForm({
     const formData = new FormData(form);
     const title = readRequiredText(formData, "title");
     const currentPrice = readRequiredText(formData, "currentPrice");
-    const targetPrice = readRequiredText(formData, "targetPrice");
+    const targetPrice = normalizeTargetPriceInput(readRequiredText(formData, "targetPrice"));
 
-    if (!title || !currentPrice || !targetPrice) {
+    if (!title || !currentPrice) {
       setMessage({ tone: "error", text: "Please check the wishlist details." });
+      return;
+    }
+
+    if (!targetPrice) {
+      setMessage({ tone: "error", text: "Enter a valid price such as $15.00 or FREE." });
       return;
     }
 

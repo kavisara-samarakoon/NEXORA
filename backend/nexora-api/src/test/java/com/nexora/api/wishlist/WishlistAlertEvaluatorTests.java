@@ -82,12 +82,43 @@ class WishlistAlertEvaluatorTests {
     }
 
     @Test
+    void parsesTrailingDollarPrices() {
+        assertAll(
+                () -> assertTrue(
+                        WishlistAlertEvaluator.evaluate("$14.99", "15$", true)
+                                .targetReached()),
+                () -> assertTrue(
+                        WishlistAlertEvaluator.evaluate("15.99$", "15.99$", true)
+                                .targetReached()),
+                () -> assertTrue(
+                        WishlistAlertEvaluator.evaluate("1,299.99$", "$1,300.00", true)
+                                .targetReached())
+        );
+    }
+
+    @Test
     void negativePricesAreNotEvaluable() {
         assertAll(
                 () -> assertNotEvaluable(
                         WishlistAlertEvaluator.evaluate("-$1.00", "$0.00", true)),
                 () -> assertNotEvaluable(
                         WishlistAlertEvaluator.evaluate("$1.00", "-2.00", true))
+        );
+    }
+
+    @Test
+    void malformedPricesRemainNotEvaluable() {
+        assertAll(
+                () -> assertNotEvaluable(
+                        WishlistAlertEvaluator.evaluate("$1.00", "$", true)),
+                () -> assertNotEvaluable(
+                        WishlistAlertEvaluator.evaluate("$1.00", "15abc", true)),
+                () -> assertNotEvaluable(
+                        WishlistAlertEvaluator.evaluate("random", "$1.00", true)),
+                () -> assertNotEvaluable(
+                        WishlistAlertEvaluator.evaluate("N/A", "$1.00", true)),
+                () -> assertNotEvaluable(
+                        WishlistAlertEvaluator.evaluate("—", "$1.00", true))
         );
     }
 

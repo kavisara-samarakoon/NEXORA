@@ -195,8 +195,8 @@ price, target price, and alert state.
 | `paused` | Inactive alert |
 | `not-evaluable` | Active alert with an unparseable current or target price |
 
-Dollar-prefixed and plain numeric values, comma-separated prices, and `FREE`
-are supported. Comparisons use decimal arithmetic.
+Dollar-prefixed, trailing-dollar, and plain numeric values, comma-separated
+prices, and `FREE` are supported. Comparisons use decimal arithmetic.
 
 Target-reached events are created when a new active item is already reached or
 when an alert changes from not reached to reached. The opt-in refresh job can

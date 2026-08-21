@@ -14,6 +14,7 @@ import {
 } from "@/data/wishlist";
 import type { WishlistResult } from "@/lib/api";
 import { AUTH_STATE_EVENT, clearAuthToken, readAuthToken } from "@/lib/auth-client";
+import { normalizeTargetPriceInput } from "@/lib/target-price";
 import {
   deleteMyWishlistItem,
   getMyWishlist,
@@ -130,18 +131,18 @@ function WishlistCard({
 
   function handleTargetPriceSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedTargetPrice = targetPrice.trim();
+    const normalizedTargetPrice = normalizeTargetPriceInput(targetPrice);
 
-    if (!trimmedTargetPrice) {
-      setValidationMessage("Enter a target price before saving.");
+    if (!normalizedTargetPrice) {
+      setValidationMessage("Enter a valid price such as $15.00 or FREE.");
       return;
     }
 
     setValidationMessage(null);
-    setTargetPrice(trimmedTargetPrice);
+    setTargetPrice(normalizedTargetPrice);
     void onUpdateAlert(
       item,
-      { targetPrice: trimmedTargetPrice },
+      { targetPrice: normalizedTargetPrice },
       `Target price for ${item.title} was updated.`,
     );
   }
