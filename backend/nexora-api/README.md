@@ -346,6 +346,10 @@ wishlist items whose alerts are enabled. The scheduler is disabled by default:
 ```properties
 nexora.wishlist.price-refresh.enabled=false
 nexora.wishlist.price-refresh.fixed-delay-ms=3600000
+nexora.wishlist.price-refresh.provider=stored
+nexora.wishlist.price-refresh.cheapshark.enabled=false
+nexora.wishlist.price-refresh.cheapshark.page-size=8
+nexora.wishlist.price-refresh.cheapshark.match-store=true
 ```
 
 Set `nexora.wishlist.price-refresh.enabled=true` to enable it. The default fixed
@@ -362,15 +366,40 @@ transition from not reached to reached, so repeated runs at the same reached
 price do not create duplicate event spam. Inactive rows, public demo rows,
 paused alerts, and rows without an owner are excluded.
 
-`StoredWishlistPriceSnapshotProvider` is deliberately a placeholder: it
-returns the item's already stored current price and makes no external request.
-The provider abstraction allows a later CheapShark or other approved price
-source to replace it. Consequently, enabling the current scheduler is harmless
-but will normally report no refreshed items unless a different provider is
-wired in or the refresh service is tested with simulated provider prices.
+`StoredWishlistPriceSnapshotProvider` remains the safe default. It returns the
+item's already stored current price and makes no external request. Selecting a
+real provider and enabling the scheduler are separate choices, so the default
+configuration performs no background external requests.
 
-This foundation does not integrate a real external price API, deliver email,
-push, Slack, Discord, or SMS notifications, or use Sentinel AI.
+The CheapShark wishlist provider is opt-in. Enable it with either of these
+settings:
+
+```properties
+nexora.wishlist.price-refresh.provider=cheapshark
+# or
+nexora.wishlist.price-refresh.cheapshark.enabled=true
+```
+
+To run it on the schedule, also set
+`nexora.wishlist.price-refresh.enabled=true`. The provider searches the first
+configured page of current CheapShark deals by the wishlist title and uses
+only `salePrice`. Paid prices are formatted as `$x.xx`; zero is stored as
+`FREE`. The page size defaults to eight and is clamped from one to 24.
+
+Matching is deliberately conservative. Titles are compared case-insensitively
+after trimming, normalizing apostrophes and common punctuation, and collapsing
+whitespace. Exact normalized titles are preferred. A contains match is allowed
+only for multi-word titles with a small, contiguous difference; for example, a
+base `Starfield` result is not accepted for `Starfield: Shattered Space`.
+Mapped store-name matches improve ranking when `match-store=true`. If the store
+directory is temporarily unavailable, an otherwise safe title match can still
+be used. Malformed or negative prices, unrelated titles, and missing required
+item fields are skipped.
+
+CheapShark or store-directory failures produce warnings and an empty snapshot;
+they do not fail the entire refresh run. One unexpected provider failure is
+also isolated to that wishlist item so later candidates can still be scanned.
+There is no notification delivery and no Sentinel AI integration.
 
 Confirm the personal item is absent from the public demo wishlist:
 
@@ -389,9 +418,9 @@ curl -i -X DELETE "http://localhost:8080/api/me/wishlist/${NEXORA_WISHLIST_ID}" 
 This is a per-user wishlist ownership, alert-settings, evaluation, and optional
 scheduled-refresh foundation. Target-reached transitions are recorded as alert
 history. It does not deliver email, push, Slack, Discord, SMS, AI, or other
-notifications, and the placeholder price provider does not fetch external
-prices. It also does not include continuous price history, external game data,
-sharing, or team features.
+notifications. CheapShark matching cannot guarantee coverage for every game or
+store, and unmatched items keep their existing price. It also does not include
+continuous price history, sharing, or team features.
 
 This is an authentication foundation, not production-complete identity
 management. Before deployment, use a generated secret from a secret manager,
