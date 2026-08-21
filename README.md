@@ -187,7 +187,10 @@ requests targeting `main`:
 The frontend workflow does not build the retained Vite prototype. Backend CI
 keeps the normal test suite database-free and runs PostgreSQL validation in a
 separate service-backed job. Dependabot checks GitHub Actions, backend Maven,
-and primary frontend npm dependencies weekly. CI does not deploy NEXORA.
+and primary frontend npm dependencies weekly. Routine major version-update PRs
+are intentionally suppressed; major upgrades are planned manually, while
+Dependabot security alerts and eligible security updates remain visible. CI
+does not deploy NEXORA.
 
 ## API overview
 
