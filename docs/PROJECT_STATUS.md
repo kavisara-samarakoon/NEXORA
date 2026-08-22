@@ -24,6 +24,10 @@ or production-ready service.
   frontend npm dependencies.
 - Lightweight security CI for high-severity production npm auditing and backend
   Maven dependency-resolution visibility, plus a repository security policy.
+- [Auth/session hardening design plan](security/auth-session-hardening-plan.md)
+  covering refresh-token rotation, HttpOnly-cookie sessions, logout, revocation,
+  account safety, and linked-account readiness. This is a completed planning
+  artifact, not an implemented control.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
 
@@ -67,7 +71,8 @@ or production-ready service.
    vulnerability scanner without making plan-limited features mandatory.
 2. Add optional backend/frontend development containerization without implying
    production deployment readiness.
-3. Design a secure browser session and refresh-token lifecycle.
+3. Review the auth/session hardening plan, then implement the backend
+   refresh-token/session foundation on a dedicated branch.
 4. Add notification preferences, verified recipients, durable delivery state,
    and retry/outbox processing.
 5. Add price history storage and frontend visualization.

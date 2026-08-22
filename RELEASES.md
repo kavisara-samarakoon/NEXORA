@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — auth/session hardening plan
+
+- Added auth/session hardening plan for refresh-token, HttpOnly-cookie, logout,
+  revocation, and account-safety roadmap.
+
 ## Unreleased — Dependabot policy polish
 
 - Suppressed routine major version-update PRs while keeping grouped minor and
