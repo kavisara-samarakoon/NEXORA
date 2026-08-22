@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — backend refresh-token/session foundation
+
+- Added backend refresh-token/session foundation with hashed server-side refresh
+  sessions, refresh rotation, logout, and HttpOnly cookie issuance.
+
 ## Unreleased — auth/session hardening plan
 
 - Added auth/session hardening plan for refresh-token, HttpOnly-cookie, logout,

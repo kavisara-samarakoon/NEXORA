@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -59,7 +60,8 @@ public class JwtService {
                 "sub", user.getId().toString(),
                 "iss", ISSUER,
                 "iat", issuedAt.getEpochSecond(),
-                "exp", issuedAt.plus(expiration).getEpochSecond()
+                "exp", issuedAt.plus(expiration).getEpochSecond(),
+                "jti", UUID.randomUUID().toString()
         );
 
         try {

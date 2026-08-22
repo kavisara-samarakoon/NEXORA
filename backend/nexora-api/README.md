@@ -16,8 +16,8 @@ the `dev` profile · Not documented as production-ready
 
 | Profile | Storage and behavior |
 | --- | --- |
-| Default | Starts without a datasource. Public catalog data is local demo data; accounts, personal wishlists, and alert history are held in memory. CheapShark external deals remain available on demand. |
-| `dev` | Enables PostgreSQL, Flyway V1–V6, Spring Data JPA, persisted catalog/account/wishlist/alert data, and the optional wishlist refresh scheduler. |
+| Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, and alert history are held in memory. CheapShark external deals remain available on demand. |
+| `dev` | Enables PostgreSQL, Flyway V1–V7, Spring Data JPA, persisted catalog/account/refresh-session/wishlist/alert data, and the optional wishlist refresh scheduler. |
 
 The default profile is useful for UI development and tests. Restarting it
 clears accounts and personal wishlist changes. The `dev` profile validates JPA
@@ -95,6 +95,7 @@ matching environment values:
 
 ```bash
 export NEXORA_JWT_SECRET="$(openssl rand -base64 48)"
+export NEXORA_REFRESH_TOKEN_HASH_SECRET="$(openssl rand -base64 48)"
 export NEXORA_DB_URL=jdbc:postgresql://localhost:5432/nexora_db
 export NEXORA_DB_USERNAME=nexora_user
 export NEXORA_DB_PASSWORD=nexora_password
@@ -120,8 +121,10 @@ endpoints return active rows only. `GET /api/wishlist` additionally requires
 | `GET` | `/api/security/status` | Demo security summary |
 | `GET` | `/api/sentinel/status` | Sentinel integration status |
 | `GET` | `/api/sentinel/demo` | Sentinel demo messages and capabilities |
-| `POST` | `/api/auth/register` | Register an account and return a JWT access token |
-| `POST` | `/api/auth/login` | Log in by email or username and return a JWT access token |
+| `POST` | `/api/auth/register` | Register, return a JWT access token, and issue a refresh cookie |
+| `POST` | `/api/auth/login` | Log in, return a JWT access token, and issue a refresh cookie |
+| `POST` | `/api/auth/refresh` | Rotate a valid refresh session and return a fresh `AuthResponse` |
+| `POST` | `/api/auth/logout` | Revoke the refresh session, clear its cookie, and return `204` |
 | `GET` | `/api/auth/me` | Return the authenticated account's safe fields |
 | `GET` | `/api/me/wishlist` | List the authenticated user's active wishlist items |
 | `POST` | `/api/me/wishlist` | Add an item to the authenticated user's wishlist |
@@ -135,14 +138,22 @@ a client-supplied user ID.
 ## Authentication
 
 Authentication uses BCrypt password hashes and stateless HS256 JWT access
-tokens. The default profile stores accounts in memory; `dev` persists them in
-the Flyway-managed `users` table.
+tokens. Register and login still return the existing
+`AuthResponse(token, tokenType, user)` JSON contract, so current Bearer clients
+remain compatible. They now also create a server-side refresh session and issue
+its opaque token as an HttpOnly cookie.
+
+Only an HMAC-SHA256 token hash is stored. The raw refresh token is generated
+independently with `SecureRandom`, is never returned in JSON, and is sent only
+through the cookie. The default profile keeps refresh sessions in memory;
+`dev` persists them in the Flyway-managed `auth_sessions` table.
 
 Register and capture a token:
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/auth/register \
   -H 'Content-Type: application/json' \
+  -c /tmp/nexora-auth-cookies.txt \
   -d '{"email":"player@example.com","username":"player_one","displayName":"Player One","password":"change-me-123"}'
 ```
 
@@ -151,6 +162,7 @@ Log in with an email or username:
 ```bash
 curl -sS -X POST http://localhost:8080/api/auth/login \
   -H 'Content-Type: application/json' \
+  -c /tmp/nexora-auth-cookies.txt \
   -d '{"emailOrUsername":"player@example.com","password":"change-me-123"}'
 ```
 
@@ -162,8 +174,35 @@ curl -sS http://localhost:8080/api/auth/me \
   -H "Authorization: Bearer ${NEXORA_TOKEN}"
 ```
 
-The bundled signing secret is local-only. Override `NEXORA_JWT_SECRET` in every
-shared or deployed environment.
+Rotate the refresh token and receive the unchanged access-token response:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/auth/refresh \
+  -b /tmp/nexora-auth-cookies.txt \
+  -c /tmp/nexora-auth-cookies.txt
+```
+
+Log out the current refresh session. The endpoint is idempotent, clears the
+cookie, and returns `204 No Content` even when the cookie is missing or invalid:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/auth/logout \
+  -b /tmp/nexora-auth-cookies.txt \
+  -c /tmp/nexora-auth-cookies.txt
+```
+
+Refresh tokens rotate on every successful refresh. The previous record is
+revoked, its reuse returns `401`, and logout revokes the current record. The
+cookie defaults to `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`, a seven-day
+maximum age, and `Secure=false` for local HTTP only.
+
+The bundled JWT and refresh-token hash secrets are local-only. Override
+`NEXORA_JWT_SECRET` and `NEXORA_REFRESH_TOKEN_HASH_SECRET` in every shared or
+deployed environment. The primary frontend has not migrated yet: it still
+stores the access token in `localStorage`, sends Bearer headers, and does not use
+the refresh endpoint. CSRF remains disabled for this compatibility foundation;
+credentialed CORS plus CSRF/origin validation must be designed and implemented
+before production cookie-authenticated workflows.
 
 ## Personal wishlist
 
@@ -328,6 +367,12 @@ delivery statuses, retries, outbox, or asynchronous after-commit delivery yet.
 | `NEXORA_DB_PASSWORD` | `nexora_password` | `dev` datasource password |
 | `NEXORA_JWT_SECRET` | Local-only fallback | JWT signing secret |
 | `NEXORA_JWT_EXPIRATION_MINUTES` | `60` | Access-token lifetime |
+| `NEXORA_REFRESH_TOKEN_HASH_SECRET` | Local-only fallback | HMAC secret for stored refresh-token hashes |
+| `NEXORA_REFRESH_TOKEN_COOKIE_NAME` | `nexora_refresh_token` | Refresh-cookie name |
+| `NEXORA_REFRESH_TOKEN_EXPIRATION_DAYS` | `7` | Refresh-session and cookie lifetime |
+| `NEXORA_REFRESH_TOKEN_COOKIE_SECURE` | `false` | Require HTTPS for the cookie; enable outside local HTTP |
+| `NEXORA_REFRESH_TOKEN_COOKIE_SAME_SITE` | `Lax` | Refresh-cookie `SameSite` value |
+| `NEXORA_REFRESH_TOKEN_COOKIE_PATH` | `/api/auth` | Refresh-cookie request path |
 | `nexora.external-deals.enabled` | `true` | Enable on-demand CheapShark deal lookup |
 | `nexora.external-deals.timeout-seconds` | `5` | External request timeout |
 | `nexora.external-deals.default-page-size` | `12` | Default external result count |
@@ -369,7 +414,7 @@ The repository's `Backend CI` GitHub Actions workflow uses Temurin Java 17 for
 pushes to `main` and pull requests targeting `main`. One job runs the normal
 database-free `mvn test` suite. A separate job starts a PostgreSQL 16 service
 and explicitly runs `PostgresDevProfileIntegrationTests` to confirm the `dev`
-profile connects, applies Flyway V1–V6, validates the JPA schema, and exposes
+profile connects, applies Flyway V1–V7, validates the JPA schema, and exposes
 the expected tables and seed data.
 
 The PostgreSQL integration test is enabled only when
@@ -389,6 +434,7 @@ NEXORA_DB_URL=jdbc:postgresql://localhost:5432/nexora_db \
 NEXORA_DB_USERNAME=nexora_user \
 NEXORA_DB_PASSWORD=nexora_password \
 NEXORA_JWT_SECRET=local-integration-test-secret-at-least-thirty-two-bytes \
+NEXORA_REFRESH_TOKEN_HASH_SECRET=local-integration-refresh-hash-secret-at-least-thirty-two-bytes \
 mvn test -Dtest=PostgresDevProfileIntegrationTests
 ```
 
@@ -401,8 +447,11 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   include a full Maven vulnerability scanner or CodeQL analysis.
 - Docker Compose provides local PostgreSQL only; there is no backend application
   image or production container workflow.
-- JWT authentication has no refresh-token lifecycle, revocation, account
-  verification, password recovery, roles, OAuth, or complete rate limiting.
+- The backend refresh-session foundation is not a complete production browser
+  session design. The frontend still uses `localStorage`, CSRF/origin hardening
+  is not implemented, and session-family reuse response is intentionally basic.
+- Authentication still has no account verification, password recovery, roles,
+  OAuth, complete rate limiting, session list, or revoke-all workflow.
 - The default profile is ephemeral; the `dev` profile requires PostgreSQL,
   either from Docker Compose or a compatible manual installation.
 - External data and caches are process-local, and CheapShark coverage is not
