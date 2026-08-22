@@ -23,17 +23,19 @@ class WishlistPriceRefreshServiceTests {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistPriceSnapshotProvider provider = mock(WishlistPriceSnapshotProvider.class);
         WishlistAlertEventRecorder recorder = mock(WishlistAlertEventRecorder.class);
+        WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
         WishlistItem item = item(1L, 7L, true, true, "$30.00", "$20.00");
         when(repository.findActiveUserAlertItemsForRefresh()).thenReturn(List.of(item));
         when(provider.findCurrentPrice(item)).thenReturn(Optional.of("$30.00"));
 
-        WishlistPriceRefreshSummary summary = service(repository, provider, recorder)
+        WishlistPriceRefreshSummary summary = service(repository, provider, recorder, historyService)
                 .refreshActiveWishlistAlerts();
 
         assertEquals(new WishlistPriceRefreshSummary(1, 0, 0, 0), summary);
         verify(provider).findCurrentPrice(item);
         verify(repository, never()).save(item);
         verifyNoInteractions(recorder);
+        verifyNoInteractions(historyService);
     }
 
     @Test
@@ -66,11 +68,13 @@ class WishlistPriceRefreshServiceTests {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistPriceSnapshotProvider provider = mock(WishlistPriceSnapshotProvider.class);
         WishlistAlertEventRecorder recorder = mock(WishlistAlertEventRecorder.class);
+        WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
         WishlistItem item = item(1L, 7L, true, true, "$30.00", "$20.00");
         when(repository.findActiveUserAlertItemsForRefresh()).thenReturn(List.of(item));
         when(provider.findCurrentPrice(item)).thenReturn(Optional.of("  $20.00  "));
+        when(provider.priceHistorySource()).thenReturn("cheapshark-provider");
 
-        WishlistPriceRefreshSummary summary = service(repository, provider, recorder)
+        WishlistPriceRefreshSummary summary = service(repository, provider, recorder, historyService)
                 .refreshActiveWishlistAlerts();
 
         assertAll(
@@ -78,6 +82,7 @@ class WishlistPriceRefreshServiceTests {
                 () -> assertEquals(new WishlistPriceRefreshSummary(1, 1, 1, 0), summary)
         );
         verify(repository).save(item);
+        verify(historyService).recordSnapshot(7L, item, "cheapshark-provider");
         verify(recorder).recordTargetReachedEvent(
                 7L,
                 item,
@@ -90,10 +95,12 @@ class WishlistPriceRefreshServiceTests {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistPriceSnapshotProvider provider = mock(WishlistPriceSnapshotProvider.class);
         WishlistAlertEventRecorder recorder = mock(WishlistAlertEventRecorder.class);
+        WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
         WishlistItem item = item(1L, 7L, true, true, "$30.00", "$20.00");
         when(repository.findActiveUserAlertItemsForRefresh()).thenReturn(List.of(item));
         when(provider.findCurrentPrice(item)).thenReturn(Optional.of("$19.99"));
-        WishlistPriceRefreshService service = service(repository, provider, recorder);
+        WishlistPriceRefreshService service = service(
+                repository, provider, recorder, historyService);
 
         WishlistPriceRefreshSummary firstRun = service.refreshActiveWishlistAlerts();
         WishlistPriceRefreshSummary secondRun = service.refreshActiveWishlistAlerts();
@@ -103,6 +110,7 @@ class WishlistPriceRefreshServiceTests {
                 () -> assertEquals(new WishlistPriceRefreshSummary(1, 0, 0, 0), secondRun)
         );
         verify(repository, times(1)).save(item);
+        verify(historyService, times(1)).recordSnapshot(7L, item, null);
         verify(recorder, times(1)).recordTargetReachedEvent(
                 7L,
                 item,
@@ -115,11 +123,12 @@ class WishlistPriceRefreshServiceTests {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistPriceSnapshotProvider provider = mock(WishlistPriceSnapshotProvider.class);
         WishlistAlertEventRecorder recorder = mock(WishlistAlertEventRecorder.class);
+        WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
         WishlistItem item = item(1L, 7L, true, true, "$30.00", "$20.00");
         when(repository.findActiveUserAlertItemsForRefresh()).thenReturn(List.of(item));
         when(provider.findCurrentPrice(item)).thenReturn(Optional.of("$25.00"));
 
-        WishlistPriceRefreshSummary summary = service(repository, provider, recorder)
+        WishlistPriceRefreshSummary summary = service(repository, provider, recorder, historyService)
                 .refreshActiveWishlistAlerts();
 
         assertAll(
@@ -131,6 +140,7 @@ class WishlistPriceRefreshServiceTests {
                                 item.getCurrentPrice(), item.getTargetPrice(), true).state())
         );
         verify(repository).save(item);
+        verify(historyService).recordSnapshot(7L, item, null);
         verifyNoInteractions(recorder);
     }
 
@@ -185,7 +195,20 @@ class WishlistPriceRefreshServiceTests {
             WishlistItemRepository repository,
             WishlistPriceSnapshotProvider provider,
             WishlistAlertEventRecorder recorder) {
-        return new WishlistPriceRefreshService(repository, provider, recorder);
+        return service(
+                repository,
+                provider,
+                recorder,
+                mock(WishlistPriceHistoryService.class));
+    }
+
+    private static WishlistPriceRefreshService service(
+            WishlistItemRepository repository,
+            WishlistPriceSnapshotProvider provider,
+            WishlistAlertEventRecorder recorder,
+            WishlistPriceHistoryService historyService) {
+        return new WishlistPriceRefreshService(
+                repository, provider, recorder, historyService);
     }
 
     private static WishlistItem item(

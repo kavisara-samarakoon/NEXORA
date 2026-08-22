@@ -15,14 +15,17 @@ public class DatabaseUserWishlistService implements UserWishlistService {
     private final WishlistItemRepository wishlistItemRepository;
     private final WishlistAlertEventRepository wishlistAlertEventRepository;
     private final WishlistAlertEventRecorder wishlistAlertEventRecorder;
+    private final WishlistPriceHistoryService wishlistPriceHistoryService;
 
     public DatabaseUserWishlistService(
             WishlistItemRepository wishlistItemRepository,
             WishlistAlertEventRepository wishlistAlertEventRepository,
-            WishlistAlertEventRecorder wishlistAlertEventRecorder) {
+            WishlistAlertEventRecorder wishlistAlertEventRecorder,
+            WishlistPriceHistoryService wishlistPriceHistoryService) {
         this.wishlistItemRepository = wishlistItemRepository;
         this.wishlistAlertEventRepository = wishlistAlertEventRepository;
         this.wishlistAlertEventRecorder = wishlistAlertEventRecorder;
+        this.wishlistPriceHistoryService = wishlistPriceHistoryService;
     }
 
     @Override
@@ -39,6 +42,15 @@ public class DatabaseUserWishlistService implements UserWishlistService {
         return wishlistAlertEventRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(WishlistAlertEventMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WishlistPriceHistoryPoint> getWishlistPriceHistory(
+            long userId, long itemId, int limit) {
+        wishlistItemRepository.findByIdAndUserIdAndActiveTrue(itemId, userId)
+                .orElseThrow(WishlistItemNotFoundException::new);
+        return wishlistPriceHistoryService.listRecent(userId, itemId, limit);
     }
 
     @Override
@@ -73,6 +85,7 @@ public class DatabaseUserWishlistService implements UserWishlistService {
                                 userId
                         )
                 );
+        wishlistPriceHistoryService.recordSnapshot(userId, savedItem, "wishlist-create");
         WishlistAlertEvaluation evaluation = evaluate(savedItem);
         if (evaluation.targetReached()) {
             wishlistAlertEventRecorder.recordTargetReachedEvent(

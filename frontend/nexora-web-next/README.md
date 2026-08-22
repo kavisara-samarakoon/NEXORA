@@ -148,7 +148,9 @@ The Wishlist page supports:
 - displaying backend-computed `target-reached`, `watching`, `paused`, and
   `not-evaluable` evaluations;
 - displaying recent target-reached events from
-  `GET /api/me/wishlist/alert-events`.
+  `GET /api/me/wishlist/alert-events`;
+- loading up to five recent price snapshots on demand for a personal item from
+  `GET /api/me/wishlist/{id}/price-history`.
 
 Logged-out users see a read-only public demo wishlist. Public preview data never
 exposes another user's personal items or alert history.
@@ -169,8 +171,10 @@ delivery. Those capabilities are not controlled by this frontend:
 - There is no frontend notification-provider, recipient, or preference UI yet.
 - There is no frontend delivery-status, retry, or email-history view.
 
-The frontend displays alert evaluations and history returned by the backend; it
-does not run scheduled checks or send notifications itself.
+The frontend displays alert evaluations, alert events, and a compact recent
+price-history list returned by the backend; it does not run scheduled checks or
+send notifications itself. The recent list is a first display foundation, not
+a full chart or price-analytics interface.
 
 ## Security notes
 
@@ -208,7 +212,8 @@ dependency graph; it never applies automatic audit fixes.
 - Real email delivery requires backend SMTP configuration.
 - The refresh-session flow has local CSRF/trusted-origin checks but still uses
   local-development cookie/CORS defaults and lacks complete session controls.
-- There is no price-history chart or long-term price-history interface.
+- Personal wishlist cards have a simple on-demand recent price-history list;
+  there is no chart, aggregation, or full long-term analytics interface.
 - Sentinel is a demo/status experience; no real Gemini or other AI integration
   exists.
 - Public content fallbacks are intentionally demo data, not guaranteed live

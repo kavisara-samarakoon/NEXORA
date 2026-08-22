@@ -16,8 +16,8 @@ the `dev` profile · Not documented as production-ready
 
 | Profile | Storage and behavior |
 | --- | --- |
-| Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, and alert history are held in memory. CheapShark external deals remain available on demand. |
-| `dev` | Enables PostgreSQL, Flyway V1–V7, Spring Data JPA, persisted catalog/account/refresh-session/wishlist/alert data, and the optional wishlist refresh scheduler. |
+| Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, alert history, and price history are held in memory. CheapShark external deals remain available on demand. |
+| `dev` | Enables PostgreSQL, Flyway V1–V8, Spring Data JPA, persisted catalog/account/refresh-session/wishlist/alert/price-history data, and the optional wishlist refresh scheduler. |
 
 The default profile is useful for UI development and tests. Restarting it
 clears accounts and personal wishlist changes. The `dev` profile validates JPA
@@ -132,6 +132,7 @@ endpoints return active rows only. `GET /api/wishlist` additionally requires
 | `PATCH` | `/api/me/wishlist/{id}/alert` | Update target price, alert state, or priority for an owned item |
 | `DELETE` | `/api/me/wishlist/{id}` | Soft-delete an owned active item |
 | `GET` | `/api/me/wishlist/alert-events` | Return target-reached history newest first |
+| `GET` | `/api/me/wishlist/{id}/price-history` | Return up to 30 recent price snapshots for an owned active item; accepts `limit=1..90` |
 
 Protected endpoints derive ownership from the JWT principal. They do not accept
 a client-supplied user ID.
@@ -274,6 +275,25 @@ In the `dev` profile, Flyway V6 persists event snapshots in
 `wishlist_alert_events`. The default profile keeps equivalent demo history in
 memory.
 
+## Wishlist price history
+
+Creating a personal wishlist item records its initial current-price snapshot.
+When the optional price refresh workflow changes an item's current price, it
+records another snapshot with the selected provider as its source. Consecutive
+snapshots with the same label and parsed value are skipped; changing only the
+target price, alert state, or priority does not add history.
+
+`GET /api/me/wishlist/{id}/price-history` requires the existing Bearer access
+token and returns an owned active item's recent points oldest-to-newest for
+chart-friendly display. The default limit is 30 and the accepted range is
+1–90. `FREE` is represented as numeric `0.00` USD. Unparseable labels such as
+`TBA` remain available while `priceAmount` and `currency` are `null`.
+
+Flyway V8 persists these snapshots in `wishlist_price_history` for the `dev`
+profile. The database-free default profile keeps equivalent process-local
+history. Soft-deleted items and another user's items return the existing
+wishlist not-found response, and public demo rows do not expose history.
+
 ## CheapShark external deals
 
 `GET /api/deals/external` calls the public CheapShark API on demand and maps
@@ -315,8 +335,8 @@ nexora.wishlist.price-refresh.cheapshark.match-store=true
 The stored provider is the safe default and makes no external request. A run
 updates `currentPrice` only when a provider returns a changed, nonblank value,
 then re-evaluates the alert. It records an event only for a not-reached to
-target-reached transition and logs scanned, refreshed, event-created, and
-skipped counts.
+target-reached transition, records a price-history point only for a changed
+current price, and logs scanned, refreshed, event-created, and skipped counts.
 
 Enable the CheapShark snapshot provider with:
 
@@ -455,7 +475,7 @@ The repository's `Backend CI` GitHub Actions workflow uses Temurin Java 17 for
 pushes to `main` and pull requests targeting `main`. One job runs the normal
 database-free `mvn test` suite. A separate job starts a PostgreSQL 16 service
 and explicitly runs `PostgresDevProfileIntegrationTests` to confirm the `dev`
-profile connects, applies Flyway V1–V7, validates the JPA schema, and exposes
+profile connects, applies Flyway V1–V8, validates the JPA schema, and exposes
 the expected tables and seed data.
 
 The PostgreSQL integration test is enabled only when
@@ -500,6 +520,8 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   complete.
 - Scheduled refresh has no distributed lock or production multi-instance
   guarantees.
+- Price-history storage and the personal history API are a foundation, not a
+  complete price analytics, aggregation, or charting system.
 - Notification delivery has no preference model, durable state, retry/outbox,
   or asynchronous after-commit behavior.
 - Email delivery requires explicit SMTP configuration.

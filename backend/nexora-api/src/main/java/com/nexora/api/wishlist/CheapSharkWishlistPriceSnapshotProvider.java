@@ -78,6 +78,11 @@ public class CheapSharkWishlistPriceSnapshotProvider
                 : Optional.of(formatPrice(bestMatch.salePrice()));
     }
 
+    @Override
+    public String priceHistorySource() {
+        return "cheapshark-provider";
+    }
+
     private List<Candidate> candidates(
             String wishlistTitle,
             List<CheapSharkDealResponse> responses) {

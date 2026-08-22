@@ -66,6 +66,103 @@ class UserWishlistApiEndpointTests {
     }
 
     @Test
+    void wishlistPriceHistoryRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/me/wishlist/1/price-history"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("authentication_required"));
+    }
+
+    @Test
+    void creatingPersonalItemRecordsChartReadyInitialPriceHistory() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        String title = "History title " + UUID.randomUUID();
+        MvcResult created = mockMvc.perform(authenticatedPost(
+                        token, title, "Steam", "$19.99", "$10.00", true))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long itemId = objectMapper.readTree(created.getResponse().getContentAsString())
+                .path("id").longValue();
+
+        mockMvc.perform(authenticatedPriceHistoryGet(token, itemId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").isNumber())
+                .andExpect(jsonPath("$[0].wishlistItemId").value(itemId))
+                .andExpect(jsonPath("$[0].itemTitle").value(title))
+                .andExpect(jsonPath("$[0].store").value("Steam"))
+                .andExpect(jsonPath("$[0].priceLabel").value("$19.99"))
+                .andExpect(jsonPath("$[0].priceAmount").value(19.99))
+                .andExpect(jsonPath("$[0].currency").value("USD"))
+                .andExpect(jsonPath("$[0].source").value("wishlist-create"))
+                .andExpect(jsonPath("$[0].observedAt").isNotEmpty());
+    }
+
+    @Test
+    void freeAndUnparseablePricesRemainSafeForHistoryConsumers() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long freeId = createdItemId(token, "Free title " + UUID.randomUUID(), "Steam", "FREE");
+        long tbaId = createdItemId(token, "TBA title " + UUID.randomUUID(), "GOG", "TBA");
+
+        mockMvc.perform(authenticatedPriceHistoryGet(token, freeId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].priceLabel").value("FREE"))
+                .andExpect(jsonPath("$[0].priceAmount").value(0.00))
+                .andExpect(jsonPath("$[0].currency").value("USD"));
+        mockMvc.perform(authenticatedPriceHistoryGet(token, tbaId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].priceLabel").value("TBA"))
+                .andExpect(jsonPath("$[0].priceAmount").doesNotExist())
+                .andExpect(jsonPath("$[0].currency").doesNotExist());
+    }
+
+    @Test
+    void priceHistoryIsPrivateAndMissingItemsReturnNotFound() throws Exception {
+        String ownerToken = registerAndLogin(uniqueUser());
+        String secondUserToken = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(ownerToken, "Private history " + UUID.randomUUID());
+
+        mockMvc.perform(authenticatedPriceHistoryGet(secondUserToken, itemId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("wishlist_item_not_found"));
+        mockMvc.perform(authenticatedPriceHistoryGet(secondUserToken, 987654321L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("wishlist_item_not_found"));
+    }
+
+    @Test
+    void softDeletedItemDoesNotExposeItsPriceHistory() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        long itemId = createdItemId(token, "Deleted history " + UUID.randomUUID());
+
+        mockMvc.perform(delete("/api/me/wishlist/{id}", itemId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(authenticatedPriceHistoryGet(token, itemId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("wishlist_item_not_found"));
+    }
+
+    @Test
+    void duplicateSaveAndAlertUpdatesDoNotAddPriceHistory() throws Exception {
+        String token = registerAndLogin(uniqueUser());
+        String title = "Stable history " + UUID.randomUUID();
+        long itemId = createdItemId(token, title, "Steam");
+
+        mockMvc.perform(authenticatedPost(token, "  " + title + "  ", " steam "))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(itemId));
+        mockMvc.perform(authenticatedPatch(
+                        token, itemId,
+                        "{\"targetPrice\":\"$12.00\",\"alertActive\":false,\"priority\":\"high\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(authenticatedPriceHistoryGet(token, itemId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].source").value("wishlist-create"));
+    }
+
+    @Test
     void newlyAuthenticatedUserStartsWithAnEmptyWishlist() throws Exception {
         String token = registerAndLogin(uniqueUser());
 
@@ -470,6 +567,19 @@ class UserWishlistApiEndpointTests {
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("id").longValue();
     }
 
+    private long createdItemId(
+            String token,
+            String title,
+            String store,
+            String currentPrice) throws Exception {
+        MvcResult result = mockMvc.perform(authenticatedPost(
+                        token, title, store, currentPrice, "$24.99", true))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("id").longValue();
+    }
+
     private String registerAndLogin(Credentials user) throws Exception {
         CsrfContext csrf = csrfContext();
         mockMvc.perform(authPost("/api/auth/register", csrf)
@@ -559,6 +669,12 @@ class UserWishlistApiEndpointTests {
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
     authenticatedAlertEventsGet(String token) {
         return get("/api/me/wishlist/alert-events")
+                .header("Authorization", "Bearer " + token);
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    authenticatedPriceHistoryGet(String token, long itemId) {
+        return get("/api/me/wishlist/{id}/price-history", itemId)
                 .header("Authorization", "Bearer " + token);
     }
 

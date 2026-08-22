@@ -20,14 +20,17 @@ public class WishlistPriceRefreshService {
     private final WishlistItemRepository wishlistItemRepository;
     private final WishlistPriceSnapshotProvider priceSnapshotProvider;
     private final WishlistAlertEventRecorder alertEventRecorder;
+    private final WishlistPriceHistoryService priceHistoryService;
 
     public WishlistPriceRefreshService(
             WishlistItemRepository wishlistItemRepository,
             WishlistPriceSnapshotProvider priceSnapshotProvider,
-            WishlistAlertEventRecorder alertEventRecorder) {
+            WishlistAlertEventRecorder alertEventRecorder,
+            WishlistPriceHistoryService priceHistoryService) {
         this.wishlistItemRepository = wishlistItemRepository;
         this.priceSnapshotProvider = priceSnapshotProvider;
         this.alertEventRecorder = alertEventRecorder;
+        this.priceHistoryService = priceHistoryService;
     }
 
     @Transactional
@@ -71,6 +74,8 @@ public class WishlistPriceRefreshService {
             if (!latestPrice.equals(item.getCurrentPrice())) {
                 item.updateCurrentPrice(latestPrice);
                 wishlistItemRepository.save(item);
+                priceHistoryService.recordSnapshot(
+                        item.getUserId(), item, priceSnapshotProvider.priceHistorySource());
                 refreshedItems++;
             }
 

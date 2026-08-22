@@ -4,6 +4,7 @@ import {
   type WishlistAlertEvaluationState,
   type WishlistAlertEvent,
   type WishlistItem,
+  type WishlistPriceHistoryPoint,
   type WishlistPriority,
   type WishlistStatus,
 } from "@/data/wishlist";
@@ -53,6 +54,35 @@ function isWishlistAlertEvent(value: unknown): value is WishlistAlertEvent {
     event.message.trim().length > 0 &&
     typeof event.createdAt === "string" &&
     event.createdAt.trim().length > 0
+  );
+}
+
+export function isWishlistPriceHistoryPoint(
+  value: unknown,
+): value is WishlistPriceHistoryPoint {
+  if (typeof value !== "object" || value === null) return false;
+
+  const point = value as Record<string, unknown>;
+  return (
+    typeof point.id === "number" &&
+    Number.isInteger(point.id) &&
+    point.id > 0 &&
+    typeof point.wishlistItemId === "number" &&
+    Number.isInteger(point.wishlistItemId) &&
+    point.wishlistItemId > 0 &&
+    typeof point.itemTitle === "string" &&
+    point.itemTitle.trim().length > 0 &&
+    typeof point.store === "string" &&
+    point.store.trim().length > 0 &&
+    typeof point.priceLabel === "string" &&
+    point.priceLabel.trim().length > 0 &&
+    (point.priceAmount === null ||
+      (typeof point.priceAmount === "number" && Number.isFinite(point.priceAmount))) &&
+    (point.currency === null || typeof point.currency === "string") &&
+    typeof point.source === "string" &&
+    point.source.trim().length > 0 &&
+    typeof point.observedAt === "string" &&
+    point.observedAt.trim().length > 0
   );
 }
 
@@ -209,6 +239,27 @@ export async function getMyWishlistAlertEvents(
   const data = await readJson(response);
 
   if (!Array.isArray(data) || !data.every(isWishlistAlertEvent)) {
+    throw invalidResponseError();
+  }
+  return data;
+}
+
+export async function getMyWishlistPriceHistory(
+  token: string,
+  id: number,
+  limit = 5,
+): Promise<WishlistPriceHistoryPoint[]> {
+  const normalizedLimit = Number.isInteger(limit) && limit >= 1 && limit <= 90
+    ? limit
+    : 5;
+  const response = await wishlistRequest(
+    `/api/me/wishlist/${encodeURIComponent(id)}/price-history?limit=${normalizedLimit}`,
+    token,
+    { method: "GET" },
+  );
+  const data = await readJson(response);
+
+  if (!Array.isArray(data) || !data.every(isWishlistPriceHistoryPoint)) {
     throw invalidResponseError();
   }
   return data;

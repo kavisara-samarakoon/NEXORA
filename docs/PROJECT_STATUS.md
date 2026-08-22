@@ -8,18 +8,20 @@ or production-ready service.
 - Next.js App Router frontend with responsive feature pages and typed fallbacks.
 - Spring Boot REST API with validation, security, and profile-based services.
 - JWT registration, login, and authenticated account lookup.
-- PostgreSQL, Flyway V1–V7, and JPA-backed data in the `dev` profile.
+- PostgreSQL, Flyway V1–V8, and JPA-backed data in the `dev` profile.
 - Public demo wishlist and isolated authenticated personal wishlists.
 - Wishlist alert configuration, evaluation, transition events, and history UI.
 - CheapShark external deals, redirect links, caching, and local fallback.
 - Opt-in wishlist price refresh scheduler with stored and CheapShark providers.
+- Wishlist price-history foundation with PostgreSQL and in-memory snapshots, an
+  owner-scoped Bearer API, and a compact on-demand frontend history view.
 - Disabled-by-default notification dispatcher with log and optional email
   providers.
 - Backend tests plus frontend lint and production-build checks.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
-  Flyway V1–V7, JPA schema validation, required tables, and seed data.
+  Flyway V1–V8, JPA schema validation, required tables, and seed data.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
   frontend npm dependencies.
 - Lightweight security CI for high-severity production npm auditing and backend
@@ -61,7 +63,11 @@ or production-ready service.
   configuration.
 - Sentinel is a demo/status experience, not a real Gemini or other AI
   integration.
-- Long-term price history and price-history charts are not implemented.
+- Recent personal price snapshots are available, but long-term analytics,
+  aggregation, and price-history charts are not implemented.
+- The price-history foundation reuses the existing stored/CheapShark provider
+  options. It adds no external data provider and no Steam, Epic, or GOG account
+  linking.
 
 ## Production-readiness gaps
 
@@ -91,6 +97,7 @@ or production-ready service.
    CORS/cookie/proxy policy, then extend session management and revocation.
 4. Add notification preferences, verified recipients, durable delivery state,
    and retry/outbox processing.
-5. Add price history storage and frontend visualization.
+5. Extend the price-history foundation with charting, aggregation, and retention
+   decisions after the snapshot model is reviewed.
 6. Define privacy, safety, and evaluation requirements before any real Sentinel
    AI integration.

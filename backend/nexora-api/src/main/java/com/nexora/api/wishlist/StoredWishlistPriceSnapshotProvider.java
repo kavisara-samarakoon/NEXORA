@@ -11,4 +11,9 @@ public class StoredWishlistPriceSnapshotProvider implements WishlistPriceSnapsho
         // Safe default: retain the stored value without making an external request.
         return Optional.ofNullable(item.getCurrentPrice());
     }
+
+    @Override
+    public String priceHistorySource() {
+        return "stored-provider";
+    }
 }

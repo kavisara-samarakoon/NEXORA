@@ -4296,6 +4296,69 @@ input:focus-visible {
   opacity: 0.6;
 }
 
+.wl-card__price-history {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.wl-card__price-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wl-card__price-history-header > strong {
+  color: var(--nx-muted);
+  font-size: 8px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.wl-card__price-history-header button {
+  border: 0;
+  color: var(--nx-blue);
+  background: transparent;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wl-card__price-history small {
+  color: var(--nx-subtle);
+  font-size: 8px;
+}
+
+.wl-card__price-history ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wl-card__price-history li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--nx-muted);
+  font-size: 8px;
+}
+
+.wl-card__price-history li strong {
+  color: var(--nx-text);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+}
+
+.wl-card__price-history time { text-align: right; }
+
 .wl-card__actions {
   display: flex;
   gap: 7px;

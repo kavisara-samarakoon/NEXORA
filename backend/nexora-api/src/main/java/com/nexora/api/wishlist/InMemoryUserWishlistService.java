@@ -19,6 +19,11 @@ public class InMemoryUserWishlistService implements UserWishlistService {
     private final AtomicLong alertEventIds = new AtomicLong();
     private final Map<Long, StoredWishlistItem> items = new ConcurrentHashMap<>();
     private final Map<Long, StoredAlertEvent> alertEvents = new ConcurrentHashMap<>();
+    private final WishlistPriceHistoryService wishlistPriceHistoryService;
+
+    public InMemoryUserWishlistService(WishlistPriceHistoryService wishlistPriceHistoryService) {
+        this.wishlistPriceHistoryService = wishlistPriceHistoryService;
+    }
 
     @Override
     public List<WishlistItem> getWishlistItems(long userId) {
@@ -44,6 +49,16 @@ public class InMemoryUserWishlistService implements UserWishlistService {
     }
 
     @Override
+    public List<WishlistPriceHistoryPoint> getWishlistPriceHistory(
+            long userId, long itemId, int limit) {
+        StoredWishlistItem storedItem = items.get(itemId);
+        if (storedItem == null || storedItem.userId() != userId || !storedItem.active()) {
+            throw new WishlistItemNotFoundException();
+        }
+        return wishlistPriceHistoryService.listRecent(userId, itemId, limit);
+    }
+
+    @Override
     public synchronized WishlistItem addWishlistItem(long userId, AddWishlistItemRequest request) {
         WishlistItemValues values = WishlistItemValues.from(request);
         WishlistItem existingItem = items.values().stream()
@@ -58,6 +73,7 @@ public class InMemoryUserWishlistService implements UserWishlistService {
         long id = ids.incrementAndGet();
         WishlistItem item = WishlistItemMapper.toResponse(id, values);
         items.put(id, new StoredWishlistItem(userId, item, true));
+        wishlistPriceHistoryService.recordSnapshot(userId, item, "wishlist-create");
         if (item.alertEvaluation().targetReached()) {
             recordAlertEvent(userId, item);
         }

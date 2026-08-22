@@ -1,6 +1,7 @@
 package com.nexora.api.wishlist;
 
 import com.nexora.api.auth.AuthenticationFailedException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -30,6 +31,12 @@ public class UserWishlistExceptionHandler {
                     + ": " + validationException.getBindingResult().getFieldError().getDefaultMessage();
         }
         return error(HttpStatus.BAD_REQUEST, "validation_failed", message);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<WishlistErrorResponse> invalidParameter(
+            ConstraintViolationException exception) {
+        return error(HttpStatus.BAD_REQUEST, "validation_failed", "Request validation failed");
     }
 
     private static ResponseEntity<WishlistErrorResponse> error(
