@@ -2,6 +2,8 @@ package com.nexora.api.wishlist;
 
 import com.nexora.api.auth.AuthenticatedUserIdResolver;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,12 +14,15 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/me/wishlist")
+@Validated
 public class UserWishlistController {
 
     private final UserWishlistService userWishlistService;
@@ -40,6 +45,15 @@ public class UserWishlistController {
             Authentication authentication) {
         return userWishlistService.getWishlistAlertEvents(
                 userIdResolver.resolve(authentication));
+    }
+
+    @GetMapping("/{id}/price-history")
+    public List<WishlistPriceHistoryPoint> getWishlistPriceHistory(
+            Authentication authentication,
+            @PathVariable long id,
+            @RequestParam(defaultValue = "30") @Min(1) @Max(90) int limit) {
+        return userWishlistService.getWishlistPriceHistory(
+                userIdResolver.resolve(authentication), id, limit);
     }
 
     @PostMapping

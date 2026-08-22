@@ -45,15 +45,21 @@ class PostgresDevProfileIntegrationTests {
                 where version is not null
                   and success = true
                 """, Long.class);
-        assertEquals(7L, successfulMigrations);
+        assertEquals(8L, successfulMigrations);
 
         Integer requiredTableCount = jdbcTemplate.queryForObject("""
                 select count(*)
                 from information_schema.tables
                 where table_schema = 'public'
-                  and table_name in ('users', 'wishlist_items', 'wishlist_alert_events', 'auth_sessions')
+                  and table_name in (
+                      'users',
+                      'wishlist_items',
+                      'wishlist_alert_events',
+                      'auth_sessions',
+                      'wishlist_price_history'
+                  )
                 """, Integer.class);
-        assertEquals(4, requiredTableCount);
+        assertEquals(5, requiredTableCount);
 
         Long seededDeals = jdbcTemplate.queryForObject(
                 "select count(*) from deals where is_active = true",

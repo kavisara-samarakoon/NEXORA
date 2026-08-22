@@ -9,6 +9,7 @@ import {
   type WishlistAlertEvent,
   type WishlistFilter,
   type WishlistItem,
+  type WishlistPriceHistoryPoint,
   type WishlistPriority,
   type WishlistStatus,
 } from "@/data/wishlist";
@@ -20,6 +21,7 @@ import {
   deleteMyWishlistItem,
   getMyWishlist,
   getMyWishlistAlertEvents,
+  getMyWishlistPriceHistory,
   normalizeUserWishlistError,
   updateMyWishlistAlert,
   withWishlistAuthRetry,
@@ -28,6 +30,7 @@ import {
 
 type WishlistView = "checking" | "public" | "personal" | "offline";
 type ItemMessage = { kind: "success" | "error"; text: string };
+type PriceHistoryState = "idle" | "loading" | "loaded" | "unavailable";
 
 function protectedWishlistError(error: unknown) {
   const wishlistError = normalizeUserWishlistError(error);
@@ -112,21 +115,27 @@ function StatusIcon({ icon }: { icon: "down" | "gift" | "signal" }) {
 
 function WishlistCard({
   alertIsActive,
+  authToken,
   canManage,
   isDeleting,
   isUpdating,
   item,
   message,
   onDelete,
+  onAuthenticationRequired,
+  onTokenChanged,
   onUpdateAlert,
 }: {
   alertIsActive: boolean;
+  authToken: string | null;
   canManage: boolean;
   isDeleting: boolean;
   isUpdating: boolean;
   item: WishlistItem;
   message?: ItemMessage;
   onDelete: (item: WishlistItem) => void;
+  onAuthenticationRequired: () => void;
+  onTokenChanged: (token: string) => void;
   onUpdateAlert: (
     item: WishlistItem,
     payload: UpdateWishlistAlertPayload,
@@ -138,6 +147,30 @@ function WishlistCard({
   const storeClass = wishlistStoreClass(item.store);
   const [targetPrice, setTargetPrice] = useState(item.targetPrice);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [priceHistory, setPriceHistory] = useState<WishlistPriceHistoryPoint[]>([]);
+  const [priceHistoryState, setPriceHistoryState] = useState<PriceHistoryState>("idle");
+
+  async function loadPriceHistory() {
+    if (!authToken || priceHistoryState === "loading") return;
+    setPriceHistoryState("loading");
+
+    try {
+      const result = await withWishlistAuthRetry(
+        authToken,
+        (activeToken) => getMyWishlistPriceHistory(activeToken, item.id, 5),
+      );
+      onTokenChanged(result.token);
+      setPriceHistory(result.value);
+      setPriceHistoryState("loaded");
+    } catch (error) {
+      const details = protectedWishlistError(error);
+      if (details.status === 401) {
+        onAuthenticationRequired();
+        return;
+      }
+      setPriceHistoryState("unavailable");
+    }
+  }
 
   function handleTargetPriceSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -233,6 +266,38 @@ function WishlistCard({
             </select>
           </label>
         </div>
+      )}
+
+      {canManage && (
+        <section className="wl-card__price-history" aria-live="polite">
+          <div className="wl-card__price-history-header">
+            <strong>Recent price history</strong>
+            {(priceHistoryState === "idle" || priceHistoryState === "unavailable") && (
+              <button type="button" onClick={() => void loadPriceHistory()}>
+                {priceHistoryState === "unavailable" ? "Retry" : "View"}
+              </button>
+            )}
+          </div>
+          {priceHistoryState === "loading" && <small>Loading recent prices…</small>}
+          {priceHistoryState === "unavailable" && (
+            <small>Price history is temporarily unavailable.</small>
+          )}
+          {priceHistoryState === "loaded" && priceHistory.length === 0 && (
+            <small>No price snapshots are available yet.</small>
+          )}
+          {priceHistoryState === "loaded" && priceHistory.length > 0 && (
+            <ol>
+              {priceHistory.map((point) => (
+                <li key={point.id}>
+                  <strong>{point.priceLabel}</strong>
+                  <time dateTime={point.observedAt}>
+                    {formatAlertEventTime(point.observedAt)}
+                  </time>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
       )}
 
       <div className="wl-card__actions">
@@ -850,13 +915,16 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             {filteredItems.map((item) => (
               <WishlistCard
                 alertIsActive={alerts[item.id] ?? item.alertActive}
+                authToken={authToken}
                 canManage={isPersonal}
                 isDeleting={deletingIds.has(item.id)}
                 isUpdating={updatingIds.has(item.id)}
                 item={item}
                 message={itemMessages[item.id]}
                 key={item.id}
+                onAuthenticationRequired={handleAuthenticationRequired}
                 onDelete={(candidate) => void handleDelete(candidate)}
+                onTokenChanged={setAuthToken}
                 onUpdateAlert={handleAlertUpdate}
               />
             ))}

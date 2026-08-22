@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — wishlist price-history foundation
+
+- Added wishlist price-history foundation with persisted snapshots, personal
+  history API, and simple frontend history display.
+
 ## Unreleased — auth CSRF/trusted-origin foundation
 
 - Added auth CSRF/trusted-origin hardening foundation for refresh-cookie browser

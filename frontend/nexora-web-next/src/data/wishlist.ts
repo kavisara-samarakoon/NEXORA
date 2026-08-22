@@ -28,6 +28,18 @@ export type WishlistAlertEvent = {
   createdAt: string;
 };
 
+export type WishlistPriceHistoryPoint = {
+  id: number;
+  wishlistItemId: number;
+  itemTitle: string;
+  store: WishlistStore;
+  priceLabel: string;
+  priceAmount: number | null;
+  currency: string | null;
+  source: string;
+  observedAt: string;
+};
+
 export type WishlistItem = {
   id: number;
   title: string;

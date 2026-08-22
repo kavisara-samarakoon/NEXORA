@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class DatabaseUserWishlistServiceTests {
@@ -26,7 +27,8 @@ class DatabaseUserWishlistServiceTests {
     void createsAnOwnedItemWithSafeDefaults() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
-        DatabaseUserWishlistService service = service(repository, eventRepository);
+        WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
+        DatabaseUserWishlistService service = service(repository, eventRepository, historyService);
         AddWishlistItemRequest request = new AddWishlistItemRequest(
                 "New Game", "Steam", "$30.00", "$20.00",
                 null, null, null, null, null);
@@ -40,6 +42,7 @@ class DatabaseUserWishlistServiceTests {
         ArgumentCaptor<com.nexora.api.wishlist.persistence.WishlistItem> captor =
                 ArgumentCaptor.forClass(com.nexora.api.wishlist.persistence.WishlistItem.class);
         verify(repository).saveAndFlush(captor.capture());
+        verify(historyService).recordSnapshot(7L, savedItem, "wishlist-create");
         verify(eventRepository, never()).saveAndFlush(any());
         com.nexora.api.wishlist.persistence.WishlistItem createdItem = captor.getValue();
         assertAll(
@@ -55,7 +58,8 @@ class DatabaseUserWishlistServiceTests {
     void returnsExistingActiveItemForNormalizedDuplicate() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
-        DatabaseUserWishlistService service = service(repository, eventRepository);
+        WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
+        DatabaseUserWishlistService service = service(repository, eventRepository, historyService);
         AddWishlistItemRequest request = new AddWishlistItemRequest(
                 "  new game ", " steam ", "$15.00", "$10.00",
                 null, null, null, null, null);
@@ -73,6 +77,7 @@ class DatabaseUserWishlistServiceTests {
         );
         verify(repository, never()).saveAndFlush(any());
         verify(eventRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(historyService);
     }
 
     @Test
@@ -139,11 +144,12 @@ class DatabaseUserWishlistServiceTests {
     void updatesOnlyProvidedAlertSettingsForOwnedActiveItem() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
+        WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
         when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
-        WishlistItem response = service(repository, eventRepository)
+        WishlistItem response = service(repository, eventRepository, historyService)
                 .updateWishlistAlert(
                         7L, 42L,
                         new UpdateWishlistAlertRequest("  $12.00  ", null, " low "));
@@ -155,6 +161,7 @@ class DatabaseUserWishlistServiceTests {
         );
         verify(repository).saveAndFlush(item);
         verify(eventRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(historyService);
     }
 
     @Test
@@ -242,6 +249,13 @@ class DatabaseUserWishlistServiceTests {
     private static DatabaseUserWishlistService service(
             WishlistItemRepository repository,
             WishlistAlertEventRepository eventRepository) {
+        return service(repository, eventRepository, mock(WishlistPriceHistoryService.class));
+    }
+
+    private static DatabaseUserWishlistService service(
+            WishlistItemRepository repository,
+            WishlistAlertEventRepository eventRepository,
+            WishlistPriceHistoryService historyService) {
         when(eventRepository.saveAndFlush(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         return new DatabaseUserWishlistService(
@@ -250,7 +264,8 @@ class DatabaseUserWishlistServiceTests {
                 new WishlistAlertEventRecorder(
                         eventRepository,
                         mock(NotificationDispatcher.class)
-                )
+                ),
+                historyService
         );
     }
 }

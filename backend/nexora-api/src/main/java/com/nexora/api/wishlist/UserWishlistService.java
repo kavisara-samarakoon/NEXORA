@@ -8,6 +8,9 @@ public interface UserWishlistService {
 
     List<WishlistAlertEventResponse> getWishlistAlertEvents(long userId);
 
+    List<WishlistPriceHistoryPoint> getWishlistPriceHistory(
+            long userId, long itemId, int limit);
+
     WishlistItem addWishlistItem(long userId, AddWishlistItemRequest request);
 
     WishlistItem updateWishlistAlert(long userId, long itemId, UpdateWishlistAlertRequest request);
