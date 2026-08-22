@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — auth CSRF/trusted-origin foundation
+
+- Added auth CSRF/trusted-origin hardening foundation for refresh-cookie browser
+  flows.
+
 ## Unreleased — frontend refresh-session foundation
 
 - Added frontend refresh-session foundation with memory-first access tokens,

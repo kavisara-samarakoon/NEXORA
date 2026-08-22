@@ -121,6 +121,7 @@ endpoints return active rows only. `GET /api/wishlist` additionally requires
 | `GET` | `/api/security/status` | Demo security summary |
 | `GET` | `/api/sentinel/status` | Sentinel integration status |
 | `GET` | `/api/sentinel/demo` | Sentinel demo messages and capabilities |
+| `GET` | `/api/auth/csrf` | Issue a browser-readable CSRF token and matching cookie |
 | `POST` | `/api/auth/register` | Register, return a JWT access token, and issue a refresh cookie |
 | `POST` | `/api/auth/login` | Log in, return a JWT access token, and issue a refresh cookie |
 | `POST` | `/api/auth/refresh` | Rotate a valid refresh session and return a fresh `AuthResponse` |
@@ -148,11 +149,31 @@ independently with `SecureRandom`, is never returned in JSON, and is sent only
 through the cookie. The default profile keeps refresh sessions in memory;
 `dev` persists them in the Flyway-managed `auth_sessions` table.
 
+The four cookie-sensitive auth POST routes—register, login, refresh, and
+logout—require a token from `GET /api/auth/csrf`. The endpoint returns
+`{"csrfToken":"..."}` and sets the same value in the non-HttpOnly
+`nexora_csrf_token` cookie. Clients must echo the value through
+`X-NEXORA-CSRF`. Tokens are generated with `SecureRandom`, are not stored by the
+backend or database, and are never refresh tokens. Requests with an `Origin`
+must match the configured trusted-origin allowlist; a `Referer` is checked when
+`Origin` is absent. Local curl/test requests may omit both origin headers only
+when the cookie/header token pair is valid.
+
+Fetch a CSRF token and retain its cookie before using an auth POST route:
+
+```bash
+curl -sS http://localhost:8080/api/auth/csrf \
+  -c /tmp/nexora-auth-cookies.txt
+export NEXORA_CSRF_TOKEN='<csrfToken-from-response>'
+```
+
 Register and capture a token:
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/auth/register \
   -H 'Content-Type: application/json' \
+  -H "X-NEXORA-CSRF: ${NEXORA_CSRF_TOKEN}" \
+  -b /tmp/nexora-auth-cookies.txt \
   -c /tmp/nexora-auth-cookies.txt \
   -d '{"email":"player@example.com","username":"player_one","displayName":"Player One","password":"change-me-123"}'
 ```
@@ -162,6 +183,8 @@ Log in with an email or username:
 ```bash
 curl -sS -X POST http://localhost:8080/api/auth/login \
   -H 'Content-Type: application/json' \
+  -H "X-NEXORA-CSRF: ${NEXORA_CSRF_TOKEN}" \
+  -b /tmp/nexora-auth-cookies.txt \
   -c /tmp/nexora-auth-cookies.txt \
   -d '{"emailOrUsername":"player@example.com","password":"change-me-123"}'
 ```
@@ -178,6 +201,7 @@ Rotate the refresh token and receive the unchanged access-token response:
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/auth/refresh \
+  -H "X-NEXORA-CSRF: ${NEXORA_CSRF_TOKEN}" \
   -b /tmp/nexora-auth-cookies.txt \
   -c /tmp/nexora-auth-cookies.txt
 ```
@@ -187,6 +211,7 @@ cookie, and returns `204 No Content` even when the cookie is missing or invalid:
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/auth/logout \
+  -H "X-NEXORA-CSRF: ${NEXORA_CSRF_TOKEN}" \
   -b /tmp/nexora-auth-cookies.txt \
   -c /tmp/nexora-auth-cookies.txt
 ```
@@ -200,9 +225,11 @@ The bundled JWT and refresh-token hash secrets are local-only. Override
 `NEXORA_JWT_SECRET` and `NEXORA_REFRESH_TOKEN_HASH_SECRET` in every shared or
 deployed environment. The primary frontend now uses the refresh endpoint for
 session bootstrap, keeps access tokens in memory, and continues to send Bearer
-headers to protected APIs. CSRF remains disabled for this compatibility
-foundation; production CORS/cookie policy plus CSRF/origin validation must be
-designed and implemented before production cookie-authenticated workflows.
+headers to protected APIs. Spring Security's general-purpose CSRF support stays
+disabled because these APIs are stateless; the focused auth-route guard runs
+before controller work and validates the double-submit token and trusted origin.
+This is a local-development foundation. Its origin, cookie, no-origin client,
+proxy, and error-handling policies still require production review.
 
 ## Personal wishlist
 
@@ -373,6 +400,14 @@ delivery statuses, retries, outbox, or asynchronous after-commit delivery yet.
 | `NEXORA_REFRESH_TOKEN_COOKIE_SECURE` | `false` | Require HTTPS for the cookie; enable outside local HTTP |
 | `NEXORA_REFRESH_TOKEN_COOKIE_SAME_SITE` | `Lax` | Refresh-cookie `SameSite` value |
 | `NEXORA_REFRESH_TOKEN_COOKIE_PATH` | `/api/auth` | Refresh-cookie request path |
+| `NEXORA_AUTH_CSRF_ENABLED` | `true` | Enable the focused auth-route CSRF/origin guard |
+| `NEXORA_AUTH_CSRF_COOKIE_NAME` | `nexora_csrf_token` | Browser-readable CSRF cookie name |
+| `NEXORA_AUTH_CSRF_HEADER_NAME` | `X-NEXORA-CSRF` | Required matching request header |
+| `NEXORA_AUTH_CSRF_COOKIE_SECURE` | `false` | Require HTTPS for the CSRF cookie; enable outside local HTTP |
+| `NEXORA_AUTH_CSRF_COOKIE_SAME_SITE` | `Lax` | CSRF-cookie `SameSite` value |
+| `NEXORA_AUTH_CSRF_COOKIE_PATH` | `/api/auth` | CSRF-cookie request path |
+| `NEXORA_AUTH_CSRF_EXPIRATION_MINUTES` | `120` | CSRF token-cookie lifetime |
+| `NEXORA_AUTH_TRUSTED_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Comma-separated auth/CORS origin allowlist |
 | `nexora.external-deals.enabled` | `true` | Enable on-demand CheapShark deal lookup |
 | `nexora.external-deals.timeout-seconds` | `5` | External request timeout |
 | `nexora.external-deals.default-page-size` | `12` | Default external result count |
@@ -396,9 +431,11 @@ browser requests from these explicit origins:
 - `http://localhost:3000` — Next.js development server
 - `http://localhost:5173` — retained Vite prototype
 
-This credentialed allowlist supports local HttpOnly refresh cookies only. It is
-not a production CORS policy, and CSRF/origin hardening remains required before
-deployment.
+The same configured allowlist drives credentialed CORS and the auth trusted-
+origin guard. Allowed request headers are limited to `Content-Type`,
+`Authorization`, and the configured CSRF header. This supports local HttpOnly
+refresh-cookie and CSRF flows only; it is not a reviewed production CORS,
+proxy, or origin policy.
 
 ## Build and verification
 
@@ -452,9 +489,9 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 - Docker Compose provides local PostgreSQL only; there is no backend application
   image or production container workflow.
 - The backend refresh-session foundation is not a complete production browser
-  session design. Access tokens are memory-first, but CSRF/origin hardening and
-  a production CORS/cookie policy are not implemented, and session-family reuse
-  response is intentionally basic.
+  session design. Local CSRF/trusted-origin checks are implemented, but the
+  production CORS/cookie/origin/proxy policy is not reviewed, and session-family
+  reuse response is intentionally basic.
 - Authentication still has no account verification, password recovery, roles,
   OAuth, complete rate limiting, session list, or revoke-all workflow.
 - The default profile is ephemeral; the `dev` profile requires PostgreSQL,

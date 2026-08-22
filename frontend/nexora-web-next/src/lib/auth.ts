@@ -1,5 +1,9 @@
 const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const AUTH_REQUEST_TIMEOUT_MS = 8000;
+const AUTH_CSRF_HEADER_NAME = "X-NEXORA-CSRF";
+
+let currentCsrfToken: string | null = null;
+let csrfBootstrapPromise: Promise<string> | null = null;
 
 export type AuthUser = {
   id: number;
@@ -74,6 +78,12 @@ function isAuthResponse(value: unknown): value is AuthResponse {
   );
 }
 
+function isCsrfTokenResponse(value: unknown): value is { csrfToken: string } {
+  if (typeof value !== "object" || value === null) return false;
+  const token = (value as Record<string, unknown>).csrfToken;
+  return typeof token === "string" && /^[A-Za-z0-9_-]{43}$/.test(token);
+}
+
 function readErrorCode(value: unknown): string | null {
   if (typeof value !== "object" || value === null) return null;
   const code = (value as Record<string, unknown>).error;
@@ -89,6 +99,14 @@ function responseError(status: number, value: unknown): AuthRequestError {
         ? "Your session is invalid or expired. Please sign in again."
         : "Invalid email, username, or password.";
     return new AuthRequestError({ status, code: backendCode || "unauthorized", message });
+  }
+
+  if (status === 403) {
+    return new AuthRequestError({
+      status,
+      code: backendCode || "csrf_failed",
+      message: "The authentication request could not be verified. Please try again.",
+    });
   }
 
   if (status === 409) {
@@ -153,13 +171,75 @@ async function authRequest(
   return data;
 }
 
+async function fetchCsrfToken(): Promise<string> {
+  const data = await authRequest("/api/auth/csrf", {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!isCsrfTokenResponse(data)) {
+    throw new AuthRequestError({
+      status: null,
+      code: "invalid_response",
+      message: "The authentication service returned an unexpected response.",
+    });
+  }
+
+  currentCsrfToken = data.csrfToken;
+  return data.csrfToken;
+}
+
+export function getCsrfToken(): Promise<string> {
+  if (currentCsrfToken) return Promise.resolve(currentCsrfToken);
+
+  if (!csrfBootstrapPromise) {
+    csrfBootstrapPromise = fetchCsrfToken().finally(() => {
+      csrfBootstrapPromise = null;
+    });
+  }
+
+  return csrfBootstrapPromise;
+}
+
+async function stateChangingAuthRequest(
+  path: "/api/auth/login" | "/api/auth/register" | "/api/auth/refresh" | "/api/auth/logout",
+  init: Omit<RequestInit, "headers"> & { headers?: Record<string, string> },
+): Promise<unknown> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const csrfToken = await getCsrfToken();
+    try {
+      return await authRequest(path, {
+        ...init,
+        credentials: "include",
+        headers: {
+          ...init.headers,
+          [AUTH_CSRF_HEADER_NAME]: csrfToken,
+        },
+      });
+    } catch (error) {
+      if (attempt === 0 && normalizeAuthError(error).status === 403) {
+        if (currentCsrfToken === csrfToken) {
+          currentCsrfToken = null;
+        }
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new AuthRequestError({
+    status: 403,
+    code: "csrf_failed",
+    message: "The authentication request could not be verified. Please try again.",
+  });
+}
+
 async function submitCredentials(
   path: "/api/auth/login" | "/api/auth/register",
   payload: LoginPayload | RegisterPayload,
 ): Promise<AuthResponse> {
-  const data = await authRequest(path, {
+  const data = await stateChangingAuthRequest(path, {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -187,9 +267,8 @@ export async function refreshSession(): Promise<AuthResponse | null> {
   let data: unknown;
 
   try {
-    data = await authRequest("/api/auth/refresh", {
+    data = await stateChangingAuthRequest("/api/auth/refresh", {
       method: "POST",
-      credentials: "include",
     });
   } catch (error) {
     if (normalizeAuthError(error).status === 401) return null;
@@ -208,9 +287,8 @@ export async function refreshSession(): Promise<AuthResponse | null> {
 }
 
 export async function logoutSession(): Promise<void> {
-  await authRequest("/api/auth/logout", {
+  await stateChangingAuthRequest("/api/auth/logout", {
     method: "POST",
-    credentials: "include",
   });
 }
 
