@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.15.0 price-history visualization polish
+
+- Added price-history visualization polish with compact card summaries, trend
+  indicators, and recent snapshot timeline.
+
 ## Unreleased — wishlist price-history foundation
 
 - Added wishlist price-history foundation with persisted snapshots, personal
