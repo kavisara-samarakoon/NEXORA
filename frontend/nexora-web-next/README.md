@@ -149,8 +149,11 @@ The Wishlist page supports:
   `not-evaluable` evaluations;
 - displaying recent target-reached events from
   `GET /api/me/wishlist/alert-events`;
-- loading up to five recent price snapshots on demand for a personal item from
-  `GET /api/me/wishlist/{id}/price-history`.
+- loading up to 15 recent price snapshots on demand for a personal item from
+  `GET /api/me/wishlist/{id}/price-history`, then presenting latest, lowest,
+  highest, snapshot-count, and last-observed summaries;
+- displaying a compact CSS-only price trend, direction indicator, and the five
+  newest snapshots with timestamps and readable source badges.
 
 Logged-out users see a read-only public demo wishlist. Public preview data never
 exposes another user's personal items or alert history.
@@ -171,10 +174,11 @@ delivery. Those capabilities are not controlled by this frontend:
 - There is no frontend notification-provider, recipient, or preference UI yet.
 - There is no frontend delivery-status, retry, or email-history view.
 
-The frontend displays alert evaluations, alert events, and a compact recent
-price-history list returned by the backend; it does not run scheduled checks or
-send notifications itself. The recent list is a first display foundation, not
-a full chart or price-analytics interface.
+The frontend displays alert evaluations, alert events, and a compact card-level
+price-history visualization returned by the existing owner-scoped Bearer API;
+it does not run scheduled checks or send notifications itself. The trend strip
+uses React and CSS only, with no chart dependency. This remains a visualization
+foundation rather than a full price-analytics interface.
 
 ## Security notes
 
@@ -212,8 +216,10 @@ dependency graph; it never applies automatic audit fixes.
 - Real email delivery requires backend SMTP configuration.
 - The refresh-session flow has local CSRF/trusted-origin checks but still uses
   local-development cookie/CORS defaults and lacks complete session controls.
-- Personal wishlist cards have a simple on-demand recent price-history list;
-  there is no chart, aggregation, or full long-term analytics interface.
+- Price-history visualization is a compact card-level view; full analytics,
+  aggregation, retention policy, and advanced charts are still not implemented.
+- This visualization milestone adds no backend migration, AI, account linking,
+  external data provider, deployment workflow, or production-readiness claim.
 - Sentinel is a demo/status experience; no real Gemini or other AI integration
   exists.
 - Public content fallbacks are intentionally demo data, not guaranteed live

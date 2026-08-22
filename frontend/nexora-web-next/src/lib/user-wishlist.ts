@@ -247,11 +247,11 @@ export async function getMyWishlistAlertEvents(
 export async function getMyWishlistPriceHistory(
   token: string,
   id: number,
-  limit = 5,
+  limit = 15,
 ): Promise<WishlistPriceHistoryPoint[]> {
   const normalizedLimit = Number.isInteger(limit) && limit >= 1 && limit <= 90
     ? limit
-    : 5;
+    : 15;
   const response = await wishlistRequest(
     `/api/me/wishlist/${encodeURIComponent(id)}/price-history?limit=${normalizedLimit}`,
     token,

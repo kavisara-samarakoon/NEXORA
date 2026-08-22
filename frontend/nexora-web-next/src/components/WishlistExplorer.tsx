@@ -31,6 +31,10 @@ import {
 type WishlistView = "checking" | "public" | "personal" | "offline";
 type ItemMessage = { kind: "success" | "error"; text: string };
 type PriceHistoryState = "idle" | "loading" | "loaded" | "unavailable";
+type NumericPriceHistoryPoint = WishlistPriceHistoryPoint & { priceAmount: number };
+
+const PRICE_HISTORY_REQUEST_LIMIT = 15;
+const PRICE_HISTORY_TIMELINE_LIMIT = 5;
 
 function protectedWishlistError(error: unknown) {
   const wishlistError = normalizeUserWishlistError(error);
@@ -100,6 +104,62 @@ function formatAlertEventTime(createdAt: string) {
   }).format(date);
 }
 
+function priceHistorySourceLabel(source: string) {
+  const knownSources: Record<string, string> = {
+    "wishlist-create": "Added to wishlist",
+    "price-refresh": "Price refresh",
+    "stored-provider": "Stored provider",
+    "cheapshark-provider": "CheapShark",
+  };
+  if (knownSources[source]) return knownSources[source];
+
+  const readable = source.replace(/[-_]+/g, " ").trim();
+  return readable
+    ? readable.charAt(0).toUpperCase() + readable.slice(1)
+    : "Price snapshot";
+}
+
+function priceHistorySourceTone(source: string) {
+  if (source === "wishlist-create") return "added";
+  if (source === "cheapshark-provider") return "external";
+  if (source === "stored-provider") return "stored";
+  return "refresh";
+}
+
+function numericPriceHistory(
+  priceHistory: readonly WishlistPriceHistoryPoint[],
+): NumericPriceHistoryPoint[] {
+  return priceHistory.filter(
+    (point): point is NumericPriceHistoryPoint => point.priceAmount !== null,
+  );
+}
+
+function priceHistoryTrend(
+  points: readonly NumericPriceHistoryPoint[],
+  snapshotCount: number,
+) {
+  if (points.length === 0) {
+    return { label: "Non-numeric history", tone: "neutral" } as const;
+  }
+  if (points.length === 1) {
+    return {
+      label: snapshotCount === 1 ? "New snapshot" : "Not enough data",
+      tone: "new",
+    } as const;
+  }
+
+  const firstPrice = points[0].priceAmount;
+  const latestPrice = points[points.length - 1].priceAmount;
+  if (latestPrice < firstPrice) return { label: "Down", tone: "down" } as const;
+  if (latestPrice > firstPrice) return { label: "Up", tone: "up" } as const;
+  return { label: "Flat", tone: "flat" } as const;
+}
+
+function priceHistoryBarHeight(amount: number, lowest: number, highest: number) {
+  if (lowest === highest) return 58;
+  return 22 + ((amount - lowest) / (highest - lowest)) * 78;
+}
+
 function wishlistStoreClass(store: string) {
   if (store === "Steam") return "steam";
   if (store === "Epic Games") return "epic";
@@ -111,6 +171,157 @@ function StatusIcon({ icon }: { icon: "down" | "gift" | "signal" }) {
   if (icon === "down") return <span aria-hidden="true">↓</span>;
   if (icon === "gift") return <span aria-hidden="true">🎁</span>;
   return <span aria-hidden="true">📡</span>;
+}
+
+function PriceHistoryPanel({
+  itemId,
+  onLoad,
+  points,
+  state,
+}: {
+  itemId: number;
+  onLoad: () => void;
+  points: readonly WishlistPriceHistoryPoint[];
+  state: PriceHistoryState;
+}) {
+  const headingId = `wishlist-price-history-${itemId}`;
+  const numericPoints = numericPriceHistory(points);
+  const latestPoint = points.at(-1);
+  const lowestPoint = numericPoints.reduce<NumericPriceHistoryPoint | null>(
+    (lowest, point) => !lowest || point.priceAmount < lowest.priceAmount ? point : lowest,
+    null,
+  );
+  const highestPoint = numericPoints.reduce<NumericPriceHistoryPoint | null>(
+    (highest, point) => !highest || point.priceAmount > highest.priceAmount ? point : highest,
+    null,
+  );
+  const trend = priceHistoryTrend(numericPoints, points.length);
+  const timelinePoints = points.slice(-PRICE_HISTORY_TIMELINE_LIMIT).reverse();
+  const lowestAmount = lowestPoint?.priceAmount ?? 0;
+  const highestAmount = highestPoint?.priceAmount ?? 0;
+
+  return (
+    <section
+      className={`wl-card__price-history wl-card__price-history--${state}`}
+      aria-labelledby={headingId}
+      aria-live="polite"
+    >
+      <div className="wl-card__price-history-header">
+        <div>
+          <span>Price intelligence</span>
+          <strong id={headingId}>Recent price history</strong>
+        </div>
+        {state === "loaded" && points.length > 0 && (
+          <span className={`wl-card__history-trend wl-card__history-trend--${trend.tone}`}>
+            {trend.label}
+          </span>
+        )}
+      </div>
+
+      {state === "idle" && (
+        <div className="wl-card__history-state wl-card__history-state--idle">
+          <p>See recent snapshots and how this price is moving.</p>
+          <button type="button" onClick={onLoad}>View history</button>
+        </div>
+      )}
+
+      {state === "loading" && (
+        <div className="wl-card__history-state wl-card__history-state--loading">
+          <div aria-hidden="true">
+            <span /><span /><span />
+          </div>
+          <p>Loading price history…</p>
+        </div>
+      )}
+
+      {state === "unavailable" && (
+        <div className="wl-card__history-state wl-card__history-state--error">
+          <p>Price history is temporarily unavailable. Your wishlist still works.</p>
+          <button type="button" onClick={onLoad}>Retry</button>
+        </div>
+      )}
+
+      {state === "loaded" && points.length === 0 && (
+        <div className="wl-card__history-state wl-card__history-state--empty">
+          <strong>No snapshots yet</strong>
+          <p>Price observations will appear here when they become available.</p>
+        </div>
+      )}
+
+      {state === "loaded" && latestPoint && (
+        <div className="wl-card__history-content">
+          <dl className="wl-card__history-stats">
+            <div><dt>Latest</dt><dd>{latestPoint.priceLabel}</dd></div>
+            <div><dt>Lowest</dt><dd>{lowestPoint?.priceLabel ?? "—"}</dd></div>
+            <div><dt>Highest</dt><dd>{highestPoint?.priceLabel ?? "—"}</dd></div>
+            <div><dt>Snapshots</dt><dd>{points.length}</dd></div>
+            <div>
+              <dt>Last observed</dt>
+              <dd><time dateTime={latestPoint.observedAt}>{formatAlertEventTime(latestPoint.observedAt)}</time></dd>
+            </div>
+          </dl>
+
+          <div className="wl-card__history-visual">
+            <div className="wl-card__history-visual-heading">
+              <span>Observed trend</span>
+              <strong>{trend.label}</strong>
+            </div>
+            {numericPoints.length === 0 ? (
+              <p>These snapshots use labels such as TBA, so a numeric trend is not available.</p>
+            ) : (
+              <div
+                className={numericPoints.length === 1
+                  ? "wl-card__history-bars wl-card__history-bars--single"
+                  : "wl-card__history-bars"}
+                role="img"
+                aria-label={numericPoints.length === 1
+                  ? `One numeric price snapshot: ${numericPoints[0].priceLabel}`
+                  : `${numericPoints.length} numeric price snapshots, trending ${trend.label.toLowerCase()}`}
+              >
+                {numericPoints.map((point) => (
+                  <span
+                    aria-hidden="true"
+                    key={point.id}
+                    style={{
+                      height: `${priceHistoryBarHeight(
+                        point.priceAmount,
+                        lowestAmount,
+                        highestAmount,
+                      )}%`,
+                    }}
+                    title={`${point.priceLabel} · ${formatAlertEventTime(point.observedAt)}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="wl-card__history-timeline">
+            <div className="wl-card__history-timeline-heading">
+              <strong>Recent snapshots</strong>
+              <span>Newest first</span>
+            </div>
+            <ol aria-label="Recent price snapshots, newest first">
+              {timelinePoints.map((point) => (
+                <li key={point.id}>
+                  <span className="wl-card__history-timeline-dot" aria-hidden="true" />
+                  <div>
+                    <strong>{point.priceLabel}</strong>
+                    <time dateTime={point.observedAt}>
+                      {formatAlertEventTime(point.observedAt)}
+                    </time>
+                  </div>
+                  <span className={`wl-card__history-source wl-card__history-source--${priceHistorySourceTone(point.source)}`}>
+                    {priceHistorySourceLabel(point.source)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function WishlistCard({
@@ -157,7 +368,11 @@ function WishlistCard({
     try {
       const result = await withWishlistAuthRetry(
         authToken,
-        (activeToken) => getMyWishlistPriceHistory(activeToken, item.id, 5),
+        (activeToken) => getMyWishlistPriceHistory(
+          activeToken,
+          item.id,
+          PRICE_HISTORY_REQUEST_LIMIT,
+        ),
       );
       onTokenChanged(result.token);
       setPriceHistory(result.value);
@@ -269,35 +484,12 @@ function WishlistCard({
       )}
 
       {canManage && (
-        <section className="wl-card__price-history" aria-live="polite">
-          <div className="wl-card__price-history-header">
-            <strong>Recent price history</strong>
-            {(priceHistoryState === "idle" || priceHistoryState === "unavailable") && (
-              <button type="button" onClick={() => void loadPriceHistory()}>
-                {priceHistoryState === "unavailable" ? "Retry" : "View"}
-              </button>
-            )}
-          </div>
-          {priceHistoryState === "loading" && <small>Loading recent prices…</small>}
-          {priceHistoryState === "unavailable" && (
-            <small>Price history is temporarily unavailable.</small>
-          )}
-          {priceHistoryState === "loaded" && priceHistory.length === 0 && (
-            <small>No price snapshots are available yet.</small>
-          )}
-          {priceHistoryState === "loaded" && priceHistory.length > 0 && (
-            <ol>
-              {priceHistory.map((point) => (
-                <li key={point.id}>
-                  <strong>{point.priceLabel}</strong>
-                  <time dateTime={point.observedAt}>
-                    {formatAlertEventTime(point.observedAt)}
-                  </time>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
+        <PriceHistoryPanel
+          itemId={item.id}
+          onLoad={() => void loadPriceHistory()}
+          points={priceHistory}
+          state={priceHistoryState}
+        />
       )}
 
       <div className="wl-card__actions">

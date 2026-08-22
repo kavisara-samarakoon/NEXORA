@@ -15,6 +15,8 @@ or production-ready service.
 - Opt-in wishlist price refresh scheduler with stored and CheapShark providers.
 - Wishlist price-history foundation with PostgreSQL and in-memory snapshots, an
   owner-scoped Bearer API, and a compact on-demand frontend history view.
+- Price-history visualization polish with card-level summaries, a direction
+  indicator, a CSS-only trend strip, and a five-entry recent snapshot timeline.
 - Disabled-by-default notification dispatcher with log and optional email
   providers.
 - Backend tests plus frontend lint and production-build checks.
@@ -63,11 +65,13 @@ or production-ready service.
   configuration.
 - Sentinel is a demo/status experience, not a real Gemini or other AI
   integration.
-- Recent personal price snapshots are available, but long-term analytics,
-  aggregation, and price-history charts are not implemented.
+- Price-history visualization is a compact card-level view; full analytics,
+  aggregation, retention policy, and advanced charts are still not implemented.
 - The price-history foundation reuses the existing stored/CheapShark provider
   options. It adds no external data provider and no Steam, Epic, or GOG account
   linking.
+- The visualization polish uses the existing owner-scoped Bearer API and adds no
+  chart dependency, backend migration, AI, deployment, or authentication change.
 
 ## Production-readiness gaps
 
@@ -97,7 +101,7 @@ or production-ready service.
    CORS/cookie/proxy policy, then extend session management and revocation.
 4. Add notification preferences, verified recipients, durable delivery state,
    and retry/outbox processing.
-5. Extend the price-history foundation with charting, aggregation, and retention
-   decisions after the snapshot model is reviewed.
+5. Extend the compact price-history view only after defining aggregation,
+   retention, and advanced-chart requirements.
 6. Define privacy, safety, and evaluation requirements before any real Sentinel
    AI integration.
