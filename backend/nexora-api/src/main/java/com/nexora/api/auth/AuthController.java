@@ -1,5 +1,8 @@
 package com.nexora.api.auth;
 
+import com.nexora.api.auth.csrf.AuthBrowserRequestGuard;
+import com.nexora.api.auth.csrf.AuthCsrfService;
+import com.nexora.api.auth.csrf.AuthCsrfTokenResponse;
 import com.nexora.api.auth.session.RefreshCookieService;
 import com.nexora.api.auth.session.RefreshSessionService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,32 +25,53 @@ public class AuthController {
     private final AuthenticatedUserIdResolver userIdResolver;
     private final RefreshSessionService refreshSessionService;
     private final RefreshCookieService refreshCookieService;
+    private final AuthCsrfService csrfService;
+    private final AuthBrowserRequestGuard browserRequestGuard;
 
     public AuthController(
             AuthService authService,
             AuthenticatedUserIdResolver userIdResolver,
             RefreshSessionService refreshSessionService,
-            RefreshCookieService refreshCookieService) {
+            RefreshCookieService refreshCookieService,
+            AuthCsrfService csrfService,
+            AuthBrowserRequestGuard browserRequestGuard) {
         this.authService = authService;
         this.userIdResolver = userIdResolver;
         this.refreshSessionService = refreshSessionService;
         this.refreshCookieService = refreshCookieService;
+        this.csrfService = csrfService;
+        this.browserRequestGuard = browserRequestGuard;
+    }
+
+    @GetMapping("/csrf")
+    public ResponseEntity<AuthCsrfTokenResponse> csrf() {
+        String token = csrfService.generateToken();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, csrfService.issueCookie(token))
+                .body(new AuthCsrfTokenResponse(token));
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(
+            HttpServletRequest servletRequest,
+            @Valid @RequestBody RegisterRequest request) {
+        browserRequestGuard.validate(servletRequest);
         AuthResponse response = authService.register(request);
         return withRefreshCookie(response, HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(
+            HttpServletRequest servletRequest,
+            @Valid @RequestBody LoginRequest request) {
+        browserRequestGuard.validate(servletRequest);
         AuthResponse response = authService.login(request);
         return withRefreshCookie(response, HttpStatus.OK);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(HttpServletRequest request) {
+        browserRequestGuard.validate(request);
         RefreshSessionService.IssuedRefreshToken refreshToken =
                 refreshSessionService.rotate(refreshCookieService.readToken(request));
         try {
@@ -63,6 +87,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
+        browserRequestGuard.validate(request);
         refreshSessionService.revokeIfPresent(refreshCookieService.readToken(request));
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, refreshCookieService.clearCookie())

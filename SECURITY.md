@@ -44,6 +44,9 @@ time is guaranteed while the project remains a development MVP.
   logout revocation, profile-based storage, and HttpOnly cookie issuance.
 - Frontend refresh-session consumption with memory-first Bearer access tokens,
   serialized refresh, backend logout, and legacy `localStorage` token cleanup.
+- Focused local-development CSRF/trusted-origin checks for register, login,
+  refresh, and logout using a `SecureRandom` double-submit token, explicit
+  origin allowlist, and restricted credentialed CORS headers.
 - Backend request validation and ownership checks for personal wishlist data.
 - Backend tests, frontend lint/build validation, and PostgreSQL `dev`-profile
   integration validation in CI.
@@ -61,9 +64,10 @@ production-hardening phases remain incomplete.
 
 - Active access tokens are held in frontend memory and legacy `localStorage`
   tokens are removed. Protected APIs still use Bearer access tokens.
-- CSRF/origin validation and a reviewed production CORS/cookie policy are not
-  implemented for cookie-authenticated workflows. The explicit credentialed
-  localhost CORS support and local cookie defaults are not production-ready.
+- Local CSRF cookie/header and trusted `Origin`/`Referer` validation now protects
+  cookie-sensitive auth routes. The no-origin curl/test allowance, explicit
+  localhost CORS support, local cookie defaults, reverse-proxy assumptions, and
+  overall production policy are not production-ready.
 - Rate limiting, account verification, password recovery, session-wide
   revocation policy, and comprehensive security monitoring are not implemented.
 - There is no CodeQL/full code-scanning workflow, dedicated secret-scanning

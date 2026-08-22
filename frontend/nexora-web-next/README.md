@@ -129,6 +129,15 @@ state even if the backend is unavailable. New access tokens are not written to
 `localStorage`; the legacy `nexora.auth.access_token` entry is removed during
 bootstrap, login, registration, refresh, and logout.
 
+Before register, login, refresh, or logout, the auth client obtains a CSRF token
+from `GET /api/auth/csrf` with browser credentials. It caches only the response
+token in module memory and echoes it as `X-NEXORA-CSRF`; the matching
+`nexora_csrf_token` cookie is managed by the browser. A CSRF `403` clears the
+memory token, obtains a new cookie/token pair, and retries the rejected auth
+request once. Neither the CSRF token nor any access or refresh token is written
+to `localStorage` or `sessionStorage`; the refresh token remains only in its
+HttpOnly cookie.
+
 The Wishlist page supports:
 
 - loading authenticated personal items;
@@ -171,10 +180,11 @@ Protected APIs continue to use Bearer access tokens. This reduces durable token
 exposure but is still a local/development foundation, not a production security
 claim.
 
-The backend currently permits credentialed requests only from the explicit
-localhost frontend origins. CSRF/origin validation, production CORS and cookie
-policy, broader revocation controls, and operational monitoring remain future
-work before production cookie-authenticated use.
+The backend permits credentialed requests only from configured explicit
+localhost frontend origins and validates a CSRF cookie/header pair plus browser
+`Origin` or `Referer` on cookie-sensitive auth POST routes. These controls are a
+local-development foundation. Production CORS, cookie, proxy, CSRF/origin,
+broader revocation, and operational-monitoring policy still requires review.
 
 `NEXT_PUBLIC_*` configuration is visible to users. SMTP credentials, JWT
 secrets, and database credentials belong only in backend/deployment
@@ -196,8 +206,8 @@ dependency graph; it never applies automatic audit fixes.
 - Automatic refresh scheduling and notification providers are backend-only
   configuration.
 - Real email delivery requires backend SMTP configuration.
-- The refresh-session flow uses local-development cookie/CORS defaults and does
-  not yet include production CSRF/origin hardening or complete session controls.
+- The refresh-session flow has local CSRF/trusted-origin checks but still uses
+  local-development cookie/CORS defaults and lacks complete session controls.
 - There is no price-history chart or long-term price-history interface.
 - Sentinel is a demo/status experience; no real Gemini or other AI integration
   exists.

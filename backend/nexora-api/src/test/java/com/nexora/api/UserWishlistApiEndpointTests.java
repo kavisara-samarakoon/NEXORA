@@ -1,10 +1,12 @@
 package com.nexora.api;
 
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.JsonNode;
@@ -469,17 +471,39 @@ class UserWishlistApiEndpointTests {
     }
 
     private String registerAndLogin(Credentials user) throws Exception {
-        mockMvc.perform(post("/api/auth/register")
+        CsrfContext csrf = csrfContext();
+        mockMvc.perform(authPost("/api/auth/register", csrf)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerJson(user)))
                 .andExpect(status().isCreated());
 
-        MvcResult login = mockMvc.perform(post("/api/auth/login")
+        MvcResult login = mockMvc.perform(authPost("/api/auth/login", csrf)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginJson(user)))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(login.getResponse().getContentAsString()).path("token").stringValue();
+    }
+
+    private CsrfContext csrfContext() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/auth/csrf")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String token = objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("csrfToken")
+                .stringValue();
+        String setCookie = result.getResponse().getHeader(HttpHeaders.SET_COOKIE);
+        String[] nameAndValue = setCookie.split(";", 2)[0].split("=", 2);
+        return new CsrfContext(token, new Cookie(nameAndValue[0], nameAndValue[1]));
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    authPost(String path, CsrfContext csrf) {
+        return post(path)
+                .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                .header("X-NEXORA-CSRF", csrf.token())
+                .cookie(csrf.cookie());
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -567,5 +591,8 @@ class UserWishlistApiEndpointTests {
     }
 
     private record Credentials(String email, String username, String password) {
+    }
+
+    private record CsrfContext(String token, Cookie cookie) {
     }
 }

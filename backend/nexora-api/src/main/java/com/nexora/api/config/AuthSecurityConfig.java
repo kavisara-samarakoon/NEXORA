@@ -46,6 +46,7 @@ public class AuthSecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api",
                                 "/api/health",
+                                "/api/auth/csrf",
                                 "/api/deals/**",
                                 "/api/giveaways/**",
                                 "/api/wishlist/**",

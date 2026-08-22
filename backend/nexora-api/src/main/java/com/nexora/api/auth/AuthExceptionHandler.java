@@ -1,5 +1,6 @@
 package com.nexora.api.auth;
 
+import com.nexora.api.auth.csrf.AuthRequestProtectionException;
 import com.nexora.api.users.UserAccountConflictException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 
 @RestControllerAdvice(assignableTypes = AuthController.class)
 public class AuthExceptionHandler {
+
+    @ExceptionHandler(AuthRequestProtectionException.class)
+    public ResponseEntity<AuthErrorResponse> csrfFailed(AuthRequestProtectionException exception) {
+        return error(HttpStatus.FORBIDDEN, "csrf_failed", exception.getMessage());
+    }
 
     @ExceptionHandler(UserAccountConflictException.class)
     public ResponseEntity<AuthErrorResponse> conflict(UserAccountConflictException exception) {
