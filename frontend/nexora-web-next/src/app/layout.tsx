@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
+import AuthSessionBootstrap from "@/components/AuthSessionBootstrap";
 import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/metadata";
 import "./globals.css";
 
@@ -104,7 +105,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${orbitron.variable}`}
     >
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <AuthSessionBootstrap />
+        {children}
+      </body>
     </html>
   );
 }

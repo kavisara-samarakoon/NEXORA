@@ -5,6 +5,7 @@ import type { WishlistItem, WishlistPriority, WishlistStatus, WishlistStore } fr
 import {
   addMyWishlistItem,
   normalizeUserWishlistError,
+  withWishlistAuthRetry,
   type AddWishlistItemPayload,
 } from "@/lib/user-wishlist";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
@@ -13,6 +14,7 @@ type AddWishlistItemFormProps = {
   token: string;
   onAdded: (item: WishlistItem) => void;
   onAuthenticationRequired: () => void;
+  onTokenChanged: (token: string) => void;
 };
 
 function readRequiredText(formData: FormData, name: string): string {
@@ -23,6 +25,7 @@ export default function AddWishlistItemForm({
   token,
   onAdded,
   onAuthenticationRequired,
+  onTokenChanged,
 }: AddWishlistItemFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ tone: "error" | "success"; text: string } | null>(null);
@@ -63,7 +66,12 @@ export default function AddWishlistItemForm({
     setMessage(null);
 
     try {
-      const item = await addMyWishlistItem(token, payload);
+      const result = await withWishlistAuthRetry(
+        token,
+        (activeToken) => addMyWishlistItem(activeToken, payload),
+      );
+      const item = result.value;
+      onTokenChanged(result.token);
       onAdded(item);
       form.reset();
       setMessage({ tone: "success", text: `${item.title} was added to your personal wishlist.` });

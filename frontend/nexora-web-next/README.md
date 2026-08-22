@@ -114,7 +114,20 @@ where useful.
 
 Login and registration call the Spring Boot authentication endpoints through
 `NEXT_PUBLIC_API_BASE_URL`. The top bar resolves the signed-in account through
-`GET /api/auth/me`.
+the backend refresh-session flow and `GET /api/auth/me`.
+
+The frontend keeps the active access token in module memory and continues to
+send it as `Authorization: Bearer` for protected account and wishlist APIs. A
+small global client bootstrap calls `POST /api/auth/refresh` with browser
+credentials after a page load, allowing the backend's HttpOnly refresh cookie
+to restore the access token and safe user summary. Concurrent refresh attempts
+are serialized, and wishlist requests retry at most once after a `401`.
+
+Login and registration include browser credentials so their refresh cookies are
+accepted. Logout calls `POST /api/auth/logout`, then clears frontend session
+state even if the backend is unavailable. New access tokens are not written to
+`localStorage`; the legacy `nexora.auth.access_token` entry is removed during
+bootstrap, login, registration, refresh, and logout.
 
 The Wishlist page supports:
 
@@ -152,11 +165,16 @@ does not run scheduled checks or send notifications itself.
 
 ## Security notes
 
-The current JWT access token is stored in browser `localStorage`. This is a
-temporary MVP design and is more exposed to cross-site scripting than an
-HttpOnly-cookie approach. A production-grade refresh-token lifecycle, secure
-cookie strategy, token revocation, stronger route protection, and related
-hardening remain future work.
+The active JWT access token is memory-first and the longer-lived refresh token
+remains in the backend-issued HttpOnly cookie, where JavaScript cannot read it.
+Protected APIs continue to use Bearer access tokens. This reduces durable token
+exposure but is still a local/development foundation, not a production security
+claim.
+
+The backend currently permits credentialed requests only from the explicit
+localhost frontend origins. CSRF/origin validation, production CORS and cookie
+policy, broader revocation controls, and operational monitoring remain future
+work before production cookie-authenticated use.
 
 `NEXT_PUBLIC_*` configuration is visible to users. SMTP credentials, JWT
 secrets, and database credentials belong only in backend/deployment
@@ -178,7 +196,8 @@ dependency graph; it never applies automatic audit fixes.
 - Automatic refresh scheduling and notification providers are backend-only
   configuration.
 - Real email delivery requires backend SMTP configuration.
-- Browser `localStorage` authentication is not the final production design.
+- The refresh-session flow uses local-development cookie/CORS defaults and does
+  not yet include production CSRF/origin hardening or complete session controls.
 - There is no price-history chart or long-term price-history interface.
 - Sentinel is a demo/status experience; no real Gemini or other AI integration
   exists.

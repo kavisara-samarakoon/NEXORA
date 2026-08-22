@@ -31,6 +31,10 @@ or production-ready service.
 - Backend refresh-token/session foundation with hashed tokens, profile-based
   in-memory/PostgreSQL storage, rotation, logout revocation, and HttpOnly cookie
   issuance while preserving the existing Bearer access-token response.
+- Frontend refresh-session foundation with memory-first access tokens, global
+  cookie-backed session bootstrap, serialized refresh/retry, backend logout,
+  and cleanup of legacy `localStorage` tokens. Protected APIs still use Bearer
+  access tokens.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
 
@@ -46,9 +50,9 @@ or production-ready service.
 - Notification delivery has no persistent status, retries, outbox, or
   asynchronous after-commit processing.
 - The frontend has no notification-provider or preference settings UI.
-- Browser `localStorage` access-token storage is still used by the frontend and
-  is not suitable as a final production session design. The frontend does not
-  yet consume the backend refresh-session foundation.
+- Access tokens are memory-first and legacy `localStorage` tokens are removed,
+  but the browser session lifecycle still depends on local-development cookie
+  and CORS settings rather than a reviewed production configuration.
 - Sentinel is a demo/status experience, not a real Gemini or other AI
   integration.
 - Long-term price history and price-history charts are not implemented.
@@ -63,9 +67,9 @@ or production-ready service.
   Dependency Review Action workflow.
 - No full Maven vulnerability scanner; the current Maven check verifies
   dependency resolution only.
-- The backend refresh-token/HttpOnly-cookie foundation exists, but production
-  CSRF/origin controls, credentialed CORS, frontend session migration, session
-  management, and complete revocation policy are not implemented.
+- The backend and frontend refresh-session foundations exist, but production
+  CSRF/origin controls, production CORS/cookie policy, session management, and
+  complete revocation policy are not implemented.
 - No complete rate limiting, account verification, password recovery, or
   security monitoring controls.
 - No distributed scheduler locking or multi-instance coordination.
@@ -77,8 +81,8 @@ or production-ready service.
    vulnerability scanner without making plan-limited features mandatory.
 2. Add optional backend/frontend development containerization without implying
    production deployment readiness.
-3. Migrate the frontend to memory-only access tokens and the backend refresh
-   flow, then add CSRF/origin hardening before any production use.
+3. Add CSRF/origin hardening and a reviewed production CORS/cookie policy, then
+   extend session management and revocation controls.
 4. Add notification preferences, verified recipients, durable delivery state,
    and retry/outbox processing.
 5. Add price history storage and frontend visualization.
