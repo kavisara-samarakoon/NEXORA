@@ -42,6 +42,8 @@ time is guaranteed while the project remains a development MVP.
 - JWT access-token authentication foundation.
 - Backend refresh-session foundation with HMAC-SHA256 token hashes, rotation,
   logout revocation, profile-based storage, and HttpOnly cookie issuance.
+- Frontend refresh-session consumption with memory-first Bearer access tokens,
+  serialized refresh, backend logout, and legacy `localStorage` token cleanup.
 - Backend request validation and ownership checks for personal wishlist data.
 - Backend tests, frontend lint/build validation, and PostgreSQL `dev`-profile
   integration validation in CI.
@@ -54,14 +56,14 @@ time is guaranteed while the project remains a development MVP.
 
 The proposed implementation roadmap is documented in
 [`docs/security/auth-session-hardening-plan.md`](docs/security/auth-session-hardening-plan.md).
-The backend foundation described in Phase 2 is now implemented; later frontend
-and production-hardening phases remain incomplete.
+The backend foundation and initial frontend migration are implemented; later
+production-hardening phases remain incomplete.
 
-- Browser access tokens still use `localStorage`; the frontend has not migrated
-  to the backend refresh-session foundation.
-- CSRF/origin validation and credentialed production CORS are not implemented
-  for cookie-authenticated workflows. The local cookie defaults are not a
-  production-ready browser session configuration.
+- Active access tokens are held in frontend memory and legacy `localStorage`
+  tokens are removed. Protected APIs still use Bearer access tokens.
+- CSRF/origin validation and a reviewed production CORS/cookie policy are not
+  implemented for cookie-authenticated workflows. The explicit credentialed
+  localhost CORS support and local cookie defaults are not production-ready.
 - Rate limiting, account verification, password recovery, session-wide
   revocation policy, and comprehensive security monitoring are not implemented.
 - There is no CodeQL/full code-scanning workflow, dedicated secret-scanning

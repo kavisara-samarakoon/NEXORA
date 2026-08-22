@@ -28,6 +28,7 @@ function initialsFor(user: AuthUser): string {
 
 export default function AuthStatus() {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -84,12 +85,20 @@ export default function AuthStatus() {
         <button
           className="auth-status__logout"
           type="button"
+          disabled={isLoggingOut}
           onClick={() => {
-            logout();
-            setAuthState({ status: "anonymous" });
+            setIsLoggingOut(true);
+            void logout()
+              .catch(() => {
+                // Local state is cleared even when the backend is unavailable.
+              })
+              .finally(() => {
+                setAuthState({ status: "anonymous" });
+                setIsLoggingOut(false);
+              });
           }}
         >
-          Logout
+          {isLoggingOut ? "Logging out…" : "Logout"}
         </button>
       </div>
     );

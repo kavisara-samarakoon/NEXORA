@@ -159,6 +159,7 @@ async function submitCredentials(
 ): Promise<AuthResponse> {
   const data = await authRequest(path, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -180,6 +181,37 @@ export function login(payload: LoginPayload): Promise<AuthResponse> {
 
 export function register(payload: RegisterPayload): Promise<AuthResponse> {
   return submitCredentials("/api/auth/register", payload);
+}
+
+export async function refreshSession(): Promise<AuthResponse | null> {
+  let data: unknown;
+
+  try {
+    data = await authRequest("/api/auth/refresh", {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (error) {
+    if (normalizeAuthError(error).status === 401) return null;
+    throw error;
+  }
+
+  if (!isAuthResponse(data)) {
+    throw new AuthRequestError({
+      status: null,
+      code: "invalid_response",
+      message: "The authentication service returned an unexpected response.",
+    });
+  }
+
+  return data;
+}
+
+export async function logoutSession(): Promise<void> {
+  await authRequest("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  });
 }
 
 export async function getCurrentUser(token: string): Promise<AuthUser> {

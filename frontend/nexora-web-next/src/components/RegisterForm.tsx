@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { normalizeAuthError, register, type RegisterPayload } from "@/lib/auth";
-import { saveAuthToken } from "@/lib/auth-client";
+import { startAuthSession } from "@/lib/auth-client";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -27,10 +27,7 @@ export default function RegisterForm() {
 
     try {
       const response = await register(payload);
-      if (!saveAuthToken(response.token)) {
-        setErrorMessage("Your browser blocked local authentication storage. Enable local storage and try again.");
-        return;
-      }
+      startAuthSession(response);
 
       form.reset();
       router.replace("/");

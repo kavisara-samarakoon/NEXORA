@@ -13,7 +13,8 @@ import {
   type WishlistStatus,
 } from "@/data/wishlist";
 import type { WishlistResult } from "@/lib/api";
-import { AUTH_STATE_EVENT, clearAuthToken, readAuthToken } from "@/lib/auth-client";
+import { normalizeAuthError } from "@/lib/auth";
+import { AUTH_STATE_EVENT, clearAuthToken, ensureAuthToken } from "@/lib/auth-client";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
 import {
   deleteMyWishlistItem,
@@ -21,11 +22,20 @@ import {
   getMyWishlistAlertEvents,
   normalizeUserWishlistError,
   updateMyWishlistAlert,
+  withWishlistAuthRetry,
   type UpdateWishlistAlertPayload,
 } from "@/lib/user-wishlist";
 
 type WishlistView = "checking" | "public" | "personal" | "offline";
 type ItemMessage = { kind: "success" | "error"; text: string };
+
+function protectedWishlistError(error: unknown) {
+  const wishlistError = normalizeUserWishlistError(error);
+  if (wishlistError.code !== "unknown_error") return wishlistError;
+
+  const authError = normalizeAuthError(error);
+  return authError.code === "unknown_error" ? wishlistError : authError;
+}
 
 const wishlistPriorities: readonly WishlistPriority[] = ["high", "medium", "low"];
 
@@ -441,7 +451,22 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
 
     async function refreshWishlist() {
       const currentVersion = ++requestVersion;
-      const token = readAuthToken();
+      let token: string | null;
+
+      try {
+        token = await ensureAuthToken();
+      } catch (error) {
+        if (!active || currentVersion !== requestVersion) return;
+        setAuthToken(null);
+        setPersonalItems([]);
+        setAlertEvents([]);
+        setAlertEventsLoading(false);
+        setAlertEventsMessage(null);
+        setAlerts(alertsFor(wishlistItems));
+        setServiceMessage(normalizeAuthError(error).message);
+        setView("offline");
+        return;
+      }
 
       if (!token) {
         if (!active || currentVersion !== requestVersion) return;
@@ -468,13 +493,13 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
 
       const eventRequestVersion = ++alertEventsRequestVersion.current;
       const [wishlistResult, alertEventsResult] = await Promise.allSettled([
-        getMyWishlist(token),
-        getMyWishlistAlertEvents(token),
+        withWishlistAuthRetry(token, getMyWishlist),
+        withWishlistAuthRetry(token, getMyWishlistAlertEvents),
       ]);
       if (!active || currentVersion !== requestVersion) return;
 
       if (wishlistResult.status === "rejected") {
-        const details = normalizeUserWishlistError(wishlistResult.reason);
+        const details = protectedWishlistError(wishlistResult.reason);
         setAlertEvents([]);
         setAlertEventsLoading(false);
         setAlertEventsMessage(null);
@@ -494,7 +519,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       }
 
       if (alertEventsResult.status === "rejected") {
-        const details = normalizeUserWishlistError(alertEventsResult.reason);
+        const details = protectedWishlistError(alertEventsResult.reason);
 
         if (details.status === 401) {
           clearAuthToken();
@@ -512,15 +537,19 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           "Alert history could not be loaded. Your wishlist is still available.",
         );
       } else if (eventRequestVersion === alertEventsRequestVersion.current) {
-        setAlertEvents(alertEventsResult.value);
+        setAlertEvents(alertEventsResult.value.value);
         setAlertEventsMessage(null);
       }
 
       if (eventRequestVersion === alertEventsRequestVersion.current) {
         setAlertEventsLoading(false);
       }
-      setPersonalItems(wishlistResult.value);
-      setAlerts(alertsFor(wishlistResult.value));
+      const activeToken = alertEventsResult.status === "fulfilled"
+        ? alertEventsResult.value.token
+        : wishlistResult.value.token;
+      setAuthToken(activeToken);
+      setPersonalItems(wishlistResult.value.value);
+      setAlerts(alertsFor(wishlistResult.value.value));
       setOperationMessage(null);
       setItemMessages({});
       setView("personal");
@@ -586,12 +615,13 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setAlertEventsMessage(null);
 
     try {
-      const events = await getMyWishlistAlertEvents(token);
+      const result = await withWishlistAuthRetry(token, getMyWishlistAlertEvents);
       if (requestVersion !== alertEventsRequestVersion.current) return;
-      setAlertEvents(events);
+      setAuthToken(result.token);
+      setAlertEvents(result.value);
     } catch (error) {
       if (requestVersion !== alertEventsRequestVersion.current) return;
-      const details = normalizeUserWishlistError(error);
+      const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
       } else {
@@ -634,7 +664,12 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     });
 
     try {
-      const updatedItem = await updateMyWishlistAlert(authToken, item.id, payload);
+      const result = await withWishlistAuthRetry(
+        authToken,
+        (activeToken) => updateMyWishlistAlert(activeToken, item.id, payload),
+      );
+      const updatedItem = result.value;
+      setAuthToken(result.token);
       setPersonalItems((current) => current.map((candidate) =>
         candidate.id === updatedItem.id ? updatedItem : candidate));
       setAlerts((current) => ({ ...current, [updatedItem.id]: updatedItem.alertActive }));
@@ -642,9 +677,9 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         ...current,
         [updatedItem.id]: { kind: "success", text: successMessage },
       }));
-      void refreshAlertEvents(authToken);
+      void refreshAlertEvents(result.token);
     } catch (error) {
-      const details = normalizeUserWishlistError(error);
+      const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
       } else {
@@ -669,7 +704,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setOperationMessage(null);
 
     try {
-      await deleteMyWishlistItem(authToken, item.id);
+      const result = await withWishlistAuthRetry(
+        authToken,
+        (activeToken) => deleteMyWishlistItem(activeToken, item.id),
+      );
+      setAuthToken(result.token);
       setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
       setAlerts((current) => {
         const next = { ...current };
@@ -683,7 +722,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       });
       setOperationMessage(`${item.title} was removed from your personal wishlist.`);
     } catch (error) {
-      const details = normalizeUserWishlistError(error);
+      const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
       } else {
@@ -763,6 +802,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           token={authToken}
           onAdded={handleItemAdded}
           onAuthenticationRequired={handleAuthenticationRequired}
+          onTokenChanged={setAuthToken}
         />
       )}
 

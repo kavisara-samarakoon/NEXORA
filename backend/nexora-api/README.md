@@ -198,11 +198,11 @@ maximum age, and `Secure=false` for local HTTP only.
 
 The bundled JWT and refresh-token hash secrets are local-only. Override
 `NEXORA_JWT_SECRET` and `NEXORA_REFRESH_TOKEN_HASH_SECRET` in every shared or
-deployed environment. The primary frontend has not migrated yet: it still
-stores the access token in `localStorage`, sends Bearer headers, and does not use
-the refresh endpoint. CSRF remains disabled for this compatibility foundation;
-credentialed CORS plus CSRF/origin validation must be designed and implemented
-before production cookie-authenticated workflows.
+deployed environment. The primary frontend now uses the refresh endpoint for
+session bootstrap, keeps access tokens in memory, and continues to send Bearer
+headers to protected APIs. CSRF remains disabled for this compatibility
+foundation; production CORS/cookie policy plus CSRF/origin validation must be
+designed and implemented before production cookie-authenticated workflows.
 
 ## Personal wishlist
 
@@ -390,11 +390,15 @@ See `src/main/resources/application.properties` for the complete safe defaults.
 ## Frontend connection and CORS
 
 The Next.js frontend uses `NEXT_PUBLIC_API_BASE_URL`, which defaults to
-`http://localhost:8080`. The backend allows local `/api/**` browser requests
-from:
+`http://localhost:8080`. The backend allows credentialed local `/api/**`
+browser requests from these explicit origins:
 
 - `http://localhost:3000` — Next.js development server
 - `http://localhost:5173` — retained Vite prototype
+
+This credentialed allowlist supports local HttpOnly refresh cookies only. It is
+not a production CORS policy, and CSRF/origin hardening remains required before
+deployment.
 
 ## Build and verification
 
@@ -448,8 +452,9 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 - Docker Compose provides local PostgreSQL only; there is no backend application
   image or production container workflow.
 - The backend refresh-session foundation is not a complete production browser
-  session design. The frontend still uses `localStorage`, CSRF/origin hardening
-  is not implemented, and session-family reuse response is intentionally basic.
+  session design. Access tokens are memory-first, but CSRF/origin hardening and
+  a production CORS/cookie policy are not implemented, and session-family reuse
+  response is intentionally basic.
 - Authentication still has no account verification, password recovery, roles,
   OAuth, complete rate limiting, session list, or revoke-all workflow.
 - The default profile is ephemeral; the `dev` profile requires PostgreSQL,

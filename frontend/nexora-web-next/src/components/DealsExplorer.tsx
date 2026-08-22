@@ -10,15 +10,18 @@ import {
 } from "@/data/deals";
 import type { WishlistItem } from "@/data/wishlist";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
+import { normalizeAuthError } from "@/lib/auth";
 import {
   AUTH_STATE_EVENT,
   clearAuthToken,
+  ensureAuthToken,
   readAuthToken,
 } from "@/lib/auth-client";
 import {
   addMyWishlistItem,
   getMyWishlist,
   normalizeUserWishlistError,
+  withWishlistAuthRetry,
   type AddWishlistItemPayload,
 } from "@/lib/user-wishlist";
 
@@ -28,6 +31,14 @@ type SaveMessage = {
   tone: "auth" | "error" | "success";
   text: string;
 };
+
+function protectedWishlistError(error: unknown) {
+  const wishlistError = normalizeUserWishlistError(error);
+  if (wishlistError.code !== "unknown_error") return wishlistError;
+
+  const authError = normalizeAuthError(error);
+  return authError.code === "unknown_error" ? wishlistError : authError;
+}
 
 const networkActivity = [35, 58, 42, 75, 52, 90, 68, 45, 82, 60, 38, 72];
 const dealNetworkIcons = {
@@ -346,8 +357,21 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const requestVersion = useRef(0);
 
   useEffect(() => {
-    function refreshToken() {
-      const token = readAuthToken();
+    let active = true;
+
+    async function refreshToken() {
+      let token = readAuthToken();
+      try {
+        token = token ?? await ensureAuthToken();
+      } catch (error) {
+        if (!active) return;
+        setAuthToken(null);
+        setAuthChecked(true);
+        setWishlistSyncWarning(normalizeAuthError(error).message);
+        return;
+      }
+
+      if (!active) return;
       if (previousAuthToken.current !== token) {
         previousAuthToken.current = token;
         setSavedDeals(new Set());
@@ -359,13 +383,18 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       setAuthChecked(true);
     }
 
-    refreshToken();
-    window.addEventListener("storage", refreshToken);
-    window.addEventListener(AUTH_STATE_EVENT, refreshToken);
+    function handleAuthChange() {
+      void refreshToken();
+    }
+
+    void refreshToken();
+    window.addEventListener("storage", handleAuthChange);
+    window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
 
     return () => {
-      window.removeEventListener("storage", refreshToken);
-      window.removeEventListener(AUTH_STATE_EVENT, refreshToken);
+      active = false;
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
   }, []);
 
@@ -378,12 +407,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     async function syncSavedWishlist() {
       setWishlistSyncWarning(null);
       try {
-        const items = await getMyWishlist(token);
+        const result = await withWishlistAuthRetry(token, getMyWishlist);
         if (!active) return;
-        setSavedWishlistItems(items);
+        setAuthToken(result.token);
+        setSavedWishlistItems(result.value);
       } catch (error) {
         if (!active) return;
-        const details = normalizeUserWishlistError(error);
+        const details = protectedWishlistError(error);
         if (details.status === 401) {
           clearAuthToken();
           setAuthToken(null);
@@ -498,7 +528,21 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       syncedSavedDealKeys.has(key)
     ) return;
 
-    const token = readAuthToken();
+    let token: string | null;
+    try {
+      token = await ensureAuthToken();
+    } catch (error) {
+      setAuthChecked(true);
+      setSaveMessages((current) => ({
+        ...current,
+        [key]: {
+          tone: "error",
+          text: normalizeAuthError(error).message,
+        },
+      }));
+      return;
+    }
+
     if (!token) {
       setAuthToken(null);
       setAuthChecked(true);
@@ -522,7 +566,12 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     });
 
     try {
-      const savedItem = await addMyWishlistItem(token, wishlistPayloadFor(deal));
+      const result = await withWishlistAuthRetry(
+        token,
+        (activeToken) => addMyWishlistItem(activeToken, wishlistPayloadFor(deal)),
+      );
+      const savedItem = result.value;
+      setAuthToken(result.token);
       setSavedDeals((current) => new Set(current).add(key));
       setSavedWishlistItems((current) =>
         current.some((item) => item.id === savedItem.id)
@@ -537,7 +586,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         },
       }));
     } catch (error) {
-      const details = normalizeUserWishlistError(error);
+      const details = protectedWishlistError(error);
       if (details.status === 409) {
         setSavedDeals((current) => new Set(current).add(key));
         setSaveMessages((current) => ({

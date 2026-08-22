@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — frontend refresh-session foundation
+
+- Added frontend refresh-session foundation with memory-first access tokens,
+  session bootstrap, backend logout, and refresh-cookie consumption.
+
 ## Unreleased — backend refresh-token/session foundation
 
 - Added backend refresh-token/session foundation with hashed server-side refresh
