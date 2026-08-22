@@ -50,6 +50,11 @@ time is guaranteed while the project remains a development MVP.
 
 ## Known limitations
 
+The proposed implementation roadmap is documented in
+[`docs/security/auth-session-hardening-plan.md`](docs/security/auth-session-hardening-plan.md).
+It is a planning artifact only; the controls described there are not yet
+implemented.
+
 - Browser access tokens use `localStorage`; there is no refresh-token or
   HttpOnly-cookie lifecycle yet.
 - Rate limiting, account verification, password recovery, token revocation,
