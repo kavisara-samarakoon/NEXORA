@@ -77,6 +77,14 @@ public class AuthService {
                 .orElseThrow(() -> new AuthenticationFailedException("Authentication is required"));
     }
 
+    public AuthResponse refreshAccessToken(long userId) {
+        return userAccountStore.findById(userId)
+                .filter(UserAccount::isActive)
+                .map(this::authenticated)
+                .orElseThrow(() -> new AuthenticationFailedException(
+                        "Refresh session is invalid or expired"));
+    }
+
     private AuthResponse authenticated(UserAccount user) {
         return new AuthResponse(jwtService.generateToken(user), "Bearer", AuthUserResponse.from(user));
     }

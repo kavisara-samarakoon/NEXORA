@@ -40,6 +40,8 @@ time is guaranteed while the project remains a development MVP.
 
 - BCrypt password hashing through Spring Security.
 - JWT access-token authentication foundation.
+- Backend refresh-session foundation with HMAC-SHA256 token hashes, rotation,
+  logout revocation, profile-based storage, and HttpOnly cookie issuance.
 - Backend request validation and ownership checks for personal wishlist data.
 - Backend tests, frontend lint/build validation, and PostgreSQL `dev`-profile
   integration validation in CI.
@@ -52,13 +54,16 @@ time is guaranteed while the project remains a development MVP.
 
 The proposed implementation roadmap is documented in
 [`docs/security/auth-session-hardening-plan.md`](docs/security/auth-session-hardening-plan.md).
-It is a planning artifact only; the controls described there are not yet
-implemented.
+The backend foundation described in Phase 2 is now implemented; later frontend
+and production-hardening phases remain incomplete.
 
-- Browser access tokens use `localStorage`; there is no refresh-token or
-  HttpOnly-cookie lifecycle yet.
-- Rate limiting, account verification, password recovery, token revocation,
-  and comprehensive security monitoring are not implemented.
+- Browser access tokens still use `localStorage`; the frontend has not migrated
+  to the backend refresh-session foundation.
+- CSRF/origin validation and credentialed production CORS are not implemented
+  for cookie-authenticated workflows. The local cookie defaults are not a
+  production-ready browser session configuration.
+- Rate limiting, account verification, password recovery, session-wide
+  revocation policy, and comprehensive security monitoring are not implemented.
 - There is no CodeQL/full code-scanning workflow, dedicated secret-scanning
   workflow, or full Maven vulnerability scanner in this foundation.
 - There is no production deployment or operations security guide.

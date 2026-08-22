@@ -52,7 +52,11 @@ public class AuthSecurityConfig {
                                 "/api/dashboard/**",
                                 "/api/security/status",
                                 "/api/sentinel/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/logout").permitAll()
                         .requestMatchers("/api/auth/me", "/api/me/**").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
