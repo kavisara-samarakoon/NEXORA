@@ -21,6 +21,9 @@ or production-ready service.
   providers.
 - Authenticated notification preferences with owner-scoped Bearer GET/PATCH
   APIs, PostgreSQL/in-memory storage, safe defaults, and Wishlist UI controls.
+- Authenticated Sentinel AI gateway foundation with a deterministic local
+  provider, contextual preview responses, transient frontend rendering, and no
+  external AI calls or message persistence.
 - Backend tests plus frontend lint and production-build checks.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
@@ -67,8 +70,8 @@ or production-ready service.
   but the browser session lifecycle still depends on local-development cookie
   CSRF, trusted-origin, and CORS settings rather than a reviewed production
   configuration.
-- Sentinel is a demo/status experience, not a real Gemini or other AI
-  integration.
+- Sentinel has an authenticated local AI gateway foundation, but no external AI
+  provider is active and no conversation persistence exists.
 - Price-history visualization is a compact card-level view; full analytics,
   aggregation, retention policy, and advanced charts are still not implemented.
 - The price-history foundation reuses the existing stored/CheapShark provider
@@ -94,6 +97,9 @@ or production-ready service.
   security monitoring controls.
 - No distributed scheduler locking or multi-instance coordination.
 - No durable notification delivery workflow or delivery observability.
+- No Sentinel privacy review, safety evaluation, moderation, rate limiting,
+  abuse monitoring, external-provider key management, cost controls, or AI
+  observability.
 
 ## Recommended next milestones
 
@@ -107,5 +113,5 @@ or production-ready service.
    delivery state, and retry/outbox processing.
 5. Extend the compact price-history view only after defining aggregation,
    retention, and advanced-chart requirements.
-6. Define privacy, safety, and evaluation requirements before any real Sentinel
-   AI integration.
+6. Define privacy, safety, evaluation, moderation, provider-key, cost-control,
+   and observability requirements before the v0.18 real Sentinel AI MVP.

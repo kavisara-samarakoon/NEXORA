@@ -121,6 +121,7 @@ endpoints return active rows only. `GET /api/wishlist` additionally requires
 | `GET` | `/api/security/status` | Demo security summary |
 | `GET` | `/api/sentinel/status` | Sentinel integration status |
 | `GET` | `/api/sentinel/demo` | Sentinel demo messages and capabilities |
+| `POST` | `/api/me/sentinel/insight` | Return authenticated deterministic local Sentinel guidance; no external AI call or persistence |
 | `GET` | `/api/auth/csrf` | Issue a browser-readable CSRF token and matching cookie |
 | `POST` | `/api/auth/register` | Register, return a JWT access token, and issue a refresh cookie |
 | `POST` | `/api/auth/login` | Log in, return a JWT access token, and issue a refresh cookie |
@@ -421,6 +422,25 @@ yet preference-aware, and there is no verified-recipient workflow, persisted
 delivery status, retry, outbox, or asynchronous after-commit delivery. Email
 still requires explicit SMTP configuration and remains a local foundation.
 
+### Sentinel AI gateway foundation
+
+`POST /api/me/sentinel/insight` is an authenticated Bearer endpoint for the
+Sentinel gateway architecture. It accepts a message of 1–500 trimmed characters
+and an optional `general`, `wishlist`, `deals`, or `security` context. An omitted
+context defaults to `general`; unsupported contexts are rejected safely.
+
+Version 0.17 has one provider: a deterministic local implementation that returns
+clearly labeled foundation guidance. It does not call Gemini, OpenAI, Anthropic,
+or any other external AI service; it does not need an API key; and it does not
+store prompts or responses. The endpoint does not mutate wishlist, deal,
+notification, or account state. Public `GET /api/sentinel/status` and
+`GET /api/sentinel/demo` remain available for the page preview.
+
+This is an architecture seam for a later v0.18 provider integration, not an AI
+production-readiness claim. Privacy review, safety evaluation, moderation, rate
+limiting, abuse monitoring, provider-secret management, cost controls, and AI
+observability are not implemented.
+
 ## Configuration reference
 
 | Property or variable | Default | Purpose |
@@ -542,5 +562,7 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   durable delivery state, retry/outbox, and asynchronous after-commit behavior
   are not implemented.
 - Email delivery requires explicit SMTP configuration.
-- Sentinel endpoints expose demo/status data only; no real AI or Gemini service
-  is integrated.
+- Sentinel has an authenticated deterministic local gateway plus public
+  demo/status endpoints. No external AI service is integrated, and there is no
+  prompt persistence, moderation, rate limiting, provider key management, cost
+  control, or AI observability.

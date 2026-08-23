@@ -17,6 +17,7 @@ import java.util.Optional;
 public class DashboardSummaryService {
 
     private static final String DEMO_MODE = "Demo Mode";
+    private static final String SENTINEL_STATUS = "Gateway Foundation";
 
     private final DealCatalogService dealCatalogService;
     private final GiveawayCatalogService giveawayCatalogService;
@@ -52,7 +53,7 @@ public class DashboardSummaryService {
                 bestDiscount.map(Deal::discountValue).orElse(0),
                 bestDiscount.map(Deal::title).orElse("No active deals"),
                 environment.matchesProfiles("dev") ? "PostgreSQL Connected" : DEMO_MODE,
-                DEMO_MODE
+                SENTINEL_STATUS
         );
     }
 }

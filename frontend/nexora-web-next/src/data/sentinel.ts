@@ -118,17 +118,17 @@ export const sentinelCapabilities = [
 ] satisfies readonly SentinelCapability[];
 
 export const sentinelSystemStatus = [
-  { label: "AI Status", value: "Demo Mode", badge: "Demo", tone: "blue", icon: "bot" },
-  { label: "Backend", value: "Not Connected Yet", badge: "Offline", tone: "orange", icon: "network" },
-  { label: "Gemini API", value: "Future Integration", badge: "Future", tone: "purple", icon: "spark" },
-  { label: "Privacy", value: "No real messages saved", badge: "Safe", tone: "green", icon: "lock" },
+  { label: "AI Status", value: "Gateway Foundation", badge: "Local", tone: "blue", icon: "bot" },
+  { label: "Backend", value: "Local API", badge: "Fallback", tone: "orange", icon: "network" },
+  { label: "Provider", value: "Local Preview / External AI Disabled", badge: "External off", tone: "purple", icon: "spark" },
+  { label: "Privacy", value: "No messages saved", badge: "Safe", tone: "green", icon: "lock" },
 ] satisfies readonly SentinelSystemStatusItem[];
 
 export const sentinelStatus = {
-  aiStatus: "Demo Mode",
-  backend: "Not Connected Yet",
-  geminiApi: "Future Integration",
-  privacy: "No real messages saved",
+  aiStatus: "Gateway Foundation",
+  backend: "Local API fallback",
+  geminiApi: "External AI Disabled",
+  privacy: "No messages saved",
 } satisfies SentinelStatus;
 
 export const sentinelDemo = {

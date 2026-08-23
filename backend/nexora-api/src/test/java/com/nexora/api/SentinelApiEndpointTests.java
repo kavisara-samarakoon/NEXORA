@@ -18,13 +18,13 @@ class SentinelApiEndpointTests {
     private MockMvc mockMvc;
 
     @Test
-    void sentinelStatusEndpointReturnsDemoStatus() throws Exception {
+    void sentinelStatusEndpointReturnsGatewayFoundationStatus() throws Exception {
         mockMvc.perform(get("/api/sentinel/status"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.aiStatus").value("Demo Mode"))
+                .andExpect(jsonPath("$.aiStatus").value("Gateway Foundation"))
                 .andExpect(jsonPath("$.backend").value("Connected"))
-                .andExpect(jsonPath("$.geminiApi").value("Future Integration"))
-                .andExpect(jsonPath("$.privacy").value("No real messages saved"));
+                .andExpect(jsonPath("$.geminiApi").value("External AI Disabled"))
+                .andExpect(jsonPath("$.privacy").value("No messages saved"));
     }
 
     @Test
@@ -37,7 +37,9 @@ class SentinelApiEndpointTests {
                 .andExpect(jsonPath("$.suggestions.length()").value(5))
                 .andExpect(jsonPath("$.capabilities.length()").value(4))
                 .andExpect(jsonPath("$.systemStatus.length()").value(4))
-                .andExpect(jsonPath("$.systemStatus[1].value").value("Connected"));
+                .andExpect(jsonPath("$.systemStatus[1].value").value("Connected"))
+                .andExpect(jsonPath("$.systemStatus[2].label").value("Provider"))
+                .andExpect(jsonPath("$.systemStatus[2].value")
+                        .value("Local Preview / External AI Disabled"));
     }
 }
-

@@ -42,7 +42,7 @@ class DashboardSummaryServiceTests {
                 () -> assertEquals(75, summary.bestDiscountValue()),
                 () -> assertEquals("Best deal", summary.bestDiscountTitle()),
                 () -> assertEquals("PostgreSQL Connected", summary.databaseStatus()),
-                () -> assertEquals("Demo Mode", summary.sentinelStatus())
+                () -> assertEquals("Gateway Foundation", summary.sentinelStatus())
         );
     }
 
