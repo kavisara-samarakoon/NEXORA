@@ -11,22 +11,42 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
     private static final String MODE = "local-foundation";
     private static final String PROVIDER = "local";
     private static final String TITLE = "Sentinel Gateway Preview";
-    private static final List<String> SAFETY_NOTES = List.of(
-            "No external AI provider is active.",
+    private static final List<String> LOCAL_SAFETY_NOTES = List.of(
+            "Gemini is disabled; this answer comes from the deterministic local provider.",
+            "Your message is not saved by this gateway.",
+            "This response is general local guidance, not an automated account action.");
+    private static final List<String> FALLBACK_SAFETY_NOTES = List.of(
+            "Gemini was unavailable, so NEXORA used its deterministic local fallback.",
             "Your message is not saved by this gateway.",
             "This response is general local guidance, not an automated account action.");
 
     @Override
-    public SentinelInsightResponse createInsight(SentinelInsightContext context) {
+    public SentinelInsightResponse createInsight(SentinelGatewayInput input) {
+        return createResponse(input.context(), MODE, TITLE, LOCAL_SAFETY_NOTES);
+    }
+
+    public SentinelInsightResponse createFallback(SentinelGatewayInput input) {
+        return createResponse(
+                input.context(),
+                "local-fallback",
+                "Sentinel Local Fallback",
+                FALLBACK_SAFETY_NOTES);
+    }
+
+    private static SentinelInsightResponse createResponse(
+            SentinelInsightContext context,
+            String mode,
+            String title,
+            List<String> safetyNotes) {
         LocalGuidance guidance = guidanceFor(context);
         return new SentinelInsightResponse(
-                MODE,
+                mode,
                 PROVIDER,
                 context.apiValue(),
-                TITLE,
+                title,
                 guidance.answer(),
                 guidance.recommendations(),
-                SAFETY_NOTES,
+                safetyNotes,
                 guidance.nextActions(),
                 Instant.now());
     }
@@ -35,8 +55,8 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
         return switch (context) {
             case WISHLIST -> new LocalGuidance(
                     "This local gateway preview can outline how Sentinel may later summarize "
-                            + "wishlist price history, target prices, and alerts. Version 0.17 "
-                            + "does not perform AI analysis or change your wishlist.",
+                            + "wishlist price history, target prices, and alerts. This local "
+                            + "provider does not perform AI analysis or change your wishlist.",
                     List.of(
                             "Compare the current price with your saved target price.",
                             "Review recent price-history snapshots before buying.",
@@ -46,8 +66,8 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
                             "Wait for a verified price refresh before making a price-based decision."));
             case DEALS -> new LocalGuidance(
                     "This local gateway preview describes how Sentinel may later evaluate deal "
-                            + "strength using NEXORA deal data. No external AI or new deal provider "
-                            + "is active in version 0.17.",
+                            + "strength using NEXORA deal data. It does not call an external AI "
+                            + "or activate a new deal-data provider.",
                     List.of(
                             "Compare the offer with the displayed historical or reference price.",
                             "Check the store and redirect destination before purchasing.",
@@ -74,7 +94,7 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
                             "Verify important purchase and account decisions against current source data."),
                     List.of(
                             "Explore the existing NEXORA feature pages for live local data.",
-                            "Review the planned v0.18 provider requirements before enabling real AI."));
+                            "Review the Gemini provider safeguards before enabling it locally."));
         };
     }
 

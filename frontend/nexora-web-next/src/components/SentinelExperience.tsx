@@ -50,10 +50,10 @@ function SentinelSystemStatus({
 
       <div className="sn-status__about">
         <div className="sn-status__section-label"><span>About Sentinel</span><strong>Preview</strong></div>
-        <div><span>Version</span><strong>0.17 local foundation</strong></div>
-        <div><span>Provider</span><strong>Local deterministic</strong></div>
+        <div><span>Version</span><strong>0.18 provider foundation</strong></div>
+        <div><span>Provider</span><strong>{status.geminiApi === "Gemini Enabled" ? "Gemini opt-in" : "Local default"}</strong></div>
         <div><span>Conversations</span><strong>Not persisted</strong></div>
-        <div><span>External AI</span><strong>Disabled</strong></div>
+        <div><span>External AI</span><strong>{status.geminiApi}</strong></div>
       </div>
 
       <div className="sn-status__network" aria-hidden="true">
@@ -80,13 +80,13 @@ export default function SentinelExperience({
         <div className="sn-hero__content">
           <div className="sn-hero__tag"><span aria-hidden="true" /> AI gateway foundation</div>
           <h1 id="sentinel-title"><span className="page-title-emoji" aria-hidden="true">🤖</span><span>NEXORA Sentinel</span></h1>
-          <p>A safe local gateway preview for game discovery, deal guidance and account safety, with external AI providers disabled.</p>
+          <p>A backend-routed guidance preview with a safe local default and optional Gemini provider foundation.</p>
         </div>
       </section>
 
       <div className="sn-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Local Gateway Preview</strong> — Static sample messages remain public. Signed-in requests use a deterministic backend provider, are not saved, and are never sent to an external AI service.</p>
+        <p><strong>Provider Gateway Preview</strong> — Static samples remain public. Signed-in requests use the local provider by default or backend-only Gemini when explicitly configured. NEXORA does not save conversations, and provider failures return a local fallback.</p>
       </div>
 
       <div className="sn-layout">

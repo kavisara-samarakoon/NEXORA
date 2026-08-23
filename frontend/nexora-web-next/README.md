@@ -193,16 +193,18 @@ not become deliverable without backend SMTP and a future recipient workflow.
 
 The Sentinel page preserves its public static messages and typed status/demo
 fallback. Signed-in users can send one transient request to the owner-scoped
-Bearer endpoint `POST /api/me/sentinel/insight`. The client validates and renders
-the local response as an answer, recommendations, safety notes, and next actions,
-with one bounded access-token refresh retry. Signed-out users receive a sign-in
-hint rather than a simulated AI answer.
+Bearer endpoint `POST /api/me/sentinel/insight`. The client accepts the local
+default, local fallback, and optional Gemini foundation response modes, then
+renders the answer, deterministic recommendations, safety notes, and next
+actions with one bounded access-token refresh retry. Signed-out users receive a
+sign-in hint rather than a simulated AI answer.
 
-The active provider is explicitly labeled `Local Gateway Preview`. Messages and
-responses live only in current React state and disappear on navigation or reload;
-they are not written to browser storage. No API key is present in frontend code,
-no external AI call is made, and no Gemini/OpenAI/LLM provider is active. The
-gateway is preparation for a later v0.18 provider milestone.
+Provider badges distinguish `Local provider`, `Local fallback`, and
+`Gemini provider`. Messages and responses live only in current React state and
+disappear on navigation or reload; they are not written to browser storage.
+Gemini configuration and API keys are backend-only. There are no `NEXT_PUBLIC`
+Gemini variables, no frontend key handling, and no autonomous wishlist, deal,
+account, notification, or security action.
 
 ## Security notes
 
@@ -248,10 +250,11 @@ dependency graph; it never applies automatic audit fixes.
   external data provider, deployment workflow, or production-readiness claim.
 - The notification-preference milestone adds no AI, account linking, delivery
   provider, deployment workflow, or production email claim.
-- Sentinel has an authenticated local deterministic gateway and public static
-  preview, but no external AI provider, conversation persistence, privacy/safety
-  review, moderation, rate limiting, abuse monitoring, cost control, or AI
-  observability exists.
+- Sentinel has an optional backend-only Gemini provider foundation, disabled by
+  default, and a deterministic local fallback. There is no conversation
+  persistence, streaming, production privacy/safety review, moderation, rate
+  limiting, abuse monitoring, managed provider-key workflow, cost control, or AI
+  observability.
 - Public content fallbacks are intentionally demo data, not guaranteed live
   provider results.
 

@@ -35,14 +35,27 @@ function SentinelAvatar() {
 }
 
 function GatewayResponseCard({ response }: { response: SentinelInsightResponse }) {
+  const providerLabel = response.provider === "gemini"
+    ? "Gemini provider"
+    : response.mode === "local-fallback"
+      ? "Local fallback"
+      : "Local provider";
+  const badgeClass = response.provider === "gemini"
+    ? "sn-gateway-response__badge sn-gateway-response__badge--gemini"
+    : response.mode === "local-fallback"
+      ? "sn-gateway-response__badge sn-gateway-response__badge--fallback"
+      : "sn-gateway-response__badge";
+
   return (
     <article className="sn-gateway-response">
       <header>
         <div>
-          <span>AI Gateway Foundation</span>
+          <span>{response.mode === "gemini-provider-foundation"
+            ? "Gemini Provider Foundation"
+            : "AI Gateway Foundation"}</span>
           <h3>{response.title}</h3>
         </div>
-        <span className="sn-gateway-response__badge">Local provider</span>
+        <span className={badgeClass}>{providerLabel}</span>
       </header>
 
       <p className="sn-gateway-response__answer">{response.answer}</p>
@@ -64,7 +77,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
 
       <footer>
         <span>{response.context} context</span>
-        <time dateTime={response.createdAt}>Generated locally for this request</time>
+        <time dateTime={response.createdAt}>Transient response — not saved</time>
       </footer>
     </article>
   );
@@ -165,7 +178,7 @@ export default function SentinelChat({
   }
 
   const statusLabel = authState === "authenticated"
-    ? "Local gateway ready"
+    ? "Backend gateway ready"
     : authState === "checking"
       ? "Checking session"
       : "Static preview";
@@ -181,7 +194,7 @@ export default function SentinelChat({
           </div>
         </div>
         <span className="sn-chat__preview-badge">
-          {authState === "authenticated" ? "Local provider" : "Static preview"}
+          {authState === "authenticated" ? "Provider routed" : "Static preview"}
         </span>
       </div>
 

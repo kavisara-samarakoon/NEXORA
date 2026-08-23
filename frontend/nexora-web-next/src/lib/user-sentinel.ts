@@ -11,8 +11,8 @@ export type SentinelInsightRequest = {
 };
 
 export type SentinelInsightResponse = {
-  mode: "local-foundation";
-  provider: "local";
+  mode: "local-foundation" | "local-fallback" | "gemini-provider-foundation";
+  provider: "local" | "gemini";
   context: SentinelInsightContext;
   title: string;
   answer: string;
@@ -62,9 +62,12 @@ function isSentinelInsightResponse(value: unknown): value is SentinelInsightResp
   if (typeof value !== "object" || value === null) return false;
 
   const response = value as Record<string, unknown>;
+  const hasValidProviderMode =
+    ((response.mode === "local-foundation" || response.mode === "local-fallback") &&
+      response.provider === "local") ||
+    (response.mode === "gemini-provider-foundation" && response.provider === "gemini");
   return (
-    response.mode === "local-foundation" &&
-    response.provider === "local" &&
+    hasValidProviderMode &&
     isSentinelInsightContext(response.context) &&
     typeof response.title === "string" &&
     response.title.trim().length > 0 &&
