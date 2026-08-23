@@ -16,8 +16,8 @@ the `dev` profile · Not documented as production-ready
 
 | Profile | Storage and behavior |
 | --- | --- |
-| Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, alert history, and price history are held in memory. CheapShark external deals remain available on demand. |
-| `dev` | Enables PostgreSQL, Flyway V1–V8, Spring Data JPA, persisted catalog/account/refresh-session/wishlist/alert/price-history data, and the optional wishlist refresh scheduler. |
+| Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, alert history, price history, and notification preferences are held in memory. CheapShark external deals remain available on demand. |
+| `dev` | Enables PostgreSQL, Flyway V1–V9, Spring Data JPA, persisted catalog/account/refresh-session/wishlist/alert/price-history/notification-preference data, and the optional wishlist refresh scheduler. |
 
 The default profile is useful for UI development and tests. Restarting it
 clears accounts and personal wishlist changes. The `dev` profile validates JPA
@@ -133,6 +133,8 @@ endpoints return active rows only. `GET /api/wishlist` additionally requires
 | `DELETE` | `/api/me/wishlist/{id}` | Soft-delete an owned active item |
 | `GET` | `/api/me/wishlist/alert-events` | Return target-reached history newest first |
 | `GET` | `/api/me/wishlist/{id}/price-history` | Return up to 30 recent price snapshots for an owned active item; accepts `limit=1..90` |
+| `GET` | `/api/me/notification-preferences` | Return the authenticated user's notification preferences, creating defaults on first access |
+| `PATCH` | `/api/me/notification-preferences` | Update one or more authenticated-user notification preferences |
 
 Protected endpoints derive ownership from the JWT principal. They do not accept
 a client-supplied user ID.
@@ -402,8 +404,22 @@ Typical Spring mail environment variables include `SPRING_MAIL_HOST`,
 real values through an appropriate local secret or deployment configuration,
 not this repository.
 
-There are no notification preferences, verified-recipient workflow, persisted
-delivery statuses, retries, outbox, or asynchronous after-commit delivery yet.
+### Notification preferences
+
+Authenticated users can read and partially update their account-scoped
+preferences through `GET` and `PATCH /api/me/notification-preferences`. Both are
+Bearer APIs under `/api/me/**`; they do not use the cookie-auth CSRF flow and do
+not accept a client-supplied user ID.
+
+Email is disabled by default. In-app, target-reached, price-drop, and free-game
+intent are enabled by default. The default profile stores preferences in memory
+and loses them on restart. Flyway V9 adds `notification_preferences` for the
+PostgreSQL `dev` profile, with one row per user and cascade cleanup.
+
+This milestone stores notification intent only. The current dispatcher is not
+yet preference-aware, and there is no verified-recipient workflow, persisted
+delivery status, retry, outbox, or asynchronous after-commit delivery. Email
+still requires explicit SMTP configuration and remains a local foundation.
 
 ## Configuration reference
 
@@ -475,7 +491,7 @@ The repository's `Backend CI` GitHub Actions workflow uses Temurin Java 17 for
 pushes to `main` and pull requests targeting `main`. One job runs the normal
 database-free `mvn test` suite. A separate job starts a PostgreSQL 16 service
 and explicitly runs `PostgresDevProfileIntegrationTests` to confirm the `dev`
-profile connects, applies Flyway V1–V8, validates the JPA schema, and exposes
+profile connects, applies Flyway V1–V9, validates the JPA schema, and exposes
 the expected tables and seed data.
 
 The PostgreSQL integration test is enabled only when
@@ -522,8 +538,9 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   guarantees.
 - Price-history storage and the personal history API are a foundation, not a
   complete price analytics, aggregation, or charting system.
-- Notification delivery has no preference model, durable state, retry/outbox,
-  or asynchronous after-commit behavior.
+- Account-scoped notification preferences exist, but dispatcher enforcement,
+  durable delivery state, retry/outbox, and asynchronous after-commit behavior
+  are not implemented.
 - Email delivery requires explicit SMTP configuration.
 - Sentinel endpoints expose demo/status data only; no real AI or Gemini service
   is integrated.

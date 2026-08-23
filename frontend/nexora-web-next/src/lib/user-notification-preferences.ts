@@ -1,0 +1,168 @@
+import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+
+const DEFAULT_API_BASE_URL = "http://localhost:8080";
+const NOTIFICATION_PREFERENCE_TIMEOUT_MS = 8000;
+
+export type NotificationPreferences = {
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  targetReachedEnabled: boolean;
+  priceDropEnabled: boolean;
+  freeGameEnabled: boolean;
+};
+
+export type UpdateNotificationPreferencesPayload = Partial<NotificationPreferences>;
+
+export type NotificationPreferenceError = {
+  status: number | null;
+  code:
+    | "authentication_required"
+    | "validation_failed"
+    | "service_unavailable"
+    | "invalid_response"
+    | "request_failed"
+    | "unknown_error";
+  message: string;
+};
+
+export class NotificationPreferenceRequestError extends Error {
+  readonly details: NotificationPreferenceError;
+
+  constructor(details: NotificationPreferenceError) {
+    super(details.message);
+    this.name = "NotificationPreferenceRequestError";
+    this.details = details;
+  }
+}
+
+function getApiBaseUrl(): string {
+  return (process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+}
+
+function isNotificationPreferences(value: unknown): value is NotificationPreferences {
+  if (typeof value !== "object" || value === null) return false;
+
+  const preferences = value as Record<string, unknown>;
+  return (
+    typeof preferences.emailEnabled === "boolean" &&
+    typeof preferences.inAppEnabled === "boolean" &&
+    typeof preferences.targetReachedEnabled === "boolean" &&
+    typeof preferences.priceDropEnabled === "boolean" &&
+    typeof preferences.freeGameEnabled === "boolean"
+  );
+}
+
+function responseError(status: number): NotificationPreferenceRequestError {
+  if (status === 401) {
+    return new NotificationPreferenceRequestError({
+      status,
+      code: "authentication_required",
+      message: "Please sign in again.",
+    });
+  }
+  if (status === 400) {
+    return new NotificationPreferenceRequestError({
+      status,
+      code: "validation_failed",
+      message: "The notification preferences could not be validated.",
+    });
+  }
+  return new NotificationPreferenceRequestError({
+    status,
+    code: "request_failed",
+    message: "Notification preferences could not be saved. Please try again.",
+  });
+}
+
+async function preferenceRequest(
+  token: string,
+  init: RequestInit,
+): Promise<NotificationPreferences> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${getApiBaseUrl()}/api/me/notification-preferences`, {
+      ...init,
+      cache: "no-store",
+      headers: {
+        ...init.headers,
+        Authorization: `Bearer ${token}`,
+      },
+      signal: AbortSignal.timeout(NOTIFICATION_PREFERENCE_TIMEOUT_MS),
+    });
+  } catch {
+    throw new NotificationPreferenceRequestError({
+      status: null,
+      code: "service_unavailable",
+      message: "Cannot reach the notification preference service.",
+    });
+  }
+
+  if (!response.ok) throw responseError(response.status);
+
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  if (!isNotificationPreferences(data)) {
+    throw new NotificationPreferenceRequestError({
+      status: null,
+      code: "invalid_response",
+      message: "The notification preference service returned an unexpected response.",
+    });
+  }
+  return data;
+}
+
+export function getMyNotificationPreferences(
+  token: string,
+): Promise<NotificationPreferences> {
+  return preferenceRequest(token, { method: "GET" });
+}
+
+export function updateMyNotificationPreferences(
+  token: string,
+  payload: UpdateNotificationPreferencesPayload,
+): Promise<NotificationPreferences> {
+  return preferenceRequest(token, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function normalizeNotificationPreferenceError(
+  error: unknown,
+): NotificationPreferenceError {
+  if (error instanceof NotificationPreferenceRequestError) return error.details;
+
+  return {
+    status: null,
+    code: "unknown_error",
+    message: "Something went wrong with notification preferences. Please try again.",
+  };
+}
+
+export async function withNotificationPreferenceAuthRetry<T>(
+  token: string,
+  request: (activeToken: string) => Promise<T>,
+): Promise<{ value: T; token: string }> {
+  try {
+    return { value: await request(token), token };
+  } catch (error) {
+    if (normalizeNotificationPreferenceError(error).status !== 401) throw error;
+
+    const currentToken = readAuthToken();
+    const refreshedToken = currentToken && currentToken !== token
+      ? currentToken
+      : await ensureAuthToken({ forceRefresh: true });
+    if (!refreshedToken) throw error;
+
+    return {
+      value: await request(refreshedToken),
+      token: refreshedToken,
+    };
+  }
+}

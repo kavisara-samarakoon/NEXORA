@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.16.0 notification preferences foundation
+
+- Added authenticated notification preferences foundation with account-scoped
+  API, PostgreSQL/in-memory storage, and Wishlist UI controls.
+
 ## Unreleased — v0.15.0 price-history visualization polish
 
 - Added price-history visualization polish with compact card summaries, trend
