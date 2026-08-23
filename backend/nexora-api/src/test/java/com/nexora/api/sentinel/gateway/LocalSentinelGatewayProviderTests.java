@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LocalSentinelGatewayProviderTests {
 
@@ -43,6 +44,29 @@ class LocalSentinelGatewayProviderTests {
                 () -> assertEquals(
                         "Gemini was unavailable, so NEXORA used its deterministic local fallback.",
                         response.safetyNotes().get(0))
+        );
+    }
+
+    @Test
+    void usesOnlyHighLevelContextCountsInDeterministicLocalAnswer() {
+        SentinelContextSummary summary = new SentinelContextSummary(
+                SentinelInsightContext.DEALS,
+                0, 0, 0, 12, 0,
+                java.util.List.of(),
+                java.util.List.of(),
+                java.util.List.of(new SentinelDealContext(
+                        "Tracked deal", "Steam", "$10", "$20", 50,
+                        "-50%", "Great Deal", "RPG")),
+                java.util.List.of());
+
+        SentinelInsightResponse response = new LocalSentinelGatewayProvider().createInsight(
+                new SentinelGatewayInput(
+                        7L, "Question", SentinelInsightContext.DEALS, summary));
+
+        assertAll(
+                () -> assertTrue(response.answer().contains("1 bounded deal summaries")),
+                () -> assertTrue(response.answer().contains("12 currently available")),
+                () -> assertFalse(response.answer().contains("Tracked deal"))
         );
     }
 }

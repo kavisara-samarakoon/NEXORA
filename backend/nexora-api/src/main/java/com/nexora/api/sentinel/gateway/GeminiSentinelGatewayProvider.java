@@ -42,14 +42,14 @@ public class GeminiSentinelGatewayProvider implements SentinelGatewayProvider {
         return switch (context) {
             case WISHLIST -> new Guidance(
                     List.of(
-                            "Compare current, target, and lowest observed prices before deciding.",
+                            "Review the tracked item's target price and recent NEXORA snapshots.",
                             "Treat NEXORA price history as supporting data, not a price guarantee."),
                     List.of(
                             "Review the item in Wishlist before changing any alert setting.",
                             "Check the official store listing before purchasing."));
             case DEALS -> new Guidance(
                     List.of(
-                            "Verify the current offer and region on the official store page.",
+                            "Compare the bounded NEXORA deal summary with the official store page.",
                             "Compare the deal with your budget and available price history."),
                     List.of(
                             "Open the current NEXORA deal source for live details.",
@@ -66,7 +66,7 @@ public class GeminiSentinelGatewayProvider implements SentinelGatewayProvider {
                             "Confirm time-sensitive details against current NEXORA and official sources.",
                             "Keep purchase and account decisions under your control."),
                     List.of(
-                            "Choose a more specific context for focused guidance.",
+                            "Use Wishlist, Deals, or Giveaways-oriented general context for more focused guidance.",
                             "Use the relevant NEXORA page for any manual follow-up."));
         };
     }

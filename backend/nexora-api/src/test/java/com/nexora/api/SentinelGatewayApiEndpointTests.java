@@ -53,7 +53,7 @@ class SentinelGatewayApiEndpointTests {
                 .andExpect(jsonPath("$.context").value("deals"))
                 .andExpect(jsonPath("$.title").value("Sentinel Gateway Preview"))
                 .andExpect(jsonPath("$.answer").value(
-                        org.hamcrest.Matchers.containsString("does not call an external AI")))
+                        org.hamcrest.Matchers.containsString("bounded deal summaries")))
                 .andExpect(jsonPath("$.recommendations.length()")
                         .value(org.hamcrest.Matchers.greaterThan(0)))
                 .andExpect(jsonPath("$.safetyNotes[0]")
@@ -73,7 +73,39 @@ class SentinelGatewayApiEndpointTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.context").value("general"))
                 .andExpect(jsonPath("$.answer")
-                        .value(org.hamcrest.Matchers.containsString("deterministic local gateway")));
+                        .value(org.hamcrest.Matchers.containsString("high-level NEXORA counts")));
+    }
+
+    @Test
+    void wishlistInsightUsesOnlyTheAuthenticatedUsersContext() throws Exception {
+        String ownerToken = register();
+        String otherToken = register();
+        mockMvc.perform(post("/api/me/wishlist")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Context-only tracked game",
+                                  "store": "Steam",
+                                  "currentPrice": "$19.99",
+                                  "targetPrice": "$14.99",
+                                  "alertActive": true
+                                }
+                                """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(insightRequest(
+                        ownerToken,
+                        "{\"message\":\"What should I watch?\",\"context\":\"wishlist\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer")
+                        .value(org.hamcrest.Matchers.containsString("1 active wishlist item")));
+        mockMvc.perform(insightRequest(
+                        otherToken,
+                        "{\"message\":\"What should I watch?\",\"context\":\"wishlist\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer")
+                        .value(org.hamcrest.Matchers.containsString("no active personal wishlist items")));
     }
 
     @Test

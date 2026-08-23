@@ -7,9 +7,13 @@ import org.springframework.stereotype.Service;
 public class SentinelGatewayService {
 
     private final SentinelGatewayProvider provider;
+    private final SentinelContextSummaryService contextSummaryService;
 
-    public SentinelGatewayService(SentinelGatewayProvider provider) {
+    public SentinelGatewayService(
+            SentinelGatewayProvider provider,
+            SentinelContextSummaryService contextSummaryService) {
         this.provider = provider;
+        this.contextSummaryService = contextSummaryService;
     }
 
     public SentinelInsightResponse requestInsight(
@@ -20,10 +24,12 @@ public class SentinelGatewayService {
         }
 
         SentinelInsightContext context = SentinelInsightContext.fromRequest(request.context());
+        SentinelContextSummary summary = contextSummaryService.summarize(userId, context);
         SentinelGatewayInput input = new SentinelGatewayInput(
                 userId,
                 request.message(),
-                context);
+                context,
+                summary);
         return provider.createInsight(input);
     }
 }

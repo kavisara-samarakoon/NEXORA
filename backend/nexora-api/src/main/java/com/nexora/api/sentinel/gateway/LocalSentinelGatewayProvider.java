@@ -22,27 +22,27 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
 
     @Override
     public SentinelInsightResponse createInsight(SentinelGatewayInput input) {
-        return createResponse(input.context(), MODE, TITLE, LOCAL_SAFETY_NOTES);
+        return createResponse(input, MODE, TITLE, LOCAL_SAFETY_NOTES);
     }
 
     public SentinelInsightResponse createFallback(SentinelGatewayInput input) {
         return createResponse(
-                input.context(),
+                input,
                 "local-fallback",
                 "Sentinel Local Fallback",
                 FALLBACK_SAFETY_NOTES);
     }
 
     private static SentinelInsightResponse createResponse(
-            SentinelInsightContext context,
+            SentinelGatewayInput input,
             String mode,
             String title,
             List<String> safetyNotes) {
-        LocalGuidance guidance = guidanceFor(context);
+        LocalGuidance guidance = guidanceFor(input);
         return new SentinelInsightResponse(
                 mode,
                 PROVIDER,
-                context.apiValue(),
+                input.context().apiValue(),
                 title,
                 guidance.answer(),
                 guidance.recommendations(),
@@ -51,12 +51,11 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
                 Instant.now());
     }
 
-    private static LocalGuidance guidanceFor(SentinelInsightContext context) {
-        return switch (context) {
+    private static LocalGuidance guidanceFor(SentinelGatewayInput input) {
+        SentinelContextSummary summary = input.summary();
+        return switch (input.context()) {
             case WISHLIST -> new LocalGuidance(
-                    "This local gateway preview can outline how Sentinel may later summarize "
-                            + "wishlist price history, target prices, and alerts. This local "
-                            + "provider does not perform AI analysis or change your wishlist.",
+                    wishlistAnswer(summary),
                     List.of(
                             "Compare the current price with your saved target price.",
                             "Review recent price-history snapshots before buying.",
@@ -65,9 +64,7 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
                             "Open Wishlist to review the item's recorded price history.",
                             "Wait for a verified price refresh before making a price-based decision."));
             case DEALS -> new LocalGuidance(
-                    "This local gateway preview describes how Sentinel may later evaluate deal "
-                            + "strength using NEXORA deal data. It does not call an external AI "
-                            + "or activate a new deal-data provider.",
+                    dealsAnswer(summary),
                     List.of(
                             "Compare the offer with the displayed historical or reference price.",
                             "Check the store and redirect destination before purchasing.",
@@ -86,16 +83,44 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
                             "Review NEXORA's Security page for the implemented local safeguards.",
                             "Contact the affected provider directly if you suspect account takeover."));
             case GENERAL -> new LocalGuidance(
-                    "Sentinel currently uses a deterministic local gateway foundation. It can "
-                            + "route authenticated requests and return safe preview guidance, but "
-                            + "no Gemini, OpenAI, or other external AI provider is active.",
+                    generalAnswer(summary),
                     List.of(
-                            "Choose a Wishlist, Deals, or Security context for focused local guidance.",
+                            "Choose Wishlist, Deals, or Security context for more focused guidance.",
                             "Verify important purchase and account decisions against current source data."),
                     List.of(
                             "Explore the existing NEXORA feature pages for live local data.",
                             "Review the Gemini provider safeguards before enabling it locally."));
         };
+    }
+
+    private static String wishlistAnswer(SentinelContextSummary summary) {
+        if (!summary.hasWishlistItems()) {
+            return "The deterministic local provider found no active personal wishlist items in "
+                    + "the bounded NEXORA summary. It does not perform AI analysis or change your wishlist.";
+        }
+        return "The deterministic local provider received a bounded summary of "
+                + summary.activeWishlistItems() + " active wishlist item(s), including up to "
+                + "five tracked prices, alerts, and limited recent snapshots. It does not perform "
+                + "AI analysis or change your wishlist.";
+    }
+
+    private static String dealsAnswer(SentinelContextSummary summary) {
+        if (!summary.hasDeals()) {
+            return "The deterministic local provider found no current deal summaries. It does not "
+                    + "call an external AI or activate a new deal-data provider.";
+        }
+        return "The deterministic local provider received " + summary.deals().size()
+                + " bounded deal summaries from " + summary.publicDealCount()
+                + " currently available NEXORA deal(s). Verify prices on the official store; this "
+                + "provider does not perform AI analysis or activate another data provider.";
+    }
+
+    private static String generalAnswer(SentinelContextSummary summary) {
+        return "The deterministic local provider received high-level NEXORA counts for "
+                + summary.activeWishlistItems() + " wishlist item(s), "
+                + summary.publicDealCount() + " public deal(s), and "
+                + summary.liveGiveawayCount() + " live giveaway(s), plus only a bounded giveaway "
+                + "summary. No Gemini or other external AI provider is active.";
     }
 
     private record LocalGuidance(
