@@ -8,7 +8,7 @@ or production-ready service.
 - Next.js App Router frontend with responsive feature pages and typed fallbacks.
 - Spring Boot REST API with validation, security, and profile-based services.
 - JWT registration, login, and authenticated account lookup.
-- PostgreSQL, Flyway V1–V8, and JPA-backed data in the `dev` profile.
+- PostgreSQL, Flyway V1–V9, and JPA-backed data in the `dev` profile.
 - Public demo wishlist and isolated authenticated personal wishlists.
 - Wishlist alert configuration, evaluation, transition events, and history UI.
 - CheapShark external deals, redirect links, caching, and local fallback.
@@ -19,11 +19,13 @@ or production-ready service.
   indicator, a CSS-only trend strip, and a five-entry recent snapshot timeline.
 - Disabled-by-default notification dispatcher with log and optional email
   providers.
+- Authenticated notification preferences with owner-scoped Bearer GET/PATCH
+  APIs, PostgreSQL/in-memory storage, safe defaults, and Wishlist UI controls.
 - Backend tests plus frontend lint and production-build checks.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
-  Flyway V1–V8, JPA schema validation, required tables, and seed data.
+  Flyway V1–V9, JPA schema validation, required tables, and seed data.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
   frontend npm dependencies.
 - Lightweight security CI for high-severity production npm auditing and backend
@@ -54,11 +56,13 @@ or production-ready service.
 - CheapShark is a third-party dependency with incomplete game/store coverage.
 - Scheduled price refresh is `dev`-profile, single-process, and disabled by
   default.
-- Email delivery requires explicit SMTP configuration. No credentials are
-  committed, and no verified-recipient or preference workflow exists.
+- Email delivery requires explicit SMTP configuration. Email preference is
+  opt-in, but no credentials are committed and no verified-recipient workflow
+  exists.
 - Notification delivery has no persistent status, retries, outbox, or
   asynchronous after-commit processing.
-- The frontend has no notification-provider or preference settings UI.
+- The Wishlist page has notification preference controls, but no provider,
+  recipient, or delivery-status management UI.
 - Access tokens are memory-first and legacy `localStorage` tokens are removed,
   but the browser session lifecycle still depends on local-development cookie
   CSRF, trusted-origin, and CORS settings rather than a reviewed production
@@ -99,8 +103,8 @@ or production-ready service.
    production deployment readiness.
 3. Review and extend the local CSRF/trusted-origin foundation into a production
    CORS/cookie/proxy policy, then extend session management and revocation.
-4. Add notification preferences, verified recipients, durable delivery state,
-   and retry/outbox processing.
+4. Define verified recipients, dispatcher preference enforcement, durable
+   delivery state, and retry/outbox processing.
 5. Extend the compact price-history view only after defining aggregation,
    retention, and advanced-chart requirements.
 6. Define privacy, safety, and evaluation requirements before any real Sentinel

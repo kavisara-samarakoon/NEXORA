@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddWishlistItemForm from "@/components/AddWishlistItemForm";
 import {
   wishlistFilters,
@@ -18,6 +18,13 @@ import { normalizeAuthError } from "@/lib/auth";
 import { AUTH_STATE_EVENT, clearAuthToken, ensureAuthToken } from "@/lib/auth-client";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
 import {
+  getMyNotificationPreferences,
+  normalizeNotificationPreferenceError,
+  updateMyNotificationPreferences,
+  withNotificationPreferenceAuthRetry,
+  type NotificationPreferences,
+} from "@/lib/user-notification-preferences";
+import {
   deleteMyWishlistItem,
   getMyWishlist,
   getMyWishlistAlertEvents,
@@ -32,9 +39,41 @@ type WishlistView = "checking" | "public" | "personal" | "offline";
 type ItemMessage = { kind: "success" | "error"; text: string };
 type PriceHistoryState = "idle" | "loading" | "loaded" | "unavailable";
 type NumericPriceHistoryPoint = WishlistPriceHistoryPoint & { priceAmount: number };
+type NotificationPreferenceLoadState = "idle" | "loading" | "ready" | "error";
 
 const PRICE_HISTORY_REQUEST_LIMIT = 15;
 const PRICE_HISTORY_TIMELINE_LIMIT = 5;
+const notificationPreferenceFields = [
+  {
+    key: "emailEnabled",
+    label: "Email alerts",
+    description: "Opt in to the future configured email channel.",
+  },
+  {
+    key: "inAppEnabled",
+    label: "In-app / log alerts",
+    description: "Keep local product-side notification signals enabled.",
+  },
+  {
+    key: "targetReachedEnabled",
+    label: "Target reached",
+    description: "Notify when a tracked price reaches its target.",
+  },
+  {
+    key: "priceDropEnabled",
+    label: "Price drops",
+    description: "Keep price-drop notification intent enabled.",
+  },
+  {
+    key: "freeGameEnabled",
+    label: "Free games",
+    description: "Keep free-game notification intent enabled.",
+  },
+] as const satisfies readonly {
+  key: keyof NotificationPreferences;
+  label: string;
+  description: string;
+}[];
 
 function protectedWishlistError(error: unknown) {
   const wishlistError = normalizeUserWishlistError(error);
@@ -551,6 +590,9 @@ function WishlistAlertPanel({
   alertEventsLoading,
   alertEventsMessage,
   alerts,
+  authToken,
+  onAuthenticationRequired,
+  onTokenChanged,
   source,
   view,
   wishlistItems,
@@ -559,6 +601,9 @@ function WishlistAlertPanel({
   alertEventsLoading: boolean;
   alertEventsMessage: string | null;
   alerts: Record<number, boolean>;
+  authToken: string | null;
+  onAuthenticationRequired: () => void;
+  onTokenChanged: (token: string) => void;
   source: WishlistResult["source"];
   view: WishlistView;
   wishlistItems: readonly WishlistItem[];
@@ -617,6 +662,14 @@ function WishlistAlertPanel({
           <div><span className="wl-network__dot wl-network__dot--free" /><span>Free now</span><strong>{freeNow}</strong></div>
         </div>
       </div>
+
+      {view === "personal" && authToken && (
+        <NotificationPreferencesPanel
+          authToken={authToken}
+          onAuthenticationRequired={onAuthenticationRequired}
+          onTokenChanged={onTokenChanged}
+        />
+      )}
 
       <section className="wl-alert-history" aria-labelledby="wishlist-alert-history-title">
         <div className="wl-alert-history__header">
@@ -681,6 +734,173 @@ function WishlistAlertPanel({
         </div>
       </div>
     </aside>
+  );
+}
+
+function NotificationPreferencesPanel({
+  authToken,
+  onAuthenticationRequired,
+  onTokenChanged,
+}: {
+  authToken: string;
+  onAuthenticationRequired: () => void;
+  onTokenChanged: (token: string) => void;
+}) {
+  const [loadState, setLoadState] = useState<NotificationPreferenceLoadState>("idle");
+  const [savedPreferences, setSavedPreferences] =
+    useState<NotificationPreferences | null>(null);
+  const [draftPreferences, setDraftPreferences] =
+    useState<NotificationPreferences | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<ItemMessage | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPreferences() {
+      setLoadState("loading");
+      setMessage(null);
+
+      try {
+        const result = await withNotificationPreferenceAuthRetry(
+          authToken,
+          getMyNotificationPreferences,
+        );
+        if (!active) return;
+        onTokenChanged(result.token);
+        setSavedPreferences(result.value);
+        setDraftPreferences(result.value);
+        setLoadState("ready");
+      } catch (error) {
+        if (!active) return;
+        const details = normalizeNotificationPreferenceError(error);
+        if (details.status === 401) {
+          onAuthenticationRequired();
+          return;
+        }
+        setLoadState("error");
+        setMessage({ kind: "error", text: details.message });
+      }
+    }
+
+    void loadPreferences();
+    return () => {
+      active = false;
+    };
+  }, [authToken, onAuthenticationRequired, onTokenChanged, retryKey]);
+
+  const hasChanges = Boolean(draftPreferences && savedPreferences
+    && notificationPreferenceFields.some(
+      (field) => draftPreferences[field.key] !== savedPreferences[field.key],
+    ));
+
+  async function savePreferences(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!draftPreferences || !hasChanges || isSaving) return;
+
+    setIsSaving(true);
+    setMessage(null);
+    try {
+      const result = await withNotificationPreferenceAuthRetry(
+        authToken,
+        (activeToken) => updateMyNotificationPreferences(
+          activeToken,
+          draftPreferences,
+        ),
+      );
+      onTokenChanged(result.token);
+      setSavedPreferences(result.value);
+      setDraftPreferences(result.value);
+      setMessage({ kind: "success", text: "Preferences saved to your account." });
+    } catch (error) {
+      const details = normalizeNotificationPreferenceError(error);
+      if (details.status === 401) {
+        onAuthenticationRequired();
+        return;
+      }
+      setMessage({ kind: "error", text: details.message });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <section className="wl-notification-preferences" aria-labelledby="wishlist-notification-preferences-title">
+      <div className="wl-notification-preferences__header">
+        <div>
+          <span>Account controls</span>
+          <strong id="wishlist-notification-preferences-title">Notification preferences</strong>
+        </div>
+        <span className="wl-notification-preferences__badge">Bearer API</span>
+      </div>
+
+      {loadState === "loading" && (
+        <div className="wl-notification-preferences__state" role="status">
+          <span aria-hidden="true" />
+          Loading preferences…
+        </div>
+      )}
+
+      {loadState === "error" && (
+        <div className="wl-notification-preferences__error" role="status">
+          <p>{message?.text || "Notification preferences are unavailable."}</p>
+          <button type="button" onClick={() => setRetryKey((current) => current + 1)}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {loadState === "ready" && draftPreferences && (
+        <form onSubmit={savePreferences}>
+          <div className="wl-notification-preferences__rows">
+            {notificationPreferenceFields.map((field) => (
+              <label key={field.key}>
+                <span className="wl-notification-preferences__copy">
+                  <strong>{field.label}</strong>
+                  <small>{field.description}</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={draftPreferences[field.key]}
+                  disabled={isSaving}
+                  onChange={(event) => {
+                    setDraftPreferences((current) => current
+                      ? { ...current, [field.key]: event.target.checked }
+                      : current);
+                    setMessage(null);
+                  }}
+                />
+                <span className="wl-notification-preferences__toggle" aria-hidden="true">
+                  <span />
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <p className="wl-notification-preferences__notice">
+            Email delivery remains unavailable until SMTP and a recipient workflow are
+            configured. Durable delivery and retries are planned for later.
+          </p>
+
+          <div className="wl-notification-preferences__actions">
+            <span
+              className={message?.kind === "error"
+                ? "wl-notification-preferences__message wl-notification-preferences__message--error"
+                : message?.kind === "success"
+                  ? "wl-notification-preferences__message wl-notification-preferences__message--success"
+                  : "wl-notification-preferences__message"}
+              role={message?.kind === "error" ? "alert" : "status"}
+            >
+              {isSaving ? "Saving preferences…" : message?.text || "Preferences sync with your account."}
+            </span>
+            <button type="submit" disabled={!hasChanges || isSaving}>
+              {isSaving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 
@@ -851,7 +1071,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setSearchQuery("");
   }
 
-  function handleAuthenticationRequired() {
+  const handleAuthenticationRequired = useCallback(() => {
     alertEventsRequestVersion.current += 1;
     clearAuthToken();
     setAuthToken(null);
@@ -864,7 +1084,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setItemMessages({});
     setServiceMessage("Please sign in again.");
     setView("public");
-  }
+  }, [wishlistItems]);
 
   async function refreshAlertEvents(token: string) {
     const requestVersion = ++alertEventsRequestVersion.current;
@@ -1143,6 +1363,9 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           alertEventsLoading={alertEventsLoading}
           alertEventsMessage={alertEventsMessage}
           alerts={alerts}
+          authToken={authToken}
+          onAuthenticationRequired={handleAuthenticationRequired}
+          onTokenChanged={setAuthToken}
           source={source}
           view={view}
           wishlistItems={displayedItems}

@@ -4882,6 +4882,7 @@ input:focus-visible {
 .wl-network__badge--purple { color: #bd7aff; background: rgba(168, 85, 247, 0.09); }
 
 .wl-network__summary,
+.wl-notification-preferences,
 .wl-alert-history,
 .wl-network__stores {
   padding-top: 17px;
@@ -4933,6 +4934,236 @@ input:focus-visible {
 .wl-network__dot--reached { background: var(--nx-success); box-shadow: 0 0 9px rgba(88, 245, 165, 0.72); }
 .wl-network__dot--drop { background: var(--nx-orange); box-shadow: 0 0 7px rgba(255, 122, 0, 0.55); }
 .wl-network__dot--free { background: var(--nx-blue); box-shadow: 0 0 7px rgba(0, 212, 255, 0.55); }
+
+.wl-notification-preferences {
+  display: grid;
+  gap: 12px;
+}
+
+.wl-notification-preferences__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wl-notification-preferences__header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.wl-notification-preferences__header > div > span {
+  color: var(--nx-blue);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.wl-notification-preferences__header > div > strong {
+  font-size: 12px;
+}
+
+.wl-notification-preferences__badge {
+  padding: 4px 7px;
+  border-radius: 6px;
+  color: var(--nx-blue);
+  background: rgba(0, 212, 255, 0.07);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.wl-notification-preferences form,
+.wl-notification-preferences__rows {
+  display: grid;
+  gap: 8px;
+}
+
+.wl-notification-preferences__rows > label {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.018);
+  cursor: pointer;
+}
+
+.wl-notification-preferences__copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.wl-notification-preferences__copy strong {
+  color: var(--nx-muted);
+  font-size: 12px;
+}
+
+.wl-notification-preferences__copy small {
+  color: var(--nx-subtle);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.wl-notification-preferences__rows input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.wl-notification-preferences__toggle {
+  position: relative;
+  width: 30px;
+  height: 17px;
+  flex: 0 0 30px;
+  border: 1px solid rgba(146, 153, 169, 0.18);
+  border-radius: 999px;
+  background: rgba(146, 153, 169, 0.09);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.wl-notification-preferences__toggle > span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--nx-muted);
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.wl-notification-preferences__rows input:checked + .wl-notification-preferences__toggle {
+  border-color: rgba(88, 245, 165, 0.24);
+  background: rgba(88, 245, 165, 0.09);
+}
+
+.wl-notification-preferences__rows input:checked + .wl-notification-preferences__toggle > span {
+  background: var(--nx-success);
+  box-shadow: 0 0 7px rgba(88, 245, 165, 0.48);
+  transform: translateX(13px);
+}
+
+.wl-notification-preferences__rows input:focus-visible + .wl-notification-preferences__toggle {
+  outline: 2px solid rgba(0, 212, 255, 0.32);
+  outline-offset: 2px;
+}
+
+.wl-notification-preferences__rows input:disabled ~ * {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.wl-notification-preferences__notice {
+  padding: 9px;
+  border: 1px solid rgba(255, 122, 0, 0.12);
+  border-radius: 8px;
+  color: var(--nx-subtle);
+  background: rgba(255, 122, 0, 0.035);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.wl-notification-preferences__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wl-notification-preferences__actions > button,
+.wl-notification-preferences__error button {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  border-radius: 8px;
+  color: var(--nx-blue);
+  background: rgba(0, 212, 255, 0.06);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.wl-notification-preferences__actions > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.wl-notification-preferences__message {
+  color: var(--nx-subtle);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.wl-notification-preferences__message--success { color: var(--nx-success); }
+.wl-notification-preferences__message--error { color: #ff8d8d; }
+
+.wl-notification-preferences__state,
+.wl-notification-preferences__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--nx-muted);
+  background: rgba(255, 255, 255, 0.015);
+  font-size: 11px;
+}
+
+.wl-notification-preferences__state > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nx-blue);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.48);
+  animation: wl-notification-preference-pulse 800ms ease-in-out infinite alternate;
+}
+
+.wl-notification-preferences__error {
+  justify-content: space-between;
+  border-color: rgba(255, 122, 0, 0.16);
+  color: var(--nx-orange);
+  background: rgba(255, 122, 0, 0.035);
+}
+
+.wl-notification-preferences__error p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.wl-notification-preferences__error button {
+  border-color: rgba(255, 122, 0, 0.18);
+  color: var(--nx-orange);
+  background: rgba(255, 122, 0, 0.055);
+}
+
+@keyframes wl-notification-preference-pulse {
+  from { opacity: 0.35; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 430px) {
+  .wl-notification-preferences__header,
+  .wl-notification-preferences__actions,
+  .wl-notification-preferences__error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wl-notification-preferences__badge { align-self: flex-start; }
+
+  .wl-notification-preferences__actions > button,
+  .wl-notification-preferences__error button { width: 100%; }
+}
 
 .wl-alert-history__header {
   display: flex;
