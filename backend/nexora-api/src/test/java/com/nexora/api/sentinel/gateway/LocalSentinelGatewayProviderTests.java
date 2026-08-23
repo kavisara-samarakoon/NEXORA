@@ -13,7 +13,8 @@ class LocalSentinelGatewayProviderTests {
         LocalSentinelGatewayProvider provider = new LocalSentinelGatewayProvider();
 
         for (SentinelInsightContext context : SentinelInsightContext.values()) {
-            SentinelInsightResponse response = provider.createInsight(context);
+            SentinelInsightResponse response = provider.createInsight(
+                    new SentinelGatewayInput(7L, "  Local guidance please  ", context));
 
             assertAll(
                     () -> assertEquals("local-foundation", response.mode()),
@@ -25,5 +26,23 @@ class LocalSentinelGatewayProviderTests {
                     () -> assertFalse(response.nextActions().isEmpty())
             );
         }
+    }
+
+    @Test
+    void marksFallbackResponsesWithoutExposingProviderErrors() {
+        SentinelInsightResponse response = new LocalSentinelGatewayProvider()
+                .createFallback(new SentinelGatewayInput(
+                        7L,
+                        "Question",
+                        SentinelInsightContext.GENERAL));
+
+        assertAll(
+                () -> assertEquals("local-fallback", response.mode()),
+                () -> assertEquals("local", response.provider()),
+                () -> assertEquals("Sentinel Local Fallback", response.title()),
+                () -> assertEquals(
+                        "Gemini was unavailable, so NEXORA used its deterministic local fallback.",
+                        response.safetyNotes().get(0))
+        );
     }
 }

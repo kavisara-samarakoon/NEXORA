@@ -53,11 +53,11 @@ class SentinelGatewayApiEndpointTests {
                 .andExpect(jsonPath("$.context").value("deals"))
                 .andExpect(jsonPath("$.title").value("Sentinel Gateway Preview"))
                 .andExpect(jsonPath("$.answer").value(
-                        org.hamcrest.Matchers.containsString("No external AI")))
+                        org.hamcrest.Matchers.containsString("does not call an external AI")))
                 .andExpect(jsonPath("$.recommendations.length()")
                         .value(org.hamcrest.Matchers.greaterThan(0)))
                 .andExpect(jsonPath("$.safetyNotes[0]")
-                        .value("No external AI provider is active."))
+                        .value("Gemini is disabled; this answer comes from the deterministic local provider."))
                 .andExpect(jsonPath("$.nextActions.length()")
                         .value(org.hamcrest.Matchers.greaterThan(0)))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty());

@@ -23,7 +23,7 @@ class SentinelApiEndpointTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.aiStatus").value("Gateway Foundation"))
                 .andExpect(jsonPath("$.backend").value("Connected"))
-                .andExpect(jsonPath("$.geminiApi").value("External AI Disabled"))
+                .andExpect(jsonPath("$.geminiApi").value("Gemini Disabled"))
                 .andExpect(jsonPath("$.privacy").value("No messages saved"));
     }
 
@@ -40,6 +40,6 @@ class SentinelApiEndpointTests {
                 .andExpect(jsonPath("$.systemStatus[1].value").value("Connected"))
                 .andExpect(jsonPath("$.systemStatus[2].label").value("Provider"))
                 .andExpect(jsonPath("$.systemStatus[2].value")
-                        .value("Local Preview / External AI Disabled"));
+                        .value("Local Preview / Gemini Disabled"));
     }
 }

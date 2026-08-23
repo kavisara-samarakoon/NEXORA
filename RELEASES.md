@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.18.0 Gemini provider foundation
+
+- Added optional backend-only Gemini provider behind Sentinel gateway with local
+  fallback and no message persistence.
+
 ## Unreleased — v0.17.0 AI gateway foundation
 
 - Added authenticated Sentinel AI gateway foundation with a local deterministic

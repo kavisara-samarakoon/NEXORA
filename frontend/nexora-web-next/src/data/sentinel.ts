@@ -120,14 +120,14 @@ export const sentinelCapabilities = [
 export const sentinelSystemStatus = [
   { label: "AI Status", value: "Gateway Foundation", badge: "Local", tone: "blue", icon: "bot" },
   { label: "Backend", value: "Local API", badge: "Fallback", tone: "orange", icon: "network" },
-  { label: "Provider", value: "Local Preview / External AI Disabled", badge: "External off", tone: "purple", icon: "spark" },
+  { label: "Provider", value: "Local Preview / Gemini Disabled", badge: "External off", tone: "purple", icon: "spark" },
   { label: "Privacy", value: "No messages saved", badge: "Safe", tone: "green", icon: "lock" },
 ] satisfies readonly SentinelSystemStatusItem[];
 
 export const sentinelStatus = {
   aiStatus: "Gateway Foundation",
   backend: "Local API fallback",
-  geminiApi: "External AI Disabled",
+  geminiApi: "Gemini Disabled",
   privacy: "No messages saved",
 } satisfies SentinelStatus;
 

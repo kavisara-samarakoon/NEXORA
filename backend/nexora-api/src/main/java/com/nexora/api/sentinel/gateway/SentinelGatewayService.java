@@ -20,6 +20,10 @@ public class SentinelGatewayService {
         }
 
         SentinelInsightContext context = SentinelInsightContext.fromRequest(request.context());
-        return provider.createInsight(context);
+        SentinelGatewayInput input = new SentinelGatewayInput(
+                userId,
+                request.message(),
+                context);
+        return provider.createInsight(input);
     }
 }

@@ -1,5 +1,6 @@
 package com.nexora.api.sentinel;
 
+import com.nexora.api.sentinel.gateway.SentinelAiProperties;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -7,12 +8,11 @@ import java.util.List;
 @Service
 public class SentinelService {
 
-    private static final SentinelStatusResponse STATUS = new SentinelStatusResponse(
-            "Gateway Foundation",
-            "Connected",
-            "External AI Disabled",
-            "No messages saved"
-    );
+    private final SentinelAiProperties aiProperties;
+
+    public SentinelService(SentinelAiProperties aiProperties) {
+        this.aiProperties = aiProperties;
+    }
 
     private static final List<SentinelMessage> MESSAGES = List.of(
             new SentinelMessage(1, "user", List.of(
@@ -60,27 +60,46 @@ public class SentinelService {
                     "Learn about phishing, safe store redirects, and gaming-account best practices.", "purple")
     );
 
-    private static final List<SentinelStatusItem> SYSTEM_STATUS = List.of(
-            new SentinelStatusItem("AI Status", "Gateway Foundation", "Local", "blue", "bot"),
-            new SentinelStatusItem("Backend", "Connected", "Online", "green", "network"),
-            new SentinelStatusItem("Provider", "Local Preview / External AI Disabled",
-                    "External off", "purple", "spark"),
-            new SentinelStatusItem("Privacy", "No messages saved", "Safe", "green", "lock")
-    );
-
-    private static final SentinelDemoResponse DEMO = new SentinelDemoResponse(
-            MESSAGES,
-            SUGGESTIONS,
-            CAPABILITIES,
-            SYSTEM_STATUS
-    );
-
     public SentinelStatusResponse getStatus() {
-        return STATUS;
+        if (aiProperties.isGeminiConfigured()) {
+            return new SentinelStatusResponse(
+                    "Gemini Provider Foundation",
+                    "Connected",
+                    "Gemini Enabled",
+                    "No messages saved");
+        }
+        return new SentinelStatusResponse(
+                "Gateway Foundation",
+                "Connected",
+                "Gemini Disabled",
+                "No messages saved");
     }
 
     public SentinelDemoResponse getDemo() {
-        return DEMO;
+        boolean geminiConfigured = aiProperties.isGeminiConfigured();
+        List<SentinelStatusItem> systemStatus = List.of(
+                new SentinelStatusItem(
+                        "AI Status",
+                        geminiConfigured ? "Gemini Provider Foundation" : "Gateway Foundation",
+                        geminiConfigured ? "Gemini" : "Local",
+                        "blue",
+                        "bot"),
+                new SentinelStatusItem("Backend", "Connected", "Online", "green", "network"),
+                new SentinelStatusItem(
+                        "Provider",
+                        geminiConfigured
+                                ? "Gemini Enabled"
+                                : "Local Preview / Gemini Disabled",
+                        geminiConfigured ? "Enabled" : "External off",
+                        "purple",
+                        "spark"),
+                new SentinelStatusItem(
+                        "Privacy", "No messages saved", "Safe", "green", "lock"));
+        return new SentinelDemoResponse(
+                MESSAGES,
+                SUGGESTIONS,
+                CAPABILITIES,
+                systemStatus);
     }
 
     private static SentinelMessage.Segment segment(String text) {

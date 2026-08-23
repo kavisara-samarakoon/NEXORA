@@ -6545,6 +6545,17 @@ input:focus-visible {
   text-transform: uppercase;
 }
 
+.sn-gateway-response__badge--gemini {
+  color: #bd9cff;
+  background: rgba(168, 85, 247, 0.1);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.08);
+}
+
+.sn-gateway-response__badge--fallback {
+  color: var(--nx-orange);
+  background: rgba(255, 122, 0, 0.09);
+}
+
 .sn-gateway-response__answer {
   color: var(--nx-muted);
   font-size: 12px;

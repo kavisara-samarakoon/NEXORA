@@ -121,7 +121,7 @@ endpoints return active rows only. `GET /api/wishlist` additionally requires
 | `GET` | `/api/security/status` | Demo security summary |
 | `GET` | `/api/sentinel/status` | Sentinel integration status |
 | `GET` | `/api/sentinel/demo` | Sentinel demo messages and capabilities |
-| `POST` | `/api/me/sentinel/insight` | Return authenticated deterministic local Sentinel guidance; no external AI call or persistence |
+| `POST` | `/api/me/sentinel/insight` | Return authenticated Sentinel guidance through the local default or optional backend Gemini provider; no persistence |
 | `GET` | `/api/auth/csrf` | Issue a browser-readable CSRF token and matching cookie |
 | `POST` | `/api/auth/register` | Register, return a JWT access token, and issue a refresh cookie |
 | `POST` | `/api/auth/login` | Log in, return a JWT access token, and issue a refresh cookie |
@@ -429,17 +429,26 @@ Sentinel gateway architecture. It accepts a message of 1–500 trimmed character
 and an optional `general`, `wishlist`, `deals`, or `security` context. An omitted
 context defaults to `general`; unsupported contexts are rejected safely.
 
-Version 0.17 has one provider: a deterministic local implementation that returns
-clearly labeled foundation guidance. It does not call Gemini, OpenAI, Anthropic,
-or any other external AI service; it does not need an API key; and it does not
-store prompts or responses. The endpoint does not mutate wishlist, deal,
-notification, or account state. Public `GET /api/sentinel/status` and
-`GET /api/sentinel/demo` remain available for the page preview.
+Version 0.18 keeps the deterministic local implementation as the default and
+adds an optional backend-only Gemini REST provider. Gemini activates only when
+`NEXORA_SENTINEL_AI_PROVIDER=gemini` and `GOOGLE_API_KEY` or `GEMINI_API_KEY` is
+available; `GOOGLE_API_KEY` takes precedence. A missing key, timeout, network
+failure, non-success response, malformed body, or empty answer returns a clearly
+labeled local fallback rather than a provider error.
 
-This is an architecture seam for a later v0.18 provider integration, not an AI
-production-readiness claim. Privacy review, safety evaluation, moderation, rate
-limiting, abuse monitoring, provider-secret management, cost controls, and AI
-observability are not implemented.
+The API key is sent only through Gemini's backend `x-goog-api-key` request
+header. It is never placed in a URL or response and must not be committed. The
+Gemini request sets provider storage off, uses a strict system instruction, and
+passes only the validated, trimmed message and selected context. Gemini supplies
+only the bounded answer text; recommendations, safety notes, and next actions
+remain deterministic backend content.
+
+Neither provider stores prompts or responses in NEXORA. The endpoint cannot
+mutate wishlist, deal, notification, account, or security state. Public
+`GET /api/sentinel/status` and `GET /api/sentinel/demo` remain available and
+report whether Gemini is configured. This remains a local foundation without
+privacy review, safety evaluation, moderation, rate limiting, abuse monitoring,
+managed provider secrets, cost controls, streaming, or AI observability.
 
 ## Configuration reference
 
@@ -475,6 +484,13 @@ observability are not implemented.
 | `nexora.wishlist.price-refresh.provider` | `stored` | Select `stored` or `cheapshark` snapshots |
 | `nexora.notifications.enabled` | `false` | Enable notification dispatch |
 | `nexora.notifications.provider` | `log` | Select `log` or `email` sender |
+| `NEXORA_SENTINEL_AI_PROVIDER` | `local` | Select `local` or opt-in `gemini` Sentinel routing |
+| `GOOGLE_API_KEY` / `GEMINI_API_KEY` | Empty | Backend-only Gemini key; `GOOGLE_API_KEY` takes precedence |
+| `NEXORA_GEMINI_MODEL` | `gemini-3.6-flash` | Gemini model name |
+| `NEXORA_GEMINI_BASE_URL` | Google Gemini `v1beta` API | Local/test override for the Gemini REST base URL |
+| `NEXORA_GEMINI_TIMEOUT_MS` | `8000` | Gemini connect/request timeout |
+| `NEXORA_GEMINI_MAX_OUTPUT_TOKENS` | `512` | Bounded output-token request limit |
+| `NEXORA_GEMINI_TEMPERATURE` | `0.2` | Bounded generation temperature |
 
 See `src/main/resources/application.properties` for the complete safe defaults.
 
@@ -562,7 +578,8 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   durable delivery state, retry/outbox, and asynchronous after-commit behavior
   are not implemented.
 - Email delivery requires explicit SMTP configuration.
-- Sentinel has an authenticated deterministic local gateway plus public
-  demo/status endpoints. No external AI service is integrated, and there is no
-  prompt persistence, moderation, rate limiting, provider key management, cost
-  control, or AI observability.
+- Sentinel has an optional backend-only Gemini provider foundation, disabled by
+  default, with deterministic local default/fallback behavior. There is no
+  conversation persistence, streaming, privacy/safety review, moderation, rate
+  limiting, abuse monitoring, provider-key management beyond local environment
+  variables, cost control, or AI observability.
