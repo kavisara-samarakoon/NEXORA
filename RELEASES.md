@@ -3,6 +3,11 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.17.0 AI gateway foundation
+
+- Added authenticated Sentinel AI gateway foundation with a local deterministic
+  provider and no external AI calls.
+
 ## Unreleased — v0.16.0 notification preferences foundation
 
 - Added authenticated notification preferences foundation with account-scoped

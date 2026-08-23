@@ -6432,6 +6432,25 @@ input:focus-visible {
   border-top: 1px solid rgba(255, 255, 255, 0.045);
 }
 
+.sn-chat__composer select {
+  height: 42px;
+  padding: 0 30px 0 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: 11px;
+  outline: 0;
+  color: var(--nx-muted);
+  background: rgba(255, 255, 255, 0.026);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.sn-chat__composer select:focus-visible {
+  border-color: rgba(0, 212, 255, 0.38);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.065);
+}
+
+.sn-chat__composer select:disabled { cursor: wait; opacity: 0.58; }
+
 .sn-chat__composer input {
   min-width: 0;
   height: 42px;
@@ -6478,6 +6497,146 @@ input:focus-visible {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.6;
+}
+
+.sn-gateway-response {
+  display: grid;
+  width: calc(100% - 42px);
+  align-self: flex-start;
+  gap: 14px;
+  margin-left: 42px;
+  padding: 18px;
+  border: 1px solid rgba(0, 212, 255, 0.16);
+  border-radius: 14px 14px 14px 4px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 212, 255, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(20, 26, 34, 0.94), rgba(12, 15, 21, 0.92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.sn-gateway-response > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sn-gateway-response > header > div { display: grid; gap: 4px; }
+
+.sn-gateway-response > header > div > span {
+  color: var(--nx-blue);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.sn-gateway-response h3 { font-size: 14px; }
+
+.sn-gateway-response__badge {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 99px;
+  color: var(--nx-success);
+  background: rgba(88, 245, 165, 0.08);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sn-gateway-response__answer {
+  color: var(--nx-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.sn-gateway-response__sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.sn-gateway-response__sections > section {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.sn-gateway-response__sections h4 {
+  margin-bottom: 8px;
+  color: var(--nx-blue);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sn-gateway-response__sections ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 15px;
+  color: var(--nx-subtle);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.sn-gateway-response__safety {
+  border-color: rgba(255, 122, 0, 0.11) !important;
+  background: rgba(255, 122, 0, 0.025) !important;
+}
+
+.sn-gateway-response__safety h4 { color: var(--nx-orange); }
+
+.sn-gateway-response > footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--nx-subtle);
+  font-size: 9px;
+  text-transform: capitalize;
+}
+
+.sn-gateway-response > footer time { text-transform: none; }
+
+.sn-gateway-state {
+  display: grid;
+  width: calc(100% - 42px);
+  align-self: flex-start;
+  gap: 5px;
+  margin-left: 42px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 212, 255, 0.14);
+  border-radius: 12px;
+  color: var(--nx-muted);
+  background: rgba(0, 212, 255, 0.035);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.sn-gateway-state strong { color: var(--nx-blue); }
+.sn-gateway-state p { margin: 0; }
+.sn-gateway-state a { width: max-content; color: var(--nx-blue); font-weight: 700; }
+
+.sn-gateway-state--error {
+  border-color: rgba(255, 122, 0, 0.18);
+  background: rgba(255, 122, 0, 0.04);
+}
+
+.sn-gateway-state--error strong { color: var(--nx-orange); }
+
+@media (max-width: 680px) {
+  .sn-gateway-response,
+  .sn-gateway-state {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .sn-gateway-response__sections { grid-template-columns: 1fr; }
+  .sn-gateway-response > header,
+  .sn-gateway-response > footer { flex-direction: column; }
+  .sn-chat__composer { flex-wrap: wrap; }
+  .sn-chat__composer select { width: 100%; }
 }
 
 .sn-capability-section {

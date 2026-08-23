@@ -12,6 +12,7 @@ function CapabilityIcon({ icon }: { icon: SentinelCapability["icon"] }) {
 function statusValue(label: string, status: SentinelStatus) {
   if (label === "AI Status") return status.aiStatus;
   if (label === "Backend") return status.backend;
+  if (label === "Provider") return null;
   if (label === "Gemini API") return status.geminiApi;
   if (label === "Privacy") return status.privacy;
   return null;
@@ -49,10 +50,10 @@ function SentinelSystemStatus({
 
       <div className="sn-status__about">
         <div className="sn-status__section-label"><span>About Sentinel</span><strong>Preview</strong></div>
-        <div><span>Version</span><strong>0.1.0-demo</strong></div>
-        <div><span>Model</span><strong>Planned: Gemini</strong></div>
-        <div><span>Conversations</span><strong>Static only</strong></div>
-        <div><span>Response time</span><strong>N/A (Demo)</strong></div>
+        <div><span>Version</span><strong>0.17 local foundation</strong></div>
+        <div><span>Provider</span><strong>Local deterministic</strong></div>
+        <div><span>Conversations</span><strong>Not persisted</strong></div>
+        <div><span>External AI</span><strong>Disabled</strong></div>
       </div>
 
       <div className="sn-status__network" aria-hidden="true">
@@ -77,15 +78,15 @@ export default function SentinelExperience({
         <div className="sn-hero__orb sn-hero__orb--orange" />
         <div className="sn-hero__scanlines" />
         <div className="sn-hero__content">
-          <div className="sn-hero__tag"><span aria-hidden="true" /> AI assistant</div>
+          <div className="sn-hero__tag"><span aria-hidden="true" /> AI gateway foundation</div>
           <h1 id="sentinel-title"><span className="page-title-emoji" aria-hidden="true">🤖</span><span>NEXORA Sentinel</span></h1>
-          <p>AI assistant for game discovery, deal guidance and account safety — powered by intelligent conversation.</p>
+          <p>A safe local gateway preview for game discovery, deal guidance and account safety, with external AI providers disabled.</p>
         </div>
       </section>
 
       <div className="sn-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Static AI Preview</strong> — The conversation below uses sample messages and local interface state. No message is sent, stored, or processed by an AI service.</p>
+        <p><strong>Local Gateway Preview</strong> — Static sample messages remain public. Signed-in requests use a deterministic backend provider, are not saved, and are never sent to an external AI service.</p>
       </div>
 
       <div className="sn-layout">

@@ -2,7 +2,7 @@
 
 This directory contains NEXORA's primary frontend: a Next.js App Router
 application for game deals, giveaways, personal wishlists, alert intelligence,
-account safety, and the Sentinel demo experience.
+account safety, and the Sentinel local gateway preview.
 
 **Status:** Local/development MVP · Production builds are validated locally ·
 No production deployment is documented
@@ -78,7 +78,7 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 | `/giveaways` | Giveaway discovery | `/api/giveaways` with typed fallback data |
 | `/wishlist` | Personal wishlist and alert intelligence | Authenticated `/api/me/wishlist`, alert history, and public/fallback preview |
 | `/security` | Account-safety presentation | `/api/security/status` with typed fallback data |
-| `/sentinel` | Sentinel demo/status experience | `/api/sentinel/status` and `/api/sentinel/demo` with typed fallback data |
+| `/sentinel` | Public Sentinel preview plus authenticated local gateway | Public status/demo APIs and Bearer `POST /api/me/sentinel/insight` |
 | `/settings` | Account-control presentation | Local demo state; not connected to notification preferences |
 | `/login` | Account login | `POST /api/auth/login` |
 | `/register` | Account registration | `POST /api/auth/register` |
@@ -189,6 +189,21 @@ retry as other personal APIs. The panel loads and saves independently, so a
 preference failure does not disable the wishlist. Email remains opt-in and does
 not become deliverable without backend SMTP and a future recipient workflow.
 
+## Sentinel gateway foundation
+
+The Sentinel page preserves its public static messages and typed status/demo
+fallback. Signed-in users can send one transient request to the owner-scoped
+Bearer endpoint `POST /api/me/sentinel/insight`. The client validates and renders
+the local response as an answer, recommendations, safety notes, and next actions,
+with one bounded access-token refresh retry. Signed-out users receive a sign-in
+hint rather than a simulated AI answer.
+
+The active provider is explicitly labeled `Local Gateway Preview`. Messages and
+responses live only in current React state and disappear on navigation or reload;
+they are not written to browser storage. No API key is present in frontend code,
+no external AI call is made, and no Gemini/OpenAI/LLM provider is active. The
+gateway is preparation for a later v0.18 provider milestone.
+
 ## Security notes
 
 The active JWT access token is memory-first and the longer-lived refresh token
@@ -233,8 +248,10 @@ dependency graph; it never applies automatic audit fixes.
   external data provider, deployment workflow, or production-readiness claim.
 - The notification-preference milestone adds no AI, account linking, delivery
   provider, deployment workflow, or production email claim.
-- Sentinel is a demo/status experience; no real Gemini or other AI integration
-  exists.
+- Sentinel has an authenticated local deterministic gateway and public static
+  preview, but no external AI provider, conversation persistence, privacy/safety
+  review, moderation, rate limiting, abuse monitoring, cost control, or AI
+  observability exists.
 - Public content fallbacks are intentionally demo data, not guaranteed live
   provider results.
 

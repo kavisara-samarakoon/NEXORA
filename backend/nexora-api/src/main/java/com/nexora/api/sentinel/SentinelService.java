@@ -8,10 +8,10 @@ import java.util.List;
 public class SentinelService {
 
     private static final SentinelStatusResponse STATUS = new SentinelStatusResponse(
-            "Demo Mode",
+            "Gateway Foundation",
             "Connected",
-            "Future Integration",
-            "No real messages saved"
+            "External AI Disabled",
+            "No messages saved"
     );
 
     private static final List<SentinelMessage> MESSAGES = List.of(
@@ -61,10 +61,11 @@ public class SentinelService {
     );
 
     private static final List<SentinelStatusItem> SYSTEM_STATUS = List.of(
-            new SentinelStatusItem("AI Status", "Demo Mode", "Demo", "blue", "bot"),
+            new SentinelStatusItem("AI Status", "Gateway Foundation", "Local", "blue", "bot"),
             new SentinelStatusItem("Backend", "Connected", "Online", "green", "network"),
-            new SentinelStatusItem("Gemini API", "Future Integration", "Future", "purple", "spark"),
-            new SentinelStatusItem("Privacy", "No real messages saved", "Safe", "green", "lock")
+            new SentinelStatusItem("Provider", "Local Preview / External AI Disabled",
+                    "External off", "purple", "spark"),
+            new SentinelStatusItem("Privacy", "No messages saved", "Safe", "green", "lock")
     );
 
     private static final SentinelDemoResponse DEMO = new SentinelDemoResponse(
@@ -90,4 +91,3 @@ public class SentinelService {
         return new SentinelMessage.Segment(text, true);
     }
 }
-
