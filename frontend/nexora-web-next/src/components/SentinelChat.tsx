@@ -198,6 +198,14 @@ export default function SentinelChat({
         </span>
       </div>
 
+      <p className="sn-chat__context-note">
+        <span aria-hidden="true">◇</span>
+        {authState === "authenticated"
+          ? "Uses bounded, backend-generated NEXORA context"
+          : "Sign in to use bounded NEXORA context"}
+        <strong>No conversation saved</strong>
+      </p>
+
       <div className="sn-chat__messages" aria-live="polite">
         {messages.map((message) => (
           <div className={`sn-message sn-message--${message.role}`} key={message.id}>

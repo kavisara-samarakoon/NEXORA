@@ -202,6 +202,10 @@ sign-in hint rather than a simulated AI answer.
 Provider badges distinguish `Local provider`, `Local fallback`, and
 `Gemini provider`. Messages and responses live only in current React state and
 disappear on navigation or reload; they are not written to browser storage.
+The chat labels authenticated requests as using bounded, backend-generated
+NEXORA context. Depending on the selected context, that may contain compact
+owner-scoped Wishlist, recent-price, alert, public deal, or giveaway summaries;
+the raw summary is not exposed to frontend code.
 Gemini configuration and API keys are backend-only. There are no `NEXT_PUBLIC`
 Gemini variables, no frontend key handling, and no autonomous wishlist, deal,
 account, notification, or security action.
@@ -250,11 +254,11 @@ dependency graph; it never applies automatic audit fixes.
   external data provider, deployment workflow, or production-readiness claim.
 - The notification-preference milestone adds no AI, account linking, delivery
   provider, deployment workflow, or production email claim.
-- Sentinel has an optional backend-only Gemini provider foundation, disabled by
-  default, and a deterministic local fallback. There is no conversation
-  persistence, streaming, production privacy/safety review, moderation, rate
-  limiting, abuse monitoring, managed provider-key workflow, cost control, or AI
-  observability.
+- Sentinel has bounded backend-generated NEXORA context summaries, an optional
+  backend-only Gemini provider disabled by default, and a deterministic local
+  fallback. There is no conversation persistence, autonomous action, streaming,
+  production privacy/safety review, moderation, rate limiting, abuse monitoring,
+  managed provider-key workflow, cost control, or AI observability.
 - Public content fallbacks are intentionally demo data, not guaranteed live
   provider results.
 

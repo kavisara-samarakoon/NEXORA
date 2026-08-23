@@ -436,15 +436,27 @@ available; `GOOGLE_API_KEY` takes precedence. A missing key, timeout, network
 failure, non-success response, malformed body, or empty answer returns a clearly
 labeled local fallback rather than a provider error.
 
+Version 0.19 adds server-generated contextual summaries before provider routing.
+Wishlist context contains at most five owner-scoped active items, three recent
+alert events, and three price-history points for each of the first three items.
+Deals context contains at most five public deals ordered by discount. General
+context contains high-level wishlist/alert/deal/giveaway counts and at most five
+live giveaways; security context intentionally receives no private account,
+credential, session, or risk data. Rendered provider context is redacted,
+normalized, and capped at 3,500 characters with an explicit truncation marker.
+
 The API key is sent only through Gemini's backend `x-goog-api-key` request
 header. It is never placed in a URL or response and must not be committed. The
 Gemini request sets provider storage off, uses a strict system instruction, and
-passes only the validated, trimmed message and selected context. Gemini supplies
-only the bounded answer text; recommendations, safety notes, and next actions
-remain deterministic backend content.
+passes the validated, trimmed message plus the bounded contextual summary.
+Context does not include access/refresh tokens, API keys, email addresses, or a
+raw database dump; defensive prompt rendering also redacts accidental
+token/key/email-like values. Gemini supplies only the bounded answer text;
+recommendations, safety notes, and next actions remain deterministic backend
+content.
 
-Neither provider stores prompts or responses in NEXORA. The endpoint cannot
-mutate wishlist, deal, notification, account, or security state. Public
+Neither provider stores prompts, summaries, or responses in NEXORA. The
+endpoint cannot mutate wishlist, deal, notification, account, or security state. Public
 `GET /api/sentinel/status` and `GET /api/sentinel/demo` remain available and
 report whether Gemini is configured. This remains a local foundation without
 privacy review, safety evaluation, moderation, rate limiting, abuse monitoring,
@@ -578,8 +590,9 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   durable delivery state, retry/outbox, and asynchronous after-commit behavior
   are not implemented.
 - Email delivery requires explicit SMTP configuration.
-- Sentinel has an optional backend-only Gemini provider foundation, disabled by
-  default, with deterministic local default/fallback behavior. There is no
-  conversation persistence, streaming, privacy/safety review, moderation, rate
-  limiting, abuse monitoring, provider-key management beyond local environment
-  variables, cost control, or AI observability.
+- Sentinel has bounded backend-generated wishlist, price-history, alert, deal,
+  and giveaway summaries with an optional backend-only Gemini provider that is
+  disabled by default and deterministic local default/fallback behavior. There
+  is no conversation persistence, autonomous action, streaming, privacy/safety
+  review, moderation, rate limiting, abuse monitoring, provider-key management
+  beyond local environment variables, cost control, or AI observability.

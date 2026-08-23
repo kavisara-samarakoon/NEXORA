@@ -36,10 +36,26 @@ class GeminiSentinelClientTests {
                             "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"  Safe Gemini guidance.  \"}]}}]}");
                 });
 
+        SentinelContextSummary summary = new SentinelContextSummary(
+                SentinelInsightContext.DEALS,
+                0, 0, 0, 1, 0,
+                java.util.List.of(),
+                java.util.List.of(),
+                java.util.List.of(new SentinelDealContext(
+                        "Context Deal access_token=context-secret",
+                        "Steam",
+                        "$19.99",
+                        "$59.99",
+                        67,
+                        "-67%",
+                        "Great Deal",
+                        "RPG")),
+                java.util.List.of());
         String answer = client.generateText(new SentinelGatewayInput(
                 7L,
-                "  Should I buy this game now?  ",
-                SentinelInsightContext.DEALS));
+                "  Should I buy this game now? password=user-secret  ",
+                SentinelInsightContext.DEALS,
+                summary));
 
         HttpRequest request = capturedRequest.get();
         String body = requestBody(request);
@@ -63,6 +79,11 @@ class GeminiSentinelClientTests {
                         0.4,
                         json.path("generationConfig").path("temperature").doubleValue()),
                 () -> assertTrue(body.contains("Should I buy this game now?")),
+                () -> assertTrue(body.contains("Bounded NEXORA context summary")),
+                () -> assertTrue(body.contains("Context Deal")),
+                () -> assertTrue(body.contains("[redacted secret]")),
+                () -> assertFalse(body.contains("context-secret")),
+                () -> assertFalse(body.contains("user-secret")),
                 () -> assertTrue(body.contains("NEXORA Sentinel"))
         );
     }

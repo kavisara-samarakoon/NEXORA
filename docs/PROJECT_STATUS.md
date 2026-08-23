@@ -23,7 +23,9 @@ or production-ready service.
   APIs, PostgreSQL/in-memory storage, safe defaults, and Wishlist UI controls.
 - Authenticated Sentinel AI gateway with a deterministic local default/fallback
   and an optional backend-only Gemini REST provider that is disabled by default.
-  Frontend exchanges are transient, and NEXORA persists no conversation data.
+  Sentinel can use bounded backend-generated owner-scoped Wishlist,
+  price-history, alert, public deal, and giveaway summaries. Frontend exchanges
+  are transient, and NEXORA persists no conversation data.
 - Backend tests plus frontend lint and production-build checks.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
@@ -70,8 +72,9 @@ or production-ready service.
   but the browser session lifecycle still depends on local-development cookie
   CSRF, trusted-origin, and CORS settings rather than a reviewed production
   configuration.
-- Sentinel has an optional backend-only Gemini provider foundation, disabled by
-  default, with deterministic local fallback and no conversation persistence.
+- Sentinel has bounded backend-generated contextual summaries with an optional
+  backend-only Gemini provider disabled by default and deterministic local
+  fallback. It has no conversation persistence or autonomous actions.
 - Price-history visualization is a compact card-level view; full analytics,
   aggregation, retention policy, and advanced charts are still not implemented.
 - The price-history foundation reuses the existing stored/CheapShark provider
@@ -97,9 +100,10 @@ or production-ready service.
   security monitoring controls.
 - No distributed scheduler locking or multi-instance coordination.
 - No durable notification delivery workflow or delivery observability.
-- No Sentinel streaming, production privacy review, safety evaluation,
-  moderation, rate limiting, abuse monitoring, provider-key management beyond
-  local environment variables, cost controls, or AI observability.
+- No Sentinel autonomous actions, conversation persistence, streaming,
+  production privacy review, safety evaluation, moderation, rate limiting,
+  abuse monitoring, provider-key management beyond local environment variables,
+  cost controls, or AI observability.
 
 ## Recommended next milestones
 

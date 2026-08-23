@@ -3,6 +3,12 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.19.0 Sentinel contextual insights
+
+- Added bounded backend-generated NEXORA context summaries for Sentinel
+  wishlist, deals, giveaways, and price guidance without conversation
+  persistence or autonomous actions.
+
 ## Unreleased — v0.18.0 Gemini provider foundation
 
 - Added optional backend-only Gemini provider behind Sentinel gateway with local
