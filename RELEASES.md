@@ -3,6 +3,12 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.20.0 Sentinel AI safety controls
+
+- Added Sentinel AI safety controls with in-memory per-user rate limiting,
+  provider fallback classification, provider health tracking, and configurable
+  prompt/answer limits.
+
 ## Unreleased — v0.19.0 Sentinel contextual insights
 
 - Added bounded backend-generated NEXORA context summaries for Sentinel

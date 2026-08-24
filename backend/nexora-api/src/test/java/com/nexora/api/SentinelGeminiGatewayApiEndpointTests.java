@@ -51,6 +51,7 @@ class SentinelGeminiGatewayApiEndpointTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mode").value("gemini-provider-foundation"))
                 .andExpect(jsonPath("$.provider").value("gemini"))
+                .andExpect(jsonPath("$.fallbackReason").isEmpty())
                 .andExpect(jsonPath("$.answer")
                         .value("Check the current official store price before purchasing."));
 

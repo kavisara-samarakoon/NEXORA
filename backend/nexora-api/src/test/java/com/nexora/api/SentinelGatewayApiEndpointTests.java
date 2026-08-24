@@ -50,6 +50,7 @@ class SentinelGatewayApiEndpointTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mode").value("local-foundation"))
                 .andExpect(jsonPath("$.provider").value("local"))
+                .andExpect(jsonPath("$.fallbackReason").isEmpty())
                 .andExpect(jsonPath("$.context").value("deals"))
                 .andExpect(jsonPath("$.title").value("Sentinel Gateway Preview"))
                 .andExpect(jsonPath("$.answer").value(
@@ -137,6 +138,27 @@ class SentinelGatewayApiEndpointTests {
                 .andExpect(jsonPath("$.error").value("validation_failed"))
                 .andExpect(jsonPath("$.message")
                         .value("The Sentinel gateway request could not be validated"));
+    }
+
+    @Test
+    void requestAboveConfiguredRateLimitReturnsSafe429() throws Exception {
+        String token = register();
+        String content = "{\"message\":\"Rate limit check\",\"context\":\"general\"}";
+
+        for (int request = 0; request < 12; request++) {
+            mockMvc.perform(insightRequest(token, content))
+                    .andExpect(status().isOk());
+        }
+
+        mockMvc.perform(insightRequest(token, content))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .header().string(HttpHeaders.RETRY_AFTER, "60"))
+                .andExpect(jsonPath("$.error").value("rate_limit_exceeded"))
+                .andExpect(jsonPath("$.message").value(
+                        "Sentinel request limit reached. Please wait before trying again."))
+                .andExpect(jsonPath("$.retryAfterSeconds")
+                        .value(org.hamcrest.Matchers.greaterThan(0)));
     }
 
     private String register() throws Exception {

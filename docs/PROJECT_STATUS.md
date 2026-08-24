@@ -25,7 +25,10 @@ or production-ready service.
   and an optional backend-only Gemini REST provider that is disabled by default.
   Sentinel can use bounded backend-generated owner-scoped Wishlist,
   price-history, alert, public deal, and giveaway summaries. Frontend exchanges
-  are transient, and NEXORA persists no conversation data.
+  are transient, and NEXORA persists no conversation data. Sentinel also has
+  local-development safety controls: in-memory per-user rate limiting, safe
+  provider fallback classification, process-local provider health/failure
+  tracking, and configurable bounded context-prompt and answer limits.
 - Backend tests plus frontend lint and production-build checks.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
@@ -74,7 +77,8 @@ or production-ready service.
   configuration.
 - Sentinel has bounded backend-generated contextual summaries with an optional
   backend-only Gemini provider disabled by default and deterministic local
-  fallback. It has no conversation persistence or autonomous actions.
+  fallback. Its rate windows and provider-health counters are in-memory only and
+  reset on restart. It has no conversation persistence or autonomous actions.
 - Price-history visualization is a compact card-level view; full analytics,
   aggregation, retention policy, and advanced charts are still not implemented.
 - The price-history foundation reuses the existing stored/CheapShark provider
@@ -101,9 +105,10 @@ or production-ready service.
 - No distributed scheduler locking or multi-instance coordination.
 - No durable notification delivery workflow or delivery observability.
 - No Sentinel autonomous actions, conversation persistence, streaming,
-  production privacy review, safety evaluation, moderation, rate limiting,
-  abuse monitoring, provider-key management beyond local environment variables,
-  cost controls, or AI observability.
+  production privacy review, safety evaluation, moderation pipeline,
+  production-grade distributed rate limiting, abuse monitoring, provider-key
+  management beyond local environment variables, cost controls, or production
+  AI observability.
 
 ## Recommended next milestones
 

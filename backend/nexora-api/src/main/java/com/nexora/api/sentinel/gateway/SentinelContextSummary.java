@@ -35,6 +35,10 @@ public record SentinelContextSummary(
     }
 
     public String toPromptText() {
+        return toPromptText(MAX_PROMPT_CHARACTERS);
+    }
+
+    public String toPromptText(int maxCharacters) {
         StringBuilder summary = new StringBuilder();
         switch (context) {
             case WISHLIST -> appendWishlist(summary);
@@ -45,7 +49,7 @@ public record SentinelContextSummary(
                             + "or private account-risk data were supplied. NEXORA cannot inspect "
                             + "or score account security.");
         }
-        return bounded(summary.toString());
+        return bounded(summary.toString(), maxCharacters);
     }
 
     public boolean hasWishlistItems() {
@@ -134,11 +138,12 @@ public record SentinelContextSummary(
         }
     }
 
-    private static String bounded(String value) {
-        if (value.length() <= MAX_PROMPT_CHARACTERS) {
+    private static String bounded(String value, int maxCharacters) {
+        int safeMaxCharacters = Math.max(TRUNCATED_NOTE.length(), maxCharacters);
+        if (value.length() <= safeMaxCharacters) {
             return value;
         }
-        int contentLimit = MAX_PROMPT_CHARACTERS - TRUNCATED_NOTE.length();
+        int contentLimit = safeMaxCharacters - TRUNCATED_NOTE.length();
         return value.substring(0, contentLimit).stripTrailing() + TRUNCATED_NOTE;
     }
 

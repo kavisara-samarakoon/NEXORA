@@ -445,6 +445,16 @@ live giveaways; security context intentionally receives no private account,
 credential, session, or risk data. Rendered provider context is redacted,
 normalized, and capped at 3,500 characters with an explicit truncation marker.
 
+Version 0.20 adds local-development safety and usage controls. The insight
+endpoint uses a configurable in-memory fixed-window limit keyed by authenticated
+user ID (12 requests per 60 seconds by default). Safe Gemini failures are
+classified in `fallbackReason`, and process-local health metadata tracks only
+Gemini success/fallback timestamps, the last safe fallback reason, consecutive
+failures, and aggregate success/fallback counts. It never records a user
+message, rendered prompt, response, or API key. Context-prompt and answer
+character limits are configurable and clamped to safe bounds; their existing
+3,500- and 4,000-character defaults are preserved.
+
 The API key is sent only through Gemini's backend `x-goog-api-key` request
 header. It is never placed in a URL or response and must not be committed. The
 Gemini request sets provider storage off, uses a strict system instruction, and
@@ -458,9 +468,12 @@ content.
 Neither provider stores prompts, summaries, or responses in NEXORA. The
 endpoint cannot mutate wishlist, deal, notification, account, or security state. Public
 `GET /api/sentinel/status` and `GET /api/sentinel/demo` remain available and
-report whether Gemini is configured. This remains a local foundation without
-privacy review, safety evaluation, moderation, rate limiting, abuse monitoring,
-managed provider secrets, cost controls, streaming, or AI observability.
+report whether Gemini is configured. These controls are process-local and reset
+on backend restart; they are not distributed rate limiting or production AI
+observability. This remains a local foundation without production privacy
+review, safety evaluation, moderation, abuse monitoring, managed provider
+secrets, cost controls, streaming, conversation persistence, or autonomous
+actions. Version 0.20 adds no database migration.
 
 ## Configuration reference
 
@@ -503,6 +516,11 @@ managed provider secrets, cost controls, streaming, or AI observability.
 | `NEXORA_GEMINI_TIMEOUT_MS` | `8000` | Gemini connect/request timeout |
 | `NEXORA_GEMINI_MAX_OUTPUT_TOKENS` | `512` | Bounded output-token request limit |
 | `NEXORA_GEMINI_TEMPERATURE` | `0.2` | Bounded generation temperature |
+| `NEXORA_SENTINEL_RATE_LIMIT_ENABLED` | `true` | Enable process-local per-user Sentinel insight limiting |
+| `NEXORA_SENTINEL_RATE_LIMIT_WINDOW_SECONDS` | `60` | Fixed rate-limit window, safely clamped from 1 to 3,600 seconds |
+| `NEXORA_SENTINEL_RATE_LIMIT_MAX_REQUESTS` | `12` | Requests allowed per user/window, safely clamped from 1 to 1,000 |
+| `NEXORA_SENTINEL_MAX_CONTEXT_PROMPT_CHARACTERS` | `3500` | Rendered context-summary limit, safely clamped from 256 to 10,000 characters |
+| `NEXORA_SENTINEL_MAX_ANSWER_CHARACTERS` | `4000` | Gemini answer limit, safely clamped from 256 to 16,000 characters |
 
 See `src/main/resources/application.properties` for the complete safe defaults.
 
@@ -592,7 +610,10 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 - Email delivery requires explicit SMTP configuration.
 - Sentinel has bounded backend-generated wishlist, price-history, alert, deal,
   and giveaway summaries with an optional backend-only Gemini provider that is
-  disabled by default and deterministic local default/fallback behavior. There
-  is no conversation persistence, autonomous action, streaming, privacy/safety
-  review, moderation, rate limiting, abuse monitoring, provider-key management
-  beyond local environment variables, cost control, or AI observability.
+  disabled by default, deterministic local default/fallback behavior, in-memory
+  per-user rate limiting, safe fallback classification, process-local health
+  counters, and configurable prompt/answer limits. There is no conversation
+  persistence, autonomous action, streaming, production privacy/safety review,
+  moderation pipeline, distributed rate limiting, production AI observability,
+  abuse monitoring, provider-key management beyond local environment variables,
+  or cost control.

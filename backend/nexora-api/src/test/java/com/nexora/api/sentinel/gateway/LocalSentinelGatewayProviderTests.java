@@ -35,12 +35,16 @@ class LocalSentinelGatewayProviderTests {
                 .createFallback(new SentinelGatewayInput(
                         7L,
                         "Question",
-                        SentinelInsightContext.GENERAL));
+                        SentinelInsightContext.GENERAL),
+                        SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK);
 
         assertAll(
                 () -> assertEquals("local-fallback", response.mode()),
                 () -> assertEquals("local", response.provider()),
                 () -> assertEquals("Sentinel Local Fallback", response.title()),
+                () -> assertEquals(
+                        "gemini_timeout_or_network",
+                        response.fallbackReason()),
                 () -> assertEquals(
                         "Gemini was unavailable, so NEXORA used its deterministic local fallback.",
                         response.safetyNotes().get(0))

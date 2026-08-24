@@ -10,6 +10,15 @@ export type SentinelInsightRequest = {
   context?: SentinelInsightContext;
 };
 
+export type SentinelProviderFallbackReason =
+  | "gemini_not_configured"
+  | "gemini_non_success_response"
+  | "gemini_invalid_response"
+  | "gemini_timeout_or_network"
+  | "gemini_configuration_invalid"
+  | "gemini_unavailable"
+  | "unknown";
+
 export type SentinelInsightResponse = {
   mode: "local-foundation" | "local-fallback" | "gemini-provider-foundation";
   provider: "local" | "gemini";
@@ -19,6 +28,7 @@ export type SentinelInsightResponse = {
   recommendations: string[];
   safetyNotes: string[];
   nextActions: string[];
+  fallbackReason: SentinelProviderFallbackReason | null;
   createdAt: string;
 };
 
@@ -27,6 +37,7 @@ export type SentinelInsightError = {
   code:
     | "authentication_required"
     | "validation_failed"
+    | "rate_limit_exceeded"
     | "service_unavailable"
     | "invalid_response"
     | "request_failed"
@@ -58,6 +69,18 @@ function isSentinelInsightContext(value: unknown): value is SentinelInsightConte
   return value === "general" || value === "wishlist" || value === "deals" || value === "security";
 }
 
+function isSentinelProviderFallbackReason(
+  value: unknown,
+): value is SentinelProviderFallbackReason {
+  return value === "gemini_not_configured" ||
+    value === "gemini_non_success_response" ||
+    value === "gemini_invalid_response" ||
+    value === "gemini_timeout_or_network" ||
+    value === "gemini_configuration_invalid" ||
+    value === "gemini_unavailable" ||
+    value === "unknown";
+}
+
 function isSentinelInsightResponse(value: unknown): value is SentinelInsightResponse {
   if (typeof value !== "object" || value === null) return false;
 
@@ -66,8 +89,12 @@ function isSentinelInsightResponse(value: unknown): value is SentinelInsightResp
     ((response.mode === "local-foundation" || response.mode === "local-fallback") &&
       response.provider === "local") ||
     (response.mode === "gemini-provider-foundation" && response.provider === "gemini");
+  const hasValidFallbackReason = response.mode === "local-fallback"
+    ? isSentinelProviderFallbackReason(response.fallbackReason)
+    : response.fallbackReason === null;
   return (
     hasValidProviderMode &&
+    hasValidFallbackReason &&
     isSentinelInsightContext(response.context) &&
     typeof response.title === "string" &&
     response.title.trim().length > 0 &&
@@ -94,6 +121,13 @@ function responseError(status: number): SentinelInsightRequestError {
       status,
       code: "validation_failed",
       message: "Enter a message between 1 and 500 characters using a supported context.",
+    });
+  }
+  if (status === 429) {
+    return new SentinelInsightRequestError({
+      status,
+      code: "rate_limit_exceeded",
+      message: "Sentinel request limit reached. Please wait before trying again.",
     });
   }
   return new SentinelInsightRequestError({

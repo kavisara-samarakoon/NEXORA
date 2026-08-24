@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -89,14 +90,113 @@ class GeminiSentinelClientTests {
     }
 
     @Test
-    void emptyMalformedAndNonSuccessResponsesFailSafely() {
+    void emptyAndMalformedResponsesHaveSafeInvalidResponseReason() {
         SentinelGatewayInput input = new SentinelGatewayInput(
                 7L, "Question", SentinelInsightContext.GENERAL);
 
-        assertThrows(GeminiClientException.class, () -> clientReturning(200, "{}").generateText(input));
-        assertThrows(GeminiClientException.class, () -> clientReturning(200, "null").generateText(input));
-        assertThrows(GeminiClientException.class, () -> clientReturning(200, "not-json").generateText(input));
-        assertThrows(GeminiClientException.class, () -> clientReturning(429, "rate limited").generateText(input));
+        assertReason(input, clientReturning(200, "{}"),
+                SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE);
+        assertReason(input, clientReturning(200, "null"),
+                SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE);
+        assertReason(input, clientReturning(200, ""),
+                SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE);
+        assertReason(input, clientReturning(200, "not-json"),
+                SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE);
+    }
+
+    @Test
+    void nonSuccessResponseHasSafeClassifiedReason() {
+        SentinelGatewayInput input = new SentinelGatewayInput(
+                7L, "Question", SentinelInsightContext.GENERAL);
+
+        assertReason(input, clientReturning(429, "rate limited"),
+                SentinelProviderFallbackReason.GEMINI_NON_SUCCESS_RESPONSE);
+    }
+
+    @Test
+    void networkFailureHasSafeClassifiedReason() {
+        GeminiSentinelClient client = new GeminiSentinelClient(
+                properties(),
+                objectMapper,
+                request -> {
+                    throw new IOException("test-only network failure");
+                });
+
+        assertReason(
+                new SentinelGatewayInput(7L, "Question", SentinelInsightContext.GENERAL),
+                client,
+                SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK);
+    }
+
+    @Test
+    void missingAndInvalidConfigurationHaveSafeClassifiedReasons() {
+        SentinelAiProperties missingKey = properties();
+        missingKey.getGemini().setApiKey("");
+        SentinelAiProperties invalidModel = properties();
+        invalidModel.getGemini().setModel("invalid/model");
+        SentinelGatewayInput input = new SentinelGatewayInput(
+                7L, "Question", SentinelInsightContext.GENERAL);
+
+        assertReason(
+                input,
+                new GeminiSentinelClient(missingKey, objectMapper, request -> null),
+                SentinelProviderFallbackReason.GEMINI_NOT_CONFIGURED);
+        assertReason(
+                input,
+                new GeminiSentinelClient(invalidModel, objectMapper, request -> null),
+                SentinelProviderFallbackReason.GEMINI_CONFIGURATION_INVALID);
+    }
+
+    @Test
+    void configuredContextAndAnswerCharacterLimitsAreApplied() throws Exception {
+        SentinelAiProperties properties = properties();
+        properties.getSafety().setMaxContextPromptCharacters(256);
+        properties.getSafety().setMaxAnswerCharacters(300);
+        AtomicReference<HttpRequest> capturedRequest = new AtomicReference<>();
+        GeminiSentinelClient client = new GeminiSentinelClient(
+                properties,
+                objectMapper,
+                request -> {
+                    capturedRequest.set(request);
+                    return new GeminiSentinelClient.GeminiHttpResponse(
+                            200,
+                            "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"%s\"}]}}]}"
+                                    .formatted("a".repeat(500)));
+                });
+        String longValue = "x".repeat(500);
+        SentinelContextSummary summary = new SentinelContextSummary(
+                SentinelInsightContext.DEALS,
+                0, 0, 0, 1, 0,
+                java.util.List.of(),
+                java.util.List.of(),
+                java.util.List.of(new SentinelDealContext(
+                        longValue, longValue, longValue, longValue,
+                        50, longValue, longValue, longValue)),
+                java.util.List.of());
+
+        String answer = client.generateText(new SentinelGatewayInput(
+                7L, "Question", SentinelInsightContext.DEALS, summary));
+        JsonNode json = objectMapper.readTree(requestBody(capturedRequest.get()));
+        String prompt = json.path("contents").get(0).path("parts").get(0)
+                .path("text").stringValue();
+        String renderedContext = prompt.substring(
+                prompt.indexOf("<nexora_context>") + "<nexora_context>\n".length(),
+                prompt.indexOf("\n</nexora_context>"));
+
+        assertEquals(300, answer.length());
+        assertEquals(256, renderedContext.length());
+        assertTrue(renderedContext.endsWith(
+                "[Context truncated to the configured safety limit.]"));
+    }
+
+    private static void assertReason(
+            SentinelGatewayInput input,
+            GeminiSentinelClient client,
+            SentinelProviderFallbackReason expectedReason) {
+        GeminiClientException exception = assertThrows(
+                GeminiClientException.class,
+                () -> client.generateText(input));
+        assertEquals(expectedReason, exception.reason());
     }
 
     private GeminiSentinelClient clientReturning(int status, String body) {

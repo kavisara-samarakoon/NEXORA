@@ -17,7 +17,6 @@ import java.util.List;
 @Component
 public class GeminiSentinelClient {
 
-    static final int MAX_ANSWER_CHARACTERS = 4_000;
     private static final String SYSTEM_INSTRUCTION = """
             You are NEXORA Sentinel. Return concise guidance only. Never claim that you made a
             purchase or changed wishlist, deal, account, notification, or security data. Never ask
@@ -60,45 +59,89 @@ public class GeminiSentinelClient {
                         gemini.boundedTemperature()),
                 false);
 
+        String body;
         try {
-            String body = objectMapper.writeValueAsString(payload);
-            HttpRequest request = HttpRequest.newBuilder(generateContentUri(gemini))
+            body = objectMapper.writeValueAsString(payload);
+        } catch (JacksonException exception) {
+            throw new GeminiClientException(
+                    "Gemini provider request could not be created",
+                    SentinelProviderFallbackReason.UNKNOWN,
+                    exception);
+        }
+
+        HttpRequest request;
+        try {
+            request = HttpRequest.newBuilder(generateContentUri(gemini))
                     .timeout(gemini.timeout())
                     .header("Accept", "application/json")
                     .header("Content-Type", "application/json")
                     .header("x-goog-api-key", gemini.normalizedApiKey())
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                     .build();
-            GeminiHttpResponse response = requestSender.send(request);
+        } catch (IllegalArgumentException exception) {
+            throw new GeminiClientException(
+                    "Gemini provider configuration is invalid",
+                    SentinelProviderFallbackReason.GEMINI_CONFIGURATION_INVALID,
+                    exception);
+        }
 
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new GeminiClientException("Gemini provider returned a non-success status");
-            }
-            return extractAnswer(response.body());
+        GeminiHttpResponse response;
+        try {
+            response = requestSender.send(request);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new GeminiClientException("Gemini provider request was interrupted", exception);
-        } catch (IOException | JacksonException exception) {
-            throw new GeminiClientException("Gemini provider request failed", exception);
-        } catch (IllegalArgumentException exception) {
-            throw new GeminiClientException("Gemini provider configuration is invalid", exception);
+            throw new GeminiClientException(
+                    "Gemini provider request was interrupted",
+                    SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK,
+                    exception);
+        } catch (IOException exception) {
+            throw new GeminiClientException(
+                    "Gemini provider request failed",
+                    SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK,
+                    exception);
+        } catch (RuntimeException exception) {
+            throw new GeminiClientException(
+                    "Gemini provider request failed unexpectedly",
+                    SentinelProviderFallbackReason.UNKNOWN,
+                    exception);
         }
+
+        if (response == null) {
+            throw invalidResponse();
+        }
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new GeminiClientException(
+                    "Gemini provider returned a non-success status",
+                    SentinelProviderFallbackReason.GEMINI_NON_SUCCESS_RESPONSE);
+        }
+        return extractAnswer(response.body());
     }
 
-    private String extractAnswer(String responseBody) throws JacksonException {
-        JsonNode response = objectMapper.readTree(responseBody);
+    private String extractAnswer(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            throw invalidResponse();
+        }
+        JsonNode response;
+        try {
+            response = objectMapper.readTree(responseBody);
+        } catch (JacksonException exception) {
+            throw new GeminiClientException(
+                    "Gemini provider returned an invalid response",
+                    SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE,
+                    exception);
+        }
         if (response == null || response.isNull()) {
-            throw new GeminiClientException("Gemini provider returned no usable answer");
+            throw invalidResponse();
         }
 
         JsonNode candidates = response.path("candidates");
         if (!candidates.isArray() || candidates.size() == 0) {
-            throw new GeminiClientException("Gemini provider returned no usable answer");
+            throw invalidResponse();
         }
 
         JsonNode parts = candidates.get(0).path("content").path("parts");
         if (!parts.isArray()) {
-            throw new GeminiClientException("Gemini provider returned no usable answer");
+            throw invalidResponse();
         }
 
         StringBuilder answer = new StringBuilder();
@@ -114,15 +157,16 @@ public class GeminiSentinelClient {
 
         String normalized = answer.toString().trim();
         if (normalized.isEmpty()) {
-            throw new GeminiClientException("Gemini provider returned no usable answer");
+            throw invalidResponse();
         }
-        if (normalized.length() > MAX_ANSWER_CHARACTERS) {
-            return normalized.substring(0, MAX_ANSWER_CHARACTERS).trim();
+        int maxAnswerCharacters = properties.getSafety().boundedMaxAnswerCharacters();
+        if (normalized.length() > maxAnswerCharacters) {
+            return normalized.substring(0, maxAnswerCharacters).trim();
         }
         return normalized;
     }
 
-    private static String userPrompt(SentinelGatewayInput input) {
+    private String userPrompt(SentinelGatewayInput input) {
         return """
                 Context: %s
                 Product constraints: guidance only; no autonomous actions; verify current source data
@@ -141,7 +185,8 @@ public class GeminiSentinelClient {
                 Do not return JSON, markdown tables, or invented prices.
                 """.formatted(
                         input.context().apiValue(),
-                        input.summary().toPromptText(),
+                        input.summary().toPromptText(
+                                properties.getSafety().boundedMaxContextPromptCharacters()),
                         SentinelPromptSanitizer.userMessage(input.message()));
     }
 
@@ -153,11 +198,23 @@ public class GeminiSentinelClient {
     }
 
     private static void validateConfiguration(SentinelAiProperties.Gemini gemini) {
-        if (gemini.normalizedApiKey().isEmpty()
-                || gemini.normalizedBaseUrl().isEmpty()
-                || !gemini.normalizedModel().matches("[A-Za-z0-9._-]+")) {
-            throw new GeminiClientException("Gemini provider is not configured");
+        if (gemini.normalizedApiKey().isEmpty()) {
+            throw new GeminiClientException(
+                    "Gemini provider is not configured",
+                    SentinelProviderFallbackReason.GEMINI_NOT_CONFIGURED);
         }
+        if (gemini.normalizedBaseUrl().isEmpty()
+                || !gemini.normalizedModel().matches("[A-Za-z0-9._-]+")) {
+            throw new GeminiClientException(
+                    "Gemini provider configuration is invalid",
+                    SentinelProviderFallbackReason.GEMINI_CONFIGURATION_INVALID);
+        }
+    }
+
+    private static GeminiClientException invalidResponse() {
+        return new GeminiClientException(
+                "Gemini provider returned no usable answer",
+                SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE);
     }
 
     private static GeminiRequestSender createRequestSender(SentinelAiProperties properties) {
