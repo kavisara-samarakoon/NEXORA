@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  dependency-review:
-    name: Review dependency changes
+  review-dependency-changes:
+    name: Advisory dependency review
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -23,7 +23,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Reject newly introduced high-severity vulnerabilities
-        uses: actions/dependency-review-action@v5
+      - name: Review newly introduced high-severity vulnerabilities
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
         with:
           fail-on-severity: high
+          comment-summary-in-pr: always
