@@ -76,6 +76,9 @@ assessment. See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance,
 current controls, and known security limitations. Repository workflow and
 settings guidance is in
 [docs/security/repository-security-hardening.md](docs/security/repository-security-hardening.md).
+Pre-deployment authentication, session, CSRF, CORS, cookie, and secret decisions
+are tracked in the planning-only
+[auth production-policy plan](docs/security/auth-production-policy-plan.md).
 Optional development-container onboarding is documented in
 [docs/development/dev-container-foundation.md](docs/development/dev-container-foundation.md).
 

@@ -72,17 +72,20 @@ prove that every GitHub security setting is enabled.
 
 ## Known limitations
 
-The proposed implementation roadmap is documented in
+The historical migration roadmap is documented in
 [`docs/security/auth-session-hardening-plan.md`](docs/security/auth-session-hardening-plan.md).
-The backend foundation and initial frontend migration are implemented; later
-production-hardening phases remain incomplete.
+The current production decisions and go/no-go requirements are defined in the
+[`auth production-policy plan`](docs/security/auth-production-policy-plan.md).
+The backend and frontend refresh-session foundations are implemented for local
+development, but the production policy is planned rather than implemented.
 
 - Active access tokens are held in frontend memory and legacy `localStorage`
   tokens are removed. Protected APIs still use Bearer access tokens.
 - Local CSRF cookie/header and trusted `Origin`/`Referer` validation now protects
-  cookie-sensitive auth routes. The no-origin curl/test allowance, explicit
-  localhost CORS support, local cookie defaults, reverse-proxy assumptions, and
-  overall production policy are not production-ready.
+  cookie-sensitive auth routes. Localhost trusted origins and the current
+  `Secure=false` refresh/CSRF cookie defaults support local HTTP only; they are
+  not production settings. The no-origin curl/test allowance, reverse-proxy
+  assumptions, and complete production CORS/cookie policy remain unimplemented.
 - Account verification, password recovery, a complete session-wide revocation
   policy, and comprehensive security monitoring are not implemented.
 - There is no deployed production environment, production secret-management

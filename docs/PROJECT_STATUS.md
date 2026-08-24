@@ -46,10 +46,14 @@ or production-ready service.
 - [Repository security hardening guide](security/repository-security-hardening.md)
   covering implemented workflows and the GitHub security settings that remain
   manual or plan-dependent.
-- [Auth/session hardening design plan](security/auth-session-hardening-plan.md)
-  covering refresh-token rotation, HttpOnly-cookie sessions, logout, revocation,
-  account safety, and linked-account readiness. This is a completed planning
-  artifact, not an implemented control.
+- [Historical auth/session hardening design plan](security/auth-session-hardening-plan.md)
+  recording the migration path for refresh-token rotation, HttpOnly-cookie
+  sessions, logout, account safety, and linked-account readiness. Its core local
+  refresh-session phases are implemented; later production hardening remains.
+- [Auth production-policy plan](security/auth-production-policy-plan.md)
+  defining required production secret, persistent-store, cookie, CSRF, CORS,
+  origin/proxy, session lifecycle, testing, monitoring, and go/no-go decisions.
+  This is a completed planning artifact, not an implemented production control.
 - Backend refresh-token/session foundation with hashed tokens, profile-based
   in-memory/PostgreSQL storage, rotation, logout revocation, and HttpOnly cookie
   issuance while preserving the existing Bearer access-token response.
@@ -112,10 +116,13 @@ or production-ready service.
 - No full Maven vulnerability scanner; the current Maven check and artifact are
   dependency-resolution visibility only.
 - The backend/frontend refresh-session and local CSRF/trusted-origin foundations
-  exist, but production CSRF/origin/proxy policy, production CORS/cookie policy,
-  session management, and complete revocation policy are not implemented.
-- No complete rate limiting, account verification, password recovery, or
-  security monitoring controls.
+  exist, and their target production policy is documented. Production
+  fail-closed configuration, CSRF/origin/proxy behavior, CORS/cookie settings,
+  session-family reuse handling, and complete revocation/session-management UX
+  are not implemented.
+- No complete login/register abuse controls, account verification, password
+  recovery, authentication audit-event pipeline, security monitoring, or
+  incident-response process.
 - No distributed scheduler locking or multi-instance coordination.
 - No durable notification delivery workflow or delivery observability.
 - No Sentinel autonomous actions, conversation persistence, streaming,
@@ -132,12 +139,16 @@ or production-ready service.
    scanner without making external-feed availability a mandatory gate.
 2. Review a production application-container strategy only after deployment,
    operations, networking, and secret-management requirements are defined.
-3. Review and extend the local CSRF/trusted-origin foundation into a production
-   CORS/cookie/proxy policy, then extend session management and revocation.
-4. Define verified recipients, dispatcher preference enforcement, durable
+3. Select a deployment topology and formally review the auth production-policy
+   plan before implementing fail-closed production configuration,
+   HTTPS/cookie/CORS/proxy/no-origin rules, and complete session reuse/revocation
+   behavior.
+4. Define account verification, password recovery, authentication abuse
+   controls, audit events, monitoring, and incident-response workflows.
+5. Define verified recipients, dispatcher preference enforcement, durable
    delivery state, and retry/outbox processing.
-5. Extend the compact price-history view only after defining aggregation,
+6. Extend the compact price-history view only after defining aggregation,
    retention, and advanced-chart requirements.
-6. Define privacy, safety, evaluation, moderation, managed provider-key,
+7. Define privacy, safety, evaluation, moderation, managed provider-key,
    cost-control, streaming, and observability requirements before expanding the
    Gemini foundation into a production AI workflow.

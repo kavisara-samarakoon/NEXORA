@@ -1,11 +1,20 @@
 # NEXORA Auth and Session Hardening Plan
 
+> **Historical planning status:** This document began before NEXORA implemented
+> its refresh-session, memory-first frontend, logout, and local CSRF/origin
+> foundations. Phases 2–4 below are now substantially implemented. Sections 2
+> and 3 preserve the earlier baseline and risks for migration history; they do
+> not describe the current system. Use the
+> [auth production-policy plan](auth-production-policy-plan.md) for the current
+> implemented-versus-required production boundary.
+
 ## 1. Purpose
 
-This document defines the path from NEXORA's current MVP JWT authentication
-model to a safer, production-style browser authentication and session model. It
-is a design and sequencing artifact only: it does not change runtime behavior,
-API contracts, database schemas, dependencies, or deployment configuration.
+This document originally defined the path from NEXORA's earlier Bearer-only MVP
+authentication model to a safer browser authentication and refresh-session
+foundation. It now remains a historical design and sequencing artifact; editing
+it does not change runtime behavior, API contracts, database schemas,
+dependencies, or deployment configuration.
 
 The plan establishes the security boundaries and migration order that should be
 reviewed before implementation. It also creates a foundation for future account
@@ -13,9 +22,10 @@ recovery, verification, security monitoring, and safe Steam, Epic Games, and GOG
 account linking. NEXORA remains a local/development MVP and must not be described
 as production-ready merely because this plan exists.
 
-## 2. Current authentication state
+## 2. Historical authentication baseline
 
-The current implementation provides a useful MVP authentication foundation:
+At the time this plan was first written, the implementation provided the
+following Bearer-only MVP foundation:
 
 - `POST /api/auth/register` validates account input, normalizes the email,
   checks email and username uniqueness, hashes the password with BCrypt, creates
@@ -37,28 +47,43 @@ The current implementation provides a useful MVP authentication foundation:
 - Personal wishlist operations under `/api/me/wishlist` use the authenticated
   user ID for user-owned reads and changes. The public `/api/wishlist` preview
   remains separate.
-- The primary Next.js frontend stores the access token in browser
-  `localStorage` through `auth-client.ts`. Login and registration save it, while
-  account and personal-wishlist requests send it in the Bearer header.
-- Frontend components clear the stored token after authentication failures.
-  The current logout action only removes that client-side token.
+- The primary Next.js frontend stored the access token in browser
+  `localStorage` through `auth-client.ts`. Login and registration saved it,
+  while account and personal-wishlist requests sent it in the Bearer header.
+- Frontend components cleared the stored token after authentication failures.
+  Logout only removed that client-side token.
 - In the default/non-`dev` backend profile, users are stored in memory and are
   lost when the process restarts. In the `dev` profile, users are stored in
   PostgreSQL through JPA and the existing Flyway-managed schema.
 
-## 3. Current risks and limitations
+### Current implementation note
 
-The current design is appropriate only for local MVP use. Its main limitations
-are:
+The local implementation now keeps access tokens in frontend module memory,
+removes the legacy `localStorage` token, and restores sessions through an
+HttpOnly refresh cookie. Backend refresh sessions use HMAC-SHA256 token
+hashes, single-use rotation, current-session logout revocation, in-memory or
+PostgreSQL stores, and Flyway V7 `auth_sessions`. Register, login, refresh, and
+logout now use a CSRF cookie/header pair plus trusted `Origin`/`Referer` checks.
 
-- A script that executes through an XSS flaw can read and exfiltrate the access
-  token from `localStorage`. The token remains usable until it expires.
-- There is no refresh-token lifecycle, so the browser cannot renew a session
-  securely without another credential submission or continued use of a
+These controls remain local-development foundations. Production secret,
+cookie, CORS, proxy, no-origin, session-family reuse, audit, recovery,
+verification, monitoring, and operations policy remains incomplete and is
+defined as future work in the
+[auth production-policy plan](auth-production-policy-plan.md).
+
+## 3. Historical risks and limitations
+
+The earlier design was appropriate only for local MVP use. Its main limitations
+at that time were:
+
+- A script executing through an XSS flaw could read and exfiltrate the access
+  token from `localStorage`. The token remained usable until it expired.
+- There was no refresh-token lifecycle, so the browser could not renew a
+  session securely without another credential submission or continued use of a
   relatively long-lived access token.
-- There is no server-side session or token-revocation state. A valid access
-  token cannot be individually invalidated before expiry.
-- Logout is mainly client-side token removal. It does not invalidate a
+- There was no server-side session or token-revocation state. A valid access
+  token could not be individually invalidated before expiry.
+- Logout was mainly client-side token removal. It did not invalidate a
   credential on the server or terminate the same session on another device.
 - There is no password-reset or account-recovery workflow.
 - There is no email-verification workflow or verified-email state suitable for
@@ -70,13 +95,25 @@ are:
   audit/security events.
 - There is no linked-account security model for provider identity binding,
   reauthentication, unlinking, or provider-token handling.
-- CSRF is disabled for the current stateless Bearer-token model. That decision
-  must be revisited before cookies are accepted as authentication credentials.
-- The negative `!dev` profile selection currently falls back to in-memory user
-  storage. A future production profile must select persistent stores explicitly
-  and fail closed if required persistence is unavailable.
+- CSRF was disabled for that stateless Bearer-token model. That decision needed
+  to be revisited before cookies were accepted as authentication credentials.
+- At the time—and still today outside `dev`—the negative `!dev` profile
+  selection falls back to in-memory user storage. A future production profile
+  must select persistent stores explicitly and fail closed if required
+  persistence is unavailable.
+
+The durable-token, missing-refresh, client-only logout, absent server-side
+session, and cookie-route CSRF gaps above were addressed by later local
+foundations. Account recovery and verification, auth-specific abuse controls,
+structured security events, production fail-closed configuration, full session
+management/revocation policy, and linked-account security remain future work.
 
 ## 4. Target production-style design
+
+The core access/refresh split, memory-first frontend, refresh hashing/rotation,
+current-session logout, and local CSRF/origin checks described below now exist.
+They have not been reviewed or configured as a production system. Remaining
+production decisions are tracked in the current production-policy plan.
 
 ### Token and session model
 
@@ -155,9 +192,9 @@ sessions, strong independent secrets, explicit trusted origins, and non-default
 lifetimes. Startup should fail when required production values are missing; a
 production profile must not accidentally activate the current in-memory stores.
 
-## 5. Proposed backend changes
+## 5. Historical backend implementation sequence
 
-Future backend implementation should be delivered in reviewable increments:
+The original backend sequence was:
 
 - Add a Flyway migration for an `auth_sessions` (or `refresh_sessions`) table.
 - Add a refresh-session entity, repository, and service with secure random
@@ -194,9 +231,15 @@ Future backend implementation should be delivered in reviewable increments:
   password changes, and linked-account changes. Do not log raw passwords,
   access tokens, refresh tokens, reset tokens, or sensitive provider tokens.
 
-## 6. Proposed frontend changes
+The V7 session migration, refresh-session model, token hashing, rotation,
+refresh/logout routes, cookie utilities, configuration validation, and focused
+local CSRF/origin checks are implemented. Logout-all, family-wide reuse
+response, production auth rate limiting, security-event monitoring, recovery,
+verification, and production configuration enforcement remain future work.
 
-Future frontend implementation should:
+## 6. Historical frontend implementation sequence
+
+The original frontend sequence was:
 
 - Stop storing access tokens long-term in `localStorage` and remove the legacy
   token after a controlled migration.
@@ -223,11 +266,14 @@ Future frontend implementation should:
 - Never expose, read, copy, log, or include the refresh token in JavaScript,
   React state, browser storage, URLs, analytics, or error messages.
 
-## 7. Proposed database changes
+The primary frontend now uses memory-first access tokens, cookie-backed session
+bootstrap, serialized refresh/retry, backend logout, and legacy storage cleanup.
+Production browser/proxy validation and future account-safety UX remain open.
 
-The first future auth migration should add one clearly named session table,
-preferably `auth_sessions`. It should support rotation history and revocation
-without storing a usable credential. Proposed fields are:
+## 7. Historical database proposal
+
+Flyway V7 has now added the proposed `auth_sessions` table with hashed tokens,
+expiry, revocation, and rotation ancestry. The original field proposal was:
 
 | Field | Purpose |
 | --- | --- |
@@ -257,38 +303,42 @@ Later migrations may add:
 - `security_events`, containing event type, user/session reference when known,
   time, outcome, and minimized context suitable for security review.
 
-Migration names, constraints, and retention policies should be finalized only
-when the corresponding implementation branch is reviewed. None of these tables
-is created by this planning change.
+Flyway V7 and its constraints were finalized in a later implementation
+milestone. Names, constraints, and retention policies for the recovery,
+verification, and security-event tables remain future decisions; none is
+created by this policy-planning change.
 
 ## 8. API migration plan
 
-### Phase 1: Documentation plan only
+### Phase 1: Documentation plan only — completed historically
 
 - Review and approve this design, threat assumptions, naming, cookie topology,
   compatibility window, and production/local configuration boundary.
 - Make no API, runtime, database, dependency, or deployment changes.
 
-### Phase 2: Backend refresh-token/session foundation
+### Phase 2: Backend refresh-token/session foundation — implemented locally
 
 - Add the session migration, persistence model, hashing, rotation, expiry,
   revocation, configuration, and focused tests.
 - Add refresh-cookie issuance and `POST /api/auth/refresh` behind an explicitly
   reviewed contract while retaining existing Bearer support.
 
-### Phase 3: Frontend session client migration
+### Phase 3: Frontend session client migration — implemented locally
 
 - Introduce the memory-only access-token store, credentialed session bootstrap,
   serialized refresh/retry behavior, and unified authentication state.
 - Migrate `AuthStatus`, account lookup, deals saving, and personal wishlist
   operations away from durable access-token storage.
 
-### Phase 4: Logout and token revocation
+### Phase 4: Logout and current-session revocation — implemented locally
 
-- Add backend logout, cookie clearing, refresh-session revocation, replay/reuse
-  handling, and frontend logout integration.
+- Add backend logout, matching cookie clearing, current refresh-session
+  revocation, rejection of rotated tokens, and frontend logout integration.
 - Remove legacy `localStorage` access-token compatibility only after the new
   flow is validated end to end.
+
+Family-wide replay/reuse response remains future work rather than an implemented
+production control.
 
 ### Phase 5: Rate limiting and account safety
 
@@ -360,18 +410,18 @@ session lifecycle, reliable revocation, and security-event model.
 - No OAuth or external identity-provider implementation yet.
 - No production deployment, production environment, or deployment/CD changes.
 - No full multi-factor authentication implementation yet.
-- No real Sentinel AI, Gemini, or other AI integration.
+- Sentinel and provider policy was outside this auth plan. NEXORA now has an
+  optional backend-only Gemini foundation, but it remains unrelated to auth
+  session hardening and is not a production AI claim.
 - No backend or frontend runtime changes, API behavior changes, database
   migrations, dependencies, or secret/configuration rollout in this branch.
 
-## 12. Recommended next implementation branch
+## 12. Superseded next step
 
-After this plan has been reviewed and its security decisions approved, create:
-
-`feature/auth-refresh-token-backend-foundation`
-
-That branch should implement only the Phase 2 backend foundation and its tests,
-with explicit review of the session schema, token hashing and rotation,
-refresh-cookie attributes, CSRF controls, compatibility contract, and
-configuration boundaries. Implementation must not begin merely because the
-planning document has been added.
+The previously recommended refresh-token backend branch was completed by later
+milestones. The next auth work must follow the
+[auth production-policy plan](auth-production-policy-plan.md): select a real
+deployment topology first, review its threat model, and only then implement
+production fail-closed configuration, cookie/CORS/proxy policy, session-family
+revocation, account recovery/verification, abuse controls, and security-event
+monitoring in separately reviewed changes.
