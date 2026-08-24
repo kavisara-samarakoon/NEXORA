@@ -50,7 +50,7 @@ function SentinelSystemStatus({
 
       <div className="sn-status__about">
         <div className="sn-status__section-label"><span>About Sentinel</span><strong>Preview</strong></div>
-        <div><span>Version</span><strong>0.19 contextual insights</strong></div>
+        <div><span>Version</span><strong>0.20 safety controls</strong></div>
         <div><span>Provider</span><strong>{status.geminiApi === "Gemini Enabled" ? "Gemini opt-in" : "Local default"}</strong></div>
         <div><span>Conversations</span><strong>Not persisted</strong></div>
         <div><span>External AI</span><strong>{status.geminiApi}</strong></div>

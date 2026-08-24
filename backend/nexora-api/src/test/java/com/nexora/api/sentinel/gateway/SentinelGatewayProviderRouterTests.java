@@ -3,6 +3,8 @@ package com.nexora.api.sentinel.gateway;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -13,6 +15,10 @@ class SentinelGatewayProviderRouterTests {
             new LocalSentinelGatewayProvider();
     private final GeminiSentinelGatewayProvider geminiProvider =
             mock(GeminiSentinelGatewayProvider.class);
+    private final SentinelProviderHealthService healthService =
+            new SentinelProviderHealthService(java.time.Clock.fixed(
+                    java.time.Instant.parse("2026-08-24T00:00:00Z"),
+                    java.time.ZoneOffset.UTC));
     private final SentinelGatewayInput input = new SentinelGatewayInput(
             7L,
             "Should I buy this game?",
@@ -26,6 +32,7 @@ class SentinelGatewayProviderRouterTests {
 
         assertEquals("local-foundation", response.mode());
         assertEquals("local", response.provider());
+        assertNull(response.fallbackReason());
         verifyNoInteractions(geminiProvider);
     }
 
@@ -37,6 +44,7 @@ class SentinelGatewayProviderRouterTests {
 
         assertEquals("local-fallback", response.mode());
         assertEquals("local", response.provider());
+        assertEquals("gemini_not_configured", response.fallbackReason());
         verifyNoInteractions(geminiProvider);
     }
 
@@ -50,25 +58,50 @@ class SentinelGatewayProviderRouterTests {
         SentinelInsightResponse response = router(properties).createInsight(input);
 
         assertEquals(geminiResponse, response);
+        assertEquals(1, healthService.snapshot().totalGeminiSuccessCount());
     }
 
     @Test
     void geminiFailureUsesLocalFallback() {
         SentinelAiProperties properties = geminiProperties("test-only-placeholder");
         when(geminiProvider.createInsight(input))
-                .thenThrow(new GeminiClientException("safe test failure"));
+                .thenThrow(new GeminiClientException(
+                        "safe test failure",
+                        SentinelProviderFallbackReason.GEMINI_NON_SUCCESS_RESPONSE));
 
         SentinelInsightResponse response = router(properties).createInsight(input);
 
         assertEquals("local-fallback", response.mode());
         assertEquals("local", response.provider());
+        assertEquals("gemini_non_success_response", response.fallbackReason());
+        assertEquals(
+                SentinelProviderFallbackReason.GEMINI_NON_SUCCESS_RESPONSE,
+                healthService.snapshot().lastFallbackReason());
+    }
+
+    @Test
+    void classifiedInvalidAndNetworkFailuresRemainSafeInFallbackResponse() {
+        SentinelAiProperties properties = geminiProperties("test-only-placeholder");
+
+        for (SentinelProviderFallbackReason reason : java.util.List.of(
+                SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE,
+                SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK)) {
+            doThrow(new GeminiClientException("safe test failure", reason))
+                    .when(geminiProvider).createInsight(input);
+
+            SentinelInsightResponse response = router(properties).createInsight(input);
+
+            assertEquals("local-fallback", response.mode());
+            assertEquals(reason.apiValue(), response.fallbackReason());
+        }
     }
 
     private SentinelGatewayProviderRouter router(SentinelAiProperties properties) {
         return new SentinelGatewayProviderRouter(
                 properties,
                 localProvider,
-                geminiProvider);
+                geminiProvider,
+                healthService);
     }
 
     private static SentinelAiProperties geminiProperties(String apiKey) {
@@ -88,6 +121,7 @@ class SentinelGatewayProviderRouterTests {
                 java.util.List.of("Recommendation"),
                 java.util.List.of("Safety"),
                 java.util.List.of("Next"),
+                null,
                 java.time.Instant.parse("2026-08-23T00:00:00Z"));
     }
 }

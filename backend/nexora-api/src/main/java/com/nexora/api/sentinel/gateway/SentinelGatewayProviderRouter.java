@@ -10,14 +10,17 @@ public class SentinelGatewayProviderRouter implements SentinelGatewayProvider {
     private final SentinelAiProperties properties;
     private final LocalSentinelGatewayProvider localProvider;
     private final GeminiSentinelGatewayProvider geminiProvider;
+    private final SentinelProviderHealthService healthService;
 
     public SentinelGatewayProviderRouter(
             SentinelAiProperties properties,
             LocalSentinelGatewayProvider localProvider,
-            GeminiSentinelGatewayProvider geminiProvider) {
+            GeminiSentinelGatewayProvider geminiProvider,
+            SentinelProviderHealthService healthService) {
         this.properties = properties;
         this.localProvider = localProvider;
         this.geminiProvider = geminiProvider;
+        this.healthService = healthService;
     }
 
     @Override
@@ -26,13 +29,24 @@ public class SentinelGatewayProviderRouter implements SentinelGatewayProvider {
             return localProvider.createInsight(input);
         }
         if (!properties.isGeminiConfigured()) {
-            return localProvider.createFallback(input);
+            return fallback(input, SentinelProviderFallbackReason.GEMINI_NOT_CONFIGURED);
         }
 
         try {
-            return geminiProvider.createInsight(input);
+            SentinelInsightResponse response = geminiProvider.createInsight(input);
+            healthService.recordGeminiSuccess();
+            return response;
+        } catch (GeminiClientException exception) {
+            return fallback(input, exception.reason());
         } catch (RuntimeException exception) {
-            return localProvider.createFallback(input);
+            return fallback(input, SentinelProviderFallbackReason.UNKNOWN);
         }
+    }
+
+    private SentinelInsightResponse fallback(
+            SentinelGatewayInput input,
+            SentinelProviderFallbackReason reason) {
+        healthService.recordGeminiFallback(reason);
+        return localProvider.createFallback(input, reason);
     }
 }

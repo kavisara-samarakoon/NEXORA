@@ -23,7 +23,9 @@ public class GeminiSentinelGatewayProvider implements SentinelGatewayProvider {
     public SentinelInsightResponse createInsight(SentinelGatewayInput input) {
         String answer = client.generateText(input);
         if (answer == null || answer.isBlank()) {
-            throw new GeminiClientException("Gemini provider returned no usable answer");
+            throw new GeminiClientException(
+                    "Gemini provider returned no usable answer",
+                    SentinelProviderFallbackReason.GEMINI_INVALID_RESPONSE);
         }
         Guidance guidance = guidanceFor(input.context());
         return new SentinelInsightResponse(
@@ -35,6 +37,7 @@ public class GeminiSentinelGatewayProvider implements SentinelGatewayProvider {
                 guidance.recommendations(),
                 SAFETY_NOTES,
                 guidance.nextActions(),
+                null,
                 Instant.now());
     }
 

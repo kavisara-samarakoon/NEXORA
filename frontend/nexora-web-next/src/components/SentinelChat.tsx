@@ -15,6 +15,7 @@ import {
   withSentinelAuthRetry,
   type SentinelInsightContext,
   type SentinelInsightResponse,
+  type SentinelProviderFallbackReason,
 } from "@/lib/user-sentinel";
 
 type GatewayAuthState = "checking" | "authenticated" | "anonymous" | "unavailable";
@@ -33,6 +34,16 @@ function SentinelAvatar() {
     </span>
   );
 }
+
+const fallbackReasonCopy: Record<SentinelProviderFallbackReason, string> = {
+  gemini_not_configured: "Gemini is not configured for this local session.",
+  gemini_non_success_response: "Gemini returned a non-success response.",
+  gemini_invalid_response: "Gemini returned an unusable response.",
+  gemini_timeout_or_network: "Gemini could not be reached in time.",
+  gemini_configuration_invalid: "The local Gemini configuration is invalid.",
+  gemini_unavailable: "Gemini is currently unavailable.",
+  unknown: "Gemini could not complete the request.",
+};
 
 function GatewayResponseCard({ response }: { response: SentinelInsightResponse }) {
   const providerLabel = response.provider === "gemini"
@@ -59,6 +70,12 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
       </header>
 
       <p className="sn-gateway-response__answer">{response.answer}</p>
+
+      {response.mode === "local-fallback" && response.fallbackReason && (
+        <p className="sn-gateway-response__fallback-reason">
+          Fallback reason: {fallbackReasonCopy[response.fallbackReason]}
+        </p>
+      )}
 
       <div className="sn-gateway-response__sections">
         <section>

@@ -200,8 +200,10 @@ actions with one bounded access-token refresh retry. Signed-out users receive a
 sign-in hint rather than a simulated AI answer.
 
 Provider badges distinguish `Local provider`, `Local fallback`, and
-`Gemini provider`. Messages and responses live only in current React state and
-disappear on navigation or reload; they are not written to browser storage.
+`Gemini provider`. Local fallback responses show a small, fixed explanation for
+the backend-classified provider failure, and HTTP 429 responses show a friendly
+wait-before-retrying message. Messages and responses live only in current React
+state and disappear on navigation or reload; they are not written to browser storage.
 The chat labels authenticated requests as using bounded, backend-generated
 NEXORA context. Depending on the selected context, that may contain compact
 owner-scoped Wishlist, recent-price, alert, public deal, or giveaway summaries;
@@ -256,9 +258,12 @@ dependency graph; it never applies automatic audit fixes.
   provider, deployment workflow, or production email claim.
 - Sentinel has bounded backend-generated NEXORA context summaries, an optional
   backend-only Gemini provider disabled by default, and a deterministic local
-  fallback. There is no conversation persistence, autonomous action, streaming,
-  production privacy/safety review, moderation, rate limiting, abuse monitoring,
-  managed provider-key workflow, cost control, or AI observability.
+  fallback with safe failure reasons. Backend limits and provider-health
+  metadata are in-memory only. There is no conversation persistence, autonomous
+  action, streaming, production privacy/safety review, moderation pipeline,
+  distributed rate limiting, production AI observability, abuse monitoring,
+  managed provider-key workflow, or cost control. This milestone adds no
+  database migration.
 - Public content fallbacks are intentionally demo data, not guaranteed live
   provider results.
 

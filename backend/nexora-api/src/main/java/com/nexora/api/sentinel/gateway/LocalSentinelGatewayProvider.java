@@ -22,22 +22,26 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
 
     @Override
     public SentinelInsightResponse createInsight(SentinelGatewayInput input) {
-        return createResponse(input, MODE, TITLE, LOCAL_SAFETY_NOTES);
+        return createResponse(input, MODE, TITLE, LOCAL_SAFETY_NOTES, null);
     }
 
-    public SentinelInsightResponse createFallback(SentinelGatewayInput input) {
+    public SentinelInsightResponse createFallback(
+            SentinelGatewayInput input,
+            SentinelProviderFallbackReason reason) {
         return createResponse(
                 input,
                 "local-fallback",
                 "Sentinel Local Fallback",
-                FALLBACK_SAFETY_NOTES);
+                FALLBACK_SAFETY_NOTES,
+                reason.apiValue());
     }
 
     private static SentinelInsightResponse createResponse(
             SentinelGatewayInput input,
             String mode,
             String title,
-            List<String> safetyNotes) {
+            List<String> safetyNotes,
+            String fallbackReason) {
         LocalGuidance guidance = guidanceFor(input);
         return new SentinelInsightResponse(
                 mode,
@@ -48,6 +52,7 @@ public class LocalSentinelGatewayProvider implements SentinelGatewayProvider {
                 guidance.recommendations(),
                 safetyNotes,
                 guidance.nextActions(),
+                fallbackReason,
                 Instant.now());
     }
 

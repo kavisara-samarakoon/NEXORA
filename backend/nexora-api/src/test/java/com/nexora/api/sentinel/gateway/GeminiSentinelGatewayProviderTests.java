@@ -29,6 +29,7 @@ class GeminiSentinelGatewayProviderTests {
                 () -> assertEquals("deals", response.context()),
                 () -> assertEquals("Sentinel Gemini Preview", response.title()),
                 () -> assertEquals("Check the current official store price.", response.answer()),
+                () -> assertEquals(null, response.fallbackReason()),
                 () -> assertFalse(response.recommendations().isEmpty()),
                 () -> assertFalse(response.safetyNotes().isEmpty()),
                 () -> assertFalse(response.nextActions().isEmpty())

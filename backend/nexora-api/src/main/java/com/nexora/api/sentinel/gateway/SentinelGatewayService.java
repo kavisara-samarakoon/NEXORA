@@ -8,12 +8,15 @@ public class SentinelGatewayService {
 
     private final SentinelGatewayProvider provider;
     private final SentinelContextSummaryService contextSummaryService;
+    private final SentinelRateLimiter rateLimiter;
 
     public SentinelGatewayService(
             SentinelGatewayProvider provider,
-            SentinelContextSummaryService contextSummaryService) {
+            SentinelContextSummaryService contextSummaryService,
+            SentinelRateLimiter rateLimiter) {
         this.provider = provider;
         this.contextSummaryService = contextSummaryService;
+        this.rateLimiter = rateLimiter;
     }
 
     public SentinelInsightResponse requestInsight(
@@ -21,6 +24,11 @@ public class SentinelGatewayService {
             SentinelInsightRequest request) {
         if (userId <= 0) {
             throw new AuthenticationFailedException("Authentication is required");
+        }
+
+        SentinelRateLimitResult rateLimit = rateLimiter.check(userId);
+        if (!rateLimit.allowed()) {
+            throw new SentinelRateLimitExceededException(rateLimit.retryAfterSeconds());
         }
 
         SentinelInsightContext context = SentinelInsightContext.fromRequest(request.context());

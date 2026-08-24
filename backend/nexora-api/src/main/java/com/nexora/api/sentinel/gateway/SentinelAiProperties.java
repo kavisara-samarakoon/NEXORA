@@ -12,6 +12,7 @@ public class SentinelAiProperties {
 
     private String provider = "local";
     private Gemini gemini = new Gemini();
+    private Safety safety = new Safety();
 
     public String getProvider() {
         return provider;
@@ -27,6 +28,14 @@ public class SentinelAiProperties {
 
     public void setGemini(Gemini gemini) {
         this.gemini = gemini;
+    }
+
+    public Safety getSafety() {
+        return safety;
+    }
+
+    public void setSafety(Safety safety) {
+        this.safety = safety;
     }
 
     public boolean isGeminiRequested() {
@@ -126,6 +135,96 @@ public class SentinelAiProperties {
                 return 0.2;
             }
             return Math.max(0.0, Math.min(temperature, 2.0));
+        }
+    }
+
+    public static class Safety {
+
+        static final int MIN_RATE_LIMIT_WINDOW_SECONDS = 1;
+        static final int MAX_RATE_LIMIT_WINDOW_SECONDS = 3_600;
+        static final int MIN_RATE_LIMIT_MAX_REQUESTS = 1;
+        static final int MAX_RATE_LIMIT_MAX_REQUESTS = 1_000;
+        static final int MIN_CONTEXT_PROMPT_CHARACTERS = 256;
+        static final int MAX_CONTEXT_PROMPT_CHARACTERS = 10_000;
+        static final int MIN_ANSWER_CHARACTERS = 256;
+        static final int MAX_ANSWER_CHARACTERS = 16_000;
+
+        private boolean rateLimitEnabled = true;
+        private int rateLimitWindowSeconds = 60;
+        private int rateLimitMaxRequests = 12;
+        private int maxContextPromptCharacters = SentinelContextSummary.MAX_PROMPT_CHARACTERS;
+        private int maxAnswerCharacters = 4_000;
+
+        public boolean isRateLimitEnabled() {
+            return rateLimitEnabled;
+        }
+
+        public void setRateLimitEnabled(boolean rateLimitEnabled) {
+            this.rateLimitEnabled = rateLimitEnabled;
+        }
+
+        public int getRateLimitWindowSeconds() {
+            return rateLimitWindowSeconds;
+        }
+
+        public void setRateLimitWindowSeconds(int rateLimitWindowSeconds) {
+            this.rateLimitWindowSeconds = rateLimitWindowSeconds;
+        }
+
+        public int getRateLimitMaxRequests() {
+            return rateLimitMaxRequests;
+        }
+
+        public void setRateLimitMaxRequests(int rateLimitMaxRequests) {
+            this.rateLimitMaxRequests = rateLimitMaxRequests;
+        }
+
+        public int getMaxContextPromptCharacters() {
+            return maxContextPromptCharacters;
+        }
+
+        public void setMaxContextPromptCharacters(int maxContextPromptCharacters) {
+            this.maxContextPromptCharacters = maxContextPromptCharacters;
+        }
+
+        public int getMaxAnswerCharacters() {
+            return maxAnswerCharacters;
+        }
+
+        public void setMaxAnswerCharacters(int maxAnswerCharacters) {
+            this.maxAnswerCharacters = maxAnswerCharacters;
+        }
+
+        public int boundedRateLimitWindowSeconds() {
+            return bound(
+                    rateLimitWindowSeconds,
+                    MIN_RATE_LIMIT_WINDOW_SECONDS,
+                    MAX_RATE_LIMIT_WINDOW_SECONDS);
+        }
+
+        public int boundedRateLimitMaxRequests() {
+            return bound(
+                    rateLimitMaxRequests,
+                    MIN_RATE_LIMIT_MAX_REQUESTS,
+                    MAX_RATE_LIMIT_MAX_REQUESTS);
+        }
+
+        public int boundedMaxContextPromptCharacters() {
+            return bound(
+                    maxContextPromptCharacters,
+                    MIN_CONTEXT_PROMPT_CHARACTERS,
+                    MAX_CONTEXT_PROMPT_CHARACTERS);
+        }
+
+        public int boundedMaxAnswerCharacters() {
+            return bound(
+                    maxAnswerCharacters,
+                    MIN_ANSWER_CHARACTERS,
+                    MAX_ANSWER_CHARACTERS);
+        }
+
+        private static int bound(int value, int minimum, int maximum) {
+            return Math.max(minimum, Math.min(value, maximum));
         }
     }
 }

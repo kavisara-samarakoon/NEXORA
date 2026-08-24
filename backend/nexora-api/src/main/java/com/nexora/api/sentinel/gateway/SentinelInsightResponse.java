@@ -12,5 +12,6 @@ public record SentinelInsightResponse(
         List<String> recommendations,
         List<String> safetyNotes,
         List<String> nextActions,
+        String fallbackReason,
         Instant createdAt) {
 }
