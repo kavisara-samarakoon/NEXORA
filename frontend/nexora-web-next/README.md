@@ -20,13 +20,19 @@ required to run this application.
 Public content pages retain typed local fallbacks, so linting and production
 builds do not require a running backend.
 
+These commands can also run unchanged inside the repository's optional
+development container, which supplies Node.js 20 and npm. See the
+[devcontainer guide](../../docs/development/dev-container-foundation.md). The
+container is local tooling, not a frontend release image, and it does not alter
+frontend environment-variable or secret-handling rules.
+
 ## Install and run
 
 From `frontend/nexora-web-next`:
 
 ```bash
 cp .env.example .env.local
-npm install
+npm ci
 npm run lint
 npm run build
 npm run dev
