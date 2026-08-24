@@ -37,6 +37,14 @@ The API starts at [http://localhost:8080](http://localhost:8080). Check
 [http://localhost:8080/api/health](http://localhost:8080/api/health) for the
 service health response.
 
+The same commands can run inside the repository's optional development
+container, which provides Java 17 and Maven without changing the host-native
+workflow. PostgreSQL can still be supplied by the existing local Compose file.
+See the
+[devcontainer guide](../../docs/development/dev-container-foundation.md) for
+container-to-host database connection guidance. This is local tooling, not a
+backend release image.
+
 ## PostgreSQL development setup
 
 Local defaults:
@@ -586,10 +594,11 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 - This repository does not document a production deployment,
   continuous-delivery pipeline, application-container build workflow, or
   operational runbook.
-- Backend CI does not build application containers. Security CI does not yet
-  include a full Maven vulnerability scanner or CodeQL analysis.
+- Backend CI does not build application containers. CodeQL analysis is present,
+  while Security CI still does not include a full Maven vulnerability scanner.
 - Docker Compose provides local PostgreSQL only; there is no backend application
-  image or production container workflow.
+  image or production container workflow. The optional devcontainer supplies a
+  local toolchain only.
 - The backend refresh-session foundation is not a complete production browser
   session design. Local CSRF/trusted-origin checks are implemented, but the
   production CORS/cookie/origin/proxy policy is not reviewed, and session-family

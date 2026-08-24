@@ -1,0 +1,42 @@
+{
+  "name": "NEXORA local development",
+  "image": "mcr.microsoft.com/devcontainers/java:3-17-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": true
+    },
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "forwardPorts": [3000, 8080, 5432],
+  "portsAttributes": {
+    "3000": {
+      "label": "NEXORA frontend",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "NEXORA backend",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "Local PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
+  "runArgs": [
+    "--add-host=host.docker.internal:host-gateway"
+  ],
+  "postCreateCommand": "java -version && mvn -version && node --version && npm --version && git --version",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}

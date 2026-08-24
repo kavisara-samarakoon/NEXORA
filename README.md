@@ -22,8 +22,9 @@ Not deployed as a production service
 - Records target-reached alert history for personal wishlist items.
 - Provides opt-in foundations for scheduled price refresh and notification
   delivery.
-- Includes Security and Sentinel demo/status experiences. Sentinel is not a
-  real AI or Gemini integration yet.
+- Includes Security and Sentinel experiences. Authenticated Sentinel requests
+  use a backend-only local gateway with an optional Gemini provider, bounded
+  context, safety limits, and deterministic local fallback.
 
 ## Key features
 
@@ -31,11 +32,12 @@ Not deployed as a production service
 | --- | --- |
 | Deals | Curated catalog plus optional live CheapShark mode and redirect URLs |
 | Giveaways | API-backed listings with frontend fallback data |
-| Authentication | BCrypt passwords and stateless HS256 JWT access tokens |
+| Authentication | BCrypt passwords, memory-first JWT access tokens, server-side refresh sessions, and an HttpOnly refresh cookie |
 | Wishlist | Public demo data plus authenticated, user-owned CRUD operations |
 | Alert intelligence | Target evaluation, target-reached transitions, and event history |
 | Price refresh | Disabled-by-default scheduler with stored or CheapShark snapshot providers |
 | Notifications | Disabled-by-default log provider and optional email provider foundation |
+| Sentinel | Authenticated backend-only local/Gemini gateway with bounded context, transient responses, safety limits, and local fallback |
 | Frontend resilience | Response validation and typed fallbacks for public content pages |
 
 ## Architecture overview
@@ -45,7 +47,7 @@ Not deployed as a production service
 | Frontend | Next.js App Router, React, TypeScript, and CSS in `frontend/nexora-web-next` |
 | Backend | Spring Boot REST API with Spring Security, validation, JPA, and scheduling |
 | Default backend profile | Database-free demo catalogs plus in-memory accounts and personal wishlist state |
-| `dev` backend profile | PostgreSQL, Flyway V1–V6, and JPA-backed catalog, account, wishlist, and alert data |
+| `dev` backend profile | PostgreSQL, Flyway V1–V9, and JPA-backed catalog, account, refresh-session, wishlist, alert, price-history, and notification-preference data |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
 | Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, frontend lint/build, dependency checks, CodeQL, and pull-request dependency review |
@@ -65,6 +67,7 @@ personal wishlist endpoints under `/api/me/wishlist`.
 | `database` | Supporting schema and database-design workspace |
 | `assets` | Shared logos, images, and UI references |
 | `devops` | Local PostgreSQL Compose setup plus reserved deployment workspace |
+| `.devcontainer` | Optional local Java 17, Maven, Node.js 20, npm, Git, and Docker CLI development environment |
 | `research` | Final-year project and research material |
 
 See [RELEASES.md](RELEASES.md) for concise development milestones and
@@ -73,6 +76,8 @@ assessment. See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance,
 current controls, and known security limitations. Repository workflow and
 settings guidance is in
 [docs/security/repository-security-hardening.md](docs/security/repository-security-hardening.md).
+Optional development-container onboarding is documented in
+[docs/development/dev-container-foundation.md](docs/development/dev-container-foundation.md).
 
 ## Tech stack
 
@@ -84,7 +89,14 @@ settings guidance is in
 
 ## Local setup
 
-Requirements:
+NEXORA supports three local-development approaches:
+
+- Install Java, Maven, Node.js, and npm directly on the host.
+- Run the applications on the host and use Docker Compose for PostgreSQL only.
+- Use the optional development container for the toolchain, with the existing
+  PostgreSQL Compose service when persisted development data is needed.
+
+Host-native requirements:
 
 - Node.js 20.9 or newer and npm
 - Java 17 or newer
@@ -111,6 +123,10 @@ the local Docker setup described below, then run:
 ```bash
 cd backend/nexora-api
 export NEXORA_JWT_SECRET="$(openssl rand -base64 48)"
+export NEXORA_REFRESH_TOKEN_HASH_SECRET="$(openssl rand -base64 48)"
+export NEXORA_DB_URL=jdbc:postgresql://localhost:5432/nexora_db
+export NEXORA_DB_USERNAME=nexora_user
+export NEXORA_DB_PASSWORD=nexora_password
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
@@ -138,12 +154,24 @@ Manual PostgreSQL setup remains available in the
 and reset commands are in the
 [Docker README](devops/docker/README.md).
 
+### Optional development container
+
+The repository includes an optional Java 17, Maven, Node.js 20, npm, Git, and
+Docker CLI development environment. It forwards ports 3000, 8080, and 5432 but
+does not install project dependencies or start PostgreSQL, the backend, or the
+frontend automatically.
+
+Use a Dev Containers-compatible editor or tool and follow the
+[devcontainer guide](docs/development/dev-container-foundation.md). This is
+local developer tooling, not a production application image or deployment
+workflow. Host-native setup remains fully supported.
+
 ### Frontend
 
 ```bash
 cd frontend/nexora-web-next
 cp .env.example .env.local
-npm install
+npm ci
 npm run lint
 npm run build
 npm run dev
@@ -161,6 +189,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `NEXORA_DB_USERNAME` | Backend `dev` | PostgreSQL username |
 | `NEXORA_DB_PASSWORD` | Backend `dev` | PostgreSQL password |
 | `NEXORA_JWT_SECRET` | Backend | JWT signing secret; override the local-only default outside local development |
+| `NEXORA_REFRESH_TOKEN_HASH_SECRET` | Backend | HMAC secret for stored refresh-token hashes; generate a separate local value |
 | `NEXORA_JWT_EXPIRATION_MINUTES` | Backend | Access-token lifetime; default is 60 minutes |
 
 Price refresh and notifications use safe defaults:
@@ -206,10 +235,12 @@ repository settings rather than claims made by these workflow files.
 | Service | `GET /api`, `GET /api/health`, `GET /api/dashboard/summary` |
 | Catalog | `GET /api/deals`, `GET /api/deals/external`, `GET /api/giveaways` |
 | Public wishlist | `GET /api/wishlist` |
-| Authentication | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` |
+| Authentication | `GET /api/auth/csrf`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me` |
 | Personal wishlist | `GET/POST /api/me/wishlist`, `PATCH /api/me/wishlist/{id}/alert`, `DELETE /api/me/wishlist/{id}` |
 | Alert history | `GET /api/me/wishlist/alert-events` |
-| Demo/status | `GET /api/security/status`, `GET /api/sentinel/status`, `GET /api/sentinel/demo` |
+| Notification preferences | `GET/PATCH /api/me/notification-preferences` |
+| Sentinel | `GET /api/sentinel/status`, `GET /api/sentinel/demo`, authenticated `POST /api/me/sentinel/insight` |
+| Security status | `GET /api/security/status` |
 
 The full endpoint and configuration reference is in the
 [backend README](backend/nexora-api/README.md).
@@ -227,39 +258,46 @@ These are development milestones, not claims of deployed production releases.
 ## Current limitations
 
 - No production deployment or continuous-delivery pipeline is documented yet.
-- Docker Compose covers local PostgreSQL only; there are no backend/frontend
-  application images, production container workflow, or devcontainer.
+- Docker Compose covers local PostgreSQL only. The optional devcontainer
+  provides a local toolchain, not backend/frontend release images or a
+  production container workflow.
 - CI does not build application containers. CodeQL and pull-request Dependency
   Review workflows are included, while repository secret scanning/push
   protection remain owner-managed settings and Maven dependency output remains
   visibility rather than a full vulnerability scan.
-- Browser `localStorage` token storage is temporary and not production-grade;
-  there is no refresh-token or HttpOnly-cookie lifecycle.
-- Security hardening such as rate limiting, account verification, recovery,
-  token revocation, and operational auditing is incomplete.
+- Access tokens are memory-first and the refresh token uses an HttpOnly cookie,
+  but production cookie/CORS/origin/proxy policy, complete revocation/session
+  controls, account verification, recovery, and operational auditing remain
+  incomplete.
 - Scheduled refresh is single-process and has no distributed lock or production
   scheduling guarantees.
 - CheapShark coverage and conservative title/store matching cannot resolve every
   game or store.
-- Notifications have no preference UI, persistent delivery status, retries,
-  outbox, or asynchronous after-commit delivery.
+- Notification preferences are account-scoped, but notifications have no
+  persistent delivery status, retries, outbox, or asynchronous after-commit
+  delivery.
 - Email requires explicit SMTP configuration and has no verified-recipient
   workflow.
-- Sentinel remains a demo/status experience; there is no real AI or Gemini
-  integration.
-- Price history charts and long-term price history storage are not implemented.
+- Sentinel has an optional backend-only Gemini provider, bounded context, local
+  safety controls, and deterministic fallback. It has no conversation
+  persistence, autonomous actions, moderation pipeline, distributed rate
+  limiting, or production AI observability.
+- Price history has persisted snapshots and a compact visualization, but no
+  production retention policy, aggregation, or advanced analytics.
 
 ## Roadmap
 
-1. Harden authentication and move browser sessions to an approved secure token
-   lifecycle.
+1. Review the local refresh-session, cookie, CSRF, origin, and proxy foundations
+   against defined production authentication requirements.
 2. Review repository secret scanning/push protection and evaluate a reliable
-   Maven vulnerability scanner, then add optional application containerization.
-3. Add persistent notification delivery status, retry/outbox processing, and
-   user preferences.
-4. Add production-grade scheduling/locking and price history.
-5. Evaluate a real Sentinel AI integration with explicit privacy and safety
-   controls.
+   Maven vulnerability scanner.
+3. Define a production application-container strategy only after deployment,
+   operations, and secret-management requirements are established.
+4. Add verified-recipient handling, persistent notification delivery status,
+   and retry/outbox processing.
+5. Add production-grade scheduling/locking and extend price-history analytics.
+6. Define production Sentinel privacy, moderation, evaluation, cost-control,
+   provider-key, and observability requirements before expanding AI use.
 
 ## Verification
 

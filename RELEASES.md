@@ -3,6 +3,12 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.22.0 dev container foundation
+
+- Added optional local devcontainer onboarding and improved Docker PostgreSQL
+  developer documentation without adding production deployment or application
+  container release images.
+
 ## Unreleased — v0.21.0 security CI hardening
 
 - Added repository security hardening with CodeQL/dependency-review evaluation,

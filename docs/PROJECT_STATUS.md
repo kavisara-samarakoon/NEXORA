@@ -64,6 +64,10 @@ or production-ready service.
   unchanged.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
+- Optional local devcontainer foundation with Java 17, Maven, Node.js 20, npm,
+  Git, Docker CLI access, forwarded development ports, and no automatic service
+  startup. Host-native development and the PostgreSQL-only Compose setup remain
+  supported.
 
 ## Active limitations
 
@@ -99,8 +103,9 @@ or production-ready service.
 
 - No deployed production environment or production operations guide.
 - No deployment or continuous-delivery pipeline.
-- No backend/frontend application container images, production container
-  workflow, or devcontainer. Compose currently runs local PostgreSQL only.
+- No backend/frontend production application images or production container
+  workflow. Compose runs local PostgreSQL only, and the optional devcontainer
+  is local developer tooling rather than a release image.
 - Repository secret scanning, push protection, private vulnerability reporting,
   code-scanning alert policy, and required-check enforcement depend on GitHub
   repository settings and are not asserted as enabled by repository files.
@@ -125,8 +130,8 @@ or production-ready service.
    protection, Dependabot alerts/security updates, code-scanning alerts, and
    branch rules in repository settings; evaluate a stable Maven vulnerability
    scanner without making external-feed availability a mandatory gate.
-2. Add optional backend/frontend development containerization without implying
-   production deployment readiness.
+2. Review a production application-container strategy only after deployment,
+   operations, networking, and secret-management requirements are defined.
 3. Review and extend the local CSRF/trusted-origin foundation into a production
    CORS/cookie/proxy policy, then extend session management and revocation.
 4. Define verified recipients, dispatcher preference enforcement, durable
