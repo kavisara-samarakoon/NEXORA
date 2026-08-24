@@ -7,6 +7,8 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    commit-message:
+      prefix: deps
     ignore:
       - dependency-name: "*"
         update-types:
@@ -26,6 +28,8 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    commit-message:
+      prefix: deps
     ignore:
       - dependency-name: "*"
         update-types:
@@ -45,6 +49,8 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    commit-message:
+      prefix: deps
     ignore:
       - dependency-name: "*"
         update-types:

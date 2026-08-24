@@ -39,7 +39,7 @@ time is guaranteed while the project remains a development MVP.
 ## Current controls
 
 - BCrypt password hashing through Spring Security.
-- JWT access-token authentication foundation.
+- JWT access-token authentication foundation with authenticated account lookup.
 - Backend refresh-session foundation with HMAC-SHA256 token hashes, rotation,
   logout revocation, profile-based storage, and HttpOnly cookie issuance.
 - Frontend refresh-session consumption with memory-first Bearer access tokens,
@@ -47,13 +47,28 @@ time is guaranteed while the project remains a development MVP.
 - Focused local-development CSRF/trusted-origin checks for register, login,
   refresh, and logout using a `SecureRandom` double-submit token, explicit
   origin allowlist, and restricted credentialed CORS headers.
-- Backend request validation and ownership checks for personal wishlist data.
+- Backend request validation and ownership checks for personal Wishlist APIs,
+  including price history and alert history.
+- Owner-scoped notification preferences with in-memory and PostgreSQL-backed
+  development implementations.
+- Sentinel backend-only local/Gemini gateway with bounded backend-generated
+  context summaries, no conversation persistence, deterministic local fallback,
+  safe fallback classification, and process-local per-user rate limiting.
 - Backend tests, frontend lint/build validation, and PostgreSQL `dev`-profile
   integration validation in CI.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and the primary
-  Next.js npm dependencies.
-- Security CI with a high-severity production npm audit and Maven dependency
-  resolution visibility.
+  Next.js npm dependencies, with grouped minor/patch updates.
+- Security CI with a high-severity production npm audit, retained audit report,
+  and Maven dependency-tree visibility.
+- Repository-defined CodeQL analysis for Java and JavaScript/TypeScript on
+  pushes, pull requests, and a weekly schedule.
+- Pull-request dependency review configured to reject newly introduced high or
+  critical known vulnerabilities.
+
+The CodeQL and dependency-review workflows define repository automation; their
+alerts and merge enforcement still depend on successful GitHub Actions runs and
+repository security/branch-protection settings. The workflows do not themselves
+prove that every GitHub security setting is enabled.
 
 ## Known limitations
 
@@ -68,11 +83,18 @@ production-hardening phases remain incomplete.
   cookie-sensitive auth routes. The no-origin curl/test allowance, explicit
   localhost CORS support, local cookie defaults, reverse-proxy assumptions, and
   overall production policy are not production-ready.
-- Rate limiting, account verification, password recovery, session-wide
-  revocation policy, and comprehensive security monitoring are not implemented.
-- There is no CodeQL/full code-scanning workflow, dedicated secret-scanning
-  workflow, or full Maven vulnerability scanner in this foundation.
-- There is no production deployment or operations security guide.
+- Account verification, password recovery, a complete session-wide revocation
+  policy, and comprehensive security monitoring are not implemented.
+- There is no deployed production environment, production secret-management
+  setup, production monitoring/SIEM integration, or production operations guide.
+- Repository secret scanning, push protection, private vulnerability reporting,
+  code-scanning alert policy, and required checks must be enabled and reviewed
+  through GitHub repository settings where available.
+- Sentinel rate limiting and provider-health tracking are process-local, not
+  distributed controls. There is no production AI observability or moderation
+  pipeline.
+- Maven dependency-tree output is visibility only. A full Maven vulnerability
+  scanner is not a mandatory CI gate because no-key vulnerability-feed updates
+  can be slow or unreliable for this public development repository.
 - Notification delivery has no durable status, retry/outbox, verified-recipient
-  preference, or asynchronous after-commit security workflow.
-- Sentinel is a demo/status experience and has no real AI or Gemini integration.
+  workflow, or asynchronous after-commit processing.

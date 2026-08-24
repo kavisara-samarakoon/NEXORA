@@ -17,7 +17,9 @@ concurrency:
 
 jobs:
   frontend-npm-audit:
+    name: Frontend production dependency audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend/nexora-web-next
@@ -36,11 +38,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit production dependencies at high severity
+        run: npm audit --omit=dev --audit-level=high --json > npm-audit.json
+
+      - name: Upload npm audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-npm-audit
+          path: frontend/nexora-web-next/npm-audit.json
+          if-no-files-found: warn
+          retention-days: 14
 
   backend-maven-dependency-resolution:
+    name: Backend dependency tree visibility
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend/nexora-api
@@ -57,4 +70,14 @@ jobs:
           cache: maven
 
       - name: Resolve backend dependency tree
-        run: mvn -q -DskipTests dependency:tree
+        run: >-
+          mvn -q -DskipTests dependency:tree
+          -DoutputFile=maven-dependency-tree.txt
+
+      - name: Upload Maven dependency tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-maven-dependency-tree
+          path: backend/nexora-api/maven-dependency-tree.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -3,6 +3,7 @@
 [![Backend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml)
 [![Security CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml)
+[![CodeQL](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/codeql.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/codeql.yml)
 
 NEXORA is a secure, network-aware game deals, giveaways, wishlist, and alert
 intelligence platform. It combines a Next.js interface with a Spring Boot API,
@@ -47,7 +48,7 @@ Not deployed as a production service
 | `dev` backend profile | PostgreSQL, Flyway V1–V6, and JPA-backed catalog, account, wishlist, and alert data |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
-| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, frontend lint/build, and lightweight dependency security checks |
+| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, frontend lint/build, dependency checks, CodeQL, and pull-request dependency review |
 
 The public `GET /api/wishlist` contract remains separate from authenticated
 personal wishlist endpoints under `/api/me/wishlist`.
@@ -69,7 +70,9 @@ personal wishlist endpoints under `/api/me/wishlist`.
 See [RELEASES.md](RELEASES.md) for concise development milestones and
 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the current readiness
 assessment. See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance,
-current controls, and known security limitations.
+current controls, and known security limitations. Repository workflow and
+settings guidance is in
+[docs/security/repository-security-hardening.md](docs/security/repository-security-hardening.md).
 
 ## Tech stack
 
@@ -182,7 +185,9 @@ requests targeting `main`:
 | --- | --- |
 | `backend-ci.yml` | Runs database-free backend tests and a separate PostgreSQL 16 job that validates the `dev` profile, Flyway migrations, and JPA schema |
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
-| `security-ci.yml` | Audits primary frontend production dependencies at high severity and verifies backend Maven dependency resolution |
+| `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
+| `codeql.yml` | Analyzes backend Java and primary frontend JavaScript/TypeScript on `main`, pull requests, and weekly |
+| `dependency-review.yml` | Reviews dependency changes on pull requests to `main` and rejects newly introduced high or critical known vulnerabilities |
 
 The frontend workflow does not build the retained Vite prototype. Backend CI
 keeps the normal test suite database-free and runs PostgreSQL validation in a
@@ -190,7 +195,9 @@ separate service-backed job. Dependabot checks GitHub Actions, backend Maven,
 and primary frontend npm dependencies weekly. Routine major version-update PRs
 are intentionally suppressed; major upgrades are planned manually, while
 Dependabot security alerts and eligible security updates remain visible. CI
-does not deploy NEXORA.
+does not deploy NEXORA. Dependency Review works best with the dependency graph
+enabled; secret scanning, push protection, alert policy, and required checks are
+repository settings rather than claims made by these workflow files.
 
 ## API overview
 
@@ -222,9 +229,10 @@ These are development milestones, not claims of deployed production releases.
 - No production deployment or continuous-delivery pipeline is documented yet.
 - Docker Compose covers local PostgreSQL only; there are no backend/frontend
   application images, production container workflow, or devcontainer.
-- CI does not build application containers. CodeQL/full code scanning,
-  repository-configured secret scanning, and a full Maven vulnerability scanner
-  are not included yet.
+- CI does not build application containers. CodeQL and pull-request Dependency
+  Review workflows are included, while repository secret scanning/push
+  protection remain owner-managed settings and Maven dependency output remains
+  visibility rather than a full vulnerability scan.
 - Browser `localStorage` token storage is temporary and not production-grade;
   there is no refresh-token or HttpOnly-cookie lifecycle.
 - Security hardening such as rate limiting, account verification, recovery,
@@ -245,8 +253,8 @@ These are development milestones, not claims of deployed production releases.
 
 1. Harden authentication and move browser sessions to an approved secure token
    lifecycle.
-2. Add full code, secret, and Maven vulnerability scanning where repository
-   support is appropriate, then add optional application containerization.
+2. Review repository secret scanning/push protection and evaluate a reliable
+   Maven vulnerability scanner, then add optional application containerization.
 3. Add persistent notification delivery status, retry/outbox processing, and
    user preferences.
 4. Add production-grade scheduling/locking and price history.

@@ -37,7 +37,15 @@ or production-ready service.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
   frontend npm dependencies.
 - Lightweight security CI for high-severity production npm auditing and backend
-  Maven dependency-resolution visibility, plus a repository security policy.
+  Maven dependency-tree visibility with retained artifacts, plus a repository
+  security policy.
+- CodeQL workflow for scoped Java and JavaScript/TypeScript analysis on pushes,
+  pull requests, and a weekly schedule, using a manual Maven build for Java.
+- Dependency Review workflow for pull requests to `main`, configured to reject
+  newly introduced high or critical known vulnerabilities.
+- [Repository security hardening guide](security/repository-security-hardening.md)
+  covering implemented workflows and the GitHub security settings that remain
+  manual or plan-dependent.
 - [Auth/session hardening design plan](security/auth-session-hardening-plan.md)
   covering refresh-token rotation, HttpOnly-cookie sessions, logout, revocation,
   account safety, and linked-account readiness. This is a completed planning
@@ -93,10 +101,11 @@ or production-ready service.
 - No deployment or continuous-delivery pipeline.
 - No backend/frontend application container images, production container
   workflow, or devcontainer. Compose currently runs local PostgreSQL only.
-- No CodeQL/full code scanning, repository-configured secret scanning, or
-  Dependency Review Action workflow.
-- No full Maven vulnerability scanner; the current Maven check verifies
-  dependency resolution only.
+- Repository secret scanning, push protection, private vulnerability reporting,
+  code-scanning alert policy, and required-check enforcement depend on GitHub
+  repository settings and are not asserted as enabled by repository files.
+- No full Maven vulnerability scanner; the current Maven check and artifact are
+  dependency-resolution visibility only.
 - The backend/frontend refresh-session and local CSRF/trusted-origin foundations
   exist, but production CSRF/origin/proxy policy, production CORS/cookie policy,
   session management, and complete revocation policy are not implemented.
@@ -112,8 +121,10 @@ or production-ready service.
 
 ## Recommended next milestones
 
-1. Evaluate CodeQL, secret scanning, dependency review, and a dedicated Maven
-   vulnerability scanner without making plan-limited features mandatory.
+1. Review GitHub private vulnerability reporting, secret scanning/push
+   protection, Dependabot alerts/security updates, code-scanning alerts, and
+   branch rules in repository settings; evaluate a stable Maven vulnerability
+   scanner without making external-feed availability a mandatory gate.
 2. Add optional backend/frontend development containerization without implying
    production deployment readiness.
 3. Review and extend the local CSRF/trusted-origin foundation into a production
