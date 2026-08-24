@@ -3,6 +3,12 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.23.0 auth production policy plan
+
+- Added an authentication, session, CSRF, CORS, and cookie production-policy
+  plan without changing local runtime behavior or claiming production
+  readiness.
+
 ## Unreleased — v0.22.0 dev container foundation
 
 - Added optional local devcontainer onboarding and improved Docker PostgreSQL
