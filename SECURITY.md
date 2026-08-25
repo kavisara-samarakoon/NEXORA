@@ -47,6 +47,10 @@ time is guaranteed while the project remains a development MVP.
 - Focused local-development CSRF/trusted-origin checks for register, login,
   refresh, and logout using a `SecureRandom` double-submit token, explicit
   origin allowlist, and restricted credentialed CORS headers.
+- Best-effort auth security-event recording for register, login, refresh,
+  logout, and auth-route rejection outcomes. It stores only typed safe metadata,
+  uses bounded in-memory retention by default, and persists through Flyway V10
+  in `dev`.
 - Backend request validation and ownership checks for personal Wishlist APIs,
   including price history and alert history.
 - Owner-scoped notification preferences with in-memory and PostgreSQL-backed
@@ -88,6 +92,10 @@ development, but the production policy is planned rather than implemented.
   assumptions, and complete production CORS/cookie policy remain unimplemented.
 - Account verification, password recovery, a complete session-wide revocation
   policy, and comprehensive security monitoring are not implemented.
+- Auth security events intentionally exclude passwords, submitted login
+  identifiers, tokens, cookies, token hashes, raw origins, IP addresses, user
+  agents, and secrets. There is no production event retention/privacy policy,
+  dashboard, SIEM integration, alerting, or incident-response process.
 - There is no deployed production environment, production secret-management
   setup, production monitoring/SIEM integration, or production operations guide.
 - Repository secret scanning, push protection, private vulnerability reporting,

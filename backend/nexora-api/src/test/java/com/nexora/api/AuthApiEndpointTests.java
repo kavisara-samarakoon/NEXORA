@@ -1,5 +1,9 @@
 package com.nexora.api;
 
+import com.nexora.api.auth.events.AuthSecurityEvent;
+import com.nexora.api.auth.events.AuthSecurityEventOutcome;
+import com.nexora.api.auth.events.AuthSecurityEventStore;
+import com.nexora.api.auth.events.AuthSecurityEventType;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +17,13 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +43,9 @@ class AuthApiEndpointTests {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private AuthSecurityEventStore securityEventStore;
 
     @Test
     void csrfEndpointReturnsTokenAndSetsReadableCookieWithoutCreatingARefreshSession() throws Exception {
@@ -142,6 +152,101 @@ class AuthApiEndpointTests {
                         .content(loginJson(user.email(), "definitely-wrong")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("authentication_failed"));
+    }
+
+    @Test
+    void authSecurityEventsRecordSafeRegisterLoginAndRefreshOutcomes() throws Exception {
+        int eventCountBefore = securityEventStore.findAll().size();
+        Credentials user = uniqueUser();
+        MvcResult registered = register(user);
+        long userId = objectMapper.readTree(registered.getResponse().getContentAsString())
+                .path("user")
+                .path("id")
+                .asLong();
+        CsrfContext csrf = csrfContext();
+
+        mockMvc.perform(authPost("/api/auth/login", csrf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson(user.email(), user.password())))
+                .andExpect(status().isOk());
+
+        String failedIdentifier = "unrecorded-" + UUID.randomUUID() + "@example.com";
+        mockMvc.perform(authPost("/api/auth/login", csrf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson(failedIdentifier, "not-the-password")))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(authPost("/api/auth/refresh", csrf)
+                        .cookie(refreshCookie(registered)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(authPost("/api/auth/refresh", csrf))
+                .andExpect(status().isUnauthorized());
+
+        List<AuthSecurityEvent> events = eventsSince(eventCountBefore);
+        assertEquals(5, events.size());
+        assertSafeEvent(events.get(0), AuthSecurityEventType.REGISTER_SUCCESS,
+                AuthSecurityEventOutcome.SUCCESS, userId, null);
+        assertSafeEvent(events.get(1), AuthSecurityEventType.LOGIN_SUCCESS,
+                AuthSecurityEventOutcome.SUCCESS, userId, null);
+        assertSafeEvent(events.get(2), AuthSecurityEventType.LOGIN_FAILURE,
+                AuthSecurityEventOutcome.FAILURE, null, "invalid_credentials");
+        assertSafeEvent(events.get(3), AuthSecurityEventType.REFRESH_SUCCESS,
+                AuthSecurityEventOutcome.SUCCESS, userId, null);
+        assertSafeEvent(events.get(4), AuthSecurityEventType.REFRESH_FAILURE,
+                AuthSecurityEventOutcome.FAILURE, null, "invalid_refresh_session");
+    }
+
+    @Test
+    void invalidRegisterPayloadRecordsSafeValidationFailure() throws Exception {
+        int eventCountBefore = securityEventStore.findAll().size();
+
+        mockMvc.perform(authPost("/api/auth/register", csrfContext())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"));
+
+        List<AuthSecurityEvent> events = eventsSince(eventCountBefore);
+        assertEquals(1, events.size());
+        assertSafeEvent(events.get(0), AuthSecurityEventType.REGISTER_FAILURE,
+                AuthSecurityEventOutcome.FAILURE, null, "validation_failed");
+    }
+
+    @Test
+    void logoutRecordsRequestedAndCompletedWithoutAClientCredential() throws Exception {
+        Cookie refreshCookie = refreshCookie(register(uniqueUser()));
+        int eventCountBefore = securityEventStore.findAll().size();
+
+        mockMvc.perform(authPost("/api/auth/logout", csrfContext()).cookie(refreshCookie))
+                .andExpect(status().isNoContent());
+
+        List<AuthSecurityEvent> events = eventsSince(eventCountBefore);
+        assertEquals(2, events.size());
+        assertSafeEvent(events.get(0), AuthSecurityEventType.LOGOUT_REQUESTED,
+                AuthSecurityEventOutcome.SUCCESS, null, "logout_requested");
+        assertSafeEvent(events.get(1), AuthSecurityEventType.LOGOUT_COMPLETED,
+                AuthSecurityEventOutcome.SUCCESS, null, "logout_completed");
+    }
+
+    @Test
+    void csrfAndOriginRejectionsRecordOnlySafeReasonCodes() throws Exception {
+        CsrfContext csrf = csrfContext();
+        int eventCountBefore = securityEventStore.findAll().size();
+
+        expectCsrfFailure(authPostFromOrigin("/api/auth/login", csrf, "https://attacker.example")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson("not-recorded@example.com", "not-recorded-password")));
+        expectTrustedCsrfFailure(postWithoutCsrfHeader("/api/auth/login", csrf)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson("also-not-recorded@example.com", "also-not-recorded-password")));
+
+        List<AuthSecurityEvent> events = eventsSince(eventCountBefore);
+        assertEquals(2, events.size());
+        assertSafeEvent(events.get(0), AuthSecurityEventType.CSRF_ORIGIN_FAILURE,
+                AuthSecurityEventOutcome.REJECTED, null, "origin_failed");
+        assertSafeEvent(events.get(1), AuthSecurityEventType.CSRF_ORIGIN_FAILURE,
+                AuthSecurityEventOutcome.REJECTED, null, "csrf_failed");
     }
 
     @Test
@@ -385,6 +490,30 @@ class AuthApiEndpointTests {
                 .andExpect(jsonPath("$.error").value("csrf_failed"))
                 .andExpect(jsonPath("$.message")
                         .value("The authentication request could not be verified"));
+    }
+
+    private List<AuthSecurityEvent> eventsSince(int previousCount) {
+        List<AuthSecurityEvent> allEvents = securityEventStore.findAll();
+        return List.copyOf(allEvents.subList(previousCount, allEvents.size()));
+    }
+
+    private static void assertSafeEvent(
+            AuthSecurityEvent event,
+            AuthSecurityEventType type,
+            AuthSecurityEventOutcome outcome,
+            Long userId,
+            String reasonCode) {
+        assertEquals(type, event.getEventType());
+        assertEquals(outcome, event.getOutcome());
+        assertEquals(userId, event.getUserId());
+        if (reasonCode == null) {
+            assertNull(event.getReasonCode());
+        } else {
+            assertEquals(reasonCode, event.getReasonCode());
+        }
+        assertEquals("auth", event.getSource());
+        assertNotNull(event.getOccurredAt());
+        assertNotNull(event.getCreatedAt());
     }
 
     private static Credentials uniqueUser() {

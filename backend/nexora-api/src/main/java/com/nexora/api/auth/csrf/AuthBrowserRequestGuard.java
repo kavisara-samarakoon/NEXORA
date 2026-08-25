@@ -1,5 +1,7 @@
 package com.nexora.api.auth.csrf;
 
+import com.nexora.api.auth.events.AuthSecurityEventReasonCode;
+import com.nexora.api.auth.events.AuthSecurityEventService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -9,10 +11,15 @@ public class AuthBrowserRequestGuard {
 
     private final AuthCsrfProperties properties;
     private final AuthCsrfService csrfService;
+    private final AuthSecurityEventService securityEventService;
 
-    public AuthBrowserRequestGuard(AuthCsrfProperties properties, AuthCsrfService csrfService) {
+    public AuthBrowserRequestGuard(
+            AuthCsrfProperties properties,
+            AuthCsrfService csrfService,
+            AuthSecurityEventService securityEventService) {
         this.properties = properties;
         this.csrfService = csrfService;
+        this.securityEventService = securityEventService;
     }
 
     public void validate(HttpServletRequest request) {
@@ -40,6 +47,7 @@ public class AuthBrowserRequestGuard {
 
     private void validateCsrf(HttpServletRequest request) {
         if (!csrfService.requestTokenMatches(request)) {
+            securityEventService.recordCsrfOriginFailure(AuthSecurityEventReasonCode.CSRF_FAILED);
             throw new AuthRequestProtectionException();
         }
     }
@@ -49,6 +57,7 @@ public class AuthBrowserRequestGuard {
         if (requestOrigin == null
                 || (requireOriginOnlyValue && !requestOrigin.equalsIgnoreCase(headerValue.trim()))
                 || !properties.trustedOrigins().contains(requestOrigin)) {
+            securityEventService.recordCsrfOriginFailure(AuthSecurityEventReasonCode.ORIGIN_FAILED);
             throw new AuthRequestProtectionException();
         }
     }

@@ -47,7 +47,7 @@ Not deployed as a production service
 | Frontend | Next.js App Router, React, TypeScript, and CSS in `frontend/nexora-web-next` |
 | Backend | Spring Boot REST API with Spring Security, validation, JPA, and scheduling |
 | Default backend profile | Database-free demo catalogs plus in-memory accounts and personal wishlist state |
-| `dev` backend profile | PostgreSQL, Flyway V1–V9, and JPA-backed catalog, account, refresh-session, wishlist, alert, price-history, and notification-preference data |
+| `dev` backend profile | PostgreSQL, Flyway V1–V10, and JPA-backed catalog, account, refresh-session, auth-security-event, wishlist, alert, price-history, and notification-preference data |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
 | Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, frontend lint/build, dependency checks, CodeQL, and pull-request dependency review |

@@ -53,6 +53,14 @@ The following controls exist today:
 - A request with neither `Origin` nor `Referer` is currently allowed to proceed
   when its CSRF cookie/header pair is valid. This supports local curl and test
   clients; it is not an approved production no-origin policy.
+- A backend auth security-event foundation records typed register, login,
+  refresh, logout, and auth-route rejection metadata. The default profile keeps
+  at most 500 events in memory and resets them on restart; the `dev` profile
+  persists them through Flyway V10 `auth_security_events`.
+- Auth security events contain only event type, outcome, nullable internal user
+  ID, safe reason code, source, and UTC timestamps. They contain no password,
+  submitted login identifier, access/refresh/CSRF token, cookie, token hash,
+  request origin, IP address, user agent, or application/provider secret.
 
 These are local-development foundations, not assurance that the application is
 safe for Internet exposure. There is no production profile, deployed topology,
@@ -204,10 +212,10 @@ scheme/host handling and browser inspection.
   transaction safety, privacy minimization, and evidence-retention needs.
 - Define bounded active-session limits and multi-tab/concurrent-refresh
   behavior before adding device management.
-- Generate security audit events for successful and failed login, registration
-  outcomes where appropriate, refresh success/failure/reuse, logout, logout-all,
-  session revocation, password change, recovery, verification, account
-  disablement, and sensitive account/provider changes.
+- Preserve the current safe register/login/refresh/logout/rejection event
+  foundation. Future work must define events for family-wide refresh reuse,
+  logout-all, session revocation, password change, recovery, verification,
+  account disablement, and sensitive account/provider changes.
 - Audit records must use safe identifiers and outcomes. Never log passwords,
   raw access or refresh tokens, CSRF tokens, reset/verification tokens, database
   credentials, SMTP credentials, or provider keys. Minimize and govern IP and
@@ -225,10 +233,13 @@ or explicit risk decisions:
 - No logout-all or user-facing session/device management.
 - No production security-event dashboard, centralized monitoring, alerting, or
   SIEM integration.
+- No approved production auth-event retention, privacy, access-control,
+  integrity, aggregation, or alert-threshold policy.
 - No verified-recipient workflow for email notifications.
 - No production incident-response, credential-compromise, or session-revocation
   runbook.
-- No production privacy/retention policy for authentication security events.
+- No request-context enrichment policy; raw origin, IP address, and user-agent
+  data are deliberately excluded from the current foundation.
 
 ## 8. Testing checklist before deployment
 
@@ -247,9 +258,9 @@ or explicit risk decisions:
       hostile subdomains, scheme changes, port changes, and wildcard absence.
 - [ ] Test malformed, expired, rotated, revoked, reused, and concurrently used
       refresh tokens, including the selected family/reuse response.
-- [ ] Run PostgreSQL integration tests for Flyway V7, rotation transactions,
-      revocation, cleanup, and persistent-store selection in the proposed
-      production profile.
+- [ ] Run PostgreSQL integration tests for Flyway V7 session storage, Flyway
+      V10 security-event storage, rotation transactions, revocation, cleanup,
+      and persistent-store selection in the proposed production profile.
 - [ ] Test account disablement and future password/recovery workflows against
       the approved session-revocation rules.
 - [ ] Review application, proxy, database, CI, and security-event logs for raw
@@ -305,6 +316,7 @@ not claim compliance merely by linking to it:
 - [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 - [OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
 - [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+- [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)
 - [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
 - [OWASP Forgot Password Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html)
 - [MDN secure cookie configuration](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies)

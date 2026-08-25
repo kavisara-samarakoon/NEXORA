@@ -3,8 +3,11 @@ package com.nexora.api.auth;
 import com.nexora.api.auth.csrf.AuthBrowserRequestGuard;
 import com.nexora.api.auth.csrf.AuthCsrfService;
 import com.nexora.api.auth.csrf.AuthCsrfTokenResponse;
+import com.nexora.api.auth.events.AuthSecurityEventReasonCode;
+import com.nexora.api.auth.events.AuthSecurityEventService;
 import com.nexora.api.auth.session.RefreshCookieService;
 import com.nexora.api.auth.session.RefreshSessionService;
+import com.nexora.api.users.UserAccountConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -27,6 +30,7 @@ public class AuthController {
     private final RefreshCookieService refreshCookieService;
     private final AuthCsrfService csrfService;
     private final AuthBrowserRequestGuard browserRequestGuard;
+    private final AuthSecurityEventService securityEventService;
 
     public AuthController(
             AuthService authService,
@@ -34,13 +38,15 @@ public class AuthController {
             RefreshSessionService refreshSessionService,
             RefreshCookieService refreshCookieService,
             AuthCsrfService csrfService,
-            AuthBrowserRequestGuard browserRequestGuard) {
+            AuthBrowserRequestGuard browserRequestGuard,
+            AuthSecurityEventService securityEventService) {
         this.authService = authService;
         this.userIdResolver = userIdResolver;
         this.refreshSessionService = refreshSessionService;
         this.refreshCookieService = refreshCookieService;
         this.csrfService = csrfService;
         this.browserRequestGuard = browserRequestGuard;
+        this.securityEventService = securityEventService;
     }
 
     @GetMapping("/csrf")
@@ -56,8 +62,21 @@ public class AuthController {
             HttpServletRequest servletRequest,
             @Valid @RequestBody RegisterRequest request) {
         browserRequestGuard.validate(servletRequest);
-        AuthResponse response = authService.register(request);
-        return withRefreshCookie(response, HttpStatus.CREATED);
+        try {
+            AuthResponse response = authService.register(request);
+            ResponseEntity<AuthResponse> result = withRefreshCookie(response, HttpStatus.CREATED);
+            securityEventService.recordRegisterSuccess(response.user().id());
+            return result;
+        } catch (UserAccountConflictException exception) {
+            securityEventService.recordRegisterFailure(AuthSecurityEventReasonCode.DUPLICATE_ACCOUNT);
+            throw exception;
+        } catch (IllegalArgumentException exception) {
+            securityEventService.recordRegisterFailure(AuthSecurityEventReasonCode.VALIDATION_FAILED);
+            throw exception;
+        } catch (RuntimeException exception) {
+            securityEventService.recordRegisterFailure(AuthSecurityEventReasonCode.UNKNOWN);
+            throw exception;
+        }
     }
 
     @PostMapping("/login")
@@ -65,22 +84,49 @@ public class AuthController {
             HttpServletRequest servletRequest,
             @Valid @RequestBody LoginRequest request) {
         browserRequestGuard.validate(servletRequest);
-        AuthResponse response = authService.login(request);
-        return withRefreshCookie(response, HttpStatus.OK);
+        try {
+            AuthResponse response = authService.login(request);
+            ResponseEntity<AuthResponse> result = withRefreshCookie(response, HttpStatus.OK);
+            securityEventService.recordLoginSuccess(response.user().id());
+            return result;
+        } catch (AuthenticationFailedException exception) {
+            securityEventService.recordLoginFailure(AuthSecurityEventReasonCode.INVALID_CREDENTIALS);
+            throw exception;
+        } catch (IllegalArgumentException exception) {
+            securityEventService.recordLoginFailure(AuthSecurityEventReasonCode.VALIDATION_FAILED);
+            throw exception;
+        } catch (RuntimeException exception) {
+            securityEventService.recordLoginFailure(AuthSecurityEventReasonCode.UNKNOWN);
+            throw exception;
+        }
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(HttpServletRequest request) {
         browserRequestGuard.validate(request);
-        RefreshSessionService.IssuedRefreshToken refreshToken =
-                refreshSessionService.rotate(refreshCookieService.readToken(request));
+        RefreshSessionService.IssuedRefreshToken refreshToken;
+        try {
+            refreshToken = refreshSessionService.rotate(refreshCookieService.readToken(request));
+        } catch (AuthenticationFailedException exception) {
+            securityEventService.recordRefreshFailure(AuthSecurityEventReasonCode.INVALID_REFRESH_SESSION);
+            throw exception;
+        } catch (RuntimeException exception) {
+            securityEventService.recordRefreshFailure(AuthSecurityEventReasonCode.UNKNOWN);
+            throw exception;
+        }
         try {
             AuthResponse response = authService.refreshAccessToken(refreshToken.userId());
-            return ResponseEntity.ok()
+            ResponseEntity<AuthResponse> result = ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, refreshCookieService.issueCookie(refreshToken.token()))
                     .body(response);
+            securityEventService.recordRefreshSuccess(refreshToken.userId());
+            return result;
         } catch (AuthenticationFailedException exception) {
             refreshSessionService.revokeIfPresent(refreshToken.token());
+            securityEventService.recordRefreshFailure(AuthSecurityEventReasonCode.INACTIVE_OR_MISSING_USER);
+            throw exception;
+        } catch (RuntimeException exception) {
+            securityEventService.recordRefreshFailure(AuthSecurityEventReasonCode.UNKNOWN);
             throw exception;
         }
     }
@@ -88,10 +134,13 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         browserRequestGuard.validate(request);
+        securityEventService.recordLogoutRequested();
         refreshSessionService.revokeIfPresent(refreshCookieService.readToken(request));
-        return ResponseEntity.noContent()
+        ResponseEntity<Void> result = ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, refreshCookieService.clearCookie())
                 .build();
+        securityEventService.recordLogoutCompleted(null);
+        return result;
     }
 
     @GetMapping("/me")

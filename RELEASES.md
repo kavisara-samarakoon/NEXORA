@@ -3,6 +3,12 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.24.0 auth security events foundation
+
+- Added a safe authentication security-event recording foundation for
+  register, login, refresh, logout, and auth-route rejection visibility without
+  storing raw credentials or claiming production monitoring readiness.
+
 ## Unreleased — v0.23.0 auth production policy plan
 
 - Added an authentication, session, CSRF, CORS, and cookie production-policy
