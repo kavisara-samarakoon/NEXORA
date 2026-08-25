@@ -1,5 +1,7 @@
 package com.nexora.api;
 
+import com.nexora.api.auth.events.AuthSecurityEventReasonCode;
+import com.nexora.api.auth.events.AuthSecurityEventService;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -31,6 +33,9 @@ class PostgresDevProfileIntegrationTests {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private AuthSecurityEventService authSecurityEventService;
+
     @Test
     void devProfileConnectsRunsAllMigrationsAndValidatesTheSchema() throws SQLException {
         assertTrue(Arrays.asList(environment.getActiveProfiles()).contains("dev"));
@@ -45,7 +50,7 @@ class PostgresDevProfileIntegrationTests {
                 where version is not null
                   and success = true
                 """, Long.class);
-        assertEquals(9L, successfulMigrations);
+        assertEquals(10L, successfulMigrations);
 
         Integer requiredTableCount = jdbcTemplate.queryForObject("""
                 select count(*)
@@ -56,11 +61,53 @@ class PostgresDevProfileIntegrationTests {
                       'wishlist_items',
                       'wishlist_alert_events',
                       'auth_sessions',
+                      'auth_security_events',
                       'wishlist_price_history',
                       'notification_preferences'
                   )
                 """, Integer.class);
-        assertEquals(6, requiredTableCount);
+        assertEquals(7, requiredTableCount);
+
+        Integer unsafeEventColumnCount = jdbcTemplate.queryForObject("""
+                select count(*)
+                from information_schema.columns
+                where table_schema = 'public'
+                  and table_name = 'auth_security_events'
+                  and column_name in (
+                      'password',
+                      'email',
+                      'username',
+                      'login_identifier',
+                      'access_token',
+                      'refresh_token',
+                      'token_hash',
+                      'csrf_token',
+                      'cookie',
+                      'ip_address',
+                      'user_agent'
+                  )
+                """, Integer.class);
+        assertEquals(0, unsafeEventColumnCount);
+
+        Long securityEventsBefore = jdbcTemplate.queryForObject(
+                "select count(*) from auth_security_events",
+                Long.class);
+        authSecurityEventService.recordLoginFailure(AuthSecurityEventReasonCode.INVALID_CREDENTIALS);
+        Long securityEventsAfter = jdbcTemplate.queryForObject(
+                "select count(*) from auth_security_events",
+                Long.class);
+        assertEquals(securityEventsBefore + 1, securityEventsAfter);
+
+        Integer safeFailureRows = jdbcTemplate.queryForObject("""
+                select count(*)
+                from auth_security_events
+                where event_type = 'LOGIN_FAILURE'
+                  and outcome = 'FAILURE'
+                  and reason_code = 'invalid_credentials'
+                  and source = 'auth'
+                  and user_id is null
+                """, Integer.class);
+        assertTrue(safeFailureRows != null && safeFailureRows > 0);
 
         Long seededDeals = jdbcTemplate.queryForObject(
                 "select count(*) from deals where is_active = true",

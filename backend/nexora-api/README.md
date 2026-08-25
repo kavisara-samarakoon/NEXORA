@@ -17,7 +17,7 @@ the `dev` profile · Not documented as production-ready
 | Profile | Storage and behavior |
 | --- | --- |
 | Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, alert history, price history, and notification preferences are held in memory. CheapShark external deals remain available on demand. |
-| `dev` | Enables PostgreSQL, Flyway V1–V9, Spring Data JPA, persisted catalog/account/refresh-session/wishlist/alert/price-history/notification-preference data, and the optional wishlist refresh scheduler. |
+| `dev` | Enables PostgreSQL, Flyway V1–V10, Spring Data JPA, persisted catalog/account/refresh-session/auth-security-event/wishlist/alert/price-history/notification-preference data, and the optional wishlist refresh scheduler. |
 
 The default profile is useful for UI development and tests. Restarting it
 clears accounts and personal wishlist changes. The `dev` profile validates JPA
@@ -242,6 +242,32 @@ disabled because these APIs are stateless; the focused auth-route guard runs
 before controller work and validates the double-submit token and trusted origin.
 This is a local-development foundation. Its origin, cookie, no-origin client,
 proxy, and error-handling policies still require production review.
+
+### Auth security event foundation
+
+Authentication paths record best-effort security-event metadata for register,
+login, refresh, logout, and CSRF/origin rejection outcomes. Events contain only
+an event type, outcome, nullable internal user ID, safe reason code, the fixed
+`auth` source, and UTC occurrence/creation timestamps.
+
+The default profile retains only the newest 500 events in memory, and those
+events disappear on backend restart. The `dev` profile persists the same safe
+metadata in Flyway V10 `auth_security_events`. Event-store failures are
+suppressed with a metadata-only warning so they do not block otherwise
+successful authentication flows or alter existing API responses.
+
+The event schema and service do not accept or store submitted passwords,
+failed-login email/username values, JWT access tokens, refresh tokens, refresh
+token hashes, CSRF tokens, cookies, request origins, IP addresses, user agents,
+API/provider keys, SMTP credentials, or database credentials. There is no
+public security-event API or frontend UI.
+
+This is local observability storage, not production monitoring. Retention,
+privacy/access policy, integrity protection, request-context minimization,
+aggregation, alert thresholds, dashboards, SIEM integration, and incident
+response remain future work. The
+[auth production-policy plan](../../docs/security/auth-production-policy-plan.md)
+tracks those requirements.
 
 ## Personal wishlist
 
@@ -565,7 +591,7 @@ The repository's `Backend CI` GitHub Actions workflow uses Temurin Java 17 for
 pushes to `main` and pull requests targeting `main`. One job runs the normal
 database-free `mvn test` suite. A separate job starts a PostgreSQL 16 service
 and explicitly runs `PostgresDevProfileIntegrationTests` to confirm the `dev`
-profile connects, applies Flyway V1–V9, validates the JPA schema, and exposes
+profile connects, applies Flyway V1–V10, validates the JPA schema, and exposes
 the expected tables and seed data.
 
 The PostgreSQL integration test is enabled only when

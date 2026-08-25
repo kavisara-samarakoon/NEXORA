@@ -8,7 +8,7 @@ or production-ready service.
 - Next.js App Router frontend with responsive feature pages and typed fallbacks.
 - Spring Boot REST API with validation, security, and profile-based services.
 - JWT registration, login, and authenticated account lookup.
-- PostgreSQL, Flyway V1–V9, and JPA-backed data in the `dev` profile.
+- PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.
 - Public demo wishlist and isolated authenticated personal wishlists.
 - Wishlist alert configuration, evaluation, transition events, and history UI.
 - CheapShark external deals, redirect links, caching, and local fallback.
@@ -33,7 +33,7 @@ or production-ready service.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
-  Flyway V1–V9, JPA schema validation, required tables, and seed data.
+  Flyway V1–V10, JPA schema validation, required tables, and seed data.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
   frontend npm dependencies.
 - Lightweight security CI for high-severity production npm auditing and backend
@@ -66,6 +66,11 @@ or production-ready service.
   validation, restricted credentialed CORS headers, and one bounded frontend
   CSRF retry. Cookie-sensitive auth POST routes are covered; Bearer APIs remain
   unchanged.
+- Safe auth security-event recording for register, login, refresh, logout, and
+  auth-route rejection metadata. The default profile retains at most 500 events
+  in memory and resets on restart; the `dev` profile persists safe metadata in
+  Flyway V10 `auth_security_events`. Passwords, submitted identifiers, tokens,
+  cookies, token hashes, raw request context, and secrets are not recorded.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
 - Optional local devcontainer foundation with Java 17, Maven, Node.js 20, npm,
@@ -120,9 +125,10 @@ or production-ready service.
   fail-closed configuration, CSRF/origin/proxy behavior, CORS/cookie settings,
   session-family reuse handling, and complete revocation/session-management UX
   are not implemented.
-- No complete login/register abuse controls, account verification, password
-  recovery, authentication audit-event pipeline, security monitoring, or
-  incident-response process.
+- The auth security-event foundation has no production retention/privacy
+  policy, integrity controls, request-context enrichment, dashboard, alerting,
+  SIEM integration, or incident-response process. Login/register abuse
+  controls, account verification, and password recovery also remain incomplete.
 - No distributed scheduler locking or multi-instance coordination.
 - No durable notification delivery workflow or delivery observability.
 - No Sentinel autonomous actions, conversation persistence, streaming,
@@ -144,7 +150,8 @@ or production-ready service.
    HTTPS/cookie/CORS/proxy/no-origin rules, and complete session reuse/revocation
    behavior.
 4. Define account verification, password recovery, authentication abuse
-   controls, audit events, monitoring, and incident-response workflows.
+   controls, additional audit events, event retention/privacy/integrity rules,
+   monitoring, alert thresholds, and incident-response workflows.
 5. Define verified recipients, dispatcher preference enforcement, durable
    delivery state, and retry/outbox processing.
 6. Extend the compact price-history view only after defining aggregation,
