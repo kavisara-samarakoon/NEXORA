@@ -64,14 +64,14 @@ time is guaranteed while the project remains a development MVP.
   Next.js npm dependencies, with grouped minor/patch updates.
 - Security CI with a high-severity production npm audit, retained audit report,
   and Maven dependency-tree visibility.
-- Repository-defined CodeQL analysis for Java and JavaScript/TypeScript on
-  pushes, pull requests, and a weekly schedule.
+- Repository-defined manual CodeQL-ready workflow for Java and JavaScript/TypeScript.
+  Automatic CodeQL upload is disabled while private-repository code scanning is unavailable.
 - Pull-request dependency review configured to reject newly introduced high or
   critical known vulnerabilities.
 
-The CodeQL and dependency-review workflows define repository automation; their
-alerts and merge enforcement still depend on successful GitHub Actions runs and
-repository security/branch-protection settings. The workflows do not themselves
+The CodeQL-ready and dependency-review workflows define repository automation;
+CodeQL alert upload still depends on code scanning being enabled/available for the repository,
+and merge enforcement depends on successful GitHub Actions runs and repository security/branch-protection settings. The workflows do not themselves
 prove that every GitHub security setting is enabled.
 
 ## Known limitations

@@ -39,8 +39,9 @@ or production-ready service.
 - Lightweight security CI for high-severity production npm auditing and backend
   Maven dependency-tree visibility with retained artifacts, plus a repository
   security policy.
-- CodeQL workflow for scoped Java and JavaScript/TypeScript analysis on pushes,
-  pull requests, and a weekly schedule, using a manual Maven build for Java.
+- Manual CodeQL-ready workflow for scoped Java and JavaScript/TypeScript analysis,
+  using a manual Maven build for Java. Automatic CodeQL upload is disabled while
+  private-repository code scanning is unavailable.
 - Dependency Review workflow for pull requests to `main`, configured to reject
   newly introduced high or critical known vulnerabilities.
 - [Repository security hardening guide](security/repository-security-hardening.md)
@@ -116,7 +117,7 @@ or production-ready service.
   workflow. Compose runs local PostgreSQL only, and the optional devcontainer
   is local developer tooling rather than a release image.
 - Repository secret scanning, push protection, private vulnerability reporting,
-  code-scanning alert policy, and required-check enforcement depend on GitHub
+  code-scanning availability/alert policy, and required-check enforcement depend on GitHub
   repository settings and are not asserted as enabled by repository files.
 - No full Maven vulnerability scanner; the current Maven check and artifact are
   dependency-resolution visibility only.

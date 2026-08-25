@@ -23,7 +23,7 @@ public deployment, published package, or production release.
 
 ## Unreleased — v0.21.0 security CI hardening
 
-- Added repository security hardening with CodeQL/dependency-review evaluation,
+- Added repository security hardening with manual CodeQL-ready/dependency-review evaluation,
   improved security workflow documentation, and clearer security policy guidance.
 
 ## Unreleased — v0.20.0 Sentinel AI safety controls

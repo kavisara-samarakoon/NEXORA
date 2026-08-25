@@ -11,11 +11,11 @@ GitHub settings that the repository owner must configure and review separately.
 | Backend CI | Runs the database-free Maven test suite and a separate PostgreSQL 16 `dev`-profile integration test. |
 | Frontend CI | Installs the primary Next.js dependencies, runs ESLint, and creates a production build for validation only. |
 | Security CI | Gates on high-severity production npm audit findings and retains the JSON report; exports the Maven dependency tree as a visibility artifact. |
-| CodeQL | Analyzes Java through a manual Maven build and analyzes JavaScript/TypeScript without a build on pushes and pull requests to `main`, plus weekly. |
+| CodeQL | Manual CodeQL-ready workflow for Java and JavaScript/TypeScript. Automatic upload is disabled while private-repository code scanning is unavailable. |
 | Dependency Review | Reviews dependency changes on pull requests to `main` and fails for newly introduced high or critical known vulnerabilities. |
 | Dependabot | Checks GitHub Actions, Maven, and primary Next.js npm dependencies weekly; routine minor/patch updates are grouped and major updates remain manual. |
 
-The CodeQL workflow scopes analysis to `backend/nexora-api` and
+The CodeQL-ready workflow scopes analysis to `backend/nexora-api` and
 `frontend/nexora-web-next`; it does not build or analyze the retained Vite
 prototype as a primary application. None of these workflows deploy NEXORA or
 require application credentials.
@@ -37,16 +37,17 @@ visibility, account plan, and GitHub product changes.
   updates. Dependency Review depends on the dependency graph/API data.
 - Enable secret scanning and push protection when available. These are GitHub
   settings, not capabilities created by the workflows in this repository.
-- Review CodeQL/code-scanning alerts after the workflow has run successfully.
-  If CodeQL default setup is already active, choose either default setup or this
-  repository's advanced workflow to avoid duplicate analyses.
+- Review CodeQL/code-scanning availability before enabling automatic runs. If
+  code scanning becomes available, choose either CodeQL default setup or this
+  repository's workflow to avoid duplicate analyses.
 - Add branch protection or a ruleset for `main`, then require the stable backend,
-  frontend, security, CodeQL, and dependency-review checks only after their job
-  names and behavior have been confirmed on a pull request.
+  frontend, security, and dependency-review checks only after their job names
+  and behavior have been confirmed on a pull request. Require CodeQL only after
+  code scanning is enabled and stable for this repository.
 - Limit GitHub Actions permissions to read by default and retain the explicit
   workflow exceptions required for CodeQL result upload.
 
-Public repositories on GitHub.com can use CodeQL and Dependency Review. Private
+Public repositories on GitHub.com can use CodeQL/code scanning more broadly. Private
 repository availability can depend on GitHub Code Security or GitHub Advanced
 Security licensing. This repository does not claim those plan-dependent
 features are enabled.
@@ -83,8 +84,8 @@ npm audit --omit=dev --audit-level=high
 git diff --check
 ```
 
-CodeQL upload and Dependency Review require GitHub event and repository context,
-so their final verification occurs on a pull request. No real credentials are
+Dependency Review requires GitHub event and repository context, so final verification occurs on a pull request.
+CodeQL upload additionally requires code scanning to be enabled/available for the repository. No real credentials are
 needed for either workflow.
 
 ## Remaining gaps

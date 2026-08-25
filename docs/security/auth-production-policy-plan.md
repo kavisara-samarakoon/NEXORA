@@ -266,8 +266,8 @@ or explicit risk decisions:
 - [ ] Review application, proxy, database, CI, and security-event logs for raw
       token, credential, CSRF, personal-data, and provider-secret leakage.
 - [ ] Confirm repository secret scanning/push protection where available,
-      private vulnerability reporting, Dependabot/security alerts, CodeQL, and
-      required branch checks in GitHub settings.
+      private vulnerability reporting, Dependabot/security alerts, CodeQL/code scanning if available,
+      and required branch checks in GitHub settings.
 - [ ] Perform an independent threat-model and security review for the selected
       deployment topology and rollback design.
 
