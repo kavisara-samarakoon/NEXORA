@@ -3,7 +3,6 @@
 [![Backend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml)
 [![Security CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml)
-[![CodeQL](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/codeql.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/codeql.yml)
 
 NEXORA is a secure, network-aware game deals, giveaways, wishlist, and alert
 intelligence platform. It combines a Next.js interface with a Spring Boot API,
@@ -50,7 +49,7 @@ Not deployed as a production service
 | `dev` backend profile | PostgreSQL, Flyway V1–V10, and JPA-backed catalog, account, refresh-session, auth-security-event, wishlist, alert, price-history, and notification-preference data |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
-| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, frontend lint/build, dependency checks, CodeQL, and pull-request dependency review |
+| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, frontend lint/build, dependency checks, manual CodeQL-ready scanning, and pull-request dependency review |
 
 The public `GET /api/wishlist` contract remains separate from authenticated
 personal wishlist endpoints under `/api/me/wishlist`.
@@ -218,7 +217,7 @@ requests targeting `main`:
 | `backend-ci.yml` | Runs database-free backend tests and a separate PostgreSQL 16 job that validates the `dev` profile, Flyway migrations, and JPA schema |
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
 | `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
-| `codeql.yml` | Analyzes backend Java and primary frontend JavaScript/TypeScript on `main`, pull requests, and weekly |
+| `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
 | `dependency-review.yml` | Reviews dependency changes on pull requests to `main` and rejects newly introduced high or critical known vulnerabilities |
 
 The frontend workflow does not build the retained Vite prototype. Backend CI
