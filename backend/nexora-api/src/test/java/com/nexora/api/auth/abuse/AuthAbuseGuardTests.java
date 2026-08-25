@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +74,13 @@ class AuthAbuseGuardTests {
         @Override
         public List<AuthSecurityEvent> findAll() {
             return List.copyOf(events);
+        }
+
+        @Override
+        public int deleteOlderThan(LocalDateTime cutoff) {
+            int sizeBefore = events.size();
+            events.removeIf(event -> event.getOccurredAt().isBefore(cutoff));
+            return sizeBefore - events.size();
         }
     }
 }

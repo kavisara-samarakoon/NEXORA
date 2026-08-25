@@ -61,6 +61,11 @@ The following controls exist today:
   ID, safe reason code, source, and UTC timestamps. They contain no password,
   submitted login identifier, access/refresh/CSRF token, cookie, token hash,
   request origin, IP address, user agent, or application/provider secret.
+- Auth security-event cleanup is configurable for local development, disabled
+  by default, and uses a 30-day default retention age. When enabled, a daily UTC
+  task removes only old safe metadata from the bounded in-memory store or the
+  existing Flyway V10 PostgreSQL table. The in-memory store still resets on
+  restart, and cleanup-store failures do not escape into authentication flows.
 - Register, login, refresh, logout, and repeated CSRF/origin rejection attempts
   have process-local fixed-window controls. Counters use only typed purpose keys,
   expire in memory, and return a safe `429` with retry timing after the local
@@ -76,7 +81,7 @@ secret manager, reverse-proxy policy, operations guide, or security monitoring
 integration.
 
 Repository CodeQL remains manual-only until code scanning is enabled/available;
-this local auth-control milestone does not change that workflow policy.
+these local authentication foundations do not change that workflow policy.
 
 ## 3. Required production environment and secret policy
 
@@ -246,7 +251,9 @@ or explicit risk decisions:
 - No production security-event dashboard, centralized monitoring, alerting, or
   SIEM integration.
 - No approved production auth-event retention, privacy, access-control,
-  integrity, aggregation, or alert-threshold policy.
+  integrity, aggregation, or alert-threshold policy. The configurable local
+  cleanup foundation is a deletion mechanism, not a production policy or
+  compliance control.
 - No verified-recipient workflow for email notifications.
 - No production incident-response, credential-compromise, or session-revocation
   runbook.

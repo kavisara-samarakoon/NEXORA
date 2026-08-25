@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Modifier;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
@@ -90,6 +91,11 @@ class AuthSecurityEventServiceTests {
             @Override
             public List<AuthSecurityEvent> findAll() {
                 return List.of();
+            }
+
+            @Override
+            public int deleteOlderThan(LocalDateTime cutoff) {
+                throw new IllegalStateException("simulated event store failure");
             }
         };
         AuthSecurityEventService service = new AuthSecurityEventService(

@@ -2,8 +2,10 @@ package com.nexora.api;
 
 import com.nexora.api.auth.events.AuthSecurityEventReasonCode;
 import com.nexora.api.auth.events.AuthSecurityEventService;
+import com.nexora.api.auth.events.AuthSecurityEventStore;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 
 import javax.sql.DataSource;
@@ -15,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,7 +39,11 @@ class PostgresDevProfileIntegrationTests {
     @Autowired
     private AuthSecurityEventService authSecurityEventService;
 
+    @Autowired
+    private AuthSecurityEventStore authSecurityEventStore;
+
     @Test
+    @Transactional
     void devProfileConnectsRunsAllMigrationsAndValidatesTheSchema() throws SQLException {
         assertTrue(Arrays.asList(environment.getActiveProfiles()).contains("dev"));
 
@@ -108,6 +115,31 @@ class PostgresDevProfileIntegrationTests {
                   and user_id is null
                 """, Integer.class);
         assertTrue(safeFailureRows != null && safeFailureRows > 0);
+
+        LocalDateTime oldEventTime = LocalDateTime.of(1970, 1, 1, 0, 0);
+        LocalDateTime retainedEventTime = LocalDateTime.of(2026, 1, 1, 0, 0);
+        LocalDateTime cleanupCutoff = LocalDateTime.of(2000, 1, 1, 0, 0);
+        Integer eligibleRowsBefore = jdbcTemplate.queryForObject(
+                "select count(*) from auth_security_events where occurred_at < ?",
+                Integer.class,
+                cleanupCutoff);
+        jdbcTemplate.update("""
+                insert into auth_security_events (
+                    event_type, outcome, user_id, reason_code, source, occurred_at, created_at
+                ) values ('LOGIN_FAILURE', 'FAILURE', null, 'invalid_credentials', 'auth', ?, ?)
+                """, oldEventTime, oldEventTime);
+        jdbcTemplate.update("""
+                insert into auth_security_events (
+                    event_type, outcome, user_id, reason_code, source, occurred_at, created_at
+                ) values ('LOGIN_SUCCESS', 'SUCCESS', null, null, 'auth', ?, ?)
+                """, retainedEventTime, retainedEventTime);
+
+        assertEquals(eligibleRowsBefore + 1, authSecurityEventStore.deleteOlderThan(cleanupCutoff));
+        Integer retainedCleanupRows = jdbcTemplate.queryForObject(
+                "select count(*) from auth_security_events where occurred_at = ?",
+                Integer.class,
+                retainedEventTime);
+        assertEquals(1, retainedCleanupRows);
 
         Long seededDeals = jdbcTemplate.queryForObject(
                 "select count(*) from deals where is_active = true",

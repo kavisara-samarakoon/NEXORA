@@ -72,6 +72,11 @@ or production-ready service.
   in memory and resets on restart; the `dev` profile persists safe metadata in
   Flyway V10 `auth_security_events`. Passwords, submitted identifiers, tokens,
   cookies, token hashes, raw request context, and secrets are not recorded.
+- Configurable local auth security-event cleanup is disabled by default and
+  uses a 30-day default age cutoff, safely bounded from 1 to 3,650 days. When an
+  owner enables it, a daily UTC task prunes only old safe metadata. The
+  in-memory store remains capped at 500 events and resets on restart; the `dev`
+  store deletes old rows from the existing Flyway V10 table.
 - Local-development auth abuse controls use a thread-safe fixed window and only
   five route/purpose keys for register, login, refresh, logout, and repeated
   CSRF/origin rejection attempts. Limited requests receive a safe `429` with
@@ -132,9 +137,10 @@ or production-ready service.
   fail-closed configuration, CSRF/origin/proxy behavior, CORS/cookie settings,
   session-family reuse handling, and complete revocation/session-management UX
   are not implemented.
-- The auth security-event foundation has no production retention/privacy
-  policy, integrity controls, request-context enrichment, dashboard, alerting,
-  SIEM integration, or incident-response process. The route-level auth abuse
+- The local auth security-event cleanup mechanism is not a production
+  retention/privacy/compliance policy and supplies no production access-control,
+  integrity, request-context enrichment, dashboard, monitoring, alerting, SIEM,
+  or incident-response process. The route-level auth abuse
   foundation is not a distributed limiter, credential-stuffing/bot strategy,
   monitoring or alerting system, privacy/retention policy, or incident-response
   workflow. Account verification and password recovery remain incomplete.
@@ -160,8 +166,9 @@ or production-ready service.
    behavior.
 4. Define account verification, password recovery, production distributed
    authentication abuse controls and credential-stuffing/bot defenses,
-   additional audit events, event retention/privacy/integrity rules, monitoring,
-   alert thresholds, and incident-response workflows.
+   additional audit events, approved production event
+   retention/privacy/access-control/integrity rules, monitoring, alert
+   thresholds, and incident-response workflows.
 5. Define verified recipients, dispatcher preference enforcement, durable
    delivery state, and retry/outbox processing.
 6. Extend the compact price-history view only after defining aggregation,

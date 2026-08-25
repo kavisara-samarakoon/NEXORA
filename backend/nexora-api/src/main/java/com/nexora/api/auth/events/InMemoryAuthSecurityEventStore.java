@@ -3,10 +3,12 @@ package com.nexora.api.auth.events;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
@@ -43,5 +45,13 @@ public class InMemoryAuthSecurityEventStore implements AuthSecurityEventStore {
     @Override
     public synchronized List<AuthSecurityEvent> findAll() {
         return List.copyOf(new ArrayList<>(events));
+    }
+
+    @Override
+    public synchronized int deleteOlderThan(LocalDateTime cutoff) {
+        LocalDateTime requiredCutoff = Objects.requireNonNull(cutoff);
+        int sizeBefore = events.size();
+        events.removeIf(event -> event.getOccurredAt().isBefore(requiredCutoff));
+        return sizeBefore - events.size();
     }
 }
