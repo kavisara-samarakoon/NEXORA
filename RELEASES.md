@@ -1,9 +1,19 @@
 # NEXORA development milestones
 
-These labels summarize completed repository milestones. They do not imply a
+These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
-## Unreleased — v0.26.0 auth security event retention foundation
+The latest stable development tag is
+[`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
+Older headings retain the wording used when each milestone was recorded.
+
+## In progress — v0.27.0 repository presentation polish
+
+- Improving repository-level documentation, reviewer navigation, maturity
+  wording, and roadmap clarity without changing runtime behavior or production
+  readiness.
+
+## Latest stable development milestone — v0.26.0 auth security event retention foundation
 
 - Added configurable local/development retention cleanup for safe auth security
   events without adding a public event API, dashboard, monitoring system, or

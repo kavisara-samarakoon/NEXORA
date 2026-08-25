@@ -3,6 +3,12 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
+The v0.27 repository presentation work is documentation-only. The
+[reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
+navigation and evaluation without changing the technical or production
+readiness of the project. The latest stable development milestone remains
+`v0.26.0-auth-security-event-retention-foundation`.
+
 ## Completed foundations
 
 - Next.js App Router frontend with responsive feature pages and typed fallbacks.

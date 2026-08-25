@@ -4,41 +4,57 @@
 [![Frontend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml)
 [![Security CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml)
 
-NEXORA is a secure, network-aware game deals, giveaways, wishlist, and alert
-intelligence platform. It combines a Next.js interface with a Spring Boot API,
-optional PostgreSQL persistence, and conservative CheapShark integrations.
+NEXORA is a full-stack game-deal intelligence MVP that combines discovery,
+personal price tracking, alert history, account-scoped workflows, and a bounded
+Sentinel assistant in one locally runnable project.
 
-**Status:** Local/development MVP · Core frontend and backend flows implemented ·
-Not deployed as a production service
+> **Project status:** Local/development MVP for learning, portfolio review, and
+> controlled evaluation. NEXORA is not deployed and is not production-ready.
+> The latest stable development milestone is
+> [`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
 
-## What NEXORA does
+Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
+[project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
+[backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
+[development milestones](RELEASES.md) ·
+[auth production-policy plan](docs/security/auth-production-policy-plan.md)
 
-- Presents curated game deals and giveaways with typed offline fallbacks.
-- Retrieves live deal data and store redirect links from CheapShark on demand.
-- Supports JWT registration, login, authenticated account lookup, and
-  process-local abuse controls for repeated authentication attempts.
-- Keeps personal wishlists separate from the public demo/global wishlist.
-- Lets users save deals, configure price targets, and review alert evaluations.
-- Records target-reached alert history for personal wishlist items.
-- Provides opt-in foundations for scheduled price refresh and notification
-  delivery.
-- Includes Security and Sentinel experiences. Authenticated Sentinel requests
-  use a backend-only local gateway with an optional Gemini provider, bounded
-  context, safety limits, and deterministic local fallback.
+## Why NEXORA exists
 
-## Key features
+Game deals, giveaways, wishlists, and price targets are often spread across
+unrelated services. NEXORA explores how those workflows can fit into one
+coherent application while demonstrating a complete system: a responsive
+client, authenticated API, persistence, background refresh foundations,
+security controls, and testable optional integrations.
 
-| Area | Current capability |
-| --- | --- |
-| Deals | Curated catalog plus optional live CheapShark mode and redirect URLs |
-| Giveaways | API-backed listings with frontend fallback data |
-| Authentication | BCrypt passwords, memory-first JWT access tokens, server-side refresh sessions, an HttpOnly refresh cookie, and local in-memory auth-route abuse controls |
-| Wishlist | Public demo data plus authenticated, user-owned CRUD operations |
-| Alert intelligence | Target evaluation, target-reached transitions, and event history |
-| Price refresh | Disabled-by-default scheduler with stored or CheapShark snapshot providers |
-| Notifications | Disabled-by-default log provider and optional email provider foundation |
-| Sentinel | Authenticated backend-only local/Gemini gateway with bounded context, transient responses, safety limits, and local fallback |
-| Frontend resilience | Response validation and typed fallbacks for public content pages |
+## What makes NEXORA different
+
+- The useful local demo does not depend on paid or third-party services;
+  PostgreSQL, Gemini, email, and live price refresh remain optional.
+- Personal data paths are account-scoped, with explicit ownership checks for
+  wishlists, alerts, notification preferences, and price targets.
+- Security work is visible in the repository: browser auth controls,
+  refresh-token rotation, safe auth security events, local abuse controls, and
+  retention cleanup all have documented limits.
+- Experimental capabilities are labelled honestly. Local foundations are not
+  presented as production operations or compliance controls.
+
+## Current MVP scope and maturity
+
+| Area | Current capability | Maturity |
+| --- | --- | --- |
+| Deals and giveaways | Browse, search, filter, sort, and inspect catalogue records | Implemented MVP |
+| Authentication | Register, sign in, rotate sessions, sign out, and inspect the current account | Local security foundation |
+| Wishlist | Save and remove games with account ownership boundaries | Implemented MVP |
+| Price targets and alerts | Set thresholds, generate alerts, and review delivery/read state | Implemented MVP |
+| Price history | Record and query snapshots used by deal and alert workflows | Implemented foundation |
+| Price refresh | Run manual or scheduled refresh through stored or optional external providers | Optional foundation |
+| Notifications | Store preferences and optionally deliver through SMTP | Optional foundation |
+| Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
+| Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
+
+“Foundation” means the capability is implemented and testable for local
+development; it does not imply production-scale operations.
 
 ## Architecture overview
 
@@ -55,6 +71,25 @@ Not deployed as a production service
 The public `GET /api/wishlist` contract remains separate from authenticated
 personal wishlist endpoints under `/api/me/wishlist`.
 
+## Security-first design notes
+
+- Auth security events use typed safe metadata and exclude raw credentials,
+  submitted identifiers, tokens, cookies, IP addresses, user agents, and raw
+  origin/referrer values.
+- Security-event recording and configured cleanup are best-effort so event-store
+  failures do not break normal authentication behavior.
+- Auth abuse controls are process-local and reset on restart; they are not
+  distributed production rate limiting.
+- CodeQL remains manual-only because code scanning is not enabled for this
+  private repository.
+- Production still requires approved deployment, secret management, distributed
+  abuse protection, monitoring, privacy/retention, access-control, and
+  incident-response decisions.
+
+See [SECURITY.md](SECURITY.md) and the
+[auth production-policy plan](docs/security/auth-production-policy-plan.md) for
+the boundary between current controls and future production requirements.
+
 ## Project structure
 
 | Path | Purpose |
@@ -70,33 +105,10 @@ personal wishlist endpoints under `/api/me/wishlist`.
 | `.devcontainer` | Optional local Java 17, Maven, Node.js 20, npm, Git, and Docker CLI development environment |
 | `research` | Final-year project and research material |
 
-See [RELEASES.md](RELEASES.md) for concise development milestones and
-[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the current readiness
-assessment. See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance,
-current controls, and known security limitations. Repository workflow and
-settings guidance is in
+Repository workflow and settings guidance is in
 [docs/security/repository-security-hardening.md](docs/security/repository-security-hardening.md).
-Pre-deployment authentication, session, CSRF, CORS, cookie, and secret decisions
-are tracked in the planning-only
-[auth production-policy plan](docs/security/auth-production-policy-plan.md).
 Optional development-container onboarding is documented in
 [docs/development/dev-container-foundation.md](docs/development/dev-container-foundation.md).
-
-Register, login, refresh, logout, and repeated CSRF/origin rejection attempts
-have local fixed-window controls. Limited requests return `429` with a safe
-`rate_limited` response and create a typed, best-effort auth security event.
-The counters use only route/purpose keys: they do not store submitted
-identifiers, passwords, tokens, cookies, IP addresses, user agents, raw
-origins/referrers, or secrets. They are process-local, reset on restart, and are
-not production-grade or distributed abuse protection.
-
-Safe auth security events also have a configurable local retention-cleanup
-foundation. Cleanup is disabled by default, uses a 30-day default retention
-window, and runs daily in UTC only when an owner enables it. The in-memory store
-remains capped at 500 events and resets on restart; the `dev` PostgreSQL store
-can delete old rows from the existing Flyway V10 table. Cleanup handles only
-the existing typed safe metadata and is not a production retention, privacy, or
-compliance policy.
 
 ## Tech stack
 
@@ -105,6 +117,29 @@ compliance policy.
 - PostgreSQL and Flyway for the `dev` profile
 - Maven and npm
 - CheapShark public API for external deal information
+
+## Suggested evaluation path
+
+1. Read the [reviewer overview](docs/PROJECT_OVERVIEW.md) for the problem,
+   architecture, and scope in one place.
+2. Scan the maturity matrix above and
+   [current project status](docs/PROJECT_STATUS.md) to distinguish implemented
+   features from local foundations.
+3. Run the backend tests and frontend lint/build commands in
+   [Verification](#verification).
+4. Start the local stack and follow the demo flow below.
+5. Review [SECURITY.md](SECURITY.md),
+   [development milestones](RELEASES.md), and the
+   [roadmap](docs/ROADMAP.md) for limitations and next steps.
+
+## Local demo flow
+
+1. Browse and filter deals and giveaways without an account.
+2. Register a local account and sign in through the cookie-based browser flow.
+3. Add a game to the wishlist, set a target price, and inspect price history.
+4. Review generated alerts and notification preferences.
+5. Try Sentinel in deterministic local mode; optional providers can be
+   configured separately.
 
 ## Local setup
 
@@ -266,15 +301,21 @@ The full endpoint and configuration reference is in the
 
 ## Release milestones
 
-- `v0.2.0-alert-intelligence-mvp` — wishlist evaluation and alert history.
-- `v0.3.0-price-refresh-foundation` — opt-in scheduled refresh workflow.
-- `v0.4.0-real-price-provider` — conservative CheapShark wishlist matching.
-- `v0.5.0-notification-foundation` — failure-isolated notification dispatch.
-- `v0.6.0-email-notification-foundation` — optional account-aware email adapter.
+The latest stable development milestone is
+[`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
+Recent milestones progressively added browser auth hardening, safe auth security
+events, local abuse controls, and local event-retention cleanup. Earlier
+milestones established the deal, wishlist, alert, notification, refresh, and
+Sentinel foundations.
 
-These are development milestones, not claims of deployed production releases.
+See [RELEASES.md](RELEASES.md) for the full history. These tags mark repository
+development progress, not production releases.
 
-## Current limitations
+## Not production-ready
+
+NEXORA is designed for local demonstration, academic evaluation, and portfolio
+review. It is not a hosted production service and has no production
+availability, scale, security-assurance, or compliance claim.
 
 - No production deployment or continuous-delivery pipeline is documented yet.
 - Docker Compose covers local PostgreSQL only. The optional devcontainer
@@ -306,17 +347,10 @@ These are development milestones, not claims of deployed production releases.
 
 ## Roadmap
 
-1. Review the local refresh-session, cookie, CSRF, origin, and proxy foundations
-   against defined production authentication requirements.
-2. Review repository secret scanning/push protection and evaluate a reliable
-   Maven vulnerability scanner.
-3. Define a production application-container strategy only after deployment,
-   operations, and secret-management requirements are established.
-4. Add verified-recipient handling, persistent notification delivery status,
-   and retry/outbox processing.
-5. Add production-grade scheduling/locking and extend price-history analytics.
-6. Define production Sentinel privacy, moderation, evaluation, cost-control,
-   provider-key, and observability requirements before expanding AI use.
+The milestone-based [project roadmap](docs/ROADMAP.md) separates near-term
+polish, product UX, deployment preparation, production security requirements,
+Sentinel expansion, and longer-term product exploration. No delivery dates or
+production launch are promised.
 
 ## Verification
 
