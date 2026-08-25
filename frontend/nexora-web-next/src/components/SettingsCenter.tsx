@@ -183,7 +183,7 @@ export default function SettingsCenter() {
           <div className="st-status__header">
             <span className="st-status__header-icon" aria-hidden="true">📡</span>
             <div><span>Account telemetry</span><h2 id="account-status-title">Account System Status</h2></div>
-            <span className="st-status__live"><i aria-hidden="true" /> Demo</span>
+            <span className="st-status__live st-status__live--demo"><i aria-hidden="true" /> Demo</span>
           </div>
           <div className="st-status__items">
             {accountSystemStatus.map((item) => (

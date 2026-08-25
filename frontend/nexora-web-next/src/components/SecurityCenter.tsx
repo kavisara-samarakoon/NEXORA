@@ -107,7 +107,7 @@ function SecurityOperations({
       <div className="sc-operations__header">
         <span className="sc-operations__header-icon" aria-hidden="true">📡</span>
         <div><span>Defense telemetry</span><h2 id="security-operations-title">Security Ops Status</h2></div>
-        <span className="sc-operations__live"><span aria-hidden="true" /> Demo</span>
+        <span className="sc-operations__live sc-operations__live--demo"><span aria-hidden="true" /> Demo</span>
       </div>
       <div className="sc-operations__items">
         {operations.map((item) => (

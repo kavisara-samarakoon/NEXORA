@@ -30,7 +30,7 @@ function SentinelSystemStatus({
       <div className="sn-status__header">
         <span className="sn-status__header-icon" aria-hidden="true">📡</span>
         <div><span>Assistant telemetry</span><h2 id="sentinel-status-title">Sentinel System Status</h2></div>
-        <span className="sn-status__live"><span aria-hidden="true" /> {source === "api" ? "API" : "Demo"}</span>
+        <span className={`sn-status__live sn-status__live--${source === "api" ? "api" : "demo"}`}><span aria-hidden="true" /> {source === "api" ? "API" : "Demo"}</span>
       </div>
 
       <div className="sn-status__items">

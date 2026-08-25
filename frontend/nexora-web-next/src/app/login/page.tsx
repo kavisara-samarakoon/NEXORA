@@ -13,7 +13,7 @@ export const metadata: Metadata = createPageMetadata({
 
 export default function LoginPage() {
   return (
-    <main className="auth-page">
+    <main className="auth-page nx-page-reveal">
       <div className="auth-page__orb auth-page__orb--orange" aria-hidden="true" />
       <div className="auth-page__orb auth-page__orb--blue" aria-hidden="true" />
 

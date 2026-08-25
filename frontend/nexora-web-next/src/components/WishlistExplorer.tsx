@@ -637,7 +637,7 @@ function WishlistAlertPanel({
       <div className="wl-network__header">
         <span className="wl-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Alert telemetry</span><h2 id="wishlist-alert-title">Wishlist Alert Status</h2></div>
-        <span className="wl-network__live"><span aria-hidden="true" /> {view === "personal" ? "Saved" : "Preview"}</span>
+        <span className={`wl-network__live wl-network__live--${view === "personal" ? "personal" : "preview"}`}><span aria-hidden="true" /> {view === "personal" ? "Saved" : "Preview"}</span>
       </div>
 
       <div className="wl-network__items">

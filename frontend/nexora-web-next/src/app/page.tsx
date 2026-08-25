@@ -63,7 +63,7 @@ export default async function Home() {
       <div className="main-shell">
         <Topbar />
 
-        <main className="dashboard dashboard-home">
+        <main className="dashboard dashboard-home nx-page-reveal">
           <DashboardHero summary={summaryResult.dashboardSummary} />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">

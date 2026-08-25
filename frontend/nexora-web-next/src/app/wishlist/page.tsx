@@ -21,7 +21,7 @@ export default async function WishlistPage() {
       <Sidebar />
       <div className="main-shell">
         <Topbar />
-        <main className="dashboard wishlist-page">
+        <main className="dashboard wishlist-page nx-page-reveal">
           <WishlistExplorer wishlistItems={wishlistItems} source={source} />
         </main>
       </div>

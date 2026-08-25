@@ -7,9 +7,15 @@ The latest stable development tag is
 [`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.27.0 repository presentation polish
+## In progress — v0.28.0 premium UI motion polish
 
-- Improving repository-level documentation, reviewer navigation, maturity
+- Refining the primary Next.js interface with CSS-first motion tokens, layered
+  atmosphere, reveal timing, interaction feedback, and reduced-motion support
+  without changing product behavior or production readiness.
+
+## Completed documentation milestone — v0.27.0 repository presentation polish
+
+- Improved repository-level documentation, reviewer navigation, maturity
   wording, and roadmap clarity without changing runtime behavior or production
   readiness.
 
