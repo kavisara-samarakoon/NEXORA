@@ -51,6 +51,10 @@ time is guaranteed while the project remains a development MVP.
   logout, and auth-route rejection outcomes. It stores only typed safe metadata,
   uses bounded in-memory retention by default, and persists through Flyway V10
   in `dev`.
+- Disabled-by-default auth security-event retention cleanup with a 30-day local
+  default. When enabled, a daily UTC task removes old safe metadata from the
+  bounded in-memory store or the existing V10 PostgreSQL table; cleanup failure
+  remains isolated from authentication behavior.
 - Process-local fixed-window abuse controls for register, login, refresh,
   logout, and repeated CSRF/origin rejections. Limited requests receive a safe
   `429`/`Retry-After` response, and only typed rate-limit reason codes with null
@@ -98,8 +102,11 @@ development, but the production policy is planned rather than implemented.
   policy, and comprehensive security monitoring are not implemented.
 - Auth security events intentionally exclude passwords, submitted login
   identifiers, tokens, cookies, token hashes, raw origins, IP addresses, user
-  agents, and secrets. There is no production event retention/privacy policy,
-  dashboard, SIEM integration, alerting, or incident-response process.
+  agents, and secrets. Local cleanup deletes only this safe metadata. Its
+  disabled-by-default 30-day configuration is not an approved production
+  retention/privacy/compliance policy, and there is no production access or
+  integrity policy, dashboard, monitoring, SIEM integration, alerting, or
+  incident-response process.
 - Auth abuse counters use only five route/purpose enum keys and store no raw
   passwords, submitted identifiers, JWTs, refresh tokens or hashes, CSRF
   tokens, cookies, origins/referrers, IP addresses, user agents, API/provider

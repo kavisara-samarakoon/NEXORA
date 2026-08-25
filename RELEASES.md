@@ -3,6 +3,12 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.26.0 auth security event retention foundation
+
+- Added configurable local/development retention cleanup for safe auth security
+  events without adding a public event API, dashboard, monitoring system, or
+  production compliance claim.
+
 ## Unreleased — v0.25.0 auth abuse controls foundation
 
 - Added process-local authentication abuse controls for repeated auth-route

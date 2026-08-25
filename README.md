@@ -90,6 +90,14 @@ identifiers, passwords, tokens, cookies, IP addresses, user agents, raw
 origins/referrers, or secrets. They are process-local, reset on restart, and are
 not production-grade or distributed abuse protection.
 
+Safe auth security events also have a configurable local retention-cleanup
+foundation. Cleanup is disabled by default, uses a 30-day default retention
+window, and runs daily in UTC only when an owner enables it. The in-memory store
+remains capped at 500 events and resets on restart; the `dev` PostgreSQL store
+can delete old rows from the existing Flyway V10 table. Cleanup handles only
+the existing typed safe metadata and is not a production retention, privacy, or
+compliance policy.
+
 ## Tech stack
 
 - Next.js 16, React 19, TypeScript, and ESLint

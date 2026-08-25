@@ -256,16 +256,28 @@ metadata in Flyway V10 `auth_security_events`. Event-store failures are
 suppressed with a metadata-only warning so they do not block otherwise
 successful authentication flows or alter existing API responses.
 
+Configurable retention cleanup is available for this safe metadata. It is
+disabled by default, defaults to 30 retention days, and checks once daily at
+03:00 UTC when enabled. The cutoff is calculated in UTC. The in-memory store
+removes matching events while retaining its existing 500-event maximum and
+restart-reset behavior; the `dev` PostgreSQL store deletes matching rows from
+the existing V10 table. Cleanup failures are suppressed and logged without
+exception messages, so cleanup cannot break authentication behavior.
+
 The event schema and service do not accept or store submitted passwords,
 failed-login email/username values, JWT access tokens, refresh tokens, refresh
 token hashes, CSRF tokens, cookies, request origins, IP addresses, user agents,
 API/provider keys, SMTP credentials, or database credentials. There is no
-public security-event API or frontend UI.
+public security-event API or frontend UI. Retention cleanup reads only the
+event timestamp and deletes only these safe event rows; it does not add or
+collect request data.
 
-This is local observability storage, not production monitoring. Retention,
-privacy/access policy, integrity protection, request-context minimization,
-aggregation, alert thresholds, dashboards, SIEM integration, and incident
-response remain future work. The
+This is local observability and cleanup, not production monitoring or a
+retention/privacy/compliance policy. Enabling cleanup is a local owner decision.
+Approved production retention periods, privacy/access policy, integrity
+protection, request-context minimization, aggregation, alert thresholds,
+dashboards, SIEM integration, monitoring, and incident response remain future
+work. The
 [auth production-policy plan](../../docs/security/auth-production-policy-plan.md)
 tracks those requirements.
 
@@ -570,6 +582,8 @@ actions. Version 0.20 adds no database migration.
 | `NEXORA_AUTH_ABUSE_REFRESH_MAX_ATTEMPTS` | `30` | Refresh attempts per process/window, safely clamped from 1 to 10,000 |
 | `NEXORA_AUTH_ABUSE_LOGOUT_MAX_ATTEMPTS` | `30` | Logout attempts per process/window, safely clamped from 1 to 10,000 |
 | `NEXORA_AUTH_ABUSE_REJECTION_MAX_ATTEMPTS` | `30` | CSRF/origin rejections per process/window, safely clamped from 1 to 10,000 |
+| `NEXORA_AUTH_SECURITY_EVENTS_CLEANUP_ENABLED` | `false` | Enable local daily cleanup of old safe auth security events |
+| `NEXORA_AUTH_SECURITY_EVENTS_RETENTION_DAYS` | `30` | Local event age cutoff, safely clamped from 1 to 3,650 days |
 | `nexora.external-deals.enabled` | `true` | Enable on-demand CheapShark deal lookup |
 | `nexora.external-deals.timeout-seconds` | `5` | External request timeout |
 | `nexora.external-deals.default-page-size` | `12` | Default external result count |
@@ -672,6 +686,10 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   OAuth, production distributed rate limiting, credential-stuffing/bot defense,
   session list, or revoke-all workflow. The local abuse counters reset on
   restart and do not coordinate across backend processes.
+- Auth security-event cleanup is disabled by default and is only a local
+  scheduling/storage mechanism. It does not define a production retention,
+  privacy, access-control, integrity, monitoring, compliance, or
+  incident-response policy.
 - The default profile is ephemeral; the `dev` profile requires PostgreSQL,
   either from Docker Compose or a compatible manual installation.
 - External data and caches are process-local, and CheapShark coverage is not
