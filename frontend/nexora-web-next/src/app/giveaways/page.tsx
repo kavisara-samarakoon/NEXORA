@@ -21,7 +21,7 @@ export default async function GiveawaysPage() {
       <Sidebar />
       <div className="main-shell">
         <Topbar />
-        <main className="dashboard giveaways-page">
+        <main className="dashboard giveaways-page nx-page-reveal">
           <GiveawaysExplorer giveaways={giveaways} source={source} />
         </main>
       </div>

@@ -137,7 +137,7 @@ function GiveawayNetworkStatus({ source }: { source: GiveawaysResult["source"] }
       <div className="ga-network__header">
         <span className="ga-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Drop telemetry</span><h2 id="giveaway-network-title">Giveaway Network Status</h2></div>
-        <span className="ga-network__live">
+        <span className={`ga-network__live ga-network__live--${isApiSource ? "api" : "demo"}`}>
           <span aria-hidden="true" /> {isApiSource ? "Live" : "Demo"}
         </span>
       </div>

@@ -19,6 +19,14 @@
   --radius-md: 16px;
   --radius-lg: 24px;
   --glass-blur: 24px;
+  --nx-motion-fast: 180ms;
+  --nx-motion-base: 220ms;
+  --nx-motion-reveal: 480ms;
+  --nx-ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+  --nx-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --nx-focus-ring: rgba(255, 153, 58, 0.32);
+  --nx-glass-highlight: rgba(255, 255, 255, 0.085);
+  --nx-shadow-premium: 0 24px 58px rgba(0, 0, 0, 0.42);
 }
 
 * {
@@ -9187,5 +9195,688 @@ body::before {
 
   .auth-form__grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* v0.28 premium UI motion polish */
+@keyframes nx-reveal-up {
+  from {
+    opacity: 0.01;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nx-ambient-drift {
+  0%, 100% {
+    opacity: 0.55;
+    transform: translate3d(-1.5%, -1%, 0) scale(1);
+  }
+  50% {
+    opacity: 0.78;
+    transform: translate3d(1.5%, 1%, 0) scale(1.035);
+  }
+}
+
+@keyframes nx-status-breathe {
+  0%, 100% {
+    opacity: 0.82;
+    transform: scale(0.86);
+    box-shadow: 0 0 0 0 rgba(88, 245, 165, 0.2), 0 0 11px rgba(88, 245, 165, 0.58);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 5px rgba(88, 245, 165, 0), 0 0 16px rgba(88, 245, 165, 0.72);
+  }
+}
+
+body {
+  background:
+    radial-gradient(circle at 82% -8%, rgba(255, 122, 0, 0.16), transparent 31%),
+    radial-gradient(circle at 4% 44%, rgba(0, 212, 255, 0.075), transparent 27%),
+    radial-gradient(circle at 58% 72%, rgba(255, 122, 0, 0.045), transparent 25%),
+    linear-gradient(145deg, #07070c 0%, var(--nx-bg) 48%, #08090e 100%);
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgba(255, 122, 0, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 122, 0, 0.028) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-position: 0 0, 0 0, 30px 30px, 30px 30px;
+  background-size: 60px 60px, 60px 60px, 120px 120px, 120px 120px;
+  mask-image: linear-gradient(to bottom, black 0%, rgba(0, 0, 0, 0.76) 62%, transparent 100%);
+}
+
+body::after {
+  position: fixed;
+  z-index: 0;
+  inset: -12%;
+  background:
+    radial-gradient(circle at 72% 18%, rgba(255, 122, 0, 0.12), transparent 24%),
+    radial-gradient(circle at 26% 78%, rgba(0, 212, 255, 0.052), transparent 26%);
+  pointer-events: none;
+  content: "";
+  animation: nx-ambient-drift 18s ease-in-out infinite;
+}
+
+.nx-reveal,
+.nx-page-reveal > :not(.auth-page__orb) {
+  animation: nx-reveal-up var(--nx-motion-reveal) var(--nx-ease-premium) both;
+  animation-delay: var(--nx-reveal-delay, 0ms);
+}
+
+.nx-page-reveal > :nth-child(2) { --nx-reveal-delay: 70ms; }
+.nx-page-reveal > :nth-child(3) { --nx-reveal-delay: 140ms; }
+.nx-page-reveal > :nth-child(4) { --nx-reveal-delay: 210ms; }
+.nx-page-reveal > :nth-child(5) { --nx-reveal-delay: 280ms; }
+.nx-page-reveal > :nth-child(n + 6) { --nx-reveal-delay: 320ms; }
+
+.dashboard-card-grid > *,
+.deals-grid > *,
+.ga-grid > *,
+.wl-grid > *,
+.sc-protection-grid > *,
+.sn-capabilities > * {
+  animation: nx-reveal-up 440ms var(--nx-ease-premium) both;
+  animation-delay: calc(var(--nx-card-order, 0) * 55ms + 140ms);
+}
+
+:is(.dashboard-card-grid, .deals-grid, .ga-grid, .wl-grid, .sc-protection-grid, .sn-capabilities) > :nth-child(2) { --nx-card-order: 1; }
+:is(.dashboard-card-grid, .deals-grid, .ga-grid, .wl-grid, .sc-protection-grid, .sn-capabilities) > :nth-child(3) { --nx-card-order: 2; }
+:is(.dashboard-card-grid, .deals-grid, .ga-grid, .wl-grid, .sc-protection-grid, .sn-capabilities) > :nth-child(4) { --nx-card-order: 3; }
+:is(.dashboard-card-grid, .deals-grid, .ga-grid, .wl-grid, .sc-protection-grid, .sn-capabilities) > :nth-child(5) { --nx-card-order: 4; }
+:is(.dashboard-card-grid, .deals-grid, .ga-grid, .wl-grid, .sc-protection-grid, .sn-capabilities) > :nth-child(n + 6) { --nx-card-order: 5; }
+
+:is(
+  .dashboard-hero,
+  .deals-hero,
+  .ga-hero,
+  .wl-hero,
+  .sc-hero,
+  .sn-hero,
+  .st-hero
+) {
+  isolation: isolate;
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 122, 0, 0.055),
+    0 28px 72px rgba(0, 0, 0, 0.38);
+}
+
+.dashboard-hero {
+  border-color: rgba(255, 142, 38, 0.3);
+  background:
+    linear-gradient(122deg, rgba(255, 122, 0, 0.18), rgba(255, 122, 0, 0.035) 38%, transparent 62%),
+    radial-gradient(circle at 88% 14%, rgba(255, 122, 0, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(20, 20, 28, 0.94), rgba(9, 10, 15, 0.84));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 0 70px rgba(255, 122, 0, 0.035),
+    0 0 0 1px rgba(255, 122, 0, 0.045),
+    0 32px 86px rgba(0, 0, 0, 0.46),
+    0 0 48px rgba(255, 122, 0, 0.095);
+}
+
+.dashboard-hero::before {
+  display: block;
+  opacity: 0.72;
+  background-image:
+    linear-gradient(rgba(255, 153, 58, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 153, 58, 0.045) 1px, transparent 1px);
+  background-size: 38px 38px;
+  mask-image: linear-gradient(105deg, black 0%, rgba(0, 0, 0, 0.72) 48%, transparent 82%);
+}
+
+.dashboard-hero::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(110deg, rgba(255, 255, 255, 0.06), transparent 24%),
+    radial-gradient(circle at 76% 2%, rgba(255, 180, 92, 0.13), transparent 25%);
+  pointer-events: none;
+  content: "";
+}
+
+.dashboard-hero__orb--orange {
+  background: rgba(255, 122, 0, 0.24);
+}
+
+.dashboard-hero__orb--blue {
+  background: rgba(0, 212, 255, 0.12);
+}
+
+:is(
+  .dashboard-hero__content,
+  .dashboard-hero__stats,
+  .deals-hero__content,
+  .ga-hero__content,
+  .wl-hero__content,
+  .sc-hero__content,
+  .sn-hero__content,
+  .st-hero__content
+) {
+  position: relative;
+  z-index: 2;
+}
+
+:is(
+  .dashboard-hero h1,
+  .deals-hero h1,
+  .ga-hero h1,
+  .wl-hero h1,
+  .sc-hero h1,
+  .sn-hero h1,
+  .st-hero h1
+) {
+  text-shadow: 0 14px 42px rgba(0, 0, 0, 0.48);
+}
+
+:is(
+  .dashboard-hero__tag,
+  .deals-hero__tag,
+  .ga-hero__tag,
+  .wl-hero__tag,
+  .sc-hero__tag,
+  .sn-hero__tag,
+  .st-hero__tag
+) {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 28px rgba(0, 0, 0, 0.22),
+    0 0 20px rgba(255, 122, 0, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.dashboard-hero__tag {
+  padding: 8px 17px;
+  border-color: rgba(255, 153, 58, 0.32);
+  color: #ffb15c;
+  background: rgba(255, 122, 0, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(255, 122, 0, 0.04),
+    0 10px 28px rgba(0, 0, 0, 0.24),
+    0 0 24px rgba(255, 122, 0, 0.12);
+}
+
+.dashboard-hero__stats .hero-stat {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.065), rgba(255, 122, 0, 0.025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075), 0 14px 34px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+}
+
+.dashboard-button--primary {
+  border: 1px solid rgba(255, 190, 128, 0.32);
+  background: linear-gradient(135deg, #ff7200, #ff9b3d 72%, #ffb663);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 12px 34px rgba(255, 122, 0, 0.34),
+    0 0 24px rgba(255, 122, 0, 0.15);
+}
+
+.dashboard-button--outline {
+  border-color: rgba(0, 212, 255, 0.4);
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+:is(
+  .giveaway-card,
+  .deal-card,
+  .deals-card,
+  .ga-card,
+  .wl-card,
+  .status-panel,
+  .network-card,
+  .sc-protection-card,
+  .sn-capability,
+  .sn-chat,
+  .sn-gateway-response,
+  .st-card,
+  .st-platform,
+  .wl-add-panel
+) {
+  border-color: rgba(255, 255, 255, 0.115);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.075),
+    0 14px 38px rgba(0, 0, 0, 0.29),
+    0 0 0 1px rgba(255, 122, 0, 0.018);
+  transition:
+    transform var(--nx-motion-base) var(--nx-ease-premium),
+    border-color var(--nx-motion-fast) var(--nx-ease-standard),
+    background-color var(--nx-motion-fast) var(--nx-ease-standard),
+    box-shadow var(--nx-motion-base) var(--nx-ease-standard);
+}
+
+:is(
+  .deals-filter-panel,
+  .deals-mode-panel,
+  .ga-filter-panel,
+  .wl-filter-panel,
+  .deals-network,
+  .ga-network,
+  .wl-network,
+  .sc-operations,
+  .sn-status,
+  .st-status,
+  .auth-panel
+) {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 var(--nx-glass-highlight),
+    0 20px 52px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 122, 0, 0.018);
+  backdrop-filter: blur(26px) saturate(112%);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition-timing-function: var(--nx-ease-standard);
+}
+
+button:not(:disabled),
+a {
+  transition:
+    color var(--nx-motion-fast) var(--nx-ease-standard),
+    background-color var(--nx-motion-fast) var(--nx-ease-standard),
+    border-color var(--nx-motion-fast) var(--nx-ease-standard),
+    box-shadow var(--nx-motion-base) var(--nx-ease-standard),
+    transform var(--nx-motion-fast) var(--nx-ease-premium),
+    opacity var(--nx-motion-fast) var(--nx-ease-standard);
+}
+
+button:not(:disabled):active,
+a:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+button:disabled,
+input:disabled,
+select:disabled {
+  box-shadow: none;
+  filter: saturate(0.72);
+  opacity: 0.6;
+}
+
+.dashboard-button:disabled,
+.section-heading__action:disabled,
+.giveaway-card button:disabled,
+.deal-card button:disabled {
+  filter: saturate(0.65);
+  opacity: 0.58;
+}
+
+input,
+select,
+textarea {
+  transition:
+    border-color var(--nx-motion-fast) var(--nx-ease-standard),
+    background-color var(--nx-motion-fast) var(--nx-ease-standard),
+    box-shadow var(--nx-motion-fast) var(--nx-ease-standard);
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #ff9a3c;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px var(--nx-focus-ring), 0 0 30px rgba(255, 122, 0, 0.24);
+}
+
+:is(.topbar__search, .deals-search, .ga-search, .wl-search, .deals-live-search > div):focus-within {
+  filter: drop-shadow(0 0 20px rgba(255, 122, 0, 0.2));
+}
+
+.topbar {
+  border-bottom-color: rgba(255, 153, 58, 0.16);
+  background:
+    linear-gradient(90deg, rgba(10, 10, 15, 0.86), rgba(25, 18, 15, 0.78)),
+    rgba(10, 10, 15, 0.8);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.24), 0 1px 0 rgba(255, 122, 0, 0.05);
+  backdrop-filter: blur(30px) saturate(135%);
+}
+
+.topbar__search input {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 8px 22px rgba(0, 0, 0, 0.16);
+}
+
+.topbar__search input:focus {
+  border-color: rgba(255, 142, 38, 0.56);
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow:
+    0 0 0 4px rgba(255, 122, 0, 0.11),
+    0 0 26px rgba(255, 122, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.sidebar {
+  border-right-color: rgba(255, 142, 38, 0.17);
+  background:
+    linear-gradient(180deg, rgba(20, 18, 25, 0.975), rgba(9, 9, 14, 0.99)),
+    radial-gradient(circle at 12% 4%, rgba(255, 122, 0, 0.15), transparent 34%);
+  box-shadow: 20px 0 58px rgba(0, 0, 0, 0.3), 1px 0 0 rgba(255, 122, 0, 0.045);
+}
+
+.nav-item {
+  transition:
+    color var(--nx-motion-fast) var(--nx-ease-standard),
+    border-color var(--nx-motion-fast) var(--nx-ease-standard),
+    background-color var(--nx-motion-fast) var(--nx-ease-standard),
+    box-shadow var(--nx-motion-base) var(--nx-ease-standard),
+    transform var(--nx-motion-fast) var(--nx-ease-premium);
+}
+
+.nav-item--active {
+  border-color: rgba(255, 142, 38, 0.26);
+  color: #ffad5c;
+  background: linear-gradient(90deg, rgba(255, 122, 0, 0.2), rgba(255, 122, 0, 0.045));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 30px rgba(255, 122, 0, 0.14);
+}
+
+.nav-item--active::before {
+  width: 4px;
+  box-shadow: 0 0 18px rgba(255, 122, 0, 0.78);
+}
+
+.nav-item:not(.nav-item--active)::after {
+  position: absolute;
+  left: -21px;
+  width: 2px;
+  height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: var(--nx-orange);
+  opacity: 0;
+  transform: scaleY(0.45);
+  transition: opacity var(--nx-motion-fast) var(--nx-ease-standard), transform var(--nx-motion-fast) var(--nx-ease-premium);
+  content: "";
+}
+
+.brand__logo {
+  transition: filter var(--nx-motion-base) var(--nx-ease-standard), transform var(--nx-motion-base) var(--nx-ease-premium);
+}
+
+.deals-network__live--active > span,
+.ga-network__live--api > span {
+  animation: nx-status-breathe 2.6s ease-in-out infinite;
+}
+
+.deals-network__live--active,
+.ga-network__live--api {
+  border-color: rgba(88, 245, 165, 0.24);
+  color: var(--nx-success);
+  background: rgba(88, 245, 165, 0.075);
+  box-shadow: 0 0 20px rgba(88, 245, 165, 0.1);
+}
+
+.status-dot,
+.network-live > span {
+  animation: none;
+}
+
+:is(
+  .deals-network__live--loading,
+  .deals-network__live--fallback,
+  .deals-network__live--curated,
+  .ga-network__live--demo,
+  .wl-network__live--personal,
+  .wl-network__live--preview,
+  .sc-operations__live--demo,
+  .sn-status__live--api,
+  .sn-status__live--demo,
+  .st-status__live--demo
+) > :is(span, i) {
+  animation: none;
+}
+
+:is(
+  .deals-network__live--fallback,
+  .ga-network__live--demo,
+  .wl-network__live--preview,
+  .sc-operations__live--demo,
+  .sn-status__live--demo,
+  .st-status__live--demo,
+  .sc-section__badge--planned
+) {
+  box-shadow: inset 0 0 0 1px rgba(255, 162, 92, 0.05), 0 0 16px rgba(255, 122, 0, 0.055);
+}
+
+@media (hover: hover) {
+  :is(
+    .giveaway-card,
+    .deal-card,
+    .deals-card,
+    .ga-card,
+    .wl-card,
+    .sc-protection-card,
+    .sn-capability,
+    .st-platform
+  ):hover {
+    border-color: rgba(255, 153, 58, 0.4);
+    transform: translateY(-4px) scale(1.009);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.11),
+      0 0 34px rgba(255, 122, 0, 0.18),
+      var(--nx-shadow-premium);
+  }
+
+  :is(
+    .giveaway-card,
+    .deal-card,
+    .deals-card,
+    .ga-card,
+    .wl-card,
+    .sc-protection-card,
+    .sn-capability,
+    .st-platform
+  ):focus-within {
+    border-color: rgba(255, 153, 58, 0.42);
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.11),
+      0 0 0 1px rgba(255, 122, 0, 0.08),
+      0 0 30px rgba(255, 122, 0, 0.16),
+      0 22px 52px rgba(0, 0, 0, 0.38);
+  }
+
+  :is(.status-panel, .network-card, .sn-chat, .st-card, .wl-add-panel):hover {
+    border-color: rgba(255, 153, 58, 0.16);
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.065),
+      0 18px 48px rgba(0, 0, 0, 0.29);
+  }
+
+  .nav-item:not(.nav-item--disabled):hover {
+    border-color: rgba(255, 142, 38, 0.16);
+    background: linear-gradient(90deg, rgba(255, 122, 0, 0.095), rgba(255, 255, 255, 0.025));
+    box-shadow: 0 0 22px rgba(255, 122, 0, 0.075);
+    transform: translateX(3px);
+  }
+
+  .nav-item:not(.nav-item--active):not(.nav-item--disabled):hover::after {
+    opacity: 0.72;
+    transform: scaleY(1);
+  }
+
+  .brand:hover .brand__logo {
+    filter: drop-shadow(0 0 19px rgba(255, 122, 0, 0.4));
+    transform: translateY(-1px) scale(1.025);
+  }
+
+  :is(.icon-button, .auth-status__login, .auth-status__register, .auth-status__logout):hover {
+    transform: translateY(-1px);
+  }
+
+  :is(
+    .dashboard-button,
+    .auth-form__submit,
+    .deals-card__actions button,
+    .deals-card__actions a,
+    .ga-card__actions button,
+    .wl-card__actions button,
+    .wl-add-form__actions button,
+    .sn-chat__composer button,
+    .st-outline-button
+  ):not(:disabled):hover {
+    filter: brightness(1.07);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3), 0 0 24px rgba(255, 122, 0, 0.16);
+  }
+
+  .dashboard-button--primary:hover {
+    filter: brightness(1.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 16px 40px rgba(255, 122, 0, 0.44),
+      0 0 34px rgba(255, 122, 0, 0.26);
+  }
+
+  .dashboard-button--outline:hover {
+    border-color: rgba(0, 212, 255, 0.65);
+    background: rgba(0, 212, 255, 0.13);
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.18), 0 14px 34px rgba(0, 0, 0, 0.24);
+  }
+
+  :is(.deals-chip, .ga-chip, .wl-chip, .sn-suggestions button):not(:disabled):hover {
+    border-color: rgba(255, 153, 58, 0.36);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), 0 0 20px rgba(255, 122, 0, 0.11);
+  }
+
+  :is(
+    .section-heading__action,
+    .giveaway-card > a,
+    .deal-card__view,
+    .deals-card__view--active
+  ):hover span:last-child {
+    transform: translateX(3px);
+  }
+
+  :is(.giveaway-card, .deal-card, .deals-card, .ga-card, .wl-card):hover :is(
+    .giveaway-card__accent,
+    .deals-card__accent,
+    .ga-card__accent,
+    .wl-card__accent
+  ) {
+    filter: brightness(1.12);
+  }
+}
+
+:is(
+  .section-heading__action,
+  .giveaway-card > a,
+  .deal-card__view,
+  .deals-card__view--active
+) span {
+  display: inline-block;
+  transition: transform var(--nx-motion-fast) var(--nx-ease-premium);
+}
+
+:is(.st-preference, .st-profile-field) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 9px 24px rgba(0, 0, 0, 0.16);
+  transition:
+    transform var(--nx-motion-base) var(--nx-ease-premium),
+    border-color var(--nx-motion-fast) var(--nx-ease-standard),
+    background-color var(--nx-motion-fast) var(--nx-ease-standard),
+    box-shadow var(--nx-motion-base) var(--nx-ease-standard);
+}
+
+@media (hover: hover) {
+  :is(.st-preference, .st-profile-field):hover {
+    border-color: rgba(255, 153, 58, 0.2) !important;
+    background: rgba(255, 122, 0, 0.035);
+    transform: translateY(-2px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.065), 0 14px 30px rgba(0, 0, 0, 0.22);
+  }
+}
+
+:is(.deals-chip--active, .ga-chip--active, .wl-chip--active) {
+  border-color: rgba(255, 153, 58, 0.46);
+  color: #ffc085;
+  background: linear-gradient(135deg, rgba(255, 122, 0, 0.2), rgba(255, 122, 0, 0.08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 22px rgba(255, 122, 0, 0.13);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after,
+  .nx-reveal,
+  .nx-page-reveal > :not(.auth-page__orb),
+  .dashboard-card-grid > *,
+  .deals-grid > *,
+  .ga-grid > *,
+  .wl-grid > *,
+  .sc-protection-grid > *,
+  .sn-capabilities > *,
+  .status-dot,
+  .network-live > span,
+  .deals-network__live > span,
+  .ga-network__live > span {
+    animation: none !important;
+  }
+
+  .nx-reveal,
+  .nx-page-reveal > :not(.auth-page__orb),
+  .dashboard-card-grid > *,
+  .deals-grid > *,
+  .ga-grid > *,
+  .wl-grid > *,
+  .sc-protection-grid > *,
+  .sn-capabilities > * {
+    opacity: 1;
+    transform: none;
+  }
+
+  :is(
+    .giveaway-card,
+    .deal-card,
+    .deals-card,
+    .ga-card,
+    .wl-card,
+    .status-panel,
+    .network-card,
+    .sc-protection-card,
+    .sn-capability,
+    .sn-chat,
+    .st-card,
+    .st-platform,
+    .nav-item,
+    button,
+    a
+  ):hover,
+  :is(
+    .giveaway-card,
+    .deal-card,
+    .deals-card,
+    .ga-card,
+    .wl-card,
+    .sc-protection-card,
+    .sn-capability,
+    .st-platform
+  ):focus-within,
+  button:not(:disabled):active,
+  a:active {
+    transform: none;
   }
 }

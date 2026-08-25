@@ -21,7 +21,7 @@ export default async function SentinelPage() {
       <Sidebar />
       <div className="main-shell">
         <Topbar />
-        <main className="dashboard sentinel-page">
+        <main className="dashboard sentinel-page nx-page-reveal">
           <SentinelExperience {...sentinel} />
         </main>
       </div>

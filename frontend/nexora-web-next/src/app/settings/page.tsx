@@ -18,7 +18,7 @@ export default function SettingsPage() {
       <Sidebar />
       <div className="main-shell">
         <Topbar />
-        <main className="dashboard settings-page">
+        <main className="dashboard settings-page nx-page-reveal">
           <SettingsCenter />
         </main>
       </div>

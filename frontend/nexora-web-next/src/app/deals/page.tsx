@@ -21,7 +21,7 @@ export default async function DealsPage() {
       <Sidebar />
       <div className="main-shell">
         <Topbar />
-        <main className="dashboard deals-page">
+        <main className="dashboard deals-page nx-page-reveal">
           <DealsExplorer deals={deals} source={source} />
         </main>
       </div>

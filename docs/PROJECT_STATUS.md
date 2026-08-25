@@ -3,7 +3,14 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The v0.27 repository presentation work is documentation-only. The
+The v0.28 premium UI motion polish is a frontend presentation milestone. It
+adds CSS-first motion and interaction refinement to the primary Next.js UI
+without changing routes, data flow, backend behavior, security posture,
+deployment readiness, or the retained Vite prototype. Demo, preview, fallback,
+and planned states remain labelled as such, and non-essential motion respects
+the user's reduced-motion preference.
+
+The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone remains

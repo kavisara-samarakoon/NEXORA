@@ -296,7 +296,7 @@ function DealNetworkStatus({
           <span>System telemetry</span>
           <h2 id="deal-network-title">Deal Network Status</h2>
         </div>
-        <span className="deals-network__live">
+        <span className={`deals-network__live deals-network__live--${isExternalLive ? "active" : isExternalLoading ? "loading" : isExternalFallback ? "fallback" : "curated"}`}>
           <span aria-hidden="true" /> {stateLabel}
         </span>
       </div>
