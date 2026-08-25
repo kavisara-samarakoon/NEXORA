@@ -51,6 +51,10 @@ time is guaranteed while the project remains a development MVP.
   logout, and auth-route rejection outcomes. It stores only typed safe metadata,
   uses bounded in-memory retention by default, and persists through Flyway V10
   in `dev`.
+- Process-local fixed-window abuse controls for register, login, refresh,
+  logout, and repeated CSRF/origin rejections. Limited requests receive a safe
+  `429`/`Retry-After` response, and only typed rate-limit reason codes with null
+  user IDs are sent to the best-effort auth event recorder.
 - Backend request validation and ownership checks for personal Wishlist APIs,
   including price history and alert history.
 - Owner-scoped notification preferences with in-memory and PostgreSQL-backed
@@ -96,6 +100,14 @@ development, but the production policy is planned rather than implemented.
   identifiers, tokens, cookies, token hashes, raw origins, IP addresses, user
   agents, and secrets. There is no production event retention/privacy policy,
   dashboard, SIEM integration, alerting, or incident-response process.
+- Auth abuse counters use only five route/purpose enum keys and store no raw
+  passwords, submitted identifiers, JWTs, refresh tokens or hashes, CSRF
+  tokens, cookies, origins/referrers, IP addresses, user agents, API/provider
+  keys, SMTP credentials, or database credentials. They are global only within
+  one process, reset on restart, and are not distributed or production-grade.
+  Production still requires bot and credential-stuffing defenses, distributed
+  limiting, monitoring, alerting, privacy/retention policy, and an
+  incident-response workflow.
 - There is no deployed production environment, production secret-management
   setup, production monitoring/SIEM integration, or production operations guide.
 - Repository secret scanning, push protection, private vulnerability reporting,

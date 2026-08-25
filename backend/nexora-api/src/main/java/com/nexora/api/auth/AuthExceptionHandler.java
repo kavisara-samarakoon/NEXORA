@@ -1,10 +1,12 @@
 package com.nexora.api.auth;
 
+import com.nexora.api.auth.abuse.AuthRateLimitExceededException;
 import com.nexora.api.auth.csrf.AuthRequestProtectionException;
 import com.nexora.api.auth.events.AuthSecurityEventReasonCode;
 import com.nexora.api.auth.events.AuthSecurityEventService;
 import com.nexora.api.users.UserAccountConflictException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -24,6 +26,17 @@ public class AuthExceptionHandler {
     @ExceptionHandler(AuthRequestProtectionException.class)
     public ResponseEntity<AuthErrorResponse> csrfFailed(AuthRequestProtectionException exception) {
         return error(HttpStatus.FORBIDDEN, "csrf_failed", exception.getMessage());
+    }
+
+    @ExceptionHandler(AuthRateLimitExceededException.class)
+    public ResponseEntity<AuthRateLimitErrorResponse> rateLimited(
+            AuthRateLimitExceededException exception) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.retryAfterSeconds()))
+                .body(new AuthRateLimitErrorResponse(
+                        "rate_limited",
+                        exception.getMessage(),
+                        exception.retryAfterSeconds()));
     }
 
     @ExceptionHandler(UserAccountConflictException.class)

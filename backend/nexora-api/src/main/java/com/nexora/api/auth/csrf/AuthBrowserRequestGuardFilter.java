@@ -1,12 +1,15 @@
 package com.nexora.api.auth.csrf;
 
 import com.nexora.api.auth.AuthErrorResponse;
+import com.nexora.api.auth.AuthRateLimitErrorResponse;
+import com.nexora.api.auth.abuse.AuthRateLimitExceededException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -60,6 +63,18 @@ public class AuthBrowserRequestGuardFilter extends OncePerRequestFilter {
             objectMapper.writeValue(
                     response.getOutputStream(),
                     new AuthErrorResponse("csrf_failed", exception.getMessage()));
+        } catch (AuthRateLimitExceededException exception) {
+            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Cache-Control", "no-store");
+            response.setHeader("Retry-After", Long.toString(exception.retryAfterSeconds()));
+            objectMapper.writeValue(
+                    response.getOutputStream(),
+                    new AuthRateLimitErrorResponse(
+                            "rate_limited",
+                            exception.getMessage(),
+                            exception.retryAfterSeconds()));
         }
     }
 }

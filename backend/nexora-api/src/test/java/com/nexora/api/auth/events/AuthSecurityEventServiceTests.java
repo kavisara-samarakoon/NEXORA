@@ -33,9 +33,10 @@ class AuthSecurityEventServiceTests {
         service.recordLogoutRequested();
         service.recordLogoutCompleted(null);
         service.recordCsrfOriginFailure(AuthSecurityEventReasonCode.ORIGIN_FAILED);
+        service.recordAuthRateLimited(AuthSecurityEventReasonCode.LOGIN_RATE_LIMITED);
 
         List<AuthSecurityEvent> events = store.findAll();
-        assertEquals(9, events.size());
+        assertEquals(10, events.size());
         assertEvent(events.get(0), AuthSecurityEventType.REGISTER_SUCCESS,
                 AuthSecurityEventOutcome.SUCCESS, 11L, null);
         assertEvent(events.get(1), AuthSecurityEventType.REGISTER_FAILURE,
@@ -54,6 +55,8 @@ class AuthSecurityEventServiceTests {
                 AuthSecurityEventOutcome.SUCCESS, null, "logout_completed");
         assertEvent(events.get(8), AuthSecurityEventType.CSRF_ORIGIN_FAILURE,
                 AuthSecurityEventOutcome.REJECTED, null, "origin_failed");
+        assertEvent(events.get(9), AuthSecurityEventType.AUTH_RATE_LIMITED,
+                AuthSecurityEventOutcome.REJECTED, null, "login_rate_limited");
     }
 
     @Test
@@ -96,6 +99,8 @@ class AuthSecurityEventServiceTests {
         assertDoesNotThrow(() -> service.recordLoginSuccess(42L));
         assertDoesNotThrow(() -> service.recordLoginFailure(
                 AuthSecurityEventReasonCode.INVALID_CREDENTIALS));
+        assertDoesNotThrow(() -> service.recordAuthRateLimited(
+                AuthSecurityEventReasonCode.LOGIN_RATE_LIMITED));
     }
 
     private static void assertEvent(

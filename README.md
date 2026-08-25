@@ -15,7 +15,8 @@ Not deployed as a production service
 
 - Presents curated game deals and giveaways with typed offline fallbacks.
 - Retrieves live deal data and store redirect links from CheapShark on demand.
-- Supports JWT registration, login, and authenticated account lookup.
+- Supports JWT registration, login, authenticated account lookup, and
+  process-local abuse controls for repeated authentication attempts.
 - Keeps personal wishlists separate from the public demo/global wishlist.
 - Lets users save deals, configure price targets, and review alert evaluations.
 - Records target-reached alert history for personal wishlist items.
@@ -31,7 +32,7 @@ Not deployed as a production service
 | --- | --- |
 | Deals | Curated catalog plus optional live CheapShark mode and redirect URLs |
 | Giveaways | API-backed listings with frontend fallback data |
-| Authentication | BCrypt passwords, memory-first JWT access tokens, server-side refresh sessions, and an HttpOnly refresh cookie |
+| Authentication | BCrypt passwords, memory-first JWT access tokens, server-side refresh sessions, an HttpOnly refresh cookie, and local in-memory auth-route abuse controls |
 | Wishlist | Public demo data plus authenticated, user-owned CRUD operations |
 | Alert intelligence | Target evaluation, target-reached transitions, and event history |
 | Price refresh | Disabled-by-default scheduler with stored or CheapShark snapshot providers |
@@ -80,6 +81,14 @@ are tracked in the planning-only
 [auth production-policy plan](docs/security/auth-production-policy-plan.md).
 Optional development-container onboarding is documented in
 [docs/development/dev-container-foundation.md](docs/development/dev-container-foundation.md).
+
+Register, login, refresh, logout, and repeated CSRF/origin rejection attempts
+have local fixed-window controls. Limited requests return `429` with a safe
+`rate_limited` response and create a typed, best-effort auth security event.
+The counters use only route/purpose keys: they do not store submitted
+identifiers, passwords, tokens, cookies, IP addresses, user agents, raw
+origins/referrers, or secrets. They are process-local, reset on restart, and are
+not production-grade or distributed abuse protection.
 
 ## Tech stack
 

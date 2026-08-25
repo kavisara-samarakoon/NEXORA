@@ -1,5 +1,7 @@
 package com.nexora.api.auth.csrf;
 
+import com.nexora.api.auth.abuse.AuthAbuseGuard;
+import com.nexora.api.auth.abuse.AuthAbuseLimit;
 import com.nexora.api.auth.events.AuthSecurityEventReasonCode;
 import com.nexora.api.auth.events.AuthSecurityEventService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,14 +14,17 @@ public class AuthBrowserRequestGuard {
     private final AuthCsrfProperties properties;
     private final AuthCsrfService csrfService;
     private final AuthSecurityEventService securityEventService;
+    private final AuthAbuseGuard abuseGuard;
 
     public AuthBrowserRequestGuard(
             AuthCsrfProperties properties,
             AuthCsrfService csrfService,
-            AuthSecurityEventService securityEventService) {
+            AuthSecurityEventService securityEventService,
+            AuthAbuseGuard abuseGuard) {
         this.properties = properties;
         this.csrfService = csrfService;
         this.securityEventService = securityEventService;
+        this.abuseGuard = abuseGuard;
     }
 
     public void validate(HttpServletRequest request) {
@@ -47,8 +52,7 @@ public class AuthBrowserRequestGuard {
 
     private void validateCsrf(HttpServletRequest request) {
         if (!csrfService.requestTokenMatches(request)) {
-            securityEventService.recordCsrfOriginFailure(AuthSecurityEventReasonCode.CSRF_FAILED);
-            throw new AuthRequestProtectionException();
+            reject(AuthSecurityEventReasonCode.CSRF_FAILED);
         }
     }
 
@@ -57,8 +61,13 @@ public class AuthBrowserRequestGuard {
         if (requestOrigin == null
                 || (requireOriginOnlyValue && !requestOrigin.equalsIgnoreCase(headerValue.trim()))
                 || !properties.trustedOrigins().contains(requestOrigin)) {
-            securityEventService.recordCsrfOriginFailure(AuthSecurityEventReasonCode.ORIGIN_FAILED);
-            throw new AuthRequestProtectionException();
+            reject(AuthSecurityEventReasonCode.ORIGIN_FAILED);
         }
+    }
+
+    private void reject(AuthSecurityEventReasonCode reasonCode) {
+        abuseGuard.check(AuthAbuseLimit.CSRF_ORIGIN_REJECTION);
+        securityEventService.recordCsrfOriginFailure(reasonCode);
+        throw new AuthRequestProtectionException();
     }
 }

@@ -61,11 +61,22 @@ The following controls exist today:
   ID, safe reason code, source, and UTC timestamps. They contain no password,
   submitted login identifier, access/refresh/CSRF token, cookie, token hash,
   request origin, IP address, user agent, or application/provider secret.
+- Register, login, refresh, logout, and repeated CSRF/origin rejection attempts
+  have process-local fixed-window controls. Counters use only typed purpose keys,
+  expire in memory, and return a safe `429` with retry timing after the local
+  limit. `AUTH_RATE_LIMITED` events use a typed reason code and null user ID.
+- The counters store no raw password, submitted identifier, JWT, refresh token
+  or hash, CSRF token, cookie, `Origin`/`Referer`, IP address, user agent, API or
+  provider key, SMTP credential, or database credential. They reset on restart
+  and do not coordinate across processes.
 
 These are local-development foundations, not assurance that the application is
 safe for Internet exposure. There is no production profile, deployed topology,
 secret manager, reverse-proxy policy, operations guide, or security monitoring
 integration.
+
+Repository CodeQL remains manual-only until code scanning is enabled/available;
+this local auth-control milestone does not change that workflow policy.
 
 ## 3. Required production environment and secret policy
 
@@ -228,8 +239,9 @@ or explicit risk decisions:
 
 - No email/account verification workflow.
 - No password recovery workflow.
-- No complete login/register abuse rate limiting, credential-stuffing defense,
-  or production lockout policy.
+- No production distributed auth rate limiting, credential-stuffing/bot
+  defense, or production lockout policy. The implemented route-purpose counters
+  are a local-development safeguard only and reset on restart.
 - No logout-all or user-facing session/device management.
 - No production security-event dashboard, centralized monitoring, alerting, or
   SIEM integration.
