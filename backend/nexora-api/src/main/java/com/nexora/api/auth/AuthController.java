@@ -1,5 +1,7 @@
 package com.nexora.api.auth;
 
+import com.nexora.api.auth.abuse.AuthAbuseGuard;
+import com.nexora.api.auth.abuse.AuthAbuseLimit;
 import com.nexora.api.auth.csrf.AuthBrowserRequestGuard;
 import com.nexora.api.auth.csrf.AuthCsrfService;
 import com.nexora.api.auth.csrf.AuthCsrfTokenResponse;
@@ -31,6 +33,7 @@ public class AuthController {
     private final AuthCsrfService csrfService;
     private final AuthBrowserRequestGuard browserRequestGuard;
     private final AuthSecurityEventService securityEventService;
+    private final AuthAbuseGuard abuseGuard;
 
     public AuthController(
             AuthService authService,
@@ -39,7 +42,8 @@ public class AuthController {
             RefreshCookieService refreshCookieService,
             AuthCsrfService csrfService,
             AuthBrowserRequestGuard browserRequestGuard,
-            AuthSecurityEventService securityEventService) {
+            AuthSecurityEventService securityEventService,
+            AuthAbuseGuard abuseGuard) {
         this.authService = authService;
         this.userIdResolver = userIdResolver;
         this.refreshSessionService = refreshSessionService;
@@ -47,6 +51,7 @@ public class AuthController {
         this.csrfService = csrfService;
         this.browserRequestGuard = browserRequestGuard;
         this.securityEventService = securityEventService;
+        this.abuseGuard = abuseGuard;
     }
 
     @GetMapping("/csrf")
@@ -62,6 +67,7 @@ public class AuthController {
             HttpServletRequest servletRequest,
             @Valid @RequestBody RegisterRequest request) {
         browserRequestGuard.validate(servletRequest);
+        abuseGuard.check(AuthAbuseLimit.REGISTER);
         try {
             AuthResponse response = authService.register(request);
             ResponseEntity<AuthResponse> result = withRefreshCookie(response, HttpStatus.CREATED);
@@ -84,6 +90,7 @@ public class AuthController {
             HttpServletRequest servletRequest,
             @Valid @RequestBody LoginRequest request) {
         browserRequestGuard.validate(servletRequest);
+        abuseGuard.check(AuthAbuseLimit.LOGIN);
         try {
             AuthResponse response = authService.login(request);
             ResponseEntity<AuthResponse> result = withRefreshCookie(response, HttpStatus.OK);
@@ -104,6 +111,7 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(HttpServletRequest request) {
         browserRequestGuard.validate(request);
+        abuseGuard.check(AuthAbuseLimit.REFRESH);
         RefreshSessionService.IssuedRefreshToken refreshToken;
         try {
             refreshToken = refreshSessionService.rotate(refreshCookieService.readToken(request));
@@ -134,6 +142,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         browserRequestGuard.validate(request);
+        abuseGuard.check(AuthAbuseLimit.LOGOUT);
         securityEventService.recordLogoutRequested();
         refreshSessionService.revokeIfPresent(refreshCookieService.readToken(request));
         ResponseEntity<Void> result = ResponseEntity.noContent()

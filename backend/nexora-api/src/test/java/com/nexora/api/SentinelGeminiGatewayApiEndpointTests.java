@@ -24,7 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "nexora.sentinel.ai.provider=gemini",
-        "nexora.sentinel.ai.gemini.api-key=test-only-placeholder"
+        "nexora.sentinel.ai.gemini.api-key=test-only-placeholder",
+        "nexora.auth.abuse-controls.enabled=false"
 })
 @AutoConfigureMockMvc
 class SentinelGeminiGatewayApiEndpointTests {

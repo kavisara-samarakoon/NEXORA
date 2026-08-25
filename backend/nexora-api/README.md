@@ -269,6 +269,37 @@ response remain future work. The
 [auth production-policy plan](../../docs/security/auth-production-policy-plan.md)
 tracks those requirements.
 
+### Auth abuse-control foundation
+
+Register, login, refresh, logout, and repeated CSRF/origin rejection attempts
+use thread-safe, fixed-window counters before expensive auth work. The counters
+are keyed only by a small typed route/purpose enum; they never contain submitted
+email/username values, passwords, JWTs, refresh tokens or hashes, CSRF tokens,
+cookies, IP addresses, user agents, raw `Origin`/`Referer` values, API/provider
+keys, SMTP credentials, or database credentials. Expired windows are removed,
+and the enum key space bounds the map to five entries.
+
+After a purpose reaches its configured attempts per window, the API returns
+`429 Too Many Requests`, sets `Retry-After`, and returns:
+
+```json
+{
+  "error": "rate_limited",
+  "message": "Too many authentication attempts. Please wait before trying again.",
+  "retryAfterSeconds": 60
+}
+```
+
+Each limited request records a best-effort `AUTH_RATE_LIMITED` event with only a
+typed route reason code and a null user ID. Event-store failure remains
+suppressed and does not replace the safe 429 behavior or break normal auth
+flows. These controls are local-development safeguards only: they are global
+within one backend process, reset on restart, and are neither distributed nor
+production-grade. Production still requires a distributed rate limiter,
+bot/credential-stuffing strategy, monitoring, alerting, privacy/retention
+policy, and incident-response workflow. No public abuse-control API or frontend
+behavior was added.
+
 ## Personal wishlist
 
 The personal wishlist supports listing, adding, alert-setting updates, and soft
@@ -532,6 +563,13 @@ actions. Version 0.20 adds no database migration.
 | `NEXORA_AUTH_CSRF_COOKIE_PATH` | `/api/auth` | CSRF-cookie request path |
 | `NEXORA_AUTH_CSRF_EXPIRATION_MINUTES` | `120` | CSRF token-cookie lifetime |
 | `NEXORA_AUTH_TRUSTED_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Comma-separated auth/CORS origin allowlist |
+| `NEXORA_AUTH_ABUSE_CONTROLS_ENABLED` | `true` | Enable process-local auth-route fixed-window controls |
+| `NEXORA_AUTH_ABUSE_WINDOW_SECONDS` | `60` | Shared auth-attempt window, safely clamped from 1 to 3,600 seconds |
+| `NEXORA_AUTH_ABUSE_REGISTER_MAX_ATTEMPTS` | `10` | Register attempts per process/window, safely clamped from 1 to 10,000 |
+| `NEXORA_AUTH_ABUSE_LOGIN_MAX_ATTEMPTS` | `20` | Login attempts per process/window, safely clamped from 1 to 10,000 |
+| `NEXORA_AUTH_ABUSE_REFRESH_MAX_ATTEMPTS` | `30` | Refresh attempts per process/window, safely clamped from 1 to 10,000 |
+| `NEXORA_AUTH_ABUSE_LOGOUT_MAX_ATTEMPTS` | `30` | Logout attempts per process/window, safely clamped from 1 to 10,000 |
+| `NEXORA_AUTH_ABUSE_REJECTION_MAX_ATTEMPTS` | `30` | CSRF/origin rejections per process/window, safely clamped from 1 to 10,000 |
 | `nexora.external-deals.enabled` | `true` | Enable on-demand CheapShark deal lookup |
 | `nexora.external-deals.timeout-seconds` | `5` | External request timeout |
 | `nexora.external-deals.default-page-size` | `12` | Default external result count |
@@ -620,8 +658,9 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 - This repository does not document a production deployment,
   continuous-delivery pipeline, application-container build workflow, or
   operational runbook.
-- Backend CI does not build application containers. CodeQL analysis is present,
-  while Security CI still does not include a full Maven vulnerability scanner.
+- Backend CI does not build application containers. CodeQL remains manual-only
+  until code scanning is enabled/available, while Security CI still does not
+  include a full Maven vulnerability scanner.
 - Docker Compose provides local PostgreSQL only; there is no backend application
   image or production container workflow. The optional devcontainer supplies a
   local toolchain only.
@@ -630,7 +669,9 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   production CORS/cookie/origin/proxy policy is not reviewed, and session-family
   reuse response is intentionally basic.
 - Authentication still has no account verification, password recovery, roles,
-  OAuth, complete rate limiting, session list, or revoke-all workflow.
+  OAuth, production distributed rate limiting, credential-stuffing/bot defense,
+  session list, or revoke-all workflow. The local abuse counters reset on
+  restart and do not coordinate across backend processes.
 - The default profile is ephemeral; the `dev` profile requires PostgreSQL,
   either from Docker Compose or a compatible manual installation.
 - External data and caches are process-local, and CheapShark coverage is not

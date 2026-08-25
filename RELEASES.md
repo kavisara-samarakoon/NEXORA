@@ -3,6 +3,12 @@
 These labels summarize completed repository milestones. They do not imply a
 public deployment, published package, or production release.
 
+## Unreleased — v0.25.0 auth abuse controls foundation
+
+- Added process-local authentication abuse controls for repeated auth-route
+  attempts with safe 429 responses and auth security-event recording, without
+  claiming production distributed rate limiting.
+
 ## Unreleased — v0.24.0 auth security events foundation
 
 - Added a safe authentication security-event recording foundation for

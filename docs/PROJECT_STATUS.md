@@ -72,6 +72,12 @@ or production-ready service.
   in memory and resets on restart; the `dev` profile persists safe metadata in
   Flyway V10 `auth_security_events`. Passwords, submitted identifiers, tokens,
   cookies, token hashes, raw request context, and secrets are not recorded.
+- Local-development auth abuse controls use a thread-safe fixed window and only
+  five route/purpose keys for register, login, refresh, logout, and repeated
+  CSRF/origin rejection attempts. Limited requests receive a safe `429` with
+  `Retry-After`/`retryAfterSeconds`, and `AUTH_RATE_LIMITED` events contain only
+  a typed reason code with no user ID or request data. Counters reset on backend
+  restart and do not coordinate across processes.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
 - Optional local devcontainer foundation with Java 17, Maven, Node.js 20, npm,
@@ -128,8 +134,10 @@ or production-ready service.
   are not implemented.
 - The auth security-event foundation has no production retention/privacy
   policy, integrity controls, request-context enrichment, dashboard, alerting,
-  SIEM integration, or incident-response process. Login/register abuse
-  controls, account verification, and password recovery also remain incomplete.
+  SIEM integration, or incident-response process. The route-level auth abuse
+  foundation is not a distributed limiter, credential-stuffing/bot strategy,
+  monitoring or alerting system, privacy/retention policy, or incident-response
+  workflow. Account verification and password recovery remain incomplete.
 - No distributed scheduler locking or multi-instance coordination.
 - No durable notification delivery workflow or delivery observability.
 - No Sentinel autonomous actions, conversation persistence, streaming,
@@ -150,9 +158,10 @@ or production-ready service.
    plan before implementing fail-closed production configuration,
    HTTPS/cookie/CORS/proxy/no-origin rules, and complete session reuse/revocation
    behavior.
-4. Define account verification, password recovery, authentication abuse
-   controls, additional audit events, event retention/privacy/integrity rules,
-   monitoring, alert thresholds, and incident-response workflows.
+4. Define account verification, password recovery, production distributed
+   authentication abuse controls and credential-stuffing/bot defenses,
+   additional audit events, event retention/privacy/integrity rules, monitoring,
+   alert thresholds, and incident-response workflows.
 5. Define verified recipients, dispatcher preference enforcement, durable
    delivery state, and retry/outbox processing.
 6. Extend the compact price-history view only after defining aggregation,

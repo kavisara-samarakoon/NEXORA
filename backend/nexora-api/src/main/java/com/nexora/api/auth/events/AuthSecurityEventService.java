@@ -75,6 +75,14 @@ public class AuthSecurityEventService {
                 reasonCode);
     }
 
+    public void recordAuthRateLimited(AuthSecurityEventReasonCode reasonCode) {
+        record(
+                AuthSecurityEventType.AUTH_RATE_LIMITED,
+                AuthSecurityEventOutcome.REJECTED,
+                null,
+                reasonCode);
+    }
+
     private void record(
             AuthSecurityEventType eventType,
             AuthSecurityEventOutcome outcome,
