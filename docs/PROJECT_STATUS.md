@@ -3,6 +3,14 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
+The v0.35 API contract documentation foundation is in progress. It adds a
+source-aligned backend contract and a localhost-only reviewer testing guide for
+public/protected routes, request/response shapes, authentication, CSRF/origin
+checks, refresh cookies, shared errors, profiles, and known limitations. This
+documentation milestone changes no backend or frontend behavior, dependencies,
+database migrations, or GitHub workflows. The latest stable development
+milestone remains `v0.34.0-api-error-contract-foundation` until v0.35 is merged.
+
 The v0.34 API error contract foundation standardizes targeted authentication,
 CSRF/origin, rate-limit, personal Wishlist, Sentinel gateway, and notification-
 preference failures. Existing `error`, `message`, and applicable
@@ -56,7 +64,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.30.0-product-ux-quality-polish`.
+`v0.34.0-api-error-contract-foundation`.
 
 ## Completed foundations
 

@@ -74,6 +74,19 @@ The API starts at [http://localhost:8080](http://localhost:8080). Check
 [http://localhost:8080/api/health](http://localhost:8080/api/health) for the
 service health response.
 
+### API contract documentation
+
+The source-aligned [backend API contract](../../docs/api/API_CONTRACT.md)
+documents public/protected routes, request/response records, local default and
+`dev` PostgreSQL modes, authentication, CSRF/origin checks, refresh cookies,
+and the shared error contract. The
+[reviewer API testing guide](../../docs/api/REVIEWER_API_TESTING.md) provides a
+localhost-only curl walkthrough without requiring `jq`, PostgreSQL, or optional
+providers.
+
+These documents describe the current source; they do not add Swagger/OpenAPI,
+change runtime behavior, or imply production readiness.
+
 ### Runtime health and startup summary
 
 `GET /api/health` preserves the existing `UP` / `NEXORA API` fields and adds:

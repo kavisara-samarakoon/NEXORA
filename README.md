@@ -11,10 +11,12 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.33.0-runtime-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.33.0-runtime-observability-foundation).
+> [`v0.34.0-api-error-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.34.0-api-error-contract-foundation).
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
+[API contract](docs/api/API_CONTRACT.md) ·
+[reviewer API testing](docs/api/REVIEWER_API_TESTING.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
@@ -362,12 +364,16 @@ repository settings rather than claims made by these workflow files.
 | Security status | `GET /api/security/status` |
 
 The full endpoint and configuration reference is in the
-[backend README](backend/nexora-api/README.md).
+[backend README](backend/nexora-api/README.md). The source-aligned
+[API contract](docs/api/API_CONTRACT.md) and copyable
+[reviewer testing guide](docs/api/REVIEWER_API_TESTING.md) document access,
+request/response, auth/CSRF, and shared error behavior without duplicating it
+here.
 
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.33.0-runtime-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.33.0-runtime-observability-foundation).
+[`v0.34.0-api-error-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.34.0-api-error-contract-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

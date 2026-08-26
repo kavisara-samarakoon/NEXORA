@@ -4,10 +4,19 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.30.0-product-ux-quality-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.30.0-product-ux-quality-polish).
+[`v0.34.0-api-error-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.34.0-api-error-contract-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.34.0 API error contract foundation
+## In progress — v0.35.0 API contract documentation foundation
+
+- Added `docs/api/API_CONTRACT.md` and
+  `docs/api/REVIEWER_API_TESTING.md`, with concise links from the root and
+  backend READMEs. The source-aligned documents cover public/protected routes,
+  auth/CSRF/refresh flow, shared errors, profiles, localhost curl review, and
+  honest security/operations limits. This documentation-only milestone changes
+  no runtime code, dependencies, migrations, workflows, or production status.
+
+## Completed backend milestone — v0.34.0 API error contract foundation
 
 - Added a shared safe error response/factory across targeted auth, CSRF/origin,
   rate-limit, Wishlist, Sentinel, and notification-preference failures.
@@ -68,7 +77,7 @@ Older headings retain the wording used when each milestone was recorded.
   wording, and roadmap clarity without changing runtime behavior or production
   readiness.
 
-## Latest stable development milestone — v0.26.0 auth security event retention foundation
+## Completed backend milestone — v0.26.0 auth security event retention foundation
 
 - Added configurable local/development retention cleanup for safe auth security
   events without adding a public event API, dashboard, monitoring system, or
