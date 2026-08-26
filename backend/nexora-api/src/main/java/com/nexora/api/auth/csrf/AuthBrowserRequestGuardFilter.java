@@ -1,8 +1,7 @@
 package com.nexora.api.auth.csrf;
 
-import com.nexora.api.auth.AuthErrorResponse;
-import com.nexora.api.auth.AuthRateLimitErrorResponse;
 import com.nexora.api.auth.abuse.AuthRateLimitExceededException;
+import com.nexora.api.error.ApiErrorFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,10 +28,15 @@ public class AuthBrowserRequestGuardFilter extends OncePerRequestFilter {
             "/api/auth/logout");
 
     private final AuthBrowserRequestGuard guard;
+    private final ApiErrorFactory errorFactory;
     private final ObjectMapper objectMapper;
 
-    public AuthBrowserRequestGuardFilter(AuthBrowserRequestGuard guard, ObjectMapper objectMapper) {
+    public AuthBrowserRequestGuardFilter(
+            AuthBrowserRequestGuard guard,
+            ApiErrorFactory errorFactory,
+            ObjectMapper objectMapper) {
         this.guard = guard;
+        this.errorFactory = errorFactory;
         this.objectMapper = objectMapper;
     }
 
@@ -62,7 +66,11 @@ public class AuthBrowserRequestGuardFilter extends OncePerRequestFilter {
             response.setHeader("Cache-Control", "no-store");
             objectMapper.writeValue(
                     response.getOutputStream(),
-                    new AuthErrorResponse("csrf_failed", exception.getMessage()));
+                    errorFactory.create(
+                            HttpStatus.FORBIDDEN,
+                            "csrf_failed",
+                            exception.getMessage(),
+                            request));
         } catch (AuthRateLimitExceededException exception) {
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -71,9 +79,11 @@ public class AuthBrowserRequestGuardFilter extends OncePerRequestFilter {
             response.setHeader("Retry-After", Long.toString(exception.retryAfterSeconds()));
             objectMapper.writeValue(
                     response.getOutputStream(),
-                    new AuthRateLimitErrorResponse(
+                    errorFactory.create(
+                            HttpStatus.TOO_MANY_REQUESTS,
                             "rate_limited",
                             exception.getMessage(),
+                            request,
                             exception.retryAfterSeconds()));
         }
     }

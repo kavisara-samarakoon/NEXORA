@@ -553,7 +553,11 @@ class UserWishlistApiEndpointTests {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("validation_failed"));
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/me/wishlist"))
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
     }
 
     private long createdItemId(String token, String title) throws Exception {

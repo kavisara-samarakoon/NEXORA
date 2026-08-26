@@ -1,6 +1,11 @@
 package com.nexora.api.notifications.preferences;
 
 import com.nexora.api.auth.AuthenticationFailedException;
+import com.nexora.api.error.ApiErrorFactory;
+import com.nexora.api.error.ApiErrorResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -9,31 +14,34 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = UserNotificationPreferenceController.class)
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class NotificationPreferenceExceptionHandler {
 
+    private final ApiErrorFactory errorFactory;
+
+    public NotificationPreferenceExceptionHandler(ApiErrorFactory errorFactory) {
+        this.errorFactory = errorFactory;
+    }
+
     @ExceptionHandler(AuthenticationFailedException.class)
-    public ResponseEntity<NotificationPreferenceErrorResponse> unauthorized(
-            AuthenticationFailedException exception) {
-        return error(
+    public ResponseEntity<ApiErrorResponse> unauthorized(
+            AuthenticationFailedException exception,
+            HttpServletRequest request) {
+        return errorFactory.response(
                 HttpStatus.UNAUTHORIZED,
                 "authentication_required",
-                exception.getMessage());
+                exception.getMessage(),
+                request);
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
-    public ResponseEntity<NotificationPreferenceErrorResponse> invalidRequest(
-            Exception exception) {
-        return error(
+    public ResponseEntity<ApiErrorResponse> invalidRequest(
+            Exception exception,
+            HttpServletRequest request) {
+        return errorFactory.response(
                 HttpStatus.BAD_REQUEST,
                 "validation_failed",
-                "Notification preference validation failed");
-    }
-
-    private static ResponseEntity<NotificationPreferenceErrorResponse> error(
-            HttpStatus status,
-            String code,
-            String message) {
-        return ResponseEntity.status(status)
-                .body(new NotificationPreferenceErrorResponse(code, message));
+                "Notification preference validation failed",
+                request);
     }
 }

@@ -1,7 +1,12 @@
 package com.nexora.api.wishlist;
 
 import com.nexora.api.auth.AuthenticationFailedException;
+import com.nexora.api.error.ApiErrorFactory;
+import com.nexora.api.error.ApiErrorResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -10,37 +15,53 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = UserWishlistController.class)
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class UserWishlistExceptionHandler {
 
+    private final ApiErrorFactory errorFactory;
+
+    public UserWishlistExceptionHandler(ApiErrorFactory errorFactory) {
+        this.errorFactory = errorFactory;
+    }
+
     @ExceptionHandler(WishlistItemNotFoundException.class)
-    public ResponseEntity<WishlistErrorResponse> notFound(WishlistItemNotFoundException exception) {
-        return error(HttpStatus.NOT_FOUND, "wishlist_item_not_found", exception.getMessage());
+    public ResponseEntity<ApiErrorResponse> notFound(
+            WishlistItemNotFoundException exception,
+            HttpServletRequest request) {
+        return errorFactory.response(
+                HttpStatus.NOT_FOUND, "wishlist_item_not_found", exception.getMessage(), request);
     }
 
     @ExceptionHandler(AuthenticationFailedException.class)
-    public ResponseEntity<WishlistErrorResponse> unauthorized(AuthenticationFailedException exception) {
-        return error(HttpStatus.UNAUTHORIZED, "authentication_required", exception.getMessage());
+    public ResponseEntity<ApiErrorResponse> unauthorized(
+            AuthenticationFailedException exception,
+            HttpServletRequest request) {
+        return errorFactory.response(
+                HttpStatus.UNAUTHORIZED, "authentication_required", exception.getMessage(), request);
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
-    public ResponseEntity<WishlistErrorResponse> invalidRequest(Exception exception) {
+    public ResponseEntity<ApiErrorResponse> invalidRequest(
+            Exception exception,
+            HttpServletRequest request) {
         String message = "Request validation failed";
         if (exception instanceof MethodArgumentNotValidException validationException
                 && validationException.getBindingResult().getFieldError() != null) {
             message = validationException.getBindingResult().getFieldError().getField()
                     + ": " + validationException.getBindingResult().getFieldError().getDefaultMessage();
         }
-        return error(HttpStatus.BAD_REQUEST, "validation_failed", message);
+        return errorFactory.response(
+                HttpStatus.BAD_REQUEST, "validation_failed", message, request);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<WishlistErrorResponse> invalidParameter(
-            ConstraintViolationException exception) {
-        return error(HttpStatus.BAD_REQUEST, "validation_failed", "Request validation failed");
-    }
-
-    private static ResponseEntity<WishlistErrorResponse> error(
-            HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).body(new WishlistErrorResponse(code, message));
+    public ResponseEntity<ApiErrorResponse> invalidParameter(
+            ConstraintViolationException exception,
+            HttpServletRequest request) {
+        return errorFactory.response(
+                HttpStatus.BAD_REQUEST,
+                "validation_failed",
+                "Request validation failed",
+                request);
     }
 }

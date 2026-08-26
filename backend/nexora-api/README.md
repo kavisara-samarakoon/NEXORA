@@ -101,6 +101,35 @@ distributed tracing, centralized logging, alerting, dashboards, or production
 monitoring. Prometheus, Grafana, OpenTelemetry, managed logging, and operational
 response remain future work, and NEXORA remains not production-ready.
 
+### Shared API error contract
+
+Version 0.34 routes targeted auth, browser CSRF/origin, local rate-limit,
+personal Wishlist, Sentinel gateway, and notification-preference failures
+through one safe error factory. A lowest-priority REST-only fallback maps
+otherwise unexpected controller failures to `internal_error` without exposing
+exception details. The backward-compatible JSON shape is:
+
+```json
+{
+  "error": "validation_failed",
+  "message": "Request validation failed",
+  "status": 400,
+  "path": "/api/auth/register",
+  "timestampUtc": "2026-08-26T12:34:56Z",
+  "retryAfterSeconds": null
+}
+```
+
+`error` and `message` remain available with their existing meanings. The path
+contains only the request URI path, never its query string. Rate-limit errors
+retain both `Retry-After` and a numeric `retryAfterSeconds`. The shared metadata
+does not include request bodies, secrets, tokens, cookies, credentials,
+datasource URLs, exception class names, causes, or stack traces.
+
+This is an API consistency and safety foundation. It does not change routes,
+authentication/session behavior, validation rules, business logic, or
+production readiness.
+
 The same commands can run inside the repository's optional development
 container, which provides Java 17 and Maven without changing the host-native
 workflow. PostgreSQL can still be supplied by the existing local Compose file.
@@ -364,6 +393,9 @@ After a purpose reaches its configured attempts per window, the API returns
 {
   "error": "rate_limited",
   "message": "Too many authentication attempts. Please wait before trying again.",
+  "status": 429,
+  "path": "/api/auth/login",
+  "timestampUtc": "2026-08-26T12:34:56Z",
   "retryAfterSeconds": 60
 }
 ```
