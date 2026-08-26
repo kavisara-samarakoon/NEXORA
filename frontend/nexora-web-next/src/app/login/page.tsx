@@ -38,7 +38,7 @@ export default function LoginPage() {
             <p>Use the credentials registered with NEXORA.</p>
           </header>
           <LoginForm />
-          <p className="auth-panel__note">Basic access-token authentication is active. Production security controls are still evolving.</p>
+          <p className="auth-panel__note">This local-development sign-in uses the configured authentication API. It is not a production identity or deployment claim.</p>
         </div>
       </section>
     </main>

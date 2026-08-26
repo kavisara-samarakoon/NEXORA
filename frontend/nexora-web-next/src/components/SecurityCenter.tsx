@@ -69,8 +69,8 @@ function SecurityTimeline() {
         <span className="sc-section__icon sc-section__icon--blue" aria-hidden="true">
           📍
         </span>
-        <div><span>Audit stream</span><h2 id="security-timeline-title">Security Activity Timeline</h2></div>
-        <span className="sc-section__live"><span aria-hidden="true" /> Monitored</span>
+        <div><span>Static sample</span><h2 id="security-timeline-title">Security Activity Preview</h2></div>
+        <span className="sc-section__live"><span aria-hidden="true" /> Demo</span>
       </div>
       <div className="sc-timeline">
         {securityTimeline.map((event) => (
@@ -124,7 +124,7 @@ function SecurityOperations({
         ))}
       </div>
       <div className="sc-score">
-        <div className="sc-score__heading"><span>Overall protection</span><strong>Excellent</strong></div>
+        <div className="sc-score__heading"><span>Interface summary</span><strong>Demo</strong></div>
         <div className="sc-score__ring">
           <svg viewBox="0 0 120 120" aria-hidden="true">
             <defs><linearGradient id="security-score-gradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#58F5A5" /><stop offset="100%" stopColor="#00D4FF" /></linearGradient></defs>
@@ -161,9 +161,9 @@ export default function SecurityCenter({ securityStatus, source }: SecurityStatu
         <div className="sc-hero__scanlines" />
         <div className="sc-hero__content">
           <div className="sc-hero__copy">
-            <div className="sc-hero__tag"><span aria-hidden="true" /> Defense active</div>
+            <div className="sc-hero__tag"><span aria-hidden="true" /> Security interface preview</div>
             <h1 id="security-title"><span className="page-title-emoji" aria-hidden="true">🛡️</span><span>Cyber Security Command Center</span></h1>
-            <p>Account protection, API safety, session monitoring, and secure game platform access — your digital perimeter in one command center.</p>
+            <p>Review the connected authentication foundation alongside clearly labelled roadmap demonstrations for account, API, and network controls.</p>
           </div>
           <div className="sc-hero__stats" aria-label="Security summary">
             <div><strong>{securityScore}%</strong><span>Security score</span></div>

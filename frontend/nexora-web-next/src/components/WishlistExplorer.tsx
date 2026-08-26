@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddWishlistItemForm from "@/components/AddWishlistItemForm";
+import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import {
   wishlistFilters,
   type WishlistAlertEvaluation,
@@ -265,25 +266,23 @@ function PriceHistoryPanel({
       )}
 
       {state === "loading" && (
-        <div className="wl-card__history-state wl-card__history-state--loading">
-          <div aria-hidden="true">
-            <span /><span /><span />
-          </div>
-          <p>Loading price history…</p>
+        <div className="wl-card__history-state wl-card__history-state--loading" role="status">
+          <div aria-hidden="true"><span /><span /><span /></div>
+          <p><strong>Loading price history</strong><small>Requesting recent snapshots for this account item.</small></p>
         </div>
       )}
 
       {state === "unavailable" && (
-        <div className="wl-card__history-state wl-card__history-state--error">
-          <p>Price history is temporarily unavailable. Your wishlist still works.</p>
-          <button type="button" onClick={onLoad}>Retry</button>
+        <div className="wl-card__history-state wl-card__history-state--error" role="status">
+          <p><strong>Price history unavailable</strong><small>The history route could not be reached. This item and its alert settings still work.</small></p>
+          <button type="button" onClick={onLoad}>Retry history</button>
         </div>
       )}
 
       {state === "loaded" && points.length === 0 && (
         <div className="wl-card__history-state wl-card__history-state--empty">
           <strong>No snapshots yet</strong>
-          <p>Price observations will appear here when they become available.</p>
+          <p>This account item has no recorded observations yet. New snapshots will appear here after they are stored.</p>
         </div>
       )}
 
@@ -680,24 +679,58 @@ function WishlistAlertPanel({
         </div>
 
         {view === "checking" && (
-          <p className="wl-alert-history__empty" role="status">Loading alert history…</p>
+          <UxStatePanel
+            className="ux-state--compact wl-alert-history__empty"
+            description={<>Checking for account alert events.<UxSkeleton lines={2} /></>}
+            role="status"
+            title="Loading alert history"
+            tone="loading"
+          />
         )}
         {view === "public" && (
-          <p className="wl-alert-history__empty">Sign in to view your alert history.</p>
+          <UxStatePanel
+            className="ux-state--compact wl-alert-history__empty"
+            description="Alert history belongs to a personal account and is not included in the public preview."
+            title="Sign in to view alert history"
+            tone="auth"
+          >
+            <Link className="ux-state__action" href="/login">Sign in</Link>
+          </UxStatePanel>
         )}
         {view === "offline" && (
-          <p className="wl-alert-history__empty">Alert history unavailable while offline.</p>
+          <UxStatePanel
+            className="ux-state--compact wl-alert-history__empty"
+            description="The account wishlist service could not be reached. Public preview items remain available."
+            role="status"
+            title="Alert history unavailable"
+            tone="unavailable"
+          />
         )}
         {view === "personal" && alertEventsMessage && (
-          <p className="wl-alert-history__empty wl-alert-history__empty--warning" role="status">
-            {alertEventsMessage}
-          </p>
+          <UxStatePanel
+            className="ux-state--compact wl-alert-history__empty wl-alert-history__empty--warning"
+            description={alertEventsMessage}
+            role="status"
+            title="Alert history unavailable"
+            tone="unavailable"
+          />
         )}
         {view === "personal" && alertEventsLoading && alertEvents.length === 0 && !alertEventsMessage && (
-          <p className="wl-alert-history__empty" role="status">Loading alert history…</p>
+          <UxStatePanel
+            className="ux-state--compact wl-alert-history__empty"
+            description={<>Requesting recent target-reached events.<UxSkeleton lines={2} /></>}
+            role="status"
+            title="Loading alert history"
+            tone="loading"
+          />
         )}
         {view === "personal" && !alertEventsLoading && alertEvents.length === 0 && !alertEventsMessage && (
-          <p className="wl-alert-history__empty">No target-reached events yet.</p>
+          <UxStatePanel
+            className="ux-state--compact wl-alert-history__empty"
+            description="Events will appear after an active account alert first reaches its saved target."
+            title="No target-reached events yet"
+            tone="empty"
+          />
         )}
         {view === "personal" && alertEvents.length > 0 && (
           <ol className="wl-alert-history__list">
@@ -836,19 +869,27 @@ function NotificationPreferencesPanel({
       </div>
 
       {loadState === "loading" && (
-        <div className="wl-notification-preferences__state" role="status">
-          <span aria-hidden="true" />
-          Loading preferences…
-        </div>
+        <UxStatePanel
+          className="ux-state--compact wl-notification-preferences__state"
+          description={<>Requesting the preferences stored with this account.<UxSkeleton lines={3} /></>}
+          role="status"
+          title="Loading notification preferences"
+          tone="loading"
+        />
       )}
 
       {loadState === "error" && (
-        <div className="wl-notification-preferences__error" role="status">
-          <p>{message?.text || "Notification preferences are unavailable."}</p>
-          <button type="button" onClick={() => setRetryKey((current) => current + 1)}>
-            Retry
+        <UxStatePanel
+          className="ux-state--compact wl-notification-preferences__error"
+          description={<>{message?.text || "The account preference route could not be reached."} Wishlist items and alert settings remain available.</>}
+          role="alert"
+          title="Notification preferences unavailable"
+          tone="unavailable"
+        >
+          <button className="ux-state__action" type="button" onClick={() => setRetryKey((current) => current + 1)}>
+            Retry preferences
           </button>
-        </div>
+        </UxStatePanel>
       )}
 
       {loadState === "ready" && draftPreferences && (
@@ -879,8 +920,8 @@ function NotificationPreferencesPanel({
           </div>
 
           <p className="wl-notification-preferences__notice">
-            Email delivery remains unavailable until SMTP and a recipient workflow are
-            configured. Durable delivery and retries are planned for later.
+            These controls save notification intent only. Email delivery is unavailable
+            until local SMTP and a recipient workflow are configured; durable retries are not implemented.
           </p>
 
           <div className="wl-notification-preferences__actions">
@@ -892,7 +933,7 @@ function NotificationPreferencesPanel({
                   : "wl-notification-preferences__message"}
               role={message?.kind === "error" ? "alert" : "status"}
             >
-              {isSaving ? "Saving preferences…" : message?.text || "Preferences sync with your account."}
+              {isSaving ? "Saving preferences to your account…" : message?.text || "Changes are saved only when you use Save."}
             </span>
             <button type="submit" disabled={!hasChanges || isSaving}>
               {isSaving ? "Saving…" : "Save"}
@@ -915,7 +956,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [alertEventsMessage, setAlertEventsMessage] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Record<number, boolean>>(() => alertsFor(wishlistItems));
   const [serviceMessage, setServiceMessage] = useState<string | null>(null);
-  const [operationMessage, setOperationMessage] = useState<string | null>(null);
+  const [operationMessage, setOperationMessage] = useState<ItemMessage | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<number>>(() => new Set());
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(() => new Set());
   const [itemMessages, setItemMessages] = useState<Record<number, ItemMessage>>({});
@@ -1197,13 +1238,13 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         delete next[item.id];
         return next;
       });
-      setOperationMessage(`${item.title} was removed from your personal wishlist.`);
+      setOperationMessage({ kind: "success", text: `${item.title} was removed from your personal wishlist.` });
     } catch (error) {
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
       } else {
-        setOperationMessage(details.message);
+        setOperationMessage({ kind: "error", text: `${details.message} The item was not removed.` });
       }
     } finally {
       setDeletingIds((current) => {
@@ -1315,7 +1356,15 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         </div>
       </section>
 
-      {operationMessage && <p className="wl-operation-message" role="status">{operationMessage}</p>}
+      {operationMessage && (
+        <UxStatePanel
+          className="ux-state--compact wl-operation-message"
+          description={operationMessage.text}
+          role={operationMessage.kind === "error" ? "alert" : "status"}
+          title={operationMessage.kind === "error" ? "Wishlist action failed" : "Wishlist updated"}
+          tone={operationMessage.kind === "error" ? "error" : "success"}
+        />
+      )}
 
       <div className="wl-layout">
         <section aria-label={isPersonal ? "Personal wishlist games" : "Public wishlist preview games"}>
@@ -1341,20 +1390,26 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
               />
             ))}
             {isPersonal && displayedItems.length === 0 && (
-              <div className="wl-empty">
-                <span aria-hidden="true">➕</span>
-                <h2>Your personal wishlist is empty</h2>
-                <p>Add a game to start your account collection.</p>
-                <a href="#add-personal-wishlist-item">Add your first game</a>
-              </div>
+              <UxStatePanel
+                className="ux-state--grid wl-empty"
+                description="Add a game above to create the first item stored with this account. Public preview items are separate and will not be copied automatically."
+                role="status"
+                title="Your personal wishlist is empty"
+                tone="empty"
+              >
+                <a className="ux-state__action" href="#add-personal-wishlist-item">Add your first game</a>
+              </UxStatePanel>
             )}
             {displayedItems.length > 0 && filteredItems.length === 0 && (
-              <div className="wl-empty">
-                <span aria-hidden="true">📡</span>
-                <h2>No wishlist signals found</h2>
-                <p>No games match your current search and filters.</p>
-                <button type="button" onClick={resetFilters}>Reset filters</button>
-              </div>
+              <UxStatePanel
+                className="ux-state--grid wl-empty"
+                description={<>No games match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter in this {isPersonal ? "personal wishlist" : "public preview"}.</>}
+                role="status"
+                title="No matching wishlist signals"
+                tone="empty"
+              >
+                <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button>
+              </UxStatePanel>
             )}
           </div>
         </section>

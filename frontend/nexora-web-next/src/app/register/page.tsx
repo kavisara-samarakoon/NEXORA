@@ -38,7 +38,7 @@ export default function RegisterPage() {
             <p>Choose the credentials you will use to sign in.</p>
           </header>
           <RegisterForm />
-          <p className="auth-panel__note">This creates a basic NEXORA account. It does not enable roles, OAuth, or per-user wishlist data yet.</p>
+          <p className="auth-panel__note">This creates a local-development NEXORA account with personal wishlist access. OAuth, verification, recovery, and production identity controls are not included.</p>
         </div>
       </section>
     </main>

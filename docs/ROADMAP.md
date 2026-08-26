@@ -10,9 +10,9 @@ project's academic, portfolio, and product goals evolve.
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
   the existing backend, PostgreSQL, or primary frontend checks.
-- Continue reviewing accessibility, empty states, and error states after the
-  v0.29 mobile/responsive UI polish; this frontend-only work does not change
-  backend, API, security, deployment readiness, or production status.
+- Continue reviewing accessibility and product feedback after the v0.30
+  loading/empty/error/fallback state polish; this frontend-focused work does
+  not change backend, API, security, deployment readiness, or production status.
 - Keep the retained Vite prototype clearly separated from the primary product.
 
 ## Product UX improvements

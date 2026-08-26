@@ -186,7 +186,7 @@ export function normalizeSentinelInsightError(error: unknown): SentinelInsightEr
   return {
     status: null,
     code: "unknown_error",
-    message: "Something went wrong with the Sentinel gateway. Please try again.",
+    message: "The Sentinel gateway could not complete this request. Check the local backend, then try again.",
   };
 }
 

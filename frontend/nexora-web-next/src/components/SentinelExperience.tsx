@@ -80,13 +80,13 @@ export default function SentinelExperience({
         <div className="sn-hero__content">
           <div className="sn-hero__tag"><span aria-hidden="true" /> Contextual insight foundation</div>
           <h1 id="sentinel-title"><span className="page-title-emoji" aria-hidden="true">🤖</span><span>NEXORA Sentinel</span></h1>
-          <p>Backend-routed guidance using bounded NEXORA summaries, a safe local default, and optional Gemini.</p>
+          <p>Preview bounded NEXORA guidance through the authenticated backend gateway, with a local deterministic default and optional Gemini provider.</p>
         </div>
       </section>
 
       <div className="sn-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Contextual Gateway Preview</strong> — Static samples remain public. Signed-in requests can use bounded backend summaries for Wishlist, Deals, Giveaways, alerts, and prices. NEXORA does not save conversations, and provider failures return a local fallback.</p>
+        <p><strong>Contextual gateway preview</strong> — Static samples remain public. Signed-in requests can use bounded backend summaries for Wishlist, Deals, Giveaways, alerts, and prices. Responses are transient, conversations are not saved, and provider failures use an explicitly labelled local fallback.</p>
       </div>
 
       <div className="sn-layout">

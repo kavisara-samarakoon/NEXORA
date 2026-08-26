@@ -39,7 +39,7 @@ export default function AddWishlistItemForm({
     const targetPrice = normalizeTargetPriceInput(readRequiredText(formData, "targetPrice"));
 
     if (!title || !currentPrice) {
-      setMessage({ tone: "error", text: "Please check the wishlist details." });
+      setMessage({ tone: "error", text: "Enter both a game title and its current price." });
       return;
     }
 
@@ -90,6 +90,7 @@ export default function AddWishlistItemForm({
         <div>
           <span>Account collection</span>
           <h2 id="wl-add-title">Add personal wishlist item</h2>
+          <p>Saved to this account. Price labels are recorded as entered; NEXORA does not verify the store price during creation.</p>
         </div>
         <span className="wl-add-panel__badge">Personal</span>
       </div>
@@ -112,7 +113,7 @@ export default function AddWishlistItemForm({
           <input name="currentPrice" type="text" required maxLength={40} placeholder="$39.99" disabled={isSubmitting} />
         </label>
         <label className="wl-add-form__field">
-          <span>Target price</span>
+          <span>Target price <small>Use $15.00 or FREE</small></span>
           <input name="targetPrice" type="text" required maxLength={40} placeholder="$24.99" disabled={isSubmitting} />
         </label>
         <label className="wl-add-form__field">
@@ -141,7 +142,7 @@ export default function AddWishlistItemForm({
         </label>
         <label className="wl-add-form__check">
           <input name="alertActive" type="checkbox" defaultChecked disabled={isSubmitting} />
-          <span>Alert active <small>Local toggle after creation; alert engine later.</small></span>
+          <span>Alert active <small>Enables account-side evaluation. Notification delivery depends on locally configured providers.</small></span>
         </label>
 
         <div className="wl-add-form__actions">
@@ -150,7 +151,11 @@ export default function AddWishlistItemForm({
           </button>
           {message && (
             <p className={`wl-form-message wl-form-message--${message.tone}`} role={message.tone === "error" ? "alert" : "status"}>
-              {message.text}
+              <span aria-hidden="true">{message.tone === "success" ? "✓" : "!"}</span>
+              <span>
+                <strong>{message.tone === "success" ? "Wishlist item added" : "Check this form"}</strong>
+                <small>{message.text}</small>
+              </span>
             </p>
           )}
         </div>

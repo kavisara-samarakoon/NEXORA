@@ -37,7 +37,7 @@ export default function LoginForm() {
   }
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit} onChange={() => setErrorMessage(null)}>
+    <form className="auth-form" aria-busy={isSubmitting} onSubmit={handleSubmit} onChange={() => setErrorMessage(null)}>
       <div className="auth-form__field">
         <label htmlFor="login-identifier">Email or username</label>
         <input
@@ -46,9 +46,11 @@ export default function LoginForm() {
           type="text"
           autoComplete="username"
           placeholder="player@example.com"
+          aria-describedby="login-identifier-hint"
           maxLength={320}
           required
         />
+        <small className="ux-helper" id="login-identifier-hint">Use the email address or username linked to your local NEXORA account.</small>
       </div>
 
       <div className="auth-form__field">
@@ -65,7 +67,12 @@ export default function LoginForm() {
       </div>
 
       <div className="auth-form__message" aria-live="polite">
-        {errorMessage ? <p role="alert">{errorMessage}</p> : null}
+        {errorMessage ? (
+          <div className="auth-form__feedback auth-form__feedback--error" role="alert">
+            <span aria-hidden="true">!</span>
+            <span><strong>Sign-in failed</strong><small>{errorMessage}</small></span>
+          </div>
+        ) : null}
       </div>
 
       <button className="auth-form__submit" type="submit" disabled={isSubmitting}>

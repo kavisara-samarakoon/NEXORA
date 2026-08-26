@@ -79,9 +79,11 @@ export default function SettingsCenter() {
   const [preferences, setPreferences] = useState<Record<string, boolean>>(
     Object.fromEntries(allPreferences.map((item) => [item.id, item.enabled])),
   );
+  const [preferenceMessage, setPreferenceMessage] = useState<string | null>(null);
 
   function togglePreference(id: string) {
     setPreferences((current) => ({ ...current, [id]: !current[id] }));
+    setPreferenceMessage("Demo preference updated in this browser view. It was not saved to an account.");
   }
 
   return (
@@ -102,13 +104,15 @@ export default function SettingsCenter() {
         <p><strong>Frontend Settings Demo</strong> — Toggles and fields are visual-only. Persistent account settings will be connected to the future NEXORA backend.</p>
       </div>
 
+      {preferenceMessage ? <p className="ux-inline-status st-demo-feedback" role="status">{preferenceMessage}</p> : null}
+
       <div className="st-layout">
         <div className="st-content">
           <section className="st-card st-profile" aria-labelledby="profile-title">
             <div className="st-profile__identity">
               <div className="st-profile__avatar"><span>KS</span><i aria-hidden="true" /></div>
               <div className="st-profile__copy">
-                <small>Secure demo profile</small>
+                <small>Static demo profile</small>
                 <h2 id="profile-title">Kavisara</h2>
                 <p>Demo User <span>•</span> NEXORA Member</p>
               </div>
@@ -171,9 +175,9 @@ export default function SettingsCenter() {
               <div><small>Restricted actions</small><h2 id="danger-title">Danger Zone</h2></div>
             </div>
             <div className="st-danger__actions">
-              <div><strong>Clear NEXORA Data</strong><p>Remove local alerts, wishlist entries, and demo preferences.</p></div>
+              <div><strong>Clear NEXORA Data</strong><p>Unavailable in this static settings demo. No account data is changed here.</p></div>
               <button type="button" disabled title="This static demo does not store account data">Clear Data</button>
-              <div><strong>Delete Account</strong><p>Permanently remove your profile after backend verification.</p></div>
+              <div><strong>Delete Account</strong><p>Unavailable in this static settings demo and requires a separate verified backend workflow.</p></div>
               <button type="button" disabled title="Account deletion requires the future backend">Delete Account</button>
             </div>
           </section>
