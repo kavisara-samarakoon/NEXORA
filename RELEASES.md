@@ -4,10 +4,17 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
+[`v0.28.0-premium-ui-motion-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.28.0-premium-ui-motion-polish).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.28.0 premium UI motion polish
+## In progress — v0.29.0 mobile responsive UI polish
+
+- Refining the primary Next.js interface across mobile, tablet, and small-screen
+  layouts while preserving its Liquid Glass identity and v0.28 motion polish.
+  This frontend-only milestone changes no backend, API, security, deployment,
+  or production-readiness state.
+
+## Completed frontend milestone — v0.28.0 premium UI motion polish
 
 - Refining the primary Next.js interface with CSS-first motion tokens, layered
   atmosphere, reveal timing, interaction feedback, and reduced-motion support

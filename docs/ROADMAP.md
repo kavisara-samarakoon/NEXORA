@@ -10,8 +10,9 @@ project's academic, portfolio, and product goals evolve.
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
   the existing backend, PostgreSQL, or primary frontend checks.
-- Review accessibility, empty states, error states, and responsive behavior in
-  the primary Next.js interface.
+- Continue reviewing accessibility, empty states, and error states after the
+  v0.29 mobile/responsive UI polish; this frontend-only work does not change
+  backend, API, security, deployment readiness, or production status.
 - Keep the retained Vite prototype clearly separated from the primary product.
 
 ## Product UX improvements
