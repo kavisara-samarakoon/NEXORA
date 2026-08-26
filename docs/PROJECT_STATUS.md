@@ -3,6 +3,14 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
+The v0.32 production-profile safety foundation adds an early backend startup
+guard for the `prod` and `production` profiles. It fails closed when core auth
+secrets are missing, short, coupled, local defaults, or obvious placeholders;
+when refresh/CSRF cookie protections are unsafe; when CSRF is disabled; or when
+trusted origins are missing, wildcard, local/development, or non-HTTPS. Default
+and `dev` behavior remain unchanged. This is not a deployment, complete
+production configuration, security assurance, or production-readiness claim.
+
 The v0.31 frontend accessibility review is a focused polish milestone for the
 primary Next.js interface. It improves keyboard navigation, form labels and
 helper associations, ARIA semantics, focus visibility, reduced-motion coverage,
@@ -81,7 +89,12 @@ readiness of the project. The latest stable development milestone is
 - [Auth production-policy plan](security/auth-production-policy-plan.md)
   defining required production secret, persistent-store, cookie, CSRF, CORS,
   origin/proxy, session lifecycle, testing, monitoring, and go/no-go decisions.
-  This is a completed planning artifact, not an implemented production control.
+  v0.32 implements only its first bounded startup guard for core auth settings;
+  the broader policy remains unimplemented.
+- Production-profile startup safety validation for strong independent JWT and
+  refresh-token hash secrets, secure refresh/CSRF cookie settings, enabled
+  CSRF, a scoped refresh cookie, and exact HTTPS non-local trusted origins.
+  Errors identify properties without printing configured secret values.
 - Backend refresh-token/session foundation with hashed tokens, profile-based
   in-memory/PostgreSQL storage, rotation, logout revocation, and HttpOnly cookie
   issuance while preserving the existing Bearer access-token response.
@@ -131,10 +144,10 @@ readiness of the project. The latest stable development milestone is
   asynchronous after-commit processing.
 - The Wishlist page has notification preference controls, but no provider,
   recipient, or delivery-status management UI.
-- Access tokens are memory-first and legacy `localStorage` tokens are removed,
-  but the browser session lifecycle still depends on local-development cookie
-  CSRF, trusted-origin, and CORS settings rather than a reviewed production
-  configuration.
+- Access tokens are memory-first and legacy `localStorage` tokens are removed.
+  The production-profile startup gate rejects unsafe local auth settings, but
+  the browser session lifecycle still lacks a reviewed, deployed production
+  cookie, CORS, origin, proxy, and persistent-store configuration.
 - Sentinel has bounded backend-generated contextual summaries with an optional
   backend-only Gemini provider disabled by default and deterministic local
   fallback. Its rate windows and provider-health counters are in-memory only and
@@ -160,10 +173,11 @@ readiness of the project. The latest stable development milestone is
 - No full Maven vulnerability scanner; the current Maven check and artifact are
   dependency-resolution visibility only.
 - The backend/frontend refresh-session and local CSRF/trusted-origin foundations
-  exist, and their target production policy is documented. Production
-  fail-closed configuration, CSRF/origin/proxy behavior, CORS/cookie settings,
-  session-family reuse handling, and complete revocation/session-management UX
-  are not implemented.
+  exist, and v0.32 fails closed on a bounded set of unsafe production-profile
+  auth settings. Persistent production store selection, complete
+  CSRF/origin/proxy behavior, deployed CORS/cookie topology, session-family
+  reuse handling, and complete revocation/session-management UX are not
+  implemented.
 - The local auth security-event cleanup mechanism is not a production
   retention/privacy/compliance policy and supplies no production access-control,
   integrity, request-context enrichment, dashboard, monitoring, alerting, SIEM,
@@ -188,9 +202,9 @@ readiness of the project. The latest stable development milestone is
 2. Review a production application-container strategy only after deployment,
    operations, networking, and secret-management requirements are defined.
 3. Select a deployment topology and formally review the auth production-policy
-   plan before implementing fail-closed production configuration,
-   HTTPS/cookie/CORS/proxy/no-origin rules, and complete session reuse/revocation
-   behavior.
+   plan before extending the initial fail-closed guard to persistent-store and
+   deployment requirements, then implement the reviewed HTTPS/cookie/CORS/
+   proxy/no-origin rules and complete session reuse/revocation behavior.
 4. Define account verification, password recovery, production distributed
    authentication abuse controls and credential-stuffing/bot defenses,
    additional audit events, approved production event
