@@ -6,8 +6,8 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.35 source-aligned API contract and reviewer
-  testing documentation without changing backend/frontend runtime behavior.
+- Complete the in-progress v0.36 local API smoke-test script and supporting
+  reviewer documentation without changing backend/frontend runtime behavior.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -45,9 +45,13 @@ project's academic, portfolio, and product goals evolve.
 - Establish environment-specific configuration, managed secret storage,
   backups, restore testing, health checks, and rollback expectations.
 - Add deployment automation only after those decisions are reviewed.
+- Consider CI wiring for the local smoke script only after its local reviewer
+  behavior is stable; v0.36 does not change GitHub workflows.
+- Design deployed staging smoke tests only after an approved staging topology,
+  test-account lifecycle, secret boundary, and ownership model exist.
 - Consider generated OpenAPI and hosted API documentation only after the
   maintained source contract, versioning approach, and deployment boundary are
-  reviewed. They are not part of v0.35.
+  reviewed. They are not part of v0.36.
 - Write production deployment and operational runbooks only after a target
   topology, owners, monitoring, rollback, and incident-response processes are
   approved.

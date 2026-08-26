@@ -84,6 +84,12 @@ and the shared error contract. The
 localhost-only curl walkthrough without requiring `jq`, PostgreSQL, or optional
 providers.
 
+For a quicker repeatable check, run the repository's local-only
+[`api-smoke-test.sh`](../../scripts/api-smoke-test.sh) after starting the
+backend. The [scripts guide](../../scripts/README.md) documents its prerequisites,
+environment controls, covered routes, and safe failure behavior. The manual
+reviewer guide remains the detailed learning and troubleshooting path.
+
 These documents describe the current source; they do not add Swagger/OpenAPI,
 change runtime behavior, or imply production readiness.
 

@@ -3,13 +3,20 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The v0.35 API contract documentation foundation is in progress. It adds a
-source-aligned backend contract and a localhost-only reviewer testing guide for
-public/protected routes, request/response shapes, authentication, CSRF/origin
-checks, refresh cookies, shared errors, profiles, and known limitations. This
-documentation milestone changes no backend or frontend behavior, dependencies,
-database migrations, or GitHub workflows. The latest stable development
-milestone remains `v0.34.0-api-error-contract-foundation` until v0.35 is merged.
+The `v0.36.0-api-smoke-testing-foundation` milestone is in progress. It adds a
+local reviewer script that checks public routes, CSRF/authentication, protected
+account routes, Sentinel insight, and shared error-contract fields with
+generated fake account data, masked token output, and temporary cookies. This
+script/documentation milestone changes no backend or frontend behavior,
+dependencies, database migrations, or GitHub workflows. The latest stable
+development milestone remains `v0.35.0-api-contract-documentation-foundation`
+until v0.36 is merged.
+
+The v0.35 API contract documentation foundation added a source-aligned backend
+contract and a localhost-only reviewer testing guide for public/protected
+routes, request/response shapes, authentication, CSRF/origin checks, refresh
+cookies, shared errors, profiles, and known limitations. It changed no runtime
+behavior or production readiness.
 
 The v0.34 API error contract foundation standardizes targeted authentication,
 CSRF/origin, rate-limit, personal Wishlist, Sentinel gateway, and notification-
@@ -64,7 +71,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.34.0-api-error-contract-foundation`.
+`v0.35.0-api-contract-documentation-foundation`.
 
 ## Completed foundations
 

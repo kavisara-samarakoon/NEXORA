@@ -4,10 +4,19 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.34.0-api-error-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.34.0-api-error-contract-foundation).
+[`v0.35.0-api-contract-documentation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.35.0-api-contract-documentation-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.35.0 API contract documentation foundation
+## In progress — v0.36.0 API smoke testing foundation
+
+- Added `scripts/api-smoke-test.sh`, `scripts/README.md`, and reviewer-guide
+  links for repeatable checks of the documented public, CSRF/auth, protected,
+  Sentinel, and shared-error flow. The script uses generated fake credentials,
+  masks tokens, keeps cookies temporary, blocks non-local targets by default,
+  and requires no `jq`. This local script/documentation milestone changes no
+  runtime code, dependencies, migrations, workflows, or production status.
+
+## Completed documentation milestone — v0.35.0 API contract documentation foundation
 
 - Added `docs/api/API_CONTRACT.md` and
   `docs/api/REVIEWER_API_TESTING.md`, with concise links from the root and

@@ -11,12 +11,13 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.34.0-api-error-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.34.0-api-error-contract-foundation).
+> [`v0.35.0-api-contract-documentation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.35.0-api-contract-documentation-foundation).
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
 [API contract](docs/api/API_CONTRACT.md) ·
 [reviewer API testing](docs/api/REVIEWER_API_TESTING.md) ·
+[API smoke test](scripts/api-smoke-test.sh) · [scripts guide](scripts/README.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
@@ -368,12 +369,14 @@ The full endpoint and configuration reference is in the
 [API contract](docs/api/API_CONTRACT.md) and copyable
 [reviewer testing guide](docs/api/REVIEWER_API_TESTING.md) document access,
 request/response, auth/CSRF, and shared error behavior without duplicating it
-here.
+here. Reviewers can run the local-only
+[API smoke test](scripts/api-smoke-test.sh); its prerequisites and safety
+controls are summarized in the [scripts guide](scripts/README.md).
 
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.34.0-api-error-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.34.0-api-error-contract-foundation).
+[`v0.35.0-api-contract-documentation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.35.0-api-contract-documentation-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and
