@@ -6,6 +6,8 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
+- Complete the in-progress v0.35 source-aligned API contract and reviewer
+  testing documentation without changing backend/frontend runtime behavior.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -43,6 +45,12 @@ project's academic, portfolio, and product goals evolve.
 - Establish environment-specific configuration, managed secret storage,
   backups, restore testing, health checks, and rollback expectations.
 - Add deployment automation only after those decisions are reviewed.
+- Consider generated OpenAPI and hosted API documentation only after the
+  maintained source contract, versioning approach, and deployment boundary are
+  reviewed. They are not part of v0.35.
+- Write production deployment and operational runbooks only after a target
+  topology, owners, monitoring, rollback, and incident-response processes are
+  approved.
 
 ## Production security requirements
 

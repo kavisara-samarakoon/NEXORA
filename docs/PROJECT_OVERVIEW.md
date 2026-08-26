@@ -10,7 +10,7 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
+[`v0.34.0-api-error-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.34.0-api-error-contract-foundation).
 
 ## Problem statement
 
