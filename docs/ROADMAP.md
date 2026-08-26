@@ -10,6 +10,9 @@ project's academic, portfolio, and product goals evolve.
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
   the existing backend, PostgreSQL, or primary frontend checks.
+- Extend the v0.34 shared API error contract only when additional REST domains
+  need it, preserving domain-specific codes and avoiding raw exception or
+  request disclosure.
 - Continue keyboard, label, ARIA, focus, reduced-motion, and UX-state
   accessibility review after the v0.31 frontend polish; this work does not
   change backend, API, security, deployment readiness, or production status.

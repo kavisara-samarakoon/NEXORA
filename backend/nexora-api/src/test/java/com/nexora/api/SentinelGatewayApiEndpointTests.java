@@ -137,7 +137,10 @@ class SentinelGatewayApiEndpointTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("validation_failed"))
                 .andExpect(jsonPath("$.message")
-                        .value("The Sentinel gateway request could not be validated"));
+                        .value("The Sentinel gateway request could not be validated"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value(INSIGHT_PATH))
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
     }
 
     @Test
@@ -157,6 +160,9 @@ class SentinelGatewayApiEndpointTests {
                 .andExpect(jsonPath("$.error").value("rate_limit_exceeded"))
                 .andExpect(jsonPath("$.message").value(
                         "Sentinel request limit reached. Please wait before trying again."))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.path").value(INSIGHT_PATH))
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty())
                 .andExpect(jsonPath("$.retryAfterSeconds")
                         .value(org.hamcrest.Matchers.greaterThan(0)));
     }

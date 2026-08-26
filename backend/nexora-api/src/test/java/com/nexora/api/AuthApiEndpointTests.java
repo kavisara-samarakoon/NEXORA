@@ -105,7 +105,11 @@ class AuthApiEndpointTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerJson(new Credentials(user.email(), user.username() + "x", user.password()))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("account_conflict"));
+                .andExpect(jsonPath("$.error").value("account_conflict"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.path").value("/api/auth/register"))
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
 
         mockMvc.perform(authPost("/api/auth/register", csrf)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -205,7 +209,11 @@ class AuthApiEndpointTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("validation_failed"));
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/auth/register"))
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
 
         List<AuthSecurityEvent> events = eventsSince(eventCountBefore);
         assertEquals(1, events.size());
@@ -251,9 +259,13 @@ class AuthApiEndpointTests {
 
     @Test
     void meRequiresTokenAndReturnsAuthenticatedUser() throws Exception {
-        mockMvc.perform(get("/api/auth/me"))
+        mockMvc.perform(get("/api/auth/me?clientDetail=not-returned"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("authentication_required"));
+                .andExpect(jsonPath("$.error").value("authentication_required"))
+                .andExpect(jsonPath("$.message").value("A valid Bearer token is required"))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.path").value("/api/auth/me"))
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
 
         Credentials user = uniqueUser();
         String token = objectMapper.readTree(register(user).getResponse().getContentAsString())
@@ -480,7 +492,10 @@ class AuthApiEndpointTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("csrf_failed"))
                 .andExpect(jsonPath("$.message")
-                        .value("The authentication request could not be verified"));
+                        .value("The authentication request could not be verified"))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.path").isNotEmpty())
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
     }
 
     private void expectTrustedCsrfFailure(MockHttpServletRequestBuilder request) throws Exception {
@@ -489,7 +504,10 @@ class AuthApiEndpointTests {
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, TRUSTED_ORIGIN))
                 .andExpect(jsonPath("$.error").value("csrf_failed"))
                 .andExpect(jsonPath("$.message")
-                        .value("The authentication request could not be verified"));
+                        .value("The authentication request could not be verified"))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.path").isNotEmpty())
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
     }
 
     private List<AuthSecurityEvent> eventsSince(int previousCount) {
