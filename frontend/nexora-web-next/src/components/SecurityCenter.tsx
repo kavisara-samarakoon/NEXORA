@@ -27,22 +27,24 @@ function TimelineIcon({ icon }: { icon: TimelineEvent["icon"] }) {
 
 function ProtectionSection({
   badge,
+  id,
   items,
   planned = false,
   title,
 }: {
   badge: string;
+  id: string;
   items: readonly ProtectionItem[];
   planned?: boolean;
   title: string;
 }) {
   return (
-    <section className="sc-section">
+    <section className="sc-section" aria-labelledby={id}>
       <div className="sc-section__heading">
         <span className={planned ? "sc-section__icon sc-section__icon--planned" : "sc-section__icon"} aria-hidden="true">
           {planned ? "🌐" : "🔐"}
         </span>
-        <div><span>{planned ? "Network perimeter" : "Identity perimeter"}</span><h2>{title}</h2></div>
+        <div><span>{planned ? "Network perimeter" : "Identity perimeter"}</span><h2 id={id}>{title}</h2></div>
         <span className={planned ? "sc-section__badge sc-section__badge--planned" : "sc-section__badge"}>{badge}</span>
       </div>
       <div className="sc-protection-grid">
@@ -181,8 +183,8 @@ export default function SecurityCenter({ securityStatus, source }: SecurityStatu
 
       <div className="sc-layout">
         <div className="sc-content">
-          <ProtectionSection badge={`${secureAccountItems}/${accountProtection.length} secure`} items={accountProtection} title="Account Protection" />
-          <ProtectionSection badge="Roadmap" items={networkProtection} planned title="API & Network Protection" />
+          <ProtectionSection badge={`${secureAccountItems}/${accountProtection.length} secure`} id="account-protection-title" items={accountProtection} title="Account Protection" />
+          <ProtectionSection badge="Roadmap" id="network-protection-title" items={networkProtection} planned title="API & Network Protection" />
           <SecurityTimeline />
         </div>
         <SecurityOperations securityScore={securityScore} source={source} status={status} />

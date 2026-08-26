@@ -21,7 +21,7 @@ export default async function SecurityPage() {
       <Sidebar />
       <div className="main-shell">
         <Topbar />
-        <main className="dashboard security-page nx-page-reveal">
+        <main className="dashboard security-page nx-page-reveal" id="main-content" tabIndex={-1}>
           <SecurityCenter securityStatus={securityStatus} source={source} />
         </main>
       </div>

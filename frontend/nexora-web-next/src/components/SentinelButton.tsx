@@ -6,7 +6,7 @@ export default function SentinelButton() {
       <Link
         className="sentinel-button"
         href="/sentinel"
-        aria-label="Open NEXORA Sentinel"
+        aria-label="Open NEXORA Sentinel preview"
       >
         <span className="sentinel-button__orb" aria-hidden="true">🤖</span>
         <strong>NEXORA Sentinel</strong>

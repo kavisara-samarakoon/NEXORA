@@ -39,7 +39,13 @@ export default function RegisterForm() {
   }
 
   return (
-    <form className="auth-form" aria-busy={isSubmitting} onSubmit={handleSubmit} onChange={() => setErrorMessage(null)}>
+    <form
+      className="auth-form"
+      aria-busy={isSubmitting}
+      aria-describedby={errorMessage ? "register-form-error" : undefined}
+      onSubmit={handleSubmit}
+      onChange={() => setErrorMessage(null)}
+    >
       <div className="auth-form__grid">
         <div className="auth-form__field">
           <label htmlFor="register-display-name">Display name</label>
@@ -64,8 +70,10 @@ export default function RegisterForm() {
             placeholder="player_one"
             minLength={3}
             maxLength={50}
+            aria-describedby="register-username-hint"
             required
           />
+          <small className="ux-helper" id="register-username-hint">Use 3–50 characters.</small>
         </div>
       </div>
 
@@ -98,9 +106,9 @@ export default function RegisterForm() {
         <small className="ux-helper" id="register-password-hint">Use 8–72 characters. This form submits to the configured local NEXORA authentication API.</small>
       </div>
 
-      <div className="auth-form__message" aria-live="polite">
+      <div className="auth-form__message">
         {errorMessage ? (
-          <div className="auth-form__feedback auth-form__feedback--error" role="alert">
+          <div className="auth-form__feedback auth-form__feedback--error" id="register-form-error" role="alert">
             <span aria-hidden="true">!</span>
             <span><strong>Account not created</strong><small>{errorMessage}</small></span>
           </div>

@@ -11304,3 +11304,206 @@ textarea {
     background: rgba(255, 255, 255, 0.075);
   }
 }
+
+/* v0.31 frontend accessibility review */
+:root {
+  --nx-subtle: #7f8798;
+  --nx-focus-ring: rgba(255, 177, 94, 0.34);
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 1px solid rgba(255, 177, 94, 0.72);
+  border-radius: 10px;
+  color: #fff4e8;
+  background: rgba(18, 15, 16, 0.98);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 122, 0, 0.2);
+  font-size: 13px;
+  font-weight: 750;
+  transform: translateY(calc(-100% - 24px));
+  transition: transform var(--nx-motion-fast) var(--nx-ease-premium);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+#main-content {
+  scroll-margin-top: calc(var(--topbar-height) + 12px);
+}
+
+#main-content:focus-visible {
+  outline: 2px solid rgba(255, 177, 94, 0.74);
+  outline-offset: -4px;
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #ffb15e;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(7, 8, 11, 0.92), 0 0 0 9px var(--nx-focus-ring), 0 0 32px rgba(255, 122, 0, 0.24);
+}
+
+:is(
+  .giveaway-card,
+  .deal-card,
+  .deals-card,
+  .ga-card,
+  .wl-card,
+  .sc-protection-card,
+  .sn-capability,
+  .st-platform
+):focus-within {
+  border-color: rgba(255, 177, 94, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 2px rgba(255, 122, 0, 0.12), 0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
+.nav-item--disabled {
+  color: #929aab;
+  cursor: default;
+  opacity: 0.72;
+}
+
+.sidebar__help .nav-item__soon {
+  color: #a4acbb;
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.55);
+  opacity: 0.58;
+}
+
+.ux-helper,
+.auth-form__field .ux-helper,
+.auth-panel__note,
+.wl-add-panel__heading p,
+.wl-add-form__field small,
+.wl-add-form__check small {
+  color: #9ca4b4;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+:is(
+  .deals-network__item-copy,
+  .ga-network__item-copy,
+  .wl-network__item-copy,
+  .sc-operations__item-copy,
+  .sn-status__item-copy
+) small,
+.st-status__item small {
+  overflow: visible;
+  color: #969eae;
+  font-size: 10px;
+  line-height: 1.45;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.sn-message > p {
+  color: #abb2c0;
+  font-size: 12px;
+}
+
+.sn-message--user > p {
+  color: var(--nx-text);
+}
+
+.sn-suggestions button {
+  min-height: 36px;
+  padding-inline: 13px;
+  font-size: 10px;
+}
+
+.sn-chat__composer input,
+.sn-chat__composer select {
+  font-size: 12px;
+}
+
+.sn-gateway-response__fallback-reason p,
+.wl-card__history-state p small,
+.st-preference__copy span,
+.st-danger__actions p,
+.sn-capability p {
+  color: #969eae;
+  font-size: 10px;
+}
+
+.st-preference__copy strong,
+.st-profile-field strong,
+.st-platform__copy h3 {
+  font-size: 11px;
+}
+
+.st-switch {
+  display: flex;
+  width: 44px;
+  height: 30px;
+  min-width: 44px;
+  min-height: 30px;
+  align-items: center;
+  padding: 4px;
+}
+
+.st-switch span {
+  width: 18px;
+  height: 18px;
+}
+
+.st-switch--active span {
+  transform: translateX(16px);
+}
+
+.wl-notification-preferences__rows input:focus-visible + .wl-notification-preferences__toggle {
+  outline: 3px solid #ffb15e;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(7, 8, 11, 0.9), 0 0 0 8px var(--nx-focus-ring);
+}
+
+@media (max-width: 560px) {
+  :is(.deals-search, .ga-search, .wl-search) > button,
+  .sn-suggestions button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(button, a, input, select, textarea):focus-visible,
+  .wl-notification-preferences__rows input:focus-visible + .wl-notification-preferences__toggle {
+    outline: 3px solid CanvasText;
+    box-shadow: none;
+  }
+
+  .skip-link {
+    border: 2px solid CanvasText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sentinel-button-shell,
+  .sentinel-button__orb,
+  .sn-typing span,
+  .auth-form__spinner,
+  .auth-status__pulse,
+  .wl-card__history-state--loading span,
+  .wl-notification-preferences__state > span,
+  .deals-network__bars > span,
+  .ga-network__platform-fill,
+  .wl-network__store-fill,
+  .sc-score__value,
+  .ux-skeleton__line {
+    animation: none !important;
+  }
+
+  .skip-link,
+  .sidebar,
+  .sidebar-scrim {
+    transition: none !important;
+  }
+}

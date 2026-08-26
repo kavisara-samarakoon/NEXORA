@@ -148,9 +148,10 @@ function DealCard({
 }) {
   const color = storeClass(deal.store);
   const dealUrl = safeCheapSharkDealUrl(deal.dealUrl);
+  const titleId = `deal-title-${dealStateKey("curated", deal).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 
   return (
-    <article className={`deals-card deals-card--${color}`}>
+    <article className={`deals-card deals-card--${color}`} aria-labelledby={titleId}>
       <div className={`deals-card__accent deals-card__accent--${color}`} />
       <div className="deals-card__header">
         <span className={`deals-card__store deals-card__store--${color}`}>
@@ -159,7 +160,7 @@ function DealCard({
         <span className="deals-card__discount">{deal.discount}</span>
       </div>
 
-      <h2 className="deals-card__title">{deal.title}</h2>
+      <h2 className="deals-card__title" id={titleId}>{deal.title}</h2>
       <p className="deals-card__category">{deal.category}</p>
 
       <div className="deals-card__rating" aria-label={`${deal.rating} out of 5 stars`}>
@@ -183,6 +184,7 @@ function DealCard({
           type="button"
           disabled={isSaving || isSaved}
           aria-busy={isSaving}
+          aria-label={isSaved ? `${deal.title} is saved to your wishlist` : isSaving ? `Saving ${deal.title} to your wishlist` : `Save ${deal.title} to your wishlist`}
           onClick={() => onSave(deal)}
         >
           <span aria-hidden="true">{isSaved ? "✓" : "♡"}</span>
@@ -192,6 +194,7 @@ function DealCard({
           className={alertIsSet ? "deals-card__alert deals-card__alert--active" : "deals-card__alert"}
           type="button"
           aria-pressed={alertIsSet}
+          aria-label={`${alertIsSet ? "Remove" : "Set"} local alert for ${deal.title}`}
           onClick={() => onToggleAlert(deal.id)}
         >
           <span aria-hidden="true">🔔</span>
@@ -213,6 +216,7 @@ function DealCard({
             className={`deals-card__view deals-card__view--${color}`}
             type="button"
             disabled
+            aria-label={`View deal for ${deal.title} unavailable for this curated preview`}
             title="Store redirects are planned for curated deals"
           >
             <span aria-hidden="true">↗</span>
@@ -223,7 +227,7 @@ function DealCard({
       {saveMessage && (
         <div
           className={`deals-card__save-message deals-card__save-message--${saveMessage.tone}`}
-          role={saveMessage.tone === "error" || saveMessage.tone === "auth" ? "alert" : "status"}
+          role={saveMessage.tone === "error" ? "alert" : "status"}
         >
           <span className="deals-card__save-message-icon" aria-hidden="true">
             {saveMessage.tone === "success" ? "✓" : saveMessage.tone === "auth" ? "🔐" : "!"}
@@ -692,7 +696,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               {isExternalLoading ? "Loading Live Deals…" : "Live External Deals"}
             </button>
           </div>
-          <div className="deals-mode-panel__status" role="status" aria-live="polite">
+          <div className="deals-mode-panel__status" role="status">
             <span aria-hidden="true" />
             <strong>{sourceLabel}</strong>
           </div>

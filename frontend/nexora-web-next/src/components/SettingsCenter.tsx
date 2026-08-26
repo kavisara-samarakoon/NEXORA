@@ -46,18 +46,19 @@ function PreferenceRows({
       {items.map((item) => (
         <div className="st-preference" key={item.id}>
           <div className="st-preference__copy">
-            <strong>{item.label}</strong>
-            <span>{item.description}</span>
+            <strong id={`setting-${item.id}-label`}>{item.label}</strong>
+            <span id={`setting-${item.id}-description`}>{item.description}</span>
           </div>
           <button
             className={`st-switch${values[item.id] ? " st-switch--active" : ""}`}
             type="button"
             role="switch"
             aria-checked={values[item.id]}
-            aria-label={`${item.label}: ${values[item.id] ? "on" : "off"}`}
+            aria-labelledby={`setting-${item.id}-label`}
+            aria-describedby={`setting-${item.id}-description`}
             onClick={() => onToggle(item.id)}
           >
-            <span />
+            <span aria-hidden="true" />
           </button>
         </div>
       ))}
@@ -110,20 +111,20 @@ export default function SettingsCenter() {
         <div className="st-content">
           <section className="st-card st-profile" aria-labelledby="profile-title">
             <div className="st-profile__identity">
-              <div className="st-profile__avatar"><span>KS</span><i aria-hidden="true" /></div>
+              <div className="st-profile__avatar" aria-hidden="true"><span>KS</span><i /></div>
               <div className="st-profile__copy">
                 <small>Static demo profile</small>
                 <h2 id="profile-title">Kavisara</h2>
                 <p>Demo User <span>•</span> NEXORA Member</p>
               </div>
-              <button className="st-outline-button" type="button" disabled title="Profile editing requires the future backend">✏️ Edit Profile</button>
+              <button className="st-outline-button" type="button" disabled aria-label="Edit profile unavailable in this static settings demo" title="Profile editing requires the future backend">✏️ Edit Profile</button>
             </div>
             <div className="st-profile__fields">
               {profileFields.map((field) => (
                 <div className="st-profile-field" key={field.id}>
                   <span className="st-profile-field__icon" aria-hidden="true"><SettingsGlyph name={field.icon} /></span>
                   <div><small>{field.label}</small><strong>{field.value}</strong></div>
-                  <button type="button" disabled title="Editing requires the future backend">Edit</button>
+                  <button type="button" disabled aria-label={`Edit ${field.label} unavailable in this static settings demo`} title="Editing requires the future backend">Edit</button>
                 </div>
               ))}
             </div>
@@ -148,7 +149,7 @@ export default function SettingsCenter() {
                   key={platform.id}
                 >
                   <span className={`st-platform__accent st-platform__accent--${platform.id}`} aria-hidden="true" />
-                  <span className={`st-platform__mark st-platform__mark--${platform.id}`}>{platform.shortName}</span>
+                  <span className={`st-platform__mark st-platform__mark--${platform.id}`} aria-hidden="true">{platform.shortName}</span>
                   <div className="st-platform__copy">
                     <h3>{platform.name}</h3>
                     <p>{platform.account ?? "Not connected"}</p>
@@ -156,7 +157,7 @@ export default function SettingsCenter() {
                   <span className={`st-platform__state${platform.connected ? " st-platform__state--connected" : ""}`}>
                     <i aria-hidden="true" /> {platform.connected ? "Linked" : "Connect"}
                   </span>
-                  <button type="button" disabled title="Platform management requires the future backend">
+                  <button type="button" disabled aria-label={`${platform.connected ? "Manage" : "Connect"} ${platform.name} unavailable in this static settings demo`} title="Platform management requires the future backend">
                     {platform.connected ? "Manage" : "Connect"}
                   </button>
                 </article>
@@ -176,9 +177,9 @@ export default function SettingsCenter() {
             </div>
             <div className="st-danger__actions">
               <div><strong>Clear NEXORA Data</strong><p>Unavailable in this static settings demo. No account data is changed here.</p></div>
-              <button type="button" disabled title="This static demo does not store account data">Clear Data</button>
+              <button type="button" disabled aria-label="Clear NEXORA data unavailable in this static settings demo" title="This static demo does not store account data">Clear Data</button>
               <div><strong>Delete Account</strong><p>Unavailable in this static settings demo and requires a separate verified backend workflow.</p></div>
-              <button type="button" disabled title="Account deletion requires the future backend">Delete Account</button>
+              <button type="button" disabled aria-label="Delete account unavailable in this static settings demo" title="Account deletion requires the future backend">Delete Account</button>
             </div>
           </section>
         </div>

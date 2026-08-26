@@ -106,6 +106,7 @@ export default function RootLayout({
       className={`${inter.variable} ${orbitron.variable}`}
     >
       <body suppressHydrationWarning>
+        <a className="skip-link" href="#main-content">Skip to main content</a>
         <AuthSessionBootstrap />
         {children}
       </body>

@@ -3,7 +3,15 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The v0.30 product UX quality polish is a frontend presentation milestone. It
+The v0.31 frontend accessibility review is a focused polish milestone for the
+primary Next.js interface. It improves keyboard navigation, form labels and
+helper associations, ARIA semantics, focus visibility, reduced-motion coverage,
+UX-state announcements, and secondary-text readability while preserving the
+v0.28 visual identity, v0.29 responsive work, and v0.30 UX states. It changes no
+backend, API contract, security posture, deployment readiness, or production
+status and makes no production claim.
+
+The v0.30 product UX quality polish was a frontend presentation milestone. It
 improves loading, empty, error, fallback, unavailable, authentication-required,
 helper, and inline-feedback states in the primary Next.js interface while
 preserving the v0.28 motion and v0.29 responsive polish. It changes no backend,
@@ -20,7 +28,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.29.0-mobile-responsive-ui-polish`.
+`v0.30.0-product-ux-quality-polish`.
 
 ## Completed foundations
 
