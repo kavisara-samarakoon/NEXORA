@@ -3,6 +3,17 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
+The v0.34 API error contract foundation standardizes targeted authentication,
+CSRF/origin, rate-limit, personal Wishlist, Sentinel gateway, and notification-
+preference failures. Existing `error`, `message`, and applicable
+`retryAfterSeconds` fields remain compatible, while responses add HTTP status,
+the request URI path without query data, and a UTC timestamp. The contract does
+not expose raw requests, secrets, tokens, cookies, credentials, datasource
+URLs, exception classes, or stack traces. Authentication/session behavior,
+routes, validation rules, and production readiness are unchanged. A narrow,
+lowest-priority REST fallback safely normalizes otherwise unexpected controller
+failures without replacing domain-specific responses.
+
 The v0.33 runtime observability foundation expands the public backend health
 response with safe runtime/data modes, sanitized profiles, allowlisted provider
 names, UTC timing, uptime, and bounded configuration checks. One application-
@@ -107,6 +118,9 @@ readiness of the project. The latest stable development milestone is
 - Lightweight runtime observability through an additive public health summary
   and one safe application-ready log line. Unknown profiles/providers are not
   echoed, and reported modes make no database/provider connectivity claim.
+- A shared safe API error response/factory for targeted auth, browser request
+  protection, Wishlist, Sentinel, and notification-preference failures,
+  preserving established codes/messages and rate-limit retry metadata.
 - Backend refresh-token/session foundation with hashed tokens, profile-based
   in-memory/PostgreSQL storage, rotation, logout revocation, and HttpOnly cookie
   issuance while preserving the existing Bearer access-token response.
@@ -148,6 +162,8 @@ readiness of the project. The latest stable development milestone is
   in memory; restarting it clears that state.
 - Runtime health/startup summaries report configuration mode and process uptime
   only; they do not probe dependencies or supply production monitoring.
+- Shared error metadata improves local diagnosis but is not centralized error
+  reporting, tracing, production monitoring, or incident response.
 - CheapShark is a third-party dependency with incomplete game/store coverage.
 - Scheduled price refresh is `dev`-profile, single-process, and disabled by
   default.

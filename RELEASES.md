@@ -7,7 +7,18 @@ The latest stable development tag is
 [`v0.30.0-product-ux-quality-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.30.0-product-ux-quality-polish).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.33.0 runtime observability foundation
+## In progress — v0.34.0 API error contract foundation
+
+- Added a shared safe error response/factory across targeted auth, CSRF/origin,
+  rate-limit, Wishlist, Sentinel, and notification-preference failures.
+  Existing `error`, `message`, and rate-limit `retryAfterSeconds` fields remain
+  compatible; safe status, path, and UTC timestamp metadata are additive. No
+  raw requests, secrets, tokens, cookies, credentials, datasource URLs,
+  exception classes, or stack traces are exposed. A REST-only fallback safely
+  normalizes otherwise unexpected controller failures. Authentication/session
+  behavior and production readiness are unchanged.
+
+## Completed backend milestone — v0.33.0 runtime observability foundation
 
 - Expanded `GET /api/health` with safe runtime mode, sanitized profile,
   allowlisted provider, timing, uptime, and bounded configuration summaries,

@@ -125,6 +125,9 @@ class AuthAbuseApiEndpointTests {
                 .andExpect(header().exists(HttpHeaders.RETRY_AFTER))
                 .andExpect(jsonPath("$.error").value("rate_limited"))
                 .andExpect(jsonPath("$.message").value(SAFE_MESSAGE))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.path").isNotEmpty())
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty())
                 .andExpect(jsonPath("$.retryAfterSeconds").isNumber())
                 .andReturn();
 
@@ -139,7 +142,10 @@ class AuthAbuseApiEndpointTests {
     private void expectOriginFailure(MockHttpServletRequestBuilder request) throws Exception {
         mockMvc.perform(request)
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("csrf_failed"));
+                .andExpect(jsonPath("$.error").value("csrf_failed"))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.path").isNotEmpty())
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
     }
 
     private CsrfContext csrfContext() throws Exception {

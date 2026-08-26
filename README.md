@@ -11,7 +11,7 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
+> [`v0.33.0-runtime-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.33.0-runtime-observability-foundation).
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -55,6 +55,7 @@ security controls, and testable optional integrations.
 | Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
+| API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
 
 “Foundation” means the capability is implemented and testable for local
 development; it does not imply production-scale operations.
@@ -291,6 +292,25 @@ do not test external dependency availability or provide production monitoring.
 Prometheus, Grafana, OpenTelemetry, managed logging, alerting, dashboards, and
 operational response remain future deployment decisions.
 
+### API error contract foundation
+
+Version 0.34 standardizes targeted backend failures across authentication,
+browser CSRF/origin checks, local rate limits, personal Wishlist operations,
+Sentinel gateway requests, and notification preferences. Existing `error` and
+`message` fields remain unchanged for client compatibility. Errors now also
+include the HTTP `status`, request URI `path` without its query string, and a
+UTC `timestampUtc`; rate-limit responses retain `retryAfterSeconds` and the
+`Retry-After` header.
+
+A lowest-priority REST-only fallback gives otherwise unexpected controller
+failures the fixed `internal_error` code and a generic message without
+serializing exception details. Domain-specific handlers retain priority.
+
+The shared contract never includes request bodies, secrets, credentials,
+tokens, cookies, datasource URLs, exception classes, or stack traces. It does
+not alter authentication/session behavior, add production monitoring, or make
+NEXORA production-ready.
+
 Price refresh and notifications use safe defaults:
 
 ```properties
@@ -347,7 +367,7 @@ The full endpoint and configuration reference is in the
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.26.0-auth-security-event-retention-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.26.0-auth-security-event-retention-foundation).
+[`v0.33.0-runtime-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.33.0-runtime-observability-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

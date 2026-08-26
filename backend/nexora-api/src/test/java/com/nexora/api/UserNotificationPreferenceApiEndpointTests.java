@@ -103,7 +103,12 @@ class UserNotificationPreferenceApiEndpointTests {
 
         mockMvc.perform(authenticatedPatch(token, "{}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("validation_failed"));
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message")
+                        .value("Notification preference validation failed"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value(PREFERENCES_PATH))
+                .andExpect(jsonPath("$.timestampUtc").isNotEmpty());
         mockMvc.perform(authenticatedPatch(token, "{\"unknownPreference\":true}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("validation_failed"));

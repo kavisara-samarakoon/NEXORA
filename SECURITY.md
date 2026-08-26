@@ -57,6 +57,13 @@ time is guaranteed while the project remains a development MVP.
   allowlisted provider names. They do not return or log raw configuration,
   secrets, credentials, datasource URLs, database identities, cookies, tokens,
   API keys, trusted origins, or the full process environment.
+- Targeted API failures use a shared safe contract that preserves the existing
+  machine-readable error code and user-facing message while adding HTTP status,
+  URI path without query data, and a UTC timestamp. Rate limits retain their
+  bounded retry delay. Responses exclude request bodies, secrets, tokens,
+  cookies, credentials, datasource URLs, exception classes, and stack traces.
+  An API-only fallback uses a fixed generic response for otherwise unexpected
+  controller failures and leaves domain-specific handlers at higher priority.
 - Best-effort auth security-event recording for register, login, refresh,
   logout, and auth-route rejection outcomes. It stores only typed safe metadata,
   uses bounded in-memory retention by default, and persists through Flyway V10
@@ -134,6 +141,9 @@ the broader production policy and operations remain unimplemented.
 - Runtime health fields describe configuration mode and process uptime only.
   They are not external dependency health probes, production metrics, tracing,
   centralized logging, alerting, SIEM integration, or availability evidence.
+- The shared error contract standardizes the currently targeted REST error
+  producers; it is not a production incident-reporting, tracing, or monitoring
+  system and does not alter authentication/session controls.
 - Repository secret scanning, push protection, private vulnerability reporting,
   code-scanning alert policy, and required checks must be enabled and reviewed
   through GitHub repository settings where available.

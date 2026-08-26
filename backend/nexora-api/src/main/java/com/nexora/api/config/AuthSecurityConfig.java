@@ -1,11 +1,12 @@
 package com.nexora.api.config;
 
-import com.nexora.api.auth.AuthErrorResponse;
 import com.nexora.api.auth.JwtAuthenticationFilter;
+import com.nexora.api.error.ApiErrorFactory;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,6 +29,7 @@ public class AuthSecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            ApiErrorFactory errorFactory,
             ObjectMapper objectMapper) throws Exception {
         return http
                 .cors(Customizer.withDefaults())
@@ -38,7 +40,11 @@ public class AuthSecurityConfig {
                     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                     objectMapper.writeValue(
                             response.getOutputStream(),
-                            new AuthErrorResponse("authentication_required", "A valid Bearer token is required")
+                            errorFactory.create(
+                                    HttpStatus.UNAUTHORIZED,
+                                    "authentication_required",
+                                    "A valid Bearer token is required",
+                                    request)
                     );
                 }))
                 .authorizeHttpRequests(authorize -> authorize
