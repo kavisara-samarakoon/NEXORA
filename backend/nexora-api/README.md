@@ -74,6 +74,33 @@ The API starts at [http://localhost:8080](http://localhost:8080). Check
 [http://localhost:8080/api/health](http://localhost:8080/api/health) for the
 service health response.
 
+### Runtime health and startup summary
+
+`GET /api/health` preserves the existing `UP` / `NEXORA API` fields and adds:
+
+- the v0.33 milestone label;
+- `local-demo`, `dev-postgres`, or `production` runtime mode;
+- sanitized active-profile labels, using `default` when none are active and
+  `custom` instead of echoing unknown names;
+- `in-memory-demo` or `postgres-dev` data mode without datasource details;
+- allowlisted effective Sentinel, notification, and price-refresh provider
+  names;
+- UTC startup/check instants and non-negative process uptime seconds; and
+- safe configuration summaries for the application, profile, production auth
+  guard, database mode, and optional providers.
+
+An application-ready listener logs one summary line built only from those safe
+derived fields. Neither response nor log includes or exposes JWT/refresh
+secrets, cookies, CSRF values, trusted-origin values, database URLs or
+credentials, Gemini keys/base URLs, SMTP credentials, tokens, or the full
+environment.
+Provider/configuration labels are not live external dependency checks.
+
+This is lightweight local runtime observability, not Actuator, metrics,
+distributed tracing, centralized logging, alerting, dashboards, or production
+monitoring. Prometheus, Grafana, OpenTelemetry, managed logging, and operational
+response remain future work, and NEXORA remains not production-ready.
+
 The same commands can run inside the repository's optional development
 container, which provides Java 17 and Maven without changing the host-native
 workflow. PostgreSQL can still be supplied by the existing local Compose file.
@@ -157,7 +184,7 @@ endpoints return active rows only. `GET /api/wishlist` additionally requires
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api` | API welcome response |
-| `GET` | `/api/health` | Service health status |
+| `GET` | `/api/health` | Safe application runtime/configuration summary; no secret or connection details |
 | `GET` | `/api/dashboard/summary` | Deal, giveaway, wishlist, database, and Sentinel summary |
 | `GET` | `/api/deals` | Curated active deals: local demo data or PostgreSQL in `dev` |
 | `GET` | `/api/deals/external` | On-demand CheapShark deals mapped to the NEXORA deal contract |
@@ -722,6 +749,10 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
   stores or a complete browser-session design. The full CORS/cookie/origin/proxy
   policy is not reviewed, and session-family reuse response is intentionally
   basic.
+- The runtime health endpoint and startup summary expose safe configuration
+  labels only. They do not provide database/provider probes, metrics, tracing,
+  managed log collection, alerting, incident response, or production uptime
+  evidence.
 - Authentication still has no account verification, password recovery, roles,
   OAuth, production distributed rate limiting, credential-stuffing/bot defense,
   session list, or revoke-all workflow. The local abuse counters reset on

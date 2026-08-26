@@ -53,6 +53,10 @@ time is guaranteed while the project remains a development MVP.
   disabled; the refresh cookie is overly broad; or trusted origins are missing,
   wildcard, local/development, or non-HTTPS. Exceptions name properties without
   exposing configured secret values.
+- Public runtime health and startup summaries use sanitized profile labels and
+  allowlisted provider names. They do not return or log raw configuration,
+  secrets, credentials, datasource URLs, database identities, cookies, tokens,
+  API keys, trusted origins, or the full process environment.
 - Best-effort auth security-event recording for register, login, refresh,
   logout, and auth-route rejection outcomes. It stores only typed safe metadata,
   uses bounded in-memory retention by default, and persists through Flyway V10
@@ -127,6 +131,9 @@ the broader production policy and operations remain unimplemented.
   persistent production session store, managed-secret integration, HTTPS/proxy
   configuration, production monitoring/SIEM integration, incident response, or
   a production operations guide.
+- Runtime health fields describe configuration mode and process uptime only.
+  They are not external dependency health probes, production metrics, tracing,
+  centralized logging, alerting, SIEM integration, or availability evidence.
 - Repository secret scanning, push protection, private vulnerability reporting,
   code-scanning alert policy, and required checks must be enabled and reviewed
   through GitHub repository settings where available.

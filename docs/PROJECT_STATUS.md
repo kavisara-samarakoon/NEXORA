@@ -3,6 +3,15 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
+The v0.33 runtime observability foundation expands the public backend health
+response with safe runtime/data modes, sanitized profiles, allowlisted provider
+names, UTC timing, uptime, and bounded configuration checks. One application-
+ready log line summarizes the same safe labels. Neither path exposes raw
+configuration, secrets, credentials, datasource URLs, database identities,
+cookies, tokens, API keys, or full environment data. This is not external
+dependency monitoring, metrics, tracing, alerting, managed logging, or a
+production-readiness claim.
+
 The v0.32 production-profile safety foundation adds an early backend startup
 guard for the `prod` and `production` profiles. It fails closed when core auth
 secrets are missing, short, coupled, local defaults, or obvious placeholders;
@@ -95,6 +104,9 @@ readiness of the project. The latest stable development milestone is
   refresh-token hash secrets, secure refresh/CSRF cookie settings, enabled
   CSRF, a scoped refresh cookie, and exact HTTPS non-local trusted origins.
   Errors identify properties without printing configured secret values.
+- Lightweight runtime observability through an additive public health summary
+  and one safe application-ready log line. Unknown profiles/providers are not
+  echoed, and reported modes make no database/provider connectivity claim.
 - Backend refresh-token/session foundation with hashed tokens, profile-based
   in-memory/PostgreSQL storage, rotation, logout revocation, and HttpOnly cookie
   issuance while preserving the existing Bearer access-token response.
@@ -134,6 +146,8 @@ readiness of the project. The latest stable development milestone is
 
 - The default backend profile stores accounts and personal wishlist changes only
   in memory; restarting it clears that state.
+- Runtime health/startup summaries report configuration mode and process uptime
+  only; they do not probe dependencies or supply production monitoring.
 - CheapShark is a third-party dependency with incomplete game/store coverage.
 - Scheduled price refresh is `dev`-profile, single-process, and disabled by
   default.
@@ -163,6 +177,9 @@ readiness of the project. The latest stable development milestone is
 ## Production-readiness gaps
 
 - No deployed production environment or production operations guide.
+- No production metrics, tracing, centralized/managed logging, dashboards,
+  alerting, SLOs, on-call ownership, or incident-response integration. The
+  v0.33 safe summaries do not close these gaps.
 - No deployment or continuous-delivery pipeline.
 - No backend/frontend production application images or production container
   workflow. Compose runs local PostgreSQL only, and the optional devcontainer

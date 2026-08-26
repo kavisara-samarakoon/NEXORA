@@ -54,6 +54,7 @@ security controls, and testable optional integrations.
 | Notifications | Store preferences and optionally deliver through SMTP | Optional foundation |
 | Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
+| Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
 
 “Foundation” means the capability is implemented and testable for local
 development; it does not imply production-scale operations.
@@ -275,6 +276,21 @@ production configuration, select persistent storage, configure HTTPS or a
 reverse proxy, or make NEXORA production-ready. Default and `dev` startup keep
 their existing local-development behavior.
 
+### Runtime observability foundation
+
+Version 0.33 expands `GET /api/health` with a safe milestone, sanitized active
+profile labels, derived runtime/data modes, allowlisted provider names, UTC
+startup/check times, process uptime, and configuration-level check summaries.
+Application startup also writes one bounded line containing the same safe mode
+and provider labels.
+
+The endpoint and log never include raw property values, secrets, credentials,
+datasource URLs, database identities, cookies, tokens, API keys, or full system
+environment data. These summaries report application configuration mode; they
+do not test external dependency availability or provide production monitoring.
+Prometheus, Grafana, OpenTelemetry, managed logging, alerting, dashboards, and
+operational response remain future deployment decisions.
+
 Price refresh and notifications use safe defaults:
 
 ```properties
@@ -359,6 +375,9 @@ availability, scale, security-assurance, or compliance claim.
   values, but complete cookie/CORS/origin/proxy policy, persistent production
   session storage, revocation controls, account verification, recovery, and
   operational auditing remain incomplete.
+- The v0.33 health/startup summaries are lightweight local visibility, not
+  production dependency probes, metrics, tracing, log aggregation, alerting, or
+  an uptime guarantee.
 - Scheduled refresh is single-process and has no distributed lock or production
   scheduling guarantees.
 - CheapShark coverage and conservative title/store matching cannot resolve every

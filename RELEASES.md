@@ -7,7 +7,16 @@ The latest stable development tag is
 [`v0.30.0-product-ux-quality-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.30.0-product-ux-quality-polish).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.32.0 production profile safety foundation
+## In progress — v0.33.0 runtime observability foundation
+
+- Expanded `GET /api/health` with safe runtime mode, sanitized profile,
+  allowlisted provider, timing, uptime, and bounded configuration summaries,
+  plus one safe application-ready startup line. No secrets, credentials,
+  datasource URLs, cookies, tokens, API keys, or raw environment values are
+  exposed. This adds no dependency, migration, workflow, external monitoring,
+  deployment, or production-readiness claim.
+
+## Completed backend milestone — v0.32.0 production profile safety foundation
 
 - Added production-profile startup checks that fail closed for unsafe core auth
   secrets, refresh/CSRF cookie settings, CSRF enablement, and trusted origins.

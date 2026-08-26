@@ -8,9 +8,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/health")
 public class HealthController {
 
+    private final RuntimeHealthService runtimeHealthService;
+
+    public HealthController(RuntimeHealthService runtimeHealthService) {
+        this.runtimeHealthService = runtimeHealthService;
+    }
+
     @GetMapping
     public HealthResponse health() {
-        return new HealthResponse("UP", "NEXORA API");
+        return runtimeHealthService.getHealth();
     }
 }
-

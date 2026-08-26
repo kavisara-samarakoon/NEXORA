@@ -28,6 +28,11 @@ project's academic, portfolio, and product goals evolve.
 
 ## Deployment preparation
 
+- Build future deployment health probes, metrics, tracing, managed logging,
+  dashboards, alerting, and response ownership on an approved topology. The
+  v0.33 safe runtime/configuration summary is only a lightweight foundation;
+  Prometheus, Grafana, OpenTelemetry, and external integrations remain
+  deliberately unselected.
 - Select a target topology, hosting model, networking boundary, and operational
   ownership model.
 - Define backend and frontend application image requirements separately from
