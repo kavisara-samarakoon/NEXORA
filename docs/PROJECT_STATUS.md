@@ -3,20 +3,24 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The v0.29 mobile responsive UI polish is a frontend presentation milestone. It
-improves the primary Next.js interface across mobile, tablet, and small-screen
-layouts while preserving the Liquid Glass identity and v0.28 motion polish.
-It changes no routes, API calls, data flow, backend behavior, security posture,
-deployment readiness, or retained Vite prototype, and makes no production
-claim. Demo, preview, fallback, and planned states remain labelled as such,
-keyboard focus remains visible, and non-essential motion respects the user's
-reduced-motion preference.
+The v0.30 product UX quality polish is a frontend presentation milestone. It
+improves loading, empty, error, fallback, unavailable, authentication-required,
+helper, and inline-feedback states in the primary Next.js interface while
+preserving the v0.28 motion and v0.29 responsive polish. It changes no backend,
+API contract, security posture, deployment readiness, or production status and
+makes no production claim. Local, demo, preview, fallback, and planned states
+remain explicitly labelled.
+
+The v0.29 mobile responsive UI polish improved mobile, tablet, and small-screen
+layouts without changing routes, data flow, backend behavior, or the retained
+Vite prototype. Keyboard focus remains visible, and non-essential animation,
+including the v0.30 loading shimmer, respects reduced-motion preferences.
 
 The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.28.0-premium-ui-motion-polish`.
+`v0.29.0-mobile-responsive-ui-polish`.
 
 ## Completed foundations
 

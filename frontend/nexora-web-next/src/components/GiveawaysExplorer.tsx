@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import UxStatePanel from "@/components/UxStatePanel";
 import {
   giveawayFilters,
   type Giveaway,
@@ -40,12 +41,14 @@ function GiveawayCard({
   giveaway,
   reminderIsSet,
   guideIsOpen,
+  isPreview,
   onToggleGuide,
   onToggleReminder,
 }: {
   giveaway: Giveaway;
   reminderIsSet: boolean;
   guideIsOpen: boolean;
+  isPreview: boolean;
   onToggleGuide: (giveawayId: number) => void;
   onToggleReminder: (giveawayId: number) => void;
 }) {
@@ -76,7 +79,7 @@ function GiveawayCard({
       <div className={`ga-card__timer${isEndingSoon ? " ga-card__timer--urgent" : ""}`}>
         <span aria-hidden="true">⏱️</span>
         <span>{giveaway.timer} remaining</span>
-        <span className="ga-card__status"><span aria-hidden="true" /> Live</span>
+        <span className={`ga-card__status${isPreview ? " ga-card__status--preview" : ""}`}><span aria-hidden="true" /> {isPreview ? "Preview" : "API feed"}</span>
       </div>
 
       <div className="ga-card__progress">
@@ -95,7 +98,9 @@ function GiveawayCard({
 
       {guideIsOpen && (
         <div className="ga-card__guide" role="status">
-          Open {giveaway.platformLabel}, sign in, and claim this title before the window closes.
+          {isPreview
+            ? `Confirm this preview entry with ${giveaway.platformLabel} before attempting to claim it.`
+            : `Open ${giveaway.platformLabel}, sign in, and claim this title before the window closes.`}
         </div>
       )}
 
@@ -126,7 +131,7 @@ function GiveawayCard({
 function GiveawayNetworkStatus({ source }: { source: GiveawaysResult["source"] }) {
   const isApiSource = source === "api";
   const items = [
-    { label: "Giveaway Sync", value: isApiSource ? "Backend API" : "Demo mode", badge: isApiSource ? "Live" : "Demo", tone: "orange", icon: "sync" },
+    { label: "Giveaway Sync", value: isApiSource ? "Backend API feed" : "Static fallback preview", badge: isApiSource ? "API" : "Fallback", tone: "orange", icon: "sync" },
     { label: "Data Source", value: isApiSource ? "Spring Boot" : "Static dataset", badge: isApiSource ? "API" : "Static", tone: "blue", icon: "globe" },
     { label: "Claim Links", value: "Safe redirects planned", badge: "Planned", tone: "green", icon: "link" },
     { label: "Alerts", value: "Local reminders active", badge: "Local", tone: "purple", icon: "bell" },
@@ -138,7 +143,7 @@ function GiveawayNetworkStatus({ source }: { source: GiveawaysResult["source"] }
         <span className="ga-network__header-icon" aria-hidden="true">📡</span>
         <div><span>Drop telemetry</span><h2 id="giveaway-network-title">Giveaway Network Status</h2></div>
         <span className={`ga-network__live ga-network__live--${isApiSource ? "api" : "demo"}`}>
-          <span aria-hidden="true" /> {isApiSource ? "Live" : "Demo"}
+          <span aria-hidden="true" /> {isApiSource ? "API" : "Static"}
         </span>
       </div>
 
@@ -155,7 +160,7 @@ function GiveawayNetworkStatus({ source }: { source: GiveawaysResult["source"] }
       </div>
 
       <div className="ga-network__platforms">
-        <div className="ga-network__platforms-label"><span>Platform availability</span><strong>Live</strong></div>
+        <div className="ga-network__platforms-label"><span>Platform distribution</span><strong>{isApiSource ? "API feed" : "Preview data"}</strong></div>
         <div className="ga-network__platform-rows">
           {platformAvailability.map((platform) => (
             <div className="ga-network__platform-row" key={platform.name}>
@@ -220,23 +225,33 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
         <div className="ga-hero__scanlines" />
         <div className="ga-hero__content">
           <div className="ga-hero__copy">
-            <div className="ga-hero__tag"><span aria-hidden="true" /> Live tracking</div>
+            <div className="ga-hero__tag"><span aria-hidden="true" /> {source === "api" ? "Backend giveaway feed" : "Static giveaway preview"}</div>
             <h1 id="giveaways-title">
               <span className="page-title-emoji" aria-hidden="true">🎁</span>
-              <span>Live Giveaway Intelligence</span>
+              <span>Giveaway Intelligence</span>
             </h1>
             <p>
-              Track free game drops, claim windows, and safe store redirects
-              across every major platform — never miss a free title again.
+              Review free-game entries, claim windows, and platform guidance.
+              Confirm availability with the listed store before claiming.
             </p>
           </div>
           <div className="ga-hero__stats" aria-label="Giveaway statistics">
-            <div><strong>{giveaways.length}</strong><span>Live now</span></div>
+            <div><strong>{giveaways.length}</strong><span>Feed entries</span></div>
             <div><strong>{endingSoonCount}</strong><span>Ending soon</span></div>
             <div><strong>{platformCount}</strong><span>Platforms</span></div>
           </div>
         </div>
       </section>
+
+      {source !== "api" && (
+        <UxStatePanel
+          className="ux-state--compact ga-source-fallback"
+          description="The backend giveaway feed could not be reached, so this page is showing bundled preview entries. Dates and availability may not be current."
+          role="status"
+          title="Static fallback feed"
+          tone="fallback"
+        />
+      )}
 
       <section className="ga-filter-panel" aria-label="Search and filter giveaways">
         <div className="ga-search">
@@ -273,8 +288,8 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
       <div className="ga-layout">
         <section aria-label="Available game giveaways">
           <div className="ga-results-bar">
-            <span><strong>{filteredGiveaways.length}</strong> live drops detected</span>
-            <span>{source === "api" ? "Backend intelligence feed" : "Static fallback feed"}</span>
+            <span><strong>{filteredGiveaways.length}</strong> giveaway entries</span>
+            <span>{source === "api" ? "Backend giveaway feed" : "Static fallback preview"}</span>
           </div>
           <div className="ga-grid">
             {filteredGiveaways.map((giveaway) => (
@@ -282,18 +297,26 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
                 giveaway={giveaway}
                 reminderIsSet={reminders.has(giveaway.id)}
                 guideIsOpen={openGuide === giveaway.id}
+                isPreview={source !== "api"}
                 key={giveaway.id}
                 onToggleGuide={(giveawayId) => setOpenGuide((current) => current === giveawayId ? null : giveawayId)}
                 onToggleReminder={toggleReminder}
               />
             ))}
             {filteredGiveaways.length === 0 && (
-              <div className="ga-empty">
-                <span aria-hidden="true">📡</span>
-                <h2>No drops found</h2>
-                <p>No giveaways match your current search and filters.</p>
-                <button type="button" onClick={resetFilters}>Reset filters</button>
-              </div>
+              <UxStatePanel
+                className="ux-state--grid ga-empty"
+                description={giveaways.length === 0
+                  ? source === "api"
+                    ? "The backend feed returned no giveaway entries. Check again later or confirm current promotions with each store."
+                    : "No bundled preview entries are available. This does not confirm that stores have no active promotions."
+                  : <>No entries match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter.</>}
+                role="status"
+                title={giveaways.length === 0 ? "No giveaway entries available" : "No matching giveaways"}
+                tone="empty"
+              >
+                {giveaways.length > 0 ? <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button> : null}
+              </UxStatePanel>
             )}
           </div>
         </section>

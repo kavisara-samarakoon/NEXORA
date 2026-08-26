@@ -64,9 +64,9 @@ export default function AuthStatus() {
 
   if (authState.status === "loading") {
     return (
-      <div className="auth-status auth-status--loading" aria-label="Checking authentication status">
+      <div className="auth-status auth-status--loading" role="status" aria-label="Checking account session">
         <span className="auth-status__pulse" aria-hidden="true" />
-        <span>Account</span>
+        <span>Checking account</span>
       </div>
     );
   }
@@ -106,9 +106,14 @@ export default function AuthStatus() {
 
   if (authState.status === "unavailable") {
     return (
-      <div className="auth-status auth-status--unavailable" title={authState.message}>
-        <span aria-hidden="true">Account offline</span>
-        <Link href="/login">Login</Link>
+      <div
+        className="auth-status auth-status--unavailable"
+        role="status"
+        aria-label={`Account status unavailable. ${authState.message}`}
+        title={authState.message}
+      >
+        <span className="auth-status__unavailable-copy">Account unavailable</span>
+        <Link href="/login">Sign in</Link>
       </div>
     );
   }

@@ -9,6 +9,7 @@ import {
   type GameDeal,
 } from "@/data/deals";
 import type { WishlistItem } from "@/data/wishlist";
+import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
 import {
@@ -224,7 +225,15 @@ function DealCard({
           className={`deals-card__save-message deals-card__save-message--${saveMessage.tone}`}
           role={saveMessage.tone === "error" || saveMessage.tone === "auth" ? "alert" : "status"}
         >
-          <span>{saveMessage.text}</span>
+          <span className="deals-card__save-message-icon" aria-hidden="true">
+            {saveMessage.tone === "success" ? "✓" : saveMessage.tone === "auth" ? "🔐" : "!"}
+          </span>
+          <span className="deals-card__save-message-copy">
+            <strong>
+              {saveMessage.tone === "success" ? "Wishlist updated" : saveMessage.tone === "auth" ? "Sign in required" : "Deal not saved"}
+            </strong>
+            <small>{saveMessage.text}</small>
+          </span>
           {saveMessage.tone === "auth" && (
             <span className="deals-card__auth-links">
               <Link href="/login">Login</Link>
@@ -421,7 +430,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           setWishlistSyncWarning("Please sign in again to sync saved deals.");
           return;
         }
-        setWishlistSyncWarning(`Saved-deal sync unavailable. ${details.message}`);
+        setWishlistSyncWarning(details.message);
       }
     }
 
@@ -550,7 +559,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         ...current,
         [key]: {
           tone: "auth",
-          text: "Sign in to save deals to your wishlist.",
+          text: "Sign in, then use Save to Wishlist again for this deal.",
         },
       }));
       return;
@@ -606,7 +615,9 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         ...current,
         [key]: {
           tone: details.status === 401 ? "auth" : "error",
-          text: details.message,
+          text: details.status === 401
+            ? "Your session ended. Sign in again, then retry this save."
+            : `${details.message} You can retry from this card.`,
         },
       }));
     } finally {
@@ -713,11 +724,17 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         )}
 
         {isExternalFallback && (
-          <div className="deals-mode-panel__warning" role="alert">
-            <span aria-hidden="true">⚠️</span>
-            <p>Live deals are unavailable right now. Your curated deals are still shown.</p>
-            <button type="button" onClick={() => void loadExternalDeals(externalTitle)}>Retry</button>
-          </div>
+          <UxStatePanel
+            className="ux-state--inline deals-mode-panel__warning"
+            description="The external feed could not be reached. NEXORA is still showing its bundled curated deal set."
+            role="status"
+            title="Curated fallback active"
+            tone="fallback"
+          >
+            <button className="ux-state__action" type="button" onClick={() => void loadExternalDeals(externalTitle)}>
+              Retry live feed
+            </button>
+          </UxStatePanel>
         )}
       </section>
 
@@ -756,25 +773,39 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       <div className="deals-layout">
         <section aria-label={isExternalReady ? "Live external game deals" : "Curated game deals"}>
           {authChecked && !authToken && (
-            <div className="deals-auth-notice">
-              <span>Sign in to save deals to your wishlist.</span>
-              <span>
-                <Link href="/login">Login</Link>
-                <Link href="/register">Register</Link>
-              </span>
-            </div>
+            <UxStatePanel
+              className="ux-state--compact deals-auth-notice"
+              description="Browsing and local alert toggles remain available. An account is required only to save a deal to your personal wishlist."
+              title="Sign in to save deals"
+              tone="auth"
+            >
+              <Link className="ux-state__action" href="/login">Sign in</Link>
+              <Link className="ux-state__action ux-state__action--quiet" href="/register">Register</Link>
+            </UxStatePanel>
           )}
           {wishlistSyncWarning && (
-            <div className="deals-wishlist-sync-warning" role="status">
-              <span aria-hidden="true">⚠</span>
-              <span>{wishlistSyncWarning}</span>
-            </div>
+            <UxStatePanel
+              className="ux-state--compact deals-wishlist-sync-warning"
+              description={<>{wishlistSyncWarning} Deal browsing still works; saved markers may be incomplete until sync succeeds.</>}
+              role="status"
+              title="Saved-deal sync unavailable"
+              tone="unavailable"
+            />
           )}
           <div className="deals-results-bar">
             <span><strong>{filteredDeals.length}</strong> deals detected</span>
             <span>{sourceLabel}</span>
           </div>
           <div className="deals-grid" aria-busy={isExternalLoading}>
+            {isExternalLoading && (
+              <UxStatePanel
+                className="ux-state--grid"
+                description={<>Requesting current external offers. Curated deals remain visible below while the request finishes.<UxSkeleton lines={2} /></>}
+                role="status"
+                title="Loading live external deals"
+                tone="loading"
+              />
+            )}
             {filteredDeals.map((deal) => (
               <DealCard
                 deal={deal}
@@ -791,20 +822,29 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               />
             ))}
             {isExternalReady && externalDeals.length === 0 && (
-              <div className="deals-empty">
-                <span aria-hidden="true">🌐</span>
-                <h2>No live external deals found</h2>
-                <p>Try another title or clear the live search.</p>
-                <button type="button" onClick={clearExternalSearch}>Clear live search</button>
-              </div>
+              <UxStatePanel
+                className="ux-state--grid deals-empty"
+                description={activeExternalTitle
+                  ? <>The external feed returned no offers for “{activeExternalTitle}”. Try another title or load the full feed.</>
+                  : "The external feed returned no offers. Switch to Curated Deals to keep browsing NEXORA’s bundled set."}
+                role="status"
+                title="No live external deals found"
+                tone="empty"
+              >
+                {activeExternalTitle ? <button className="ux-state__action" type="button" onClick={clearExternalSearch}>Load all live deals</button> : null}
+                <button className="ux-state__action ux-state__action--quiet" type="button" onClick={() => selectMode("curated")}>View curated deals</button>
+              </UxStatePanel>
             )}
             {visibleDeals.length > 0 && filteredDeals.length === 0 && (
-              <div className="deals-empty">
-                <span aria-hidden="true">📡</span>
-                <h2>No signals found</h2>
-                <p>No deals match your current display filters.</p>
-                <button type="button" onClick={resetFilters}>Reset filters</button>
-              </div>
+              <UxStatePanel
+                className="ux-state--grid deals-empty"
+                description={<>No displayed deals match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter. Reset the view to show every available deal.</>}
+                role="status"
+                title="No matching deal signals"
+                tone="empty"
+              >
+                <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button>
+              </UxStatePanel>
             )}
           </div>
         </section>

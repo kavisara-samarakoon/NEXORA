@@ -14,6 +14,7 @@ import {
   requestSentinelInsight,
   withSentinelAuthRetry,
   type SentinelInsightContext,
+  type SentinelInsightError,
   type SentinelInsightResponse,
   type SentinelProviderFallbackReason,
 } from "@/lib/user-sentinel";
@@ -72,9 +73,10 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
       <p className="sn-gateway-response__answer">{response.answer}</p>
 
       {response.mode === "local-fallback" && response.fallbackReason && (
-        <p className="sn-gateway-response__fallback-reason">
-          Fallback reason: {fallbackReasonCopy[response.fallbackReason]}
-        </p>
+        <div className="sn-gateway-response__fallback-reason" role="status">
+          <strong>Local fallback used</strong>
+          <p>{fallbackReasonCopy[response.fallbackReason]} Sentinel returned a local deterministic response instead. This response is transient.</p>
+        </div>
       )}
 
       <div className="sn-gateway-response__sections">
@@ -111,7 +113,7 @@ export default function SentinelChat({
   const [context, setContext] = useState<SentinelInsightContext>("general");
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
   const [gatewayResponse, setGatewayResponse] = useState<SentinelInsightResponse | null>(null);
-  const [gatewayError, setGatewayError] = useState<string | null>(null);
+  const [gatewayError, setGatewayError] = useState<Pick<SentinelInsightError, "code" | "message"> | null>(null);
   const [showSignInHint, setShowSignInHint] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -187,7 +189,7 @@ export default function SentinelChat({
         setAuthState("anonymous");
         setShowSignInHint(true);
       } else {
-        setGatewayError(details.message);
+        setGatewayError({ code: details.code, message: details.message });
       }
     } finally {
       setIsSubmitting(false);
@@ -198,7 +200,9 @@ export default function SentinelChat({
     ? "Backend gateway ready"
     : authState === "checking"
       ? "Checking session"
-      : "Static preview";
+      : authState === "unavailable"
+        ? "Session check unavailable"
+        : "Static preview";
 
   return (
     <section className="sn-chat" aria-labelledby="sentinel-chat-title">
@@ -219,7 +223,9 @@ export default function SentinelChat({
         <span aria-hidden="true">◇</span>
         {authState === "authenticated"
           ? "Uses bounded, backend-generated NEXORA context"
-          : "Sign in to use bounded NEXORA context"}
+          : authState === "unavailable"
+            ? "Static samples remain available while account access is unavailable"
+            : "Sign in to use bounded NEXORA context"}
         <strong>No conversation saved</strong>
       </p>
 
@@ -255,17 +261,41 @@ export default function SentinelChat({
         {gatewayResponse && <GatewayResponseCard response={gatewayResponse} />}
 
         {showSignInHint && (
-          <div className="sn-gateway-state sn-gateway-state--notice" role="status">
-            <strong>Authenticated gateway preview</strong>
-            <p>Sign in to send this message to the local backend foundation.</p>
-            <Link href="/login">Sign in</Link>
+          <div
+            className={`sn-gateway-state ${authState === "unavailable" ? "sn-gateway-state--unavailable" : "sn-gateway-state--notice"}`}
+            role="status"
+          >
+            <strong>{authState === "unavailable" ? "Session check unavailable" : "Sign in required"}</strong>
+            <p>{authState === "unavailable"
+              ? "The local authentication route could not be reached. Static samples remain available; check the backend server before trying the gateway again."
+              : "This composer uses the authenticated local gateway. Static sample messages remain available, and NEXORA will not save this conversation."}</p>
+            <Link href="/login">{authState === "unavailable" ? "Open sign in" : "Sign in"}</Link>
+          </div>
+        )}
+
+        {authState === "unavailable" && !showSignInHint && (
+          <div className="sn-gateway-state sn-gateway-state--unavailable" role="status">
+            <strong>Session check unavailable</strong>
+            <p>The local authentication route could not be reached. Static samples remain available; check the backend server before using the gateway.</p>
+            <Link href="/login">Open sign in</Link>
           </div>
         )}
 
         {gatewayError && (
           <div className="sn-gateway-state sn-gateway-state--error" role="alert">
-            <strong>Gateway unavailable</strong>
-            <p>{gatewayError}</p>
+            <strong>{gatewayError.code === "rate_limit_exceeded" ? "Request limit reached" : "Gateway unavailable"}</strong>
+            <p>{gatewayError.message} {gatewayError.code === "rate_limit_exceeded" ? "Wait briefly before returning the message to the composer." : "Check the local backend, then return the message to the composer and try again."}</p>
+            {submittedMessage ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(submittedMessage);
+                  setGatewayError(null);
+                }}
+              >
+                Return message to composer
+              </button>
+            ) : null}
           </div>
         )}
       </div>

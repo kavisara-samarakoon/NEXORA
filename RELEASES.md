@@ -4,12 +4,19 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.28.0-premium-ui-motion-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.28.0-premium-ui-motion-polish).
+[`v0.29.0-mobile-responsive-ui-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.29.0-mobile-responsive-ui-polish).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.29.0 mobile responsive UI polish
+## In progress — v0.30.0 product UX quality polish
 
-- Refining the primary Next.js interface across mobile, tablet, and small-screen
+- Improving loading, empty, error, fallback, unavailable, and authentication-
+  required states in the primary Next.js interface. This frontend-focused
+  milestone changes no backend, API, security, deployment readiness, or
+  production status.
+
+## Completed frontend milestone — v0.29.0 mobile responsive UI polish
+
+- Refined the primary Next.js interface across mobile, tablet, and small-screen
   layouts while preserving its Liquid Glass identity and v0.28 motion polish.
   This frontend-only milestone changes no backend, API, security, deployment,
   or production-readiness state.
