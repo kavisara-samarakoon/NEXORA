@@ -215,11 +215,13 @@ function StatusIcon({ icon }: { icon: "down" | "gift" | "signal" }) {
 
 function PriceHistoryPanel({
   itemId,
+  itemTitle,
   onLoad,
   points,
   state,
 }: {
   itemId: number;
+  itemTitle: string;
   onLoad: () => void;
   points: readonly WishlistPriceHistoryPoint[];
   state: PriceHistoryState;
@@ -244,7 +246,6 @@ function PriceHistoryPanel({
     <section
       className={`wl-card__price-history wl-card__price-history--${state}`}
       aria-labelledby={headingId}
-      aria-live="polite"
     >
       <div className="wl-card__price-history-header">
         <div>
@@ -261,7 +262,7 @@ function PriceHistoryPanel({
       {state === "idle" && (
         <div className="wl-card__history-state wl-card__history-state--idle">
           <p>See recent snapshots and how this price is moving.</p>
-          <button type="button" onClick={onLoad}>View history</button>
+          <button type="button" aria-label={`View price history for ${itemTitle}`} onClick={onLoad}>View history</button>
         </div>
       )}
 
@@ -275,12 +276,12 @@ function PriceHistoryPanel({
       {state === "unavailable" && (
         <div className="wl-card__history-state wl-card__history-state--error" role="status">
           <p><strong>Price history unavailable</strong><small>The history route could not be reached. This item and its alert settings still work.</small></p>
-          <button type="button" onClick={onLoad}>Retry history</button>
+          <button type="button" aria-label={`Retry price history for ${itemTitle}`} onClick={onLoad}>Retry history</button>
         </div>
       )}
 
       {state === "loaded" && points.length === 0 && (
-        <div className="wl-card__history-state wl-card__history-state--empty">
+        <div className="wl-card__history-state wl-card__history-state--empty" role="status">
           <strong>No snapshots yet</strong>
           <p>This account item has no recorded observations yet. New snapshots will appear here after they are stored.</p>
         </div>
@@ -288,6 +289,7 @@ function PriceHistoryPanel({
 
       {state === "loaded" && latestPoint && (
         <div className="wl-card__history-content">
+          <p className="sr-only" role="status">Price history loaded for {itemTitle} with {points.length} snapshots.</p>
           <dl className="wl-card__history-stats">
             <div><dt>Latest</dt><dd>{latestPoint.priceLabel}</dd></div>
             <div><dt>Lowest</dt><dd>{lowestPoint?.priceLabel ?? "—"}</dd></div>
@@ -398,6 +400,9 @@ function WishlistCard({
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<WishlistPriceHistoryPoint[]>([]);
   const [priceHistoryState, setPriceHistoryState] = useState<PriceHistoryState>("idle");
+  const titleId = `wishlist-item-title-${item.id}`;
+  const targetHelpId = `wishlist-target-price-help-${item.id}`;
+  const settingsMessageId = `wishlist-settings-message-${item.id}`;
 
   async function loadPriceHistory() {
     if (!authToken || priceHistoryState === "loading") return;
@@ -444,7 +449,7 @@ function WishlistCard({
   }
 
   return (
-    <article className={`wl-card wl-card--${storeClass}`} aria-busy={isDeleting || isUpdating}>
+    <article className={`wl-card wl-card--${storeClass}`} aria-busy={isDeleting || isUpdating} aria-labelledby={titleId}>
       <div className={`wl-card__accent wl-card__accent--${storeClass}`} />
       <div className="wl-card__header">
         <span className={`wl-card__store wl-card__store--${storeClass}`}>{item.store}</span>
@@ -453,7 +458,7 @@ function WishlistCard({
         </span>
       </div>
 
-      <h2>{item.title}</h2>
+      <h2 id={titleId}>{item.title}</h2>
       <div className="wl-card__status-row">
         <span className={`wl-card__status wl-card__status--${item.status}`}>
           <StatusIcon icon={status.icon} />
@@ -476,7 +481,6 @@ function WishlistCard({
       <div
         className={`wl-card__evaluation wl-card__evaluation--${alertEvaluation.state}`}
         aria-label={`Alert evaluation: ${alertEvaluation.message}`}
-        aria-live="polite"
       >
         <span aria-hidden="true">{evaluationIcon(alertEvaluation.state)}</span>
         <strong>{alertEvaluation.message}</strong>
@@ -493,16 +497,19 @@ function WishlistCard({
                 maxLength={255}
                 value={targetPrice}
                 disabled={isUpdating}
+                aria-describedby={`${targetHelpId} ${settingsMessageId}`}
+                aria-invalid={Boolean(validationMessage)}
                 onChange={(event) => {
                   setTargetPrice(event.target.value);
                   if (validationMessage) setValidationMessage(null);
                 }}
               />
-              <button type="submit" disabled={isUpdating}>Save</button>
+              <button type="submit" aria-label={`Save target price for ${item.title}`} disabled={isUpdating}>Save</button>
             </div>
+            <small className="sr-only" id={targetHelpId}>Use a price such as $15.00 or FREE.</small>
           </form>
           <label className="wl-card__priority-field" htmlFor={`wishlist-priority-${item.id}`}>
-            <span>Priority</span>
+            <span>Priority<span className="sr-only"> for {item.title}</span></span>
             <select
               id={`wishlist-priority-${item.id}`}
               value={item.priority}
@@ -524,6 +531,7 @@ function WishlistCard({
       {canManage && (
         <PriceHistoryPanel
           itemId={item.id}
+          itemTitle={item.title}
           onLoad={() => void loadPriceHistory()}
           points={priceHistory}
           state={priceHistoryState}
@@ -535,6 +543,7 @@ function WishlistCard({
           className={`wl-card__view wl-card__view--${storeClass}`}
           type="button"
           disabled
+          aria-label={`View deal for ${item.title} unavailable in this preview`}
           title="Store redirects are planned for a later migration"
         >
           <span aria-hidden="true">↗</span>
@@ -545,6 +554,7 @@ function WishlistCard({
             className={alertIsActive ? "wl-card__edit wl-card__edit--active" : "wl-card__edit"}
             type="button"
             aria-pressed={alertIsActive}
+            aria-label={`${alertIsActive ? "Pause" : "Enable"} alert for ${item.title}`}
             disabled={isUpdating}
             onClick={() => void onUpdateAlert(
               item,
@@ -574,7 +584,8 @@ function WishlistCard({
           : message?.kind === "success"
             ? "wl-card__settings-message wl-card__settings-message--success"
             : "wl-card__settings-message"}
-        role={validationMessage || message?.kind === "error" ? "alert" : "status"}
+        id={settingsMessageId}
+        role={validationMessage || message?.kind === "error" ? "alert" : isUpdating || message?.kind === "success" ? "status" : undefined}
       >
         {validationMessage
           || (isUpdating ? "Saving alert settings…" : message?.text)
@@ -893,7 +904,7 @@ function NotificationPreferencesPanel({
       )}
 
       {loadState === "ready" && draftPreferences && (
-        <form onSubmit={savePreferences}>
+        <form aria-busy={isSaving} onSubmit={savePreferences}>
           <div className="wl-notification-preferences__rows">
             {notificationPreferenceFields.map((field) => (
               <label key={field.key}>
@@ -931,7 +942,7 @@ function NotificationPreferencesPanel({
                 : message?.kind === "success"
                   ? "wl-notification-preferences__message wl-notification-preferences__message--success"
                   : "wl-notification-preferences__message"}
-              role={message?.kind === "error" ? "alert" : "status"}
+              role={message?.kind === "error" ? "alert" : isSaving || message ? "status" : undefined}
             >
               {isSaving ? "Saving preferences to your account…" : message?.text || "Changes are saved only when you use Save."}
             </span>
@@ -1289,7 +1300,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         </div>
       </section>
 
-      <section className={`wl-access-banner wl-access-banner--${view}`} aria-live="polite">
+      <section
+        className={`wl-access-banner wl-access-banner--${view}`}
+        role={view === "checking" || view === "offline" ? "status" : undefined}
+        aria-atomic={view === "checking" || view === "offline" ? true : undefined}
+      >
         <div>
           <strong>
             {isPersonal ? "Personal wishlist" : view === "offline" ? "Wishlist service offline — showing public preview" : view === "checking" ? "Checking your account" : "Public wishlist preview"}
@@ -1336,7 +1351,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             onChange={(event) => setSearchQuery(event.target.value)}
           />
           {searchQuery && (
-            <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")}>
+            <button type="button" aria-label="Clear wishlist search" onClick={() => setSearchQuery("")}>
               <span aria-hidden="true">×</span>
             </button>
           )}

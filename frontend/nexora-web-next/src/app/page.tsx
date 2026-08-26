@@ -63,12 +63,12 @@ export default async function Home() {
       <div className="main-shell">
         <Topbar />
 
-        <main className="dashboard dashboard-home nx-page-reveal">
+        <main className="dashboard dashboard-home nx-page-reveal" id="main-content" tabIndex={-1}>
           <DashboardHero summary={summaryResult.dashboardSummary} />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">
-              <h2 id="giveaways-title">🎁 Live Giveaways</h2>
+              <h2 id="giveaways-title">🎁 {giveawaysResult.source === "api" ? "Giveaway Feed" : "Giveaway Preview"}</h2>
               <Link className="section-heading__action" href="/giveaways">
                 View All <span aria-hidden="true">→</span>
               </Link>

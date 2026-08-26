@@ -37,7 +37,13 @@ export default function LoginForm() {
   }
 
   return (
-    <form className="auth-form" aria-busy={isSubmitting} onSubmit={handleSubmit} onChange={() => setErrorMessage(null)}>
+    <form
+      className="auth-form"
+      aria-busy={isSubmitting}
+      aria-describedby={errorMessage ? "login-form-error" : undefined}
+      onSubmit={handleSubmit}
+      onChange={() => setErrorMessage(null)}
+    >
       <div className="auth-form__field">
         <label htmlFor="login-identifier">Email or username</label>
         <input
@@ -66,9 +72,9 @@ export default function LoginForm() {
         />
       </div>
 
-      <div className="auth-form__message" aria-live="polite">
+      <div className="auth-form__message">
         {errorMessage ? (
-          <div className="auth-form__feedback auth-form__feedback--error" role="alert">
+          <div className="auth-form__feedback auth-form__feedback--error" id="login-form-error" role="alert">
             <span aria-hidden="true">!</span>
             <span><strong>Sign-in failed</strong><small>{errorMessage}</small></span>
           </div>

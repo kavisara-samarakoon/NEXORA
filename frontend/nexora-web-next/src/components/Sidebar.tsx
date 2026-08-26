@@ -3,19 +3,51 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+const mobileNavigationQuery = "(max-width: 780px)";
+
+function subscribeToMobileNavigation(callback: () => void) {
+  const mediaQuery = window.matchMedia(mobileNavigationQuery);
+  mediaQuery.addEventListener("change", callback);
+  return () => mediaQuery.removeEventListener("change", callback);
+}
+
+function mobileNavigationSnapshot() {
+  return window.matchMedia(mobileNavigationQuery).matches;
+}
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
+  const isMobileNavigation = useSyncExternalStore(
+    subscribeToMobileNavigation,
+    mobileNavigationSnapshot,
+    () => false,
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setIsOpen(false);
+      menuButtonRef.current?.focus();
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen]);
 
   return (
     <>
       <button
         className={`menu-toggle${isOpen ? " menu-toggle--open" : ""}`}
+        ref={menuButtonRef}
         type="button"
         aria-label={isOpen ? "Close navigation" : "Open navigation"}
-        aria-controls="primary-navigation"
+        aria-controls="primary-sidebar"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
       >
@@ -27,11 +59,17 @@ export default function Sidebar() {
         className={`sidebar-scrim${isOpen ? " sidebar-scrim--visible" : ""}`}
         type="button"
         aria-label="Close navigation"
-        tabIndex={isOpen ? 0 : -1}
+        aria-hidden="true"
+        tabIndex={-1}
         onClick={() => setIsOpen(false)}
       />
 
-      <aside className={`sidebar${isOpen ? " sidebar--open" : ""}`}>
+      <aside
+        className={`sidebar${isOpen ? " sidebar--open" : ""}`}
+        id="primary-sidebar"
+        aria-hidden={isMobileNavigation && !isOpen ? true : undefined}
+        inert={isMobileNavigation && !isOpen ? true : undefined}
+      >
         <Link className="brand" href="/" onClick={() => setIsOpen(false)}>
           <Image
             className="brand__logo"
@@ -66,7 +104,7 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon" aria-hidden="true">🔥</span>
             Deals
-            <span className="nav-item__badge">24</span>
+            <span className="nav-item__badge" aria-label="24 deal entries">24</span>
           </Link>
           <Link
             className={`nav-item${pathname.startsWith("/giveaways") ? " nav-item--active" : ""}`}
@@ -76,7 +114,7 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon" aria-hidden="true">🎁</span>
             Giveaways
-            <span className="nav-item__badge">7</span>
+            <span className="nav-item__badge" aria-label="7 giveaway entries">7</span>
           </Link>
           <Link
             className={`nav-item${pathname.startsWith("/wishlist") ? " nav-item--active" : ""}`}
@@ -119,15 +157,11 @@ export default function Sidebar() {
         </nav>
 
         <div className="sidebar__footer">
-          <button
-            className="nav-item sidebar__help"
-            type="button"
-            aria-disabled="true"
-            title="Help center coming soon"
-          >
+          <div className="nav-item nav-item--disabled sidebar__help" aria-label="Help and Support, planned and unavailable">
             <span className="nav-item__icon" aria-hidden="true">❓</span>
             Help &amp; Support
-          </button>
+            <span className="nav-item__soon" aria-hidden="true">Planned</span>
+          </div>
           <div className="sidebar__connection">
             <span className="status-dot" aria-hidden="true" />
             <span>

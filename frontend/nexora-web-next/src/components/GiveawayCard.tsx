@@ -3,13 +3,13 @@ import type { Giveaway } from "@/data/dashboard";
 
 export default function GiveawayCard({ giveaway }: { giveaway: Giveaway }) {
   return (
-    <article className={`giveaway-card giveaway-card--${giveaway.platform}`}>
+    <article className={`giveaway-card giveaway-card--${giveaway.platform}`} aria-labelledby={`dashboard-giveaway-${giveaway.id}`}>
       <div className="giveaway-card__accent" />
       <div className="giveaway-card__topline">
         <span className="giveaway-card__platform">{giveaway.platformLabel}</span>
         <span className="giveaway-card__free">Free</span>
       </div>
-      <h3>{giveaway.title}</h3>
+      <h3 id={`dashboard-giveaway-${giveaway.id}`}>{giveaway.title}</h3>
       <p>{giveaway.genre}</p>
 
       <div className="giveaway-card__progress">

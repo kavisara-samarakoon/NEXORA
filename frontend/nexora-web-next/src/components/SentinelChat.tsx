@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ChatMessage } from "@/data/sentinel";
 import {
   AUTH_STATE_EVENT,
@@ -73,7 +73,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
       <p className="sn-gateway-response__answer">{response.answer}</p>
 
       {response.mode === "local-fallback" && response.fallbackReason && (
-        <div className="sn-gateway-response__fallback-reason" role="status">
+        <div className="sn-gateway-response__fallback-reason">
           <strong>Local fallback used</strong>
           <p>{fallbackReasonCopy[response.fallbackReason]} Sentinel returned a local deterministic response instead. This response is transient.</p>
         </div>
@@ -118,6 +118,13 @@ export default function SentinelChat({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authState, setAuthState] = useState<GatewayAuthState>("checking");
+  const composerInputRef = useRef<HTMLInputElement>(null);
+
+  function returnMessageToComposer(message: string) {
+    setDraft(message);
+    setGatewayError(null);
+    window.requestAnimationFrame(() => composerInputRef.current?.focus());
+  }
 
   useEffect(() => {
     let active = true;
@@ -229,7 +236,13 @@ export default function SentinelChat({
         <strong>No conversation saved</strong>
       </p>
 
-      <div className="sn-chat__messages" aria-live="polite">
+      <div
+        className="sn-chat__messages"
+        role="log"
+        aria-label="Sentinel conversation preview"
+        aria-live="polite"
+        aria-relevant="additions text"
+      >
         {messages.map((message) => (
           <div className={`sn-message sn-message--${message.role}`} key={message.id}>
             {message.role === "ai" && <SentinelAvatar />}
@@ -252,9 +265,10 @@ export default function SentinelChat({
         )}
 
         {isSubmitting && (
-          <div className="sn-message sn-message--ai" aria-label="Local gateway is preparing a response">
+          <div className="sn-message sn-message--ai">
             <SentinelAvatar />
             <div className="sn-typing" aria-hidden="true"><span /><span /><span /></div>
+            <span className="sr-only">Sentinel gateway is preparing a response.</span>
           </div>
         )}
 
@@ -263,7 +277,6 @@ export default function SentinelChat({
         {showSignInHint && (
           <div
             className={`sn-gateway-state ${authState === "unavailable" ? "sn-gateway-state--unavailable" : "sn-gateway-state--notice"}`}
-            role="status"
           >
             <strong>{authState === "unavailable" ? "Session check unavailable" : "Sign in required"}</strong>
             <p>{authState === "unavailable"
@@ -274,7 +287,7 @@ export default function SentinelChat({
         )}
 
         {authState === "unavailable" && !showSignInHint && (
-          <div className="sn-gateway-state sn-gateway-state--unavailable" role="status">
+          <div className="sn-gateway-state sn-gateway-state--unavailable">
             <strong>Session check unavailable</strong>
             <p>The local authentication route could not be reached. Static samples remain available; check the backend server before using the gateway.</p>
             <Link href="/login">Open sign in</Link>
@@ -288,10 +301,7 @@ export default function SentinelChat({
             {submittedMessage ? (
               <button
                 type="button"
-                onClick={() => {
-                  setDraft(submittedMessage);
-                  setGatewayError(null);
-                }}
+                onClick={() => returnMessageToComposer(submittedMessage)}
               >
                 Return message to composer
               </button>
@@ -300,18 +310,20 @@ export default function SentinelChat({
         )}
       </div>
 
-      <div className="sn-suggestions" aria-label="Quick suggestions">
+      <div className="sn-suggestions" role="group" aria-label="Quick suggestions">
         {suggestions.map((suggestion) => (
-          <button type="button" key={suggestion} onClick={() => setDraft(suggestion)}>
+          <button type="button" key={suggestion} onClick={() => returnMessageToComposer(suggestion)}>
             {suggestion}
           </button>
         ))}
       </div>
 
-      <form className="sn-chat__composer" onSubmit={submitPreview}>
+      <form className="sn-chat__composer" aria-busy={isSubmitting} onSubmit={submitPreview}>
+        <span className="sr-only" id="sentinel-composer-help">Choose a context, then enter a message. This preview does not save conversations.</span>
         <label className="sr-only" htmlFor="sentinel-context">Insight context</label>
         <select
           id="sentinel-context"
+          aria-describedby="sentinel-composer-help"
           value={context}
           disabled={isSubmitting}
           onChange={(event) => setContext(event.target.value as SentinelInsightContext)}
@@ -323,11 +335,13 @@ export default function SentinelChat({
         <label className="sr-only" htmlFor="sentinel-message">Message Sentinel</label>
         <input
           id="sentinel-message"
+          ref={composerInputRef}
           type="text"
           maxLength={500}
           placeholder="Ask Sentinel about games, deals, giveaways or account security..."
           value={draft}
           disabled={isSubmitting}
+          aria-describedby="sentinel-composer-help"
           onChange={(event) => setDraft(event.target.value)}
         />
         <button

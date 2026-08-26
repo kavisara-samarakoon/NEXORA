@@ -4,12 +4,19 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.29.0-mobile-responsive-ui-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.29.0-mobile-responsive-ui-polish).
+[`v0.30.0-product-ux-quality-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.30.0-product-ux-quality-polish).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.30.0 product UX quality polish
+## In progress — v0.31.0 frontend accessibility review
 
-- Improving loading, empty, error, fallback, unavailable, and authentication-
+- Reviewing keyboard navigation, labels, ARIA semantics, focus visibility,
+  reduced-motion behavior, UX-state announcements, and text readability in the
+  primary Next.js frontend. This accessibility polish changes no backend, API,
+  security posture, deployment readiness, or production status.
+
+## Completed frontend milestone — v0.30.0 product UX quality polish
+
+- Improved loading, empty, error, fallback, unavailable, and authentication-
   required states in the primary Next.js interface. This frontend-focused
   milestone changes no backend, API, security, deployment readiness, or
   production status.

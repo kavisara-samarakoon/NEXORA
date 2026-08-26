@@ -55,9 +55,11 @@ function GiveawayCard({
   const tag = tagDetails(giveaway.tag);
   const isEndingSoon = giveaway.daysRemaining < 2;
   const progressTone = giveaway.claimed >= 80 ? "hot" : giveaway.claimed >= 50 ? "warm" : "cool";
+  const titleId = `giveaway-title-${giveaway.id}`;
+  const guideId = `giveaway-guide-${giveaway.id}`;
 
   return (
-    <article className={`ga-card ga-card--${giveaway.platform}`}>
+    <article className={`ga-card ga-card--${giveaway.platform}`} aria-labelledby={titleId}>
       <div className={`ga-card__accent ga-card__accent--${giveaway.platform}`} />
       <div className="ga-card__header">
         <span className={`ga-card__platform ga-card__platform--${giveaway.platform}`}>
@@ -69,7 +71,7 @@ function GiveawayCard({
         </span>
       </div>
 
-      <h2>{giveaway.title}</h2>
+      <h2 id={titleId}>{giveaway.title}</h2>
       <p className="ga-card__genre">{giveaway.genre}</p>
       <div className="ga-card__price">
         <strong>Free</strong>
@@ -97,7 +99,7 @@ function GiveawayCard({
       </div>
 
       {guideIsOpen && (
-        <div className="ga-card__guide" role="status">
+        <div className="ga-card__guide" id={guideId} role="status">
           {isPreview
             ? `Confirm this preview entry with ${giveaway.platformLabel} before attempting to claim it.`
             : `Open ${giveaway.platformLabel}, sign in, and claim this title before the window closes.`}
@@ -108,7 +110,9 @@ function GiveawayCard({
         <button
           className={`ga-card__claim ga-card__claim--${giveaway.platform}`}
           type="button"
+          aria-controls={guideIsOpen ? guideId : undefined}
           aria-expanded={guideIsOpen}
+          aria-label={`${guideIsOpen ? "Hide" : "Show"} claim guide for ${giveaway.title}`}
           onClick={() => onToggleGuide(giveaway.id)}
         >
           <span aria-hidden="true">📋</span>
@@ -118,6 +122,7 @@ function GiveawayCard({
           className={reminderIsSet ? "ga-card__reminder ga-card__reminder--active" : "ga-card__reminder"}
           type="button"
           aria-pressed={reminderIsSet}
+          aria-label={`${reminderIsSet ? "Remove" : "Add"} local reminder for ${giveaway.title}`}
           onClick={() => onToggleReminder(giveaway.id)}
         >
           <span aria-hidden="true">🔔</span>
@@ -247,7 +252,6 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
         <UxStatePanel
           className="ux-state--compact ga-source-fallback"
           description="The backend giveaway feed could not be reached, so this page is showing bundled preview entries. Dates and availability may not be current."
-          role="status"
           title="Static fallback feed"
           tone="fallback"
         />
@@ -265,7 +269,7 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
             onChange={(event) => setSearchQuery(event.target.value)}
           />
           {searchQuery && (
-            <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")}>
+            <button type="button" aria-label="Clear giveaway search" onClick={() => setSearchQuery("")}>
               <span aria-hidden="true">×</span>
             </button>
           )}
