@@ -66,7 +66,20 @@ class NexoraApiApplicationTests {
         mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
-                .andExpect(jsonPath("$.service").value("NEXORA API"));
+                .andExpect(jsonPath("$.service").value("NEXORA API"))
+                .andExpect(jsonPath("$.milestone")
+                        .value("v0.33.0-runtime-observability-foundation"))
+                .andExpect(jsonPath("$.runtimeMode").value("local-demo"))
+                .andExpect(jsonPath("$.activeProfiles[0]").value("default"))
+                .andExpect(jsonPath("$.dataMode").value("in-memory-demo"))
+                .andExpect(jsonPath("$.sentinelProvider").value("local"))
+                .andExpect(jsonPath("$.notificationProvider").value("log"))
+                .andExpect(jsonPath("$.priceRefreshProvider").value("stored"))
+                .andExpect(jsonPath("$.startedAtUtc").exists())
+                .andExpect(jsonPath("$.checkedAtUtc").exists())
+                .andExpect(jsonPath("$.uptimeSeconds").isNumber())
+                .andExpect(jsonPath("$.checks.application").value("ready"))
+                .andExpect(jsonPath("$.checks.authProductionGuard").value("inactive"));
     }
 
     @Test
