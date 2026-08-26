@@ -11,6 +11,25 @@ The examples demonstrate implemented behavior; they are not production
 deployment or penetration-testing instructions. For endpoint-by-endpoint
 details, see [`API_CONTRACT.md`](API_CONTRACT.md).
 
+## Quick automated smoke test
+
+With the backend already running, execute the local-only
+[`api-smoke-test.sh`](../../scripts/api-smoke-test.sh) from the repository root:
+
+```bash
+scripts/api-smoke-test.sh
+```
+
+The script verifies a safe subset of the documented public, CSRF/auth,
+protected, Sentinel, and shared-error behavior. It generates a fake reviewer
+identity, masks access-token output, uses a temporary cookie jar, and requires
+no `jq`. See the [scripts guide](../../scripts/README.md) for safety controls and
+environment options.
+
+The manual curl flow below remains useful for learning each request, inspecting
+responses, and debugging a failed smoke-test step. The script does not start
+the backend automatically.
+
 ## Prerequisites
 
 - Java 17 or newer

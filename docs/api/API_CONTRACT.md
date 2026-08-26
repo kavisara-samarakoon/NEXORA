@@ -6,11 +6,11 @@ This document describes the backend HTTP contract implemented by the Spring
 Boot application in `backend/nexora-api`. It is intended for reviewers,
 lecturers, repository visitors, and future developers.
 
-The contract is source-aligned as of the in-progress
-`v0.35.0-api-contract-documentation-foundation` milestone. The latest stable
-development milestone remains `v0.34.0-api-error-contract-foundation` until
-v0.35 is merged. This is documentation for a local/development MVP, not a
-production API specification or availability commitment.
+The contract was established by the completed
+`v0.35.0-api-contract-documentation-foundation` milestone, which remains the
+latest stable development milestone while v0.36 is in progress. This is
+documentation for a local/development MVP, not a production API specification
+or availability commitment.
 
 Authoritative implementation sources include the controllers under
 `backend/nexora-api/src/main/java/com/nexora/api`,
@@ -363,4 +363,7 @@ among other decisions:
   deployment model are deliberately reviewed.
 
 For a local copyable walkthrough, see
-[`REVIEWER_API_TESTING.md`](REVIEWER_API_TESTING.md).
+[`REVIEWER_API_TESTING.md`](REVIEWER_API_TESTING.md). For a repeatable safe
+subset of that flow, run the repository's
+[`api-smoke-test.sh`](../../scripts/api-smoke-test.sh) after starting the
+backend.
