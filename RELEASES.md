@@ -7,9 +7,17 @@ The latest stable development tag is
 [`v0.30.0-product-ux-quality-polish`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.30.0-product-ux-quality-polish).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.31.0 frontend accessibility review
+## In progress — v0.32.0 production profile safety foundation
 
-- Reviewing keyboard navigation, labels, ARIA semantics, focus visibility,
+- Added production-profile startup checks that fail closed for unsafe core auth
+  secrets, refresh/CSRF cookie settings, CSRF enablement, and trusted origins.
+  Default and `dev` behavior remain unchanged. This backend safety foundation
+  changes no API, migration, dependency, workflow, or deployment configuration
+  and makes no production-readiness claim.
+
+## Completed frontend milestone — v0.31.0 frontend accessibility review
+
+- Improved keyboard navigation, labels, ARIA semantics, focus visibility,
   reduced-motion behavior, UX-state announcements, and text readability in the
   primary Next.js frontend. This accessibility polish changes no backend, API,
   security posture, deployment readiness, or production status.

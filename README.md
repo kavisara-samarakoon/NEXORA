@@ -35,7 +35,9 @@ security controls, and testable optional integrations.
   wishlists, alerts, notification preferences, and price targets.
 - Security work is visible in the repository: browser auth controls,
   refresh-token rotation, safe auth security events, local abuse controls, and
-  retention cleanup all have documented limits.
+  retention cleanup all have documented limits. The `prod` and `production`
+  profiles also fail startup when core auth secrets, secure-cookie settings, or
+  trusted origins retain unsafe local values.
 - Experimental capabilities are labelled honestly. Local foundations are not
   presented as production operations or compliance controls.
 
@@ -246,6 +248,33 @@ Open [http://localhost:3000](http://localhost:3000).
 | `NEXORA_REFRESH_TOKEN_HASH_SECRET` | Backend | HMAC secret for stored refresh-token hashes; generate a separate local value |
 | `NEXORA_JWT_EXPIRATION_MINUTES` | Backend | Access-token lifetime; default is 60 minutes |
 
+### Production-profile safety foundation
+
+When either `prod` or `production` is active, the backend performs an early,
+fail-closed check of core authentication configuration. It rejects missing,
+short, coupled, local-default, or obvious placeholder JWT and refresh-token hash
+secrets; insecure refresh/CSRF cookies; disabled CSRF protection; an unsafe
+refresh-cookie path; and missing, wildcard, local, development-port, or
+non-HTTPS trusted origins. Failure messages identify property names without
+printing configured secret values.
+
+An illustrative environment checklist is:
+
+```text
+SPRING_PROFILES_ACTIVE=production
+NEXORA_JWT_SECRET=<strong external secret of at least 48 bytes>
+NEXORA_REFRESH_TOKEN_HASH_SECRET=<separate strong external secret of at least 48 bytes>
+NEXORA_REFRESH_TOKEN_COOKIE_SECURE=true
+NEXORA_AUTH_CSRF_COOKIE_SECURE=true
+NEXORA_AUTH_CSRF_ENABLED=true
+NEXORA_AUTH_TRUSTED_ORIGINS=https://your-frontend-domain.example
+```
+
+These are placeholders, not deployable values. The guard does not create a
+production configuration, select persistent storage, configure HTTPS or a
+reverse proxy, or make NEXORA production-ready. Default and `dev` startup keep
+their existing local-development behavior.
+
 Price refresh and notifications use safe defaults:
 
 ```properties
@@ -325,10 +354,11 @@ availability, scale, security-assurance, or compliance claim.
   Review workflows are included, while repository secret scanning/push
   protection remain owner-managed settings and Maven dependency output remains
   visibility rather than a full vulnerability scan.
-- Access tokens are memory-first and the refresh token uses an HttpOnly cookie,
-  but production cookie/CORS/origin/proxy policy, complete revocation/session
-  controls, account verification, recovery, and operational auditing remain
-  incomplete.
+- Access tokens are memory-first and the refresh token uses an HttpOnly cookie.
+  The v0.32 production-profile gate rejects a narrow set of unsafe startup
+  values, but complete cookie/CORS/origin/proxy policy, persistent production
+  session storage, revocation controls, account verification, recovery, and
+  operational auditing remain incomplete.
 - Scheduled refresh is single-process and has no distributed lock or production
   scheduling guarantees.
 - CheapShark coverage and conservative title/store matching cannot resolve every

@@ -3,13 +3,14 @@
 ## 1. Purpose and status
 
 This document defines the authentication, session, CSRF, CORS, cookie, secret,
-and operational decisions NEXORA must review before any real deployment. It is
-a production-policy planning artifact only: it changes no runtime behavior,
-configuration defaults, API contract, database schema, dependency, or
-deployment workflow.
+and operational decisions NEXORA must review before any real deployment. It
+originated as a production-policy planning artifact. v0.32 implements only the
+bounded startup checks identified below; the rest remains planning. The
+milestone changes no API contract, database schema, dependency, or deployment
+workflow.
 
-NEXORA remains a local/development MVP and is not production-ready. Completing
-this document is not the same as implementing or validating its controls. A
+NEXORA remains a local/development MVP and is not production-ready. The startup
+guard is not equivalent to implementing or validating this complete policy. A
 deployment owner and security reviewer must resolve the open topology and
 operations decisions, implement the selected policy, and complete the go/no-go
 checklist before any production use.
@@ -74,11 +75,18 @@ The following controls exist today:
   or hash, CSRF token, cookie, `Origin`/`Referer`, IP address, user agent, API or
   provider key, SMTP credential, or database credential. They reset on restart
   and do not coordinate across processes.
+- When `prod` or `production` is active, an early startup guard rejects local,
+  short, missing, or obvious placeholder auth secrets; insecure refresh/CSRF
+  cookie settings; an unsafe refresh-cookie path; disabled CSRF protection; and
+  missing, wildcard, local/development, or non-HTTPS trusted origins. Failures
+  name configuration properties without including secret values. Default and
+  `dev` profiles do not enforce this production-only policy.
 
-These are local-development foundations, not assurance that the application is
-safe for Internet exposure. There is no production profile, deployed topology,
-secret manager, reverse-proxy policy, operations guide, or security monitoring
-integration.
+These are local-development foundations plus one production-profile startup
+gate, not assurance that the application is safe for Internet exposure. There
+is no complete production configuration, deployed topology, persistent
+production store selection, secret manager, reverse-proxy policy, operations
+guide, or security monitoring integration.
 
 Repository CodeQL remains manual-only until code scanning is enabled/available;
 these local authentication foundations do not change that workflow policy.
@@ -86,15 +94,20 @@ these local authentication foundations do not change that workflow policy.
 ## 3. Required production environment and secret policy
 
 Before deployment, NEXORA must have a dedicated production configuration that
-fails closed instead of inheriting local defaults.
+fails closed instead of inheriting local defaults. v0.32 begins this work by
+validating core auth settings whenever `prod` or `production` is active. It
+does not create a production properties file or resolve the remaining database,
+topology, proxy, and operations requirements.
 
 Required policy:
 
 - A production profile must use persistent PostgreSQL user and refresh-session
   stores. It must never select the default in-memory stores.
-- Production startup must fail when a required secret, database setting,
-  trusted-origin allowlist, or secure-cookie setting is absent, empty, invalid,
-  or still equal to a local placeholder.
+- Production startup now fails when the JWT/refresh hash secret,
+  trusted-origin allowlist, refresh-cookie scope/Secure setting, or CSRF
+  enabled/Secure setting is absent, invalid, or still local/placeholder. A
+  future production configuration must extend fail-closed validation to the
+  required persistent database and other selected deployment settings.
 - The JWT signing secret must be cryptographically strong, unique to the
   environment, externally managed, revocable/rotatable, and never use the
   repository default.
@@ -131,6 +144,12 @@ their values in this repository:
 | `NEXORA_REFRESH_TOKEN_COOKIE_SAME_SITE` | Explicit value selected for the deployed site topology |
 | `NEXORA_AUTH_CSRF_COOKIE_SAME_SITE` | Explicit value aligned with the deployed site topology |
 | Provider, SMTP, or Gemini variables | Present only when the corresponding capability is deliberately enabled; external secrets only |
+
+The current startup guard enforces both auth secrets at a minimum of 48 bytes,
+the two Secure flags, CSRF enablement, the existing `/api/auth` refresh-cookie
+path, and exact HTTPS non-local trusted origins. The values above remain an
+environment review checklist, not a claim that the rest of production
+configuration or operations exists.
 
 Other authentication settings—including access-token lifetime, refresh-token
 maximum age, cookie names/paths, CSRF lifetime, and proxy handling—must also be
@@ -262,8 +281,12 @@ or explicit risk decisions:
 
 ## 8. Testing checklist before deployment
 
-- [ ] Unit-test production configuration validation and fail-closed startup for
-      absent, placeholder, coupled, or invalid secrets/settings.
+- [x] Unit-test the v0.32 fail-closed guard for inactive profiles, absent/local/
+      placeholder/short/coupled auth secrets, secure-cookie and CSRF settings,
+      trusted origins, aggregated messages, and secret-value non-disclosure.
+- [ ] Extend production configuration validation to persistent-store selection,
+      database requirements, and remaining deployment settings once the
+      topology and operations design is approved.
 - [ ] Unit-test refresh and CSRF cookie issuance and clearing attributes,
       including `Secure`, `HttpOnly`, `SameSite`, path, maximum age, and domain
       absence.

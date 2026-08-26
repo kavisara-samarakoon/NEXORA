@@ -18,11 +18,48 @@ the `dev` profile · Not documented as production-ready
 | --- | --- |
 | Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, alert history, price history, and notification preferences are held in memory. CheapShark external deals remain available on demand. |
 | `dev` | Enables PostgreSQL, Flyway V1–V10, Spring Data JPA, persisted catalog/account/refresh-session/auth-security-event/wishlist/alert/price-history/notification-preference data, and the optional wishlist refresh scheduler. |
+| `prod` / `production` | Activates early production auth-configuration safety checks. It does not provide a production datasource, deployment configuration, or operational hardening. |
 
 The default profile is useful for UI development and tests. Restarting it
 clears accounts and personal wishlist changes. The `dev` profile validates JPA
 mappings against the migrated schema with `ddl-auto=validate`; Hibernate does
 not create or modify tables.
+
+### Production-profile startup guard
+
+The v0.32 safety guard runs before normal application singletons when any active
+profile is exactly `prod` or `production`. It collects unsafe settings into one
+startup exception, names the affected properties, and never includes configured
+secret values. It requires:
+
+- independent externally supplied JWT and refresh-token hash secret values of
+  at least 48 bytes, with local defaults and obvious local/test/placeholders
+  rejected;
+- `NEXORA_REFRESH_TOKEN_COOKIE_SECURE=true` and the existing `/api/auth`
+  refresh-cookie scope;
+- `NEXORA_AUTH_CSRF_ENABLED=true` and
+  `NEXORA_AUTH_CSRF_COOKIE_SECURE=true`; and
+- one or more exact HTTPS trusted origins with no wildcard, localhost,
+  loopback/any-address host, or common local development port.
+
+Example configuration shape only:
+
+```text
+SPRING_PROFILES_ACTIVE=production
+NEXORA_JWT_SECRET=<strong external secret of at least 48 bytes>
+NEXORA_REFRESH_TOKEN_HASH_SECRET=<separate strong external secret of at least 48 bytes>
+NEXORA_REFRESH_TOKEN_COOKIE_SECURE=true
+NEXORA_AUTH_CSRF_COOKIE_SECURE=true
+NEXORA_AUTH_CSRF_ENABLED=true
+NEXORA_AUTH_TRUSTED_ORIGINS=https://your-frontend-domain.example
+```
+
+Do not use the placeholder values above as configuration. The guard is a safety
+foundation, not a production profile implementation: production still needs a
+persistent database/session-store decision, managed secrets, HTTPS and reviewed
+proxy behavior, deployment and rollback procedures, monitoring, incident
+response, and broader operational hardening. Default and `dev` behavior remain
+unchanged.
 
 ## Quick start
 
@@ -235,7 +272,9 @@ maximum age, and `Secure=false` for local HTTP only.
 
 The bundled JWT and refresh-token hash secrets are local-only. Override
 `NEXORA_JWT_SECRET` and `NEXORA_REFRESH_TOKEN_HASH_SECRET` in every shared or
-deployed environment. The primary frontend now uses the refresh endpoint for
+deployed environment. A `prod`/`production` startup additionally rejects those
+defaults, secrets shorter than 48 bytes, and obvious placeholder values. The
+primary frontend now uses the refresh endpoint for
 session bootstrap, keeps access tokens in memory, and continues to send Bearer
 headers to protected APIs. Spring Security's general-purpose CSRF support stays
 disabled because these APIs are stateless; the focused auth-route guard runs
@@ -678,10 +717,11 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 - Docker Compose provides local PostgreSQL only; there is no backend application
   image or production container workflow. The optional devcontainer supplies a
   local toolchain only.
-- The backend refresh-session foundation is not a complete production browser
-  session design. Local CSRF/trusted-origin checks are implemented, but the
-  production CORS/cookie/origin/proxy policy is not reviewed, and session-family
-  reuse response is intentionally basic.
+- The production-profile guard fails closed for a bounded set of unsafe auth
+  secrets, cookies, and origins. It does not provide persistent production
+  stores or a complete browser-session design. The full CORS/cookie/origin/proxy
+  policy is not reviewed, and session-family reuse response is intentionally
+  basic.
 - Authentication still has no account verification, password recovery, roles,
   OAuth, production distributed rate limiting, credential-stuffing/bot defense,
   session list, or revoke-all workflow. The local abuse counters reset on

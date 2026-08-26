@@ -47,6 +47,12 @@ time is guaranteed while the project remains a development MVP.
 - Focused local-development CSRF/trusted-origin checks for register, login,
   refresh, and logout using a `SecureRandom` double-submit token, explicit
   origin allowlist, and restricted credentialed CORS headers.
+- Production-profile startup safety guard for `prod` and `production`. It fails
+  closed when core auth secrets remain missing, short, coupled, local,
+  test-like, or placeholder values; secure refresh/CSRF cookie settings are
+  disabled; the refresh cookie is overly broad; or trusted origins are missing,
+  wildcard, local/development, or non-HTTPS. Exceptions name properties without
+  exposing configured secret values.
 - Best-effort auth security-event recording for register, login, refresh,
   logout, and auth-route rejection outcomes. It stores only typed safe metadata,
   uses bounded in-memory retention by default, and persists through Flyway V10
@@ -89,15 +95,17 @@ The historical migration roadmap is documented in
 The current production decisions and go/no-go requirements are defined in the
 [`auth production-policy plan`](docs/security/auth-production-policy-plan.md).
 The backend and frontend refresh-session foundations are implemented for local
-development, but the production policy is planned rather than implemented.
+development. v0.32 implements only an initial production-profile startup gate;
+the broader production policy and operations remain unimplemented.
 
 - Active access tokens are held in frontend memory and legacy `localStorage`
   tokens are removed. Protected APIs still use Bearer access tokens.
 - Local CSRF cookie/header and trusted `Origin`/`Referer` validation now protects
   cookie-sensitive auth routes. Localhost trusted origins and the current
   `Secure=false` refresh/CSRF cookie defaults support local HTTP only; they are
-  not production settings. The no-origin curl/test allowance, reverse-proxy
-  assumptions, and complete production CORS/cookie policy remain unimplemented.
+  not production settings and are rejected if `prod` or `production` is active.
+  The no-origin curl/test allowance, reverse-proxy assumptions, and complete
+  production CORS/cookie policy remain unimplemented.
 - Account verification, password recovery, a complete session-wide revocation
   policy, and comprehensive security monitoring are not implemented.
 - Auth security events intentionally exclude passwords, submitted login
@@ -115,8 +123,10 @@ development, but the production policy is planned rather than implemented.
   Production still requires bot and credential-stuffing defenses, distributed
   limiting, monitoring, alerting, privacy/retention policy, and an
   incident-response workflow.
-- There is no deployed production environment, production secret-management
-  setup, production monitoring/SIEM integration, or production operations guide.
+- The startup gate does not provide a deployed production environment,
+  persistent production session store, managed-secret integration, HTTPS/proxy
+  configuration, production monitoring/SIEM integration, incident response, or
+  a production operations guide.
 - Repository secret scanning, push protection, private vulnerability reporting,
   code-scanning alert policy, and required checks must be enabled and reviewed
   through GitHub repository settings where available.
