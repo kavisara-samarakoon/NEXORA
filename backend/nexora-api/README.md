@@ -79,7 +79,10 @@ service health response.
 The source-aligned [backend API contract](../../docs/api/API_CONTRACT.md)
 documents public/protected routes, request/response records, local default and
 `dev` PostgreSQL modes, authentication, CSRF/origin checks, refresh cookies,
-and the shared error contract. The
+and the shared error contract. A hand-maintained
+[OpenAPI 3.1 contract](../../docs/api/openapi.yaml) provides a structured route
+and schema reference, with scope and maintenance guidance in the
+[OpenAPI contract guide](../../docs/api/OPENAPI_CONTRACT.md). The
 [reviewer API testing guide](../../docs/api/REVIEWER_API_TESTING.md) provides a
 localhost-only curl walkthrough without requiring `jq`, PostgreSQL, or optional
 providers.
@@ -90,8 +93,9 @@ backend. The [scripts guide](../../scripts/README.md) documents its prerequisite
 environment controls, covered routes, and safe failure behavior. The manual
 reviewer guide remains the detailed learning and troubleshooting path.
 
-These documents describe the current source; they do not add Swagger/OpenAPI,
-change runtime behavior, or imply production readiness.
+The OpenAPI file is documentation/contract only. These documents do not add
+Swagger UI or runtime generation, change backend behavior, or imply production
+readiness.
 
 ### Runtime health and startup summary
 

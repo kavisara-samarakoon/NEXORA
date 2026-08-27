@@ -6,11 +6,12 @@ This document describes the backend HTTP contract implemented by the Spring
 Boot application in `backend/nexora-api`. It is intended for reviewers,
 lecturers, repository visitors, and future developers.
 
-The contract was established by the completed
-`v0.35.0-api-contract-documentation-foundation` milestone, which remains the
-latest stable development milestone while v0.36 is in progress. This is
-documentation for a local/development MVP, not a production API specification
-or availability commitment.
+The human-readable contract was established by the completed
+`v0.35.0-api-contract-documentation-foundation` milestone. The in-progress
+`v0.38.0-openapi-contract-foundation` adds a hand-maintained OpenAPI companion;
+`v0.37.0-api-smoke-ci-foundation` remains the latest stable development
+milestone until v0.38 is merged. This is documentation for a local/development
+MVP, not a production API specification or availability commitment.
 
 Authoritative implementation sources include the controllers under
 `backend/nexora-api/src/main/java/com/nexora/api`,
@@ -30,7 +31,7 @@ the documentation should be corrected.
 | Default storage | In-memory local/demo services; state resets when the backend restarts |
 | Optional persisted mode | PostgreSQL through the Spring `dev` profile |
 | API versioning | No version prefix is currently implemented |
-| Generated schema | No Swagger/OpenAPI dependency or generated contract is currently provided |
+| OpenAPI schema | [`openapi.yaml`](openapi.yaml) is hand-maintained; no Swagger/OpenAPI runtime dependency or generated contract is provided |
 
 “Foundation” means the behavior exists and is testable in local development.
 It does not imply production-scale security, support, uptime, or operations.
@@ -193,8 +194,8 @@ distributed production rate limiting.
 | GET | `/api/sentinel/demo` | Public | Static Sentinel preview content and capability/status cards | None | `200`; messages, suggestions, capabilities, system status | `internal_error` for unexpected failure | Demo content does not perform wishlist actions. |
 
 The health response currently uses milestone label
-`v0.33.0-runtime-observability-foundation`; v0.35 does not change that runtime
-field.
+`v0.33.0-runtime-observability-foundation`; later documentation and smoke-CI
+milestones, including v0.38, do not change that runtime field.
 
 ## Public catalog and demo endpoints
 
@@ -359,10 +360,13 @@ among other decisions:
 - account verification, recovery, support, privacy, and retention policies;
 - production provider reliability, notification-delivery, and AI safety
   controls; and
-- generated OpenAPI/hosted documentation only after the runtime contract and
-  deployment model are deliberately reviewed.
+- automated OpenAPI validation, generated clients, Swagger UI/runtime docs, or
+  hosted documentation only after their maintenance, security, and deployment
+  boundaries are deliberately reviewed.
 
-For a local copyable walkthrough, see
+The hand-maintained [`openapi.yaml`](openapi.yaml) complements this explanatory
+contract; see [`OPENAPI_CONTRACT.md`](OPENAPI_CONTRACT.md) for its scope and
+limitations. For a local copyable walkthrough, see
 [`REVIEWER_API_TESTING.md`](REVIEWER_API_TESTING.md). For a repeatable safe
 subset of that flow, run the repository's
 [`api-smoke-test.sh`](../../scripts/api-smoke-test.sh) after starting the

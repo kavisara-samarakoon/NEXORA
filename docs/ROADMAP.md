@@ -6,9 +6,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.37 API Smoke CI foundation by starting the
-  backend locally in GitHub Actions, waiting for health, running the existing
-  smoke script, and retaining backend logs for pull-request debugging.
+- Complete the in-progress v0.38 OpenAPI contract foundation with a
+  hand-maintained, source-aligned OpenAPI 3.1 route and schema reference.
+- Keep the completed v0.37 API Smoke CI foundation as the latest stable
+  milestone until v0.38 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -20,6 +21,17 @@ project's academic, portfolio, and product goals evolve.
   accessibility review after the v0.31 frontend polish; this work does not
   change backend, API, security, deployment readiness, or production status.
 - Keep the retained Vite prototype clearly separated from the primary product.
+
+## API contract tooling
+
+- Consider automated OpenAPI validation only after choosing how the
+  hand-maintained contract will be compared with source and runtime behavior.
+- Consider generated clients only after contract stability, versioning, and
+  ownership expectations are defined.
+- Add Swagger UI or runtime-generated API documentation only after a separate
+  dependency, exposure, and security review.
+- Consider a maintained Postman collection or import workflow later; the
+  manual curl guide and smoke script remain the current executable examples.
 
 ## Product UX improvements
 
@@ -50,9 +62,6 @@ project's academic, portfolio, and product goals evolve.
 - Add deployment automation only after those decisions are reviewed.
 - Design deployed staging smoke tests only after an approved staging topology,
   test-account lifecycle, secret boundary, and ownership model exist.
-- Consider generated OpenAPI and hosted API documentation only after the
-  maintained source contract, versioning approach, and deployment boundary are
-  reviewed. They are not part of v0.37.
 - Add broader end-to-end/browser testing only after its scenarios, runtime
   cost, and ownership are defined; the API Smoke CI foundation is API-only.
 - Write production deployment and operational runbooks only after a target

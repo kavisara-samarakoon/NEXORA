@@ -1,0 +1,1390 @@
+openapi: 3.1.0
+info:
+  title: NEXORA Backend API
+  version: 0.38.0
+  description: >-
+    Hand-maintained, source-aligned contract for local/development reviewer
+    validation. This file describes the current Spring Boot API; it is not
+    generated runtime documentation and does not add Swagger UI.
+servers:
+  - url: http://localhost:8080
+    description: Local Spring Boot backend
+tags:
+  - name: Home
+  - name: Health
+  - name: Catalog
+  - name: Dashboard
+  - name: Security
+  - name: Sentinel
+  - name: Authentication
+  - name: Wishlist
+  - name: Notifications
+
+paths:
+  /api:
+    get:
+      operationId: getApiWelcome
+      tags: [Home]
+      summary: Get API welcome metadata
+      responses:
+        "200":
+          description: API welcome metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WelcomeResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/health:
+    get:
+      operationId: getRuntimeHealth
+      tags: [Health]
+      summary: Get the safe runtime and configuration summary
+      responses:
+        "200":
+          description: Current local runtime summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/deals:
+    get:
+      operationId: listDeals
+      tags: [Catalog]
+      summary: List active curated deals
+      responses:
+        "200":
+          description: Active deal records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Deal"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/deals/external:
+    get:
+      operationId: listExternalDeals
+      tags: [Catalog]
+      summary: Fetch external deals with curated fallback
+      parameters:
+        - name: title
+          in: query
+          required: false
+          description: Optional title filter.
+          schema:
+            type: string
+            maxLength: 80
+        - name: pageSize
+          in: query
+          required: false
+          description: Requested result count, clamped to the configured maximum.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: upperPrice
+          in: query
+          required: false
+          description: Optional exclusive positive upper-price filter.
+          schema:
+            type: number
+            format: double
+            exclusiveMinimum: 0
+      responses:
+        "200":
+          description: External or fallback deal records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Deal"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/giveaways:
+    get:
+      operationId: listGiveaways
+      tags: [Catalog]
+      summary: List active giveaways
+      responses:
+        "200":
+          description: Active giveaway records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Giveaway"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/wishlist:
+    get:
+      operationId: listPublicWishlist
+      tags: [Wishlist]
+      summary: List the public demo wishlist
+      responses:
+        "200":
+          description: Public demo wishlist records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WishlistItem"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [Dashboard]
+      summary: Get public catalog and demo-wishlist summary counts
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/security/status:
+    get:
+      operationId: getSecurityStatus
+      tags: [Security]
+      summary: Get static security-center demo data
+      responses:
+        "200":
+          description: Security-center presentation data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityStatusResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/sentinel/status:
+    get:
+      operationId: getSentinelStatus
+      tags: [Sentinel]
+      summary: Get Sentinel provider-foundation status
+      responses:
+        "200":
+          description: Safe Sentinel status labels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SentinelStatusResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/sentinel/demo:
+    get:
+      operationId: getSentinelDemo
+      tags: [Sentinel]
+      summary: Get static Sentinel preview content
+      responses:
+        "200":
+          description: Sentinel preview messages and cards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SentinelDemoResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/auth/csrf:
+    get:
+      operationId: issueAuthCsrfToken
+      tags: [Authentication]
+      summary: Issue a CSRF token and matching readable cookie
+      responses:
+        "200":
+          description: CSRF token body and matching CSRF Set-Cookie header
+          headers:
+            Set-Cookie:
+              description: Locally issues the readable nexora_csrf_token cookie.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthCsrfTokenResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/auth/register:
+    post:
+      operationId: registerAccount
+      tags: [Authentication]
+      summary: Register a local account and issue access and refresh credentials
+      description: >-
+        Requires the CSRF header value to match the CSRF cookie. Origin or
+        Referer is also checked when supplied.
+      security:
+        - CsrfTokenHeader: []
+          CsrfCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/AuthSessionCreated"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/CsrfError"
+        "409":
+          $ref: "#/components/responses/AccountConflict"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/auth/login:
+    post:
+      operationId: loginAccount
+      tags: [Authentication]
+      summary: Authenticate by email or username
+      description: >-
+        Requires the CSRF header value to match the CSRF cookie. Origin or
+        Referer is also checked when supplied.
+      security:
+        - CsrfTokenHeader: []
+          CsrfCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthSessionCreated"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationFailed"
+        "403":
+          $ref: "#/components/responses/CsrfError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/auth/refresh:
+    post:
+      operationId: refreshAuthSession
+      tags: [Authentication]
+      summary: Rotate a refresh session and issue a new access token
+      description: >-
+        Requires the refresh cookie and a matching CSRF header/cookie pair.
+        Origin or Referer is also checked when supplied.
+      security:
+        - CsrfTokenHeader: []
+          CsrfCookie: []
+          RefreshCookie: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthSessionCreated"
+        "401":
+          $ref: "#/components/responses/AuthenticationFailed"
+        "403":
+          $ref: "#/components/responses/CsrfError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/auth/logout:
+    post:
+      operationId: logoutAuthSession
+      tags: [Authentication]
+      summary: Revoke the presented refresh session and clear its cookie
+      description: >-
+        Requires a matching CSRF header/cookie pair. A presented refresh cookie
+        is revoked; logout remains safe when no refresh session is present.
+        Origin or Referer is also checked when supplied.
+      security:
+        - CsrfTokenHeader: []
+          CsrfCookie: []
+      responses:
+        "204":
+          description: Logout completed; the refresh cookie is cleared
+          headers:
+            Set-Cookie:
+              description: Clears the nexora_refresh_token cookie.
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/CsrfError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/auth/me:
+    get:
+      operationId: getCurrentAccount
+      tags: [Authentication]
+      summary: Get the current authenticated account
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current account-safe fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/wishlist:
+    get:
+      operationId: listCurrentUserWishlist
+      tags: [Wishlist]
+      summary: List active wishlist items owned by the current account
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Account-owned wishlist records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WishlistItem"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: addCurrentUserWishlistItem
+      tags: [Wishlist]
+      summary: Add an item to the current account wishlist
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddWishlistItemRequest"
+      responses:
+        "201":
+          description: Created or reactivated account-owned wishlist item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/wishlist/alert-events:
+    get:
+      operationId: listCurrentUserWishlistAlertEvents
+      tags: [Wishlist]
+      summary: List account-owned target-reached alert history
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Wishlist alert events ordered newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WishlistAlertEventResponse"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/wishlist/{id}/price-history:
+    get:
+      operationId: listCurrentUserWishlistPriceHistory
+      tags: [Wishlist]
+      summary: List recent price snapshots for an owned wishlist item
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/WishlistItemId"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of recent snapshots.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 90
+            default: 30
+      responses:
+        "200":
+          description: Recent account-owned price-history points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WishlistPriceHistoryPoint"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "404":
+          $ref: "#/components/responses/WishlistItemNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/wishlist/{id}/alert:
+    patch:
+      operationId: updateCurrentUserWishlistAlert
+      tags: [Wishlist]
+      summary: Update alert settings for an owned wishlist item
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/WishlistItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWishlistAlertRequest"
+      responses:
+        "200":
+          description: Updated account-owned wishlist item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "404":
+          $ref: "#/components/responses/WishlistItemNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/wishlist/{id}:
+    delete:
+      operationId: deleteCurrentUserWishlistItem
+      tags: [Wishlist]
+      summary: Soft-delete an owned active wishlist item
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/WishlistItemId"
+      responses:
+        "204":
+          description: Wishlist item deleted
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "404":
+          $ref: "#/components/responses/WishlistItemNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/notification-preferences:
+    get:
+      operationId: getCurrentUserNotificationPreferences
+      tags: [Notifications]
+      summary: Get notification preferences for the current account
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Complete current notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferenceResponse"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateCurrentUserNotificationPreferences
+      tags: [Notifications]
+      summary: Partially update current account notification preferences
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationPreferenceRequest"
+      responses:
+        "200":
+          description: Complete updated notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferenceResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/sentinel/insight:
+    post:
+      operationId: requestCurrentUserSentinelInsight
+      tags: [Sentinel]
+      summary: Request bounded guidance using account-scoped context
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SentinelInsightRequest"
+      responses:
+        "200":
+          description: Bounded Sentinel guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SentinelInsightResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer access token returned by register, login, or refresh.
+    CsrfTokenHeader:
+      type: apiKey
+      in: header
+      name: X-NEXORA-CSRF
+      description: Must match the value in the local CSRF cookie.
+    CsrfCookie:
+      type: apiKey
+      in: cookie
+      name: nexora_csrf_token
+      description: Readable double-submit cookie issued by GET /api/auth/csrf.
+    RefreshCookie:
+      type: apiKey
+      in: cookie
+      name: nexora_refresh_token
+      description: HttpOnly refresh-session cookie used by refresh and logout.
+
+  parameters:
+    WishlistItemId:
+      name: id
+      in: path
+      required: true
+      description: Wishlist item identifier.
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    AuthSessionCreated:
+      description: Access-token response with an issued or rotated refresh cookie
+      headers:
+        Set-Cookie:
+          description: Issues the HttpOnly nexora_refresh_token cookie.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthResponse"
+    ValidationError:
+      description: Request validation failed (`validation_failed`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    AuthenticationRequired:
+      description: A valid bearer token is required (`authentication_required`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    AuthenticationFailed:
+      description: Authentication or refresh-session validation failed (`authentication_failed`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    CsrfError:
+      description: CSRF or trusted-origin validation failed (`csrf_failed`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    AccountConflict:
+      description: The account email or username already exists (`account_conflict`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    WishlistItemNotFound:
+      description: The owned active wishlist item was not found (`wishlist_item_not_found`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    RateLimitError:
+      description: >-
+        A process-local auth or Sentinel limit was exceeded (`rate_limited` or
+        `rate_limit_exceeded`).
+      headers:
+        Retry-After:
+          description: Number of seconds to wait before retrying.
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    InternalError:
+      description: Unexpected REST controller failure (`internal_error`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+
+  schemas:
+    WelcomeResponse:
+      type: object
+      required: [message, frontend, status]
+      properties:
+        message:
+          type: string
+        frontend:
+          type: string
+        status:
+          type: string
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+        - milestone
+        - runtimeMode
+        - activeProfiles
+        - dataMode
+        - sentinelProvider
+        - notificationProvider
+        - priceRefreshProvider
+        - startedAtUtc
+        - checkedAtUtc
+        - uptimeSeconds
+        - checks
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        milestone:
+          type: string
+        runtimeMode:
+          type: string
+        activeProfiles:
+          type: array
+          items:
+            type: string
+        dataMode:
+          type: string
+        sentinelProvider:
+          type: string
+        notificationProvider:
+          type: string
+        priceRefreshProvider:
+          type: string
+        startedAtUtc:
+          type: string
+          format: date-time
+        checkedAtUtc:
+          type: string
+          format: date-time
+        uptimeSeconds:
+          type: integer
+          format: int64
+          minimum: 0
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+
+    Deal:
+      type: object
+      required:
+        - id
+        - store
+        - discount
+        - discountValue
+        - title
+        - priceOld
+        - priceNew
+        - priceValue
+        - rating
+        - stars
+        - category
+        - status
+        - dealUrl
+      properties:
+        id:
+          type: integer
+          format: int64
+        store:
+          type: string
+        discount:
+          type: string
+        discountValue:
+          type: integer
+          format: int32
+        title:
+          type: string
+        priceOld:
+          type: string
+        priceNew:
+          type: string
+        priceValue:
+          type: number
+          format: double
+        rating:
+          type: number
+          format: double
+        stars:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+        dealUrl:
+          type: [string, "null"]
+          format: uri
+
+    Giveaway:
+      type: object
+      required:
+        - id
+        - platform
+        - platformLabel
+        - title
+        - genre
+        - timer
+        - daysRemaining
+        - claimed
+        - status
+        - tag
+        - originalPrice
+      properties:
+        id:
+          type: integer
+          format: int64
+        platform:
+          type: string
+        platformLabel:
+          type: string
+        title:
+          type: string
+        genre:
+          type: string
+        timer:
+          type: string
+        daysRemaining:
+          type: integer
+          format: int32
+        claimed:
+          type: integer
+          format: int32
+        status:
+          type: string
+        tag:
+          type: string
+        originalPrice:
+          type: string
+
+    DashboardSummary:
+      type: object
+      required:
+        - activeDealsCount
+        - activeGiveawaysCount
+        - wishlistItemsCount
+        - activePriceAlertsCount
+        - bestDiscountValue
+        - bestDiscountTitle
+        - databaseStatus
+        - sentinelStatus
+      properties:
+        activeDealsCount:
+          type: integer
+          format: int32
+        activeGiveawaysCount:
+          type: integer
+          format: int32
+        wishlistItemsCount:
+          type: integer
+          format: int32
+        activePriceAlertsCount:
+          type: integer
+          format: int32
+        bestDiscountValue:
+          type: integer
+          format: int32
+        bestDiscountTitle:
+          type: string
+        databaseStatus:
+          type: string
+        sentinelStatus:
+          type: string
+
+    SecurityStatusResponse:
+      type: object
+      required:
+        - securityScore
+        - status
+        - activeSessions
+        - protectedApis
+        - alertCount
+        - accountProtection
+        - networkProtection
+      properties:
+        securityScore:
+          type: integer
+          format: int32
+        status:
+          type: string
+        activeSessions:
+          type: integer
+          format: int32
+        protectedApis:
+          type: integer
+          format: int32
+        alertCount:
+          type: integer
+          format: int32
+        accountProtection:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtectionItem"
+        networkProtection:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtectionItem"
+
+    ProtectionItem:
+      type: object
+      required: [id, icon, label, description, status, statusType]
+      properties:
+        id:
+          type: integer
+          format: int64
+        icon:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        statusType:
+          type: string
+
+    SentinelStatusResponse:
+      type: object
+      required: [aiStatus, backend, geminiApi, privacy]
+      properties:
+        aiStatus:
+          type: string
+        backend:
+          type: string
+        geminiApi:
+          type: string
+        privacy:
+          type: string
+
+    SentinelDemoResponse:
+      type: object
+      required: [messages, suggestions, capabilities, systemStatus]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SentinelMessage"
+        suggestions:
+          type: array
+          items:
+            type: string
+        capabilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/SentinelCapability"
+        systemStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/SentinelStatusItem"
+
+    SentinelMessage:
+      type: object
+      required: [id, role, segments]
+      properties:
+        id:
+          type: integer
+          format: int64
+        role:
+          type: string
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SentinelMessageSegment"
+
+    SentinelMessageSegment:
+      type: object
+      required: [text, emphasis]
+      properties:
+        text:
+          type: string
+        emphasis:
+          type: boolean
+
+    SentinelCapability:
+      type: object
+      required: [id, icon, title, description, tone]
+      properties:
+        id:
+          type: integer
+          format: int64
+        icon:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        tone:
+          type: string
+
+    SentinelStatusItem:
+      type: object
+      required: [label, value, badge, tone, icon]
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+        badge:
+          type: string
+        tone:
+          type: string
+        icon:
+          type: string
+
+    AuthCsrfTokenResponse:
+      type: object
+      required: [csrfToken]
+      properties:
+        csrfToken:
+          type: string
+          description: Value to send in X-NEXORA-CSRF with the matching cookie.
+
+    RegisterRequest:
+      type: object
+      required: [email, username, displayName, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+
+    LoginRequest:
+      type: object
+      required: [emailOrUsername, password]
+      properties:
+        emailOrUsername:
+          type: string
+          minLength: 1
+          maxLength: 320
+        password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 72
+
+    AuthResponse:
+      type: object
+      required: [token, tokenType, user]
+      properties:
+        token:
+          type: string
+          description: JWT access token.
+        tokenType:
+          type: string
+        user:
+          $ref: "#/components/schemas/AuthUserResponse"
+
+    AuthUserResponse:
+      type: object
+      required: [id, email, username, displayName]
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        displayName:
+          type: string
+
+    AddWishlistItemRequest:
+      type: object
+      required: [title, store, currentPrice, targetPrice]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        store:
+          type: string
+          minLength: 1
+          maxLength: 255
+        currentPrice:
+          type: string
+          minLength: 1
+          maxLength: 255
+        targetPrice:
+          type: string
+          minLength: 1
+          maxLength: 255
+        lowestEver:
+          type: [string, "null"]
+          maxLength: 255
+        discount:
+          type: [string, "null"]
+          maxLength: 255
+        status:
+          type: [string, "null"]
+          enum: [price-drop, free-now, tracking, null]
+        alertActive:
+          type: [boolean, "null"]
+        priority:
+          type: [string, "null"]
+          enum: [high, medium, low, null]
+
+    UpdateWishlistAlertRequest:
+      type: object
+      description: At least one non-null alert setting must be provided.
+      properties:
+        targetPrice:
+          type: [string, "null"]
+          maxLength: 255
+          pattern: ".*\\S.*"
+        alertActive:
+          type: [boolean, "null"]
+        priority:
+          type: [string, "null"]
+          enum: [high, medium, low, null]
+
+    WishlistItem:
+      type: object
+      required:
+        - id
+        - title
+        - store
+        - currentPrice
+        - targetPrice
+        - lowestEver
+        - discount
+        - status
+        - alertActive
+        - priority
+        - alertEvaluation
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        store:
+          type: string
+        currentPrice:
+          type: string
+        targetPrice:
+          type: string
+        lowestEver:
+          type: [string, "null"]
+        discount:
+          type: [string, "null"]
+        status:
+          type: [string, "null"]
+        alertActive:
+          type: boolean
+        priority:
+          type: [string, "null"]
+        alertEvaluation:
+          $ref: "#/components/schemas/WishlistAlertEvaluation"
+
+    WishlistAlertEvaluation:
+      type: object
+      required: [targetReached, state, message]
+      properties:
+        targetReached:
+          type: boolean
+        state:
+          type: string
+        message:
+          type: string
+
+    WishlistAlertEventResponse:
+      type: object
+      required:
+        - id
+        - wishlistItemId
+        - itemTitle
+        - store
+        - currentPrice
+        - targetPrice
+        - evaluationState
+        - targetReached
+        - message
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+        wishlistItemId:
+          type: integer
+          format: int64
+        itemTitle:
+          type: string
+        store:
+          type: string
+        currentPrice:
+          type: string
+        targetPrice:
+          type: string
+        evaluationState:
+          type: string
+        targetReached:
+          type: boolean
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    WishlistPriceHistoryPoint:
+      type: object
+      required:
+        - id
+        - wishlistItemId
+        - itemTitle
+        - store
+        - priceLabel
+        - priceAmount
+        - currency
+        - source
+        - observedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+        wishlistItemId:
+          type: integer
+          format: int64
+        itemTitle:
+          type: string
+        store:
+          type: string
+        priceLabel:
+          type: string
+        priceAmount:
+          type: [number, "null"]
+          format: double
+        currency:
+          type: [string, "null"]
+        source:
+          type: string
+        observedAt:
+          type: string
+          format: date-time
+
+    NotificationPreferenceResponse:
+      type: object
+      required:
+        - emailEnabled
+        - inAppEnabled
+        - targetReachedEnabled
+        - priceDropEnabled
+        - freeGameEnabled
+      properties:
+        emailEnabled:
+          type: boolean
+        inAppEnabled:
+          type: boolean
+        targetReachedEnabled:
+          type: boolean
+        priceDropEnabled:
+          type: boolean
+        freeGameEnabled:
+          type: boolean
+
+    UpdateNotificationPreferenceRequest:
+      type: object
+      description: At least one non-null preference must be provided.
+      properties:
+        emailEnabled:
+          type: [boolean, "null"]
+        inAppEnabled:
+          type: [boolean, "null"]
+        targetReachedEnabled:
+          type: [boolean, "null"]
+        priceDropEnabled:
+          type: [boolean, "null"]
+        freeGameEnabled:
+          type: [boolean, "null"]
+
+    SentinelInsightRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Must contain 1–500 characters after trimming.
+        context:
+          type: [string, "null"]
+          enum: [general, wishlist, deals, security, null]
+
+    SentinelInsightResponse:
+      type: object
+      required:
+        - mode
+        - provider
+        - context
+        - title
+        - answer
+        - recommendations
+        - safetyNotes
+        - nextActions
+        - fallbackReason
+        - createdAt
+      properties:
+        mode:
+          type: string
+        provider:
+          type: string
+        context:
+          type: string
+        title:
+          type: string
+        answer:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        safetyNotes:
+          type: array
+          items:
+            type: string
+        nextActions:
+          type: array
+          items:
+            type: string
+        fallbackReason:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - status
+        - path
+        - timestampUtc
+        - retryAfterSeconds
+      properties:
+        error:
+          type: string
+          description: Stable machine-readable error code.
+          enum:
+            - authentication_required
+            - authentication_failed
+            - account_conflict
+            - csrf_failed
+            - rate_limited
+            - rate_limit_exceeded
+            - validation_failed
+            - wishlist_item_not_found
+            - internal_error
+        message:
+          type: string
+          description: Safe human-readable explanation.
+        status:
+          type: integer
+          format: int32
+          minimum: 400
+          maximum: 599
+        path:
+          type: string
+          description: Request URI path without query data.
+        timestampUtc:
+          type: string
+          format: date-time
+        retryAfterSeconds:
+          type: [integer, "null"]
+          format: int64
+          minimum: 0

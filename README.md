@@ -11,11 +11,15 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.36.0-api-smoke-testing-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.36.0-api-smoke-testing-foundation).
+> [`v0.37.0-api-smoke-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.37.0-api-smoke-ci-foundation).
+> `v0.38.0-openapi-contract-foundation` remains in progress until merged and
+> tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
 [API contract](docs/api/API_CONTRACT.md) ·
+[OpenAPI contract](docs/api/openapi.yaml) ·
+[OpenAPI guide](docs/api/OPENAPI_CONTRACT.md) ·
 [reviewer API testing](docs/api/REVIEWER_API_TESTING.md) ·
 [API smoke test](scripts/api-smoke-test.sh) · [scripts guide](scripts/README.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
@@ -59,6 +63,7 @@ security controls, and testable optional integrations.
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
+| OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 
 “Foundation” means the capability is implemented and testable for local
 development; it does not imply production-scale operations.
@@ -375,14 +380,17 @@ The full endpoint and configuration reference is in the
 [API contract](docs/api/API_CONTRACT.md) and copyable
 [reviewer testing guide](docs/api/REVIEWER_API_TESTING.md) document access,
 request/response, auth/CSRF, and shared error behavior without duplicating it
-here. Reviewers can run the local-only
+here. The hand-maintained [OpenAPI contract](docs/api/openapi.yaml) and its
+[guide](docs/api/OPENAPI_CONTRACT.md) provide a complementary machine-readable
+route/schema overview. Reviewers can run the local-only
 [API smoke test](scripts/api-smoke-test.sh); its prerequisites and safety
-controls are summarized in the [scripts guide](scripts/README.md).
+controls are summarized in the [scripts guide](scripts/README.md), and API
+Smoke CI runs that same script against a locally started backend.
 
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.36.0-api-smoke-testing-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.36.0-api-smoke-testing-foundation).
+[`v0.37.0-api-smoke-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.37.0-api-smoke-ci-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and
