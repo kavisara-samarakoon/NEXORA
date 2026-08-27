@@ -6,10 +6,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.41 auth cookie security foundation with focused
-  refresh/CSRF cookie tests and a reviewer-friendly cookie contract.
-- Keep the completed v0.40 backend security headers foundation as the latest
-  stable milestone until v0.41 is merged and tagged.
+- Complete the in-progress v0.42 API Smoke CI resilience foundation with Maven
+  dependency warm-up retries and fail-fast backend-startup diagnostics.
+- Keep the completed v0.41 auth cookie security foundation as the latest stable
+  milestone until v0.42 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -33,6 +33,18 @@ project's academic, portfolio, and product goals evolve.
   dependency, exposure, and security review.
 - Consider a maintained Postman collection or import workflow later; the
   manual curl guide and smoke script remain the current executable examples.
+
+## CI and release follow-up
+
+- Add deployed-environment smoke tests only after approved target, credential,
+  data-lifecycle, and ownership boundaries exist.
+- Add staging environment checks only after a staging topology, test-account
+  lifecycle, secrets boundary, and support owner are defined.
+- Add release automation only after versioning, artifacts, approvals, rollback,
+  and release ownership are established.
+- Add scheduled or push-triggered CodeQL only after repository visibility and
+  code-scanning support are ready and the workflow policy is deliberately
+  reviewed; CodeQL remains manual-only today.
 
 ## Product UX improvements
 
@@ -70,8 +82,6 @@ project's academic, portfolio, and product goals evolve.
 - Establish environment-specific configuration, managed secret storage,
   backups, restore testing, health checks, and rollback expectations.
 - Add deployment automation only after those decisions are reviewed.
-- Design deployed staging smoke tests only after an approved staging topology,
-  test-account lifecycle, secret boundary, and ownership model exist.
 - Add broader end-to-end/browser testing only after its scenarios, runtime
   cost, and ownership are defined; the API Smoke CI foundation is API-only.
 - Write production deployment and operational runbooks only after a target
@@ -92,8 +102,6 @@ project's academic, portfolio, and product goals evolve.
   alerting, and incident-response policies.
 - Review repository security settings and add a dependable backend
   vulnerability scanner when an appropriate approach is selected.
-- Enable automatic CodeQL only if code scanning becomes available and the
-  workflow policy is deliberately changed; it remains manual-only today.
 
 ## AI and Sentinel expansion
 
