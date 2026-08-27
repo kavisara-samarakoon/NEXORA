@@ -6,10 +6,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.40 backend security headers foundation with
-  explicit browser-facing response headers and focused backend tests.
-- Keep the completed v0.39 OpenAPI contract validation foundation as the latest
-  stable milestone until v0.40 is merged and tagged.
+- Complete the in-progress v0.41 auth cookie security foundation with focused
+  refresh/CSRF cookie tests and a reviewer-friendly cookie contract.
+- Keep the completed v0.40 backend security headers foundation as the latest
+  stable milestone until v0.41 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -47,6 +47,9 @@ project's academic, portfolio, and product goals evolve.
 
 ## Deployment preparation
 
+- Verify refresh and CSRF cookie attributes, rotation, and clearing through a
+  deployed HTTPS browser flow only after the topology and proxy boundary are
+  approved.
 - Verify backend response headers in a deployed environment only after an
   approved HTTPS topology and proxy boundary exist.
 - Define frontend Content Security Policy separately when the frontend has a

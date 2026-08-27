@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.39.0-openapi-contract-validation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.39.0-openapi-contract-validation-foundation).
-> `v0.40.0-backend-security-headers-foundation` remains in progress until
+> [`v0.40.0-backend-security-headers-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.40.0-backend-security-headers-foundation).
+> `v0.41.0-auth-cookie-security-foundation` remains in progress until
 > merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -93,6 +93,11 @@ personal wishlist endpoints under `/api/me/wishlist`.
   failures do not break normal authentication behavior.
 - Auth abuse controls are process-local and reset on restart; they are not
   distributed production rate limiting.
+- The opaque refresh cookie is `HttpOnly`, scoped to `/api/auth`, and
+  `SameSite=Lax` by default. The CSRF cookie uses the same narrow path and
+  SameSite default but is intentionally readable for the double-submit flow.
+  `Secure=false` is a local HTTP default only; the production-profile guard
+  requires both cookies to be secure.
 - Backend API responses include `X-Content-Type-Options: nosniff`,
   `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a restrictive
   `Permissions-Policy`. Spring Security also applies no-cache/no-store behavior
@@ -402,7 +407,7 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.39.0-openapi-contract-validation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.39.0-openapi-contract-validation-foundation).
+[`v0.40.0-backend-security-headers-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.40.0-backend-security-headers-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

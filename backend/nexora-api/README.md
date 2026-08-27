@@ -291,17 +291,26 @@ tokens. Register and login still return the existing
 remain compatible. They now also create a server-side refresh session and issue
 its opaque token as an HttpOnly cookie.
 
+### Auth cookie security
+
 Only an HMAC-SHA256 token hash is stored. The raw refresh token is generated
 independently with `SecureRandom`, is never returned in JSON, and is sent only
 through the cookie. The default profile keeps refresh sessions in memory;
-`dev` persists them in the Flyway-managed `auth_sessions` table.
+`dev` persists them in the Flyway-managed `auth_sessions` table. The refresh
+cookie is `HttpOnly`, scoped to `/api/auth`, uses `SameSite=Lax`, and has a
+seven-day maximum age by default. Successful refresh rotates both the
+server-side session and cookie value; logout revokes the session and clears the
+same cookie with `Max-Age=0` and matching security attributes.
 
 The four cookie-sensitive auth POST routes—register, login, refresh, and
 logout—require a token from `GET /api/auth/csrf`. The endpoint returns
 `{"csrfToken":"..."}` and sets the same value in the non-HttpOnly
 `nexora_csrf_token` cookie. Clients must echo the value through
 `X-NEXORA-CSRF`. Tokens are generated with `SecureRandom`, are not stored by the
-backend or database, and are never refresh tokens. Requests with an `Origin`
+backend or database, and are never refresh tokens. The CSRF cookie is scoped to
+`/api/auth`, uses `SameSite=Lax`, and has a two-hour maximum age by default. It
+is intentionally not `HttpOnly` because the double-submit browser flow must
+read and echo it. Requests with an `Origin`
 must match the configured trusted-origin allowlist; a `Referer` is checked when
 `Origin` is absent. Local curl/test requests may omit both origin headers only
 when the cookie/header token pair is valid.
@@ -364,9 +373,10 @@ curl -sS -X POST http://localhost:8080/api/auth/logout \
 ```
 
 Refresh tokens rotate on every successful refresh. The previous record is
-revoked, its reuse returns `401`, and logout revokes the current record. The
-cookie defaults to `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`, a seven-day
-maximum age, and `Secure=false` for local HTTP only.
+revoked, its reuse returns `401`, and logout revokes the current record.
+`SameSite=None` is rejected for either cookie unless `Secure=true`. Both cookies
+use `Secure=false` only for localhost/non-HTTPS development defaults; the
+`prod`/`production` startup guard requires secure refresh and CSRF cookies.
 
 The bundled JWT and refresh-token hash secrets are local-only. Override
 `NEXORA_JWT_SECRET` and `NEXORA_REFRESH_TOKEN_HASH_SECRET` in every shared or

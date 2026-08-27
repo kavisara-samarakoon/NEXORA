@@ -51,6 +51,8 @@ The following controls exist today:
   allowlist.
 - Refresh and CSRF cookies default to `Secure=false`, `SameSite=Lax`, and
   `Path=/api/auth` so local HTTP development works.
+- Refresh and CSRF cookie configuration rejects `SameSite=None` unless the
+  corresponding cookie also enables `Secure`.
 - A request with neither `Origin` nor `Referer` is currently allowed to proceed
   when its CSRF cookie/header pair is valid. This supports local curl and test
   clients; it is not an approved production no-origin policy.
@@ -280,6 +282,12 @@ or explicit risk decisions:
   data are deliberately excluded from the current foundation.
 
 ## 8. Testing checklist before deployment
+
+The v0.41 foundation adds focused local-default tests for CSRF issuance,
+refresh-cookie issuance/rotation/clearing, raw-token non-disclosure, and the
+`SameSite=None`/`Secure` property guard. The broader deployment checklist below
+remains open because HTTPS, proxy, production-like cookie issuance, domain
+behavior, and real-browser verification still require deployed evidence.
 
 - [x] Unit-test the v0.32 fail-closed guard for inactive profiles, absent/local/
       placeholder/short/coupled auth secrets, secure-cookie and CSRF settings,
