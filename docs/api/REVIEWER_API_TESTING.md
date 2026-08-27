@@ -11,6 +11,10 @@ The examples demonstrate implemented behavior; they are not production
 deployment or penetration-testing instructions. For endpoint-by-endpoint
 details, see [`API_CONTRACT.md`](API_CONTRACT.md).
 
+Reviewers can inspect the hand-maintained [`openapi.yaml`](openapi.yaml) for a
+machine-readable route and schema overview. The manual curl guide below and the
+smoke test remain the hands-on sources for verifying local API behavior.
+
 ## Quick automated smoke test
 
 With the backend already running, execute the local-only

@@ -4,10 +4,20 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.36.0-api-smoke-testing-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.36.0-api-smoke-testing-foundation).
+[`v0.37.0-api-smoke-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.37.0-api-smoke-ci-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.37.0 API Smoke CI foundation
+## In progress — v0.38.0 OpenAPI contract foundation
+
+- Added the hand-maintained `docs/api/openapi.yaml` OpenAPI 3.1 route/schema
+  contract and `docs/api/OPENAPI_CONTRACT.md` maintenance and relationship
+  guide, with aligned links and milestone status across the API documentation.
+  This documentation-only work adds no Swagger/OpenAPI runtime dependency and
+  changes no Java runtime code, Java tests, frontend code, dependency manifests,
+  database migrations, or GitHub workflows. It makes no production-readiness
+  claim.
+
+## Completed CI milestone — v0.37.0 API Smoke CI foundation
 
 - Added `.github/workflows/api-smoke-ci.yml` to start the default backend on
   localhost in GitHub Actions, wait for health, and run the existing

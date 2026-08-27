@@ -3,13 +3,20 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The `v0.37.0-api-smoke-ci-foundation` milestone is in progress. It adds a
-GitHub Actions workflow that starts the default backend locally, waits for
-`/api/health`, runs the existing API smoke script, and uploads backend logs for
-debugging. The milestone changes no Java runtime code, Java tests, frontend
-code, dependency manifests, or database migrations; its scope is one workflow
-and documentation updates. The latest stable development milestone remains
-`v0.36.0-api-smoke-testing-foundation` until v0.37 is merged.
+The `v0.38.0-openapi-contract-foundation` milestone is in progress. It adds a
+hand-maintained OpenAPI 3.1 contract and a short guide that connect the
+machine-readable route/schema view with the human-readable API contract,
+reviewer walkthrough, local smoke script, and API Smoke CI. This documentation
+milestone changes no Java runtime code, Java tests, frontend code, dependency
+manifests, database migrations, or GitHub workflows. The latest stable
+development milestone remains `v0.37.0-api-smoke-ci-foundation` until v0.38 is
+merged.
+
+The v0.37 API Smoke CI foundation added a pull-request and `main` quality gate
+that starts the default backend locally, waits for `/api/health`, runs the
+existing smoke script, and uploads backend logs for debugging. It changed no
+Java runtime code, Java tests, frontend code, dependency manifests, or database
+migrations.
 
 The v0.36 API smoke testing foundation added a local reviewer script that
 checks public routes, CSRF/authentication, protected account routes, Sentinel
@@ -76,7 +83,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.36.0-api-smoke-testing-foundation`.
+`v0.37.0-api-smoke-ci-foundation`.
 
 ## Completed foundations
 
@@ -107,6 +114,8 @@ readiness of the project. The latest stable development milestone is
 - Backend tests plus frontend lint and production-build checks.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
+- API Smoke CI validation that starts the default backend on localhost, waits
+  for health, runs the existing reviewer smoke script, and retains backend logs.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
   Flyway V1–V10, JPA schema validation, required tables, and seed data.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
