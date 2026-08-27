@@ -7,10 +7,11 @@ Boot application in `backend/nexora-api`. It is intended for reviewers,
 lecturers, repository visitors, and future developers.
 
 The human-readable contract was established by the completed
-`v0.35.0-api-contract-documentation-foundation` milestone. The in-progress
-`v0.38.0-openapi-contract-foundation` adds a hand-maintained OpenAPI companion;
-`v0.37.0-api-smoke-ci-foundation` remains the latest stable development
-milestone until v0.38 is merged. This is documentation for a local/development
+`v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
+milestone added a hand-maintained OpenAPI companion, and the in-progress v0.39
+milestone adds lightweight structural validation around it.
+`v0.38.0-openapi-contract-foundation` remains the latest stable development
+milestone until v0.39 is merged. This is documentation for a local/development
 MVP, not a production API specification or availability commitment.
 
 Authoritative implementation sources include the controllers under
@@ -31,7 +32,7 @@ the documentation should be corrected.
 | Default storage | In-memory local/demo services; state resets when the backend restarts |
 | Optional persisted mode | PostgreSQL through the Spring `dev` profile |
 | API versioning | No version prefix is currently implemented |
-| OpenAPI schema | [`openapi.yaml`](openapi.yaml) is hand-maintained; no Swagger/OpenAPI runtime dependency or generated contract is provided |
+| OpenAPI schema | [`openapi.yaml`](openapi.yaml) is hand-maintained and guarded by the local checker plus API Contract CI; no Swagger/OpenAPI runtime dependency or generated contract is provided |
 
 “Foundation” means the behavior exists and is testable in local development.
 It does not imply production-scale security, support, uptime, or operations.
@@ -360,13 +361,17 @@ among other decisions:
 - account verification, recovery, support, privacy, and retention policies;
 - production provider reliability, notification-delivery, and AI safety
   controls; and
-- automated OpenAPI validation, generated clients, Swagger UI/runtime docs, or
-  hosted documentation only after their maintenance, security, and deployment
-  boundaries are deliberately reviewed.
+- full OpenAPI lint/schema validation, generated clients, Swagger UI/runtime
+  docs, or hosted documentation only after their maintenance, security, and
+  deployment boundaries are deliberately reviewed.
 
 The hand-maintained [`openapi.yaml`](openapi.yaml) complements this explanatory
-contract; see [`OPENAPI_CONTRACT.md`](OPENAPI_CONTRACT.md) for its scope and
-limitations. For a local copyable walkthrough, see
+contract and is guarded by
+[`openapi-contract-check.py`](../../scripts/openapi-contract-check.py) plus
+[`API Contract CI`](../../.github/workflows/api-contract-ci.yml).
+This document remains the detailed explanatory, source-aligned contract; see
+[`OPENAPI_CONTRACT.md`](OPENAPI_CONTRACT.md) for the machine-readable
+contract's scope and limitations. For a local copyable walkthrough, see
 [`REVIEWER_API_TESTING.md`](REVIEWER_API_TESTING.md). For a repeatable safe
 subset of that flow, run the repository's
 [`api-smoke-test.sh`](../../scripts/api-smoke-test.sh) after starting the

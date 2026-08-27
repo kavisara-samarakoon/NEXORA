@@ -63,6 +63,29 @@ The CI workflow remains local-only and does not target production or staging.
 Manual local execution is still useful before opening a pull request and when
 debugging API behavior.
 
+## OpenAPI contract check
+
+Run the hand-maintained contract guard from the repository root:
+
+```bash
+scripts/openapi-contract-check.py
+```
+
+An explicit contract path is also accepted:
+
+```bash
+scripts/openapi-contract-check.py docs/api/openapi.yaml
+```
+
+The checker verifies the expected path and operation counts, required endpoint
+and `operationId` markers, schema and security components, shared error fields
+and codes, and the localhost-only server assumption. It uses only the Python 3
+standard library and performs no network access.
+
+This is not a full OpenAPI linter. It is a lightweight source-alignment guard
+for NEXORA's hand-maintained contract. GitHub Actions runs the same command
+through [`api-contract-ci.yml`](../.github/workflows/api-contract-ci.yml).
+
 ## Environment variables
 
 Use the default local API explicitly when useful:
