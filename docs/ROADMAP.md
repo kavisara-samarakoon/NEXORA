@@ -6,8 +6,9 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.36 local API smoke-test script and supporting
-  reviewer documentation without changing backend/frontend runtime behavior.
+- Complete the in-progress v0.37 API Smoke CI foundation by starting the
+  backend locally in GitHub Actions, waiting for health, running the existing
+  smoke script, and retaining backend logs for pull-request debugging.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -33,11 +34,13 @@ project's academic, portfolio, and product goals evolve.
 
 ## Deployment preparation
 
-- Build future deployment health probes, metrics, tracing, managed logging,
-  dashboards, alerting, and response ownership on an approved topology. The
-  v0.33 safe runtime/configuration summary is only a lightweight foundation;
-  Prometheus, Grafana, OpenTelemetry, and external integrations remain
-  deliberately unselected.
+- Build future deployment health probes and production monitoring only on an
+  approved topology with alerting and response ownership. The v0.33 safe
+  runtime/configuration summary is only a lightweight foundation.
+- Add full observability dashboards later, after metrics, tracing, managed
+  logging, alert ownership, and operational response are defined. Prometheus,
+  Grafana, OpenTelemetry, and external integrations remain deliberately
+  unselected.
 - Select a target topology, hosting model, networking boundary, and operational
   ownership model.
 - Define backend and frontend application image requirements separately from
@@ -45,13 +48,13 @@ project's academic, portfolio, and product goals evolve.
 - Establish environment-specific configuration, managed secret storage,
   backups, restore testing, health checks, and rollback expectations.
 - Add deployment automation only after those decisions are reviewed.
-- Consider CI wiring for the local smoke script only after its local reviewer
-  behavior is stable; v0.36 does not change GitHub workflows.
 - Design deployed staging smoke tests only after an approved staging topology,
   test-account lifecycle, secret boundary, and ownership model exist.
 - Consider generated OpenAPI and hosted API documentation only after the
   maintained source contract, versioning approach, and deployment boundary are
-  reviewed. They are not part of v0.36.
+  reviewed. They are not part of v0.37.
+- Add broader end-to-end/browser testing only after its scenarios, runtime
+  cost, and ownership are defined; the API Smoke CI foundation is API-only.
 - Write production deployment and operational runbooks only after a target
   topology, owners, monitoring, rollback, and incident-response processes are
   approved.

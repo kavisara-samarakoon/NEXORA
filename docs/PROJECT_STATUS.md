@@ -3,14 +3,19 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The `v0.36.0-api-smoke-testing-foundation` milestone is in progress. It adds a
-local reviewer script that checks public routes, CSRF/authentication, protected
-account routes, Sentinel insight, and shared error-contract fields with
-generated fake account data, masked token output, and temporary cookies. This
-script/documentation milestone changes no backend or frontend behavior,
-dependencies, database migrations, or GitHub workflows. The latest stable
-development milestone remains `v0.35.0-api-contract-documentation-foundation`
-until v0.36 is merged.
+The `v0.37.0-api-smoke-ci-foundation` milestone is in progress. It adds a
+GitHub Actions workflow that starts the default backend locally, waits for
+`/api/health`, runs the existing API smoke script, and uploads backend logs for
+debugging. The milestone changes no Java runtime code, Java tests, frontend
+code, dependency manifests, or database migrations; its scope is one workflow
+and documentation updates. The latest stable development milestone remains
+`v0.36.0-api-smoke-testing-foundation` until v0.37 is merged.
+
+The v0.36 API smoke testing foundation added a local reviewer script that
+checks public routes, CSRF/authentication, protected account routes, Sentinel
+insight, and shared error-contract fields with generated fake account data,
+masked token output, and temporary cookies. It changed no backend or frontend
+behavior, dependencies, database migrations, or GitHub workflows.
 
 The v0.35 API contract documentation foundation added a source-aligned backend
 contract and a localhost-only reviewer testing guide for public/protected
@@ -71,7 +76,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.35.0-api-contract-documentation-foundation`.
+`v0.36.0-api-smoke-testing-foundation`.
 
 ## Completed foundations
 

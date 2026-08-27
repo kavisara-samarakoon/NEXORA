@@ -4,10 +4,20 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.35.0-api-contract-documentation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.35.0-api-contract-documentation-foundation).
+[`v0.36.0-api-smoke-testing-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.36.0-api-smoke-testing-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.36.0 API smoke testing foundation
+## In progress — v0.37.0 API Smoke CI foundation
+
+- Added `.github/workflows/api-smoke-ci.yml` to start the default backend on
+  localhost in GitHub Actions, wait for health, and run the existing
+  `scripts/api-smoke-test.sh` reviewer flow. Backend smoke logs are uploaded as
+  a retained artifact for debugging. CodeQL remains manual-only. This workflow
+  and documentation milestone changes no Java runtime code, Java tests,
+  frontend code, dependency manifests, or database migrations, and makes no
+  production-readiness claim.
+
+## Completed tooling milestone — v0.36.0 API smoke testing foundation
 
 - Added `scripts/api-smoke-test.sh`, `scripts/README.md`, and reviewer-guide
   links for repeatable checks of the documented public, CSRF/auth, protected,

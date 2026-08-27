@@ -52,6 +52,17 @@ scripts/api-smoke-test.sh
 The script exits non-zero on the first failure. If the backend is unavailable,
 it reports the failed URL and reminds you to start or check the backend.
 
+## API Smoke CI
+
+The same local script runs in GitHub Actions through
+[`api-smoke-ci.yml`](../.github/workflows/api-smoke-ci.yml). The workflow starts
+the default backend locally, waits for `/api/health`, runs the script against
+`http://localhost:8080`, and uploads `backend-smoke.log` for debugging.
+
+The CI workflow remains local-only and does not target production or staging.
+Manual local execution is still useful before opening a pull request and when
+debugging API behavior.
+
 ## Environment variables
 
 Use the default local API explicitly when useful:
