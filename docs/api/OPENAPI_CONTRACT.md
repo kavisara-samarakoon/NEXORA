@@ -10,7 +10,7 @@ understanding and possible future client or tooling work.
 ## Current status
 
 The completed v0.38 milestone created this hand-maintained, source-aligned
-contract. The in-progress v0.39 milestone adds a lightweight local checker and
+contract. The completed v0.39 milestone added a lightweight local checker and
 API Contract CI validation on pull requests and pushes to `main`. Neither
 milestone changes backend behavior, adds Swagger UI, or adds runtime generation.
 The Java controllers and DTOs remain authoritative if this documentation and

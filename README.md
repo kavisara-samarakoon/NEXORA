@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.38.0-openapi-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.38.0-openapi-contract-foundation).
-> `v0.39.0-openapi-contract-validation-foundation` remains in progress until
+> [`v0.39.0-openapi-contract-validation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.39.0-openapi-contract-validation-foundation).
+> `v0.40.0-backend-security-headers-foundation` remains in progress until
 > merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -64,6 +64,7 @@ security controls, and testable optional integrations.
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
+| Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
 
 “Foundation” means the capability is implemented and testable for local
 development; it does not imply production-scale operations.
@@ -92,6 +93,10 @@ personal wishlist endpoints under `/api/me/wishlist`.
   failures do not break normal authentication behavior.
 - Auth abuse controls are process-local and reset on restart; they are not
   distributed production rate limiting.
+- Backend API responses include `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a restrictive
+  `Permissions-Policy`. Spring Security also applies no-cache/no-store behavior
+  to auth-sensitive responses.
 - CodeQL remains manual-only because code scanning is not enabled for this
   private repository.
 - Production still requires approved deployment, secret management, distributed
@@ -397,7 +402,7 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.38.0-openapi-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.38.0-openapi-contract-foundation).
+[`v0.39.0-openapi-contract-validation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.39.0-openapi-contract-validation-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

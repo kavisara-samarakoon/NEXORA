@@ -15,10 +15,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 public class AuthSecurityConfig {
+    private static final String PERMISSIONS_POLICY =
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()";
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -34,6 +37,14 @@ public class AuthSecurityConfig {
         return http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> {
+                    headers.contentTypeOptions(Customizer.withDefaults());
+                    headers.frameOptions(frameOptions -> frameOptions.deny());
+                    headers.referrerPolicy(referrerPolicy -> referrerPolicy.policy(ReferrerPolicy.NO_REFERRER));
+                    headers.permissionsPolicyHeader(
+                            permissionsPolicy -> permissionsPolicy.policy(PERMISSIONS_POLICY));
+                    headers.cacheControl(Customizer.withDefaults());
+                })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

@@ -3,13 +3,21 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The `v0.39.0-openapi-contract-validation-foundation` milestone is in progress.
-It adds a Python standard-library checker for the hand-maintained OpenAPI path,
-operation, schema, security, shared-error, and localhost markers, plus one new
-GitHub Actions workflow that runs the check on pull requests and pushes to
-`main`. The milestone changes no Java runtime code, Java tests, frontend code,
-dependency manifests, or database migrations. The latest stable development
-milestone remains `v0.38.0-openapi-contract-foundation` until v0.39 is merged.
+The `v0.40.0-backend-security-headers-foundation` milestone is in progress. It
+adds explicit browser-facing HTTP security headers and cache-control behavior
+through the existing Spring Security filter chain, with focused backend tests
+for public and auth-sensitive responses. It changes no frontend code,
+dependency manifests, database migrations, or GitHub Actions workflows. The
+latest stable development milestone remains
+`v0.39.0-openapi-contract-validation-foundation` until v0.40 is merged and
+tagged.
+
+The v0.39 OpenAPI contract validation foundation added a Python
+standard-library checker for the hand-maintained OpenAPI path, operation,
+schema, security, shared-error, and localhost markers, plus a GitHub Actions
+workflow that runs the check on pull requests and pushes to `main`. It changed
+no Java runtime code, Java tests, frontend code, dependency manifests, or
+database migrations.
 
 The v0.38 OpenAPI contract foundation added the hand-maintained OpenAPI 3.1
 route/schema contract and its maintenance guide. It changed no runtime code,
@@ -87,7 +95,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.38.0-openapi-contract-foundation`.
+`v0.39.0-openapi-contract-validation-foundation`.
 
 ## Completed foundations
 
@@ -122,6 +130,9 @@ readiness of the project. The latest stable development milestone is
   for health, runs the existing reviewer smoke script, and retains backend logs.
 - A hand-maintained OpenAPI 3.1 route/schema contract with explicit local-only,
   security, shared-error, and maintenance boundaries.
+- API Contract CI validation that uses the Python standard library to check the
+  hand-maintained contract's expected routes, operations, schema/security/error
+  markers, and localhost-only server assumption.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
   Flyway V1–V10, JPA schema validation, required tables, and seed data.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
