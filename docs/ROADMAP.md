@@ -6,10 +6,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.38 OpenAPI contract foundation with a
-  hand-maintained, source-aligned OpenAPI 3.1 route and schema reference.
-- Keep the completed v0.37 API Smoke CI foundation as the latest stable
-  milestone until v0.38 is merged and tagged.
+- Complete the in-progress v0.39 OpenAPI contract validation foundation with a
+  lightweight standard-library checker and a separate API Contract CI workflow.
+- Keep the completed v0.38 OpenAPI contract foundation as the latest stable
+  milestone until v0.39 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -24,8 +24,9 @@ project's academic, portfolio, and product goals evolve.
 
 ## API contract tooling
 
-- Consider automated OpenAPI validation only after choosing how the
-  hand-maintained contract will be compared with source and runtime behavior.
+- Consider full OpenAPI linting with external tooling only after its dependency,
+  maintenance, reliability, and security implications are reviewed; v0.39 is a
+  deliberately lightweight marker/structure check.
 - Consider generated clients only after contract stability, versioning, and
   ownership expectations are defined.
 - Add Swagger UI or runtime-generated API documentation only after a separate

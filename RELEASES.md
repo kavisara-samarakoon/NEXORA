@@ -4,10 +4,22 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.37.0-api-smoke-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.37.0-api-smoke-ci-foundation).
+[`v0.38.0-openapi-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.38.0-openapi-contract-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.38.0 OpenAPI contract foundation
+## In progress — v0.39.0 OpenAPI contract validation foundation
+
+- Added `scripts/openapi-contract-check.py` and
+  `.github/workflows/api-contract-ci.yml` to check the expected route/operation
+  counts, endpoint and operation-ID markers, schemas, security schemes, shared
+  `ApiErrorResponse`, and localhost-only server assumptions. The checker uses
+  only the Python standard library and installs no Swagger/OpenAPI runtime
+  dependency. This script/workflow/documentation milestone changes no Java
+  runtime code, Java tests, frontend code, dependency manifests, or database
+  migrations. CodeQL remains manual-only, and no production-readiness claim is
+  made.
+
+## Completed documentation milestone — v0.38.0 OpenAPI contract foundation
 
 - Added the hand-maintained `docs/api/openapi.yaml` OpenAPI 3.1 route/schema
   contract and `docs/api/OPENAPI_CONTRACT.md` maintenance and relationship

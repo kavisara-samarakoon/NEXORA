@@ -11,9 +11,9 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.37.0-api-smoke-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.37.0-api-smoke-ci-foundation).
-> `v0.38.0-openapi-contract-foundation` remains in progress until merged and
-> tagged.
+> [`v0.38.0-openapi-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.38.0-openapi-contract-foundation).
+> `v0.39.0-openapi-contract-validation-foundation` remains in progress until
+> merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -78,7 +78,7 @@ development; it does not imply production-scale operations.
 | `dev` backend profile | PostgreSQL, Flyway V1–V10, and JPA-backed catalog, account, refresh-session, auth-security-event, wishlist, alert, price-history, and notification-preference data |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
-| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, local API smoke testing, frontend lint/build, dependency checks, manual CodeQL-ready scanning, and pull-request dependency review |
+| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, local API smoke testing, OpenAPI contract checking, frontend lint/build, dependency checks, manual CodeQL-ready scanning, and pull-request dependency review |
 
 The public `GET /api/wishlist` contract remains separate from authenticated
 personal wishlist endpoints under `/api/me/wishlist`.
@@ -341,6 +341,7 @@ requests targeting `main`:
 | --- | --- |
 | `backend-ci.yml` | Runs database-free backend tests and a separate PostgreSQL 16 job that validates the `dev` profile, Flyway migrations, and JPA schema |
 | `api-smoke-ci.yml` | Starts the default backend locally, waits for health, and runs the existing reviewer smoke script against localhost |
+| `api-contract-ci.yml` | Runs the standard-library checker for the hand-maintained OpenAPI path, operation, schema, security, error, and localhost markers |
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
 | `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
 | `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
@@ -360,6 +361,12 @@ API Smoke CI runs [`scripts/api-smoke-test.sh`](scripts/api-smoke-test.sh)
 against a backend started inside the GitHub Actions runner. It checks public
 endpoints, auth/CSRF, protected endpoints, Sentinel insight, and shared API
 error-contract behavior without targeting a deployed service.
+
+API Contract CI runs
+[`scripts/openapi-contract-check.py`](scripts/openapi-contract-check.py) against
+the hand-maintained OpenAPI file. The lightweight checker verifies expected
+paths and operations, schema/security/error markers, and localhost-only server
+assumptions without installing an OpenAPI toolchain.
 
 ## API overview
 
@@ -390,7 +397,7 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.37.0-api-smoke-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.37.0-api-smoke-ci-foundation).
+[`v0.38.0-openapi-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.38.0-openapi-contract-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and
