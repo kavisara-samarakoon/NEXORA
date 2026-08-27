@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.40.0-backend-security-headers-foundation` is the latest stable development
-milestone while the v0.41 auth cookie security foundation is in progress. This
-is documentation for a local/development MVP, not a
+`v0.41.0-auth-cookie-security-foundation` is the latest stable development
+milestone while the v0.42 API Smoke CI resilience foundation is in progress.
+This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
 Authoritative implementation sources include the controllers under

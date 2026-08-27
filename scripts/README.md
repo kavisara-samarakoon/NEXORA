@@ -55,9 +55,18 @@ it reports the failed URL and reminds you to start or check the backend.
 ## API Smoke CI
 
 The same local script runs in GitHub Actions through
-[`api-smoke-ci.yml`](../.github/workflows/api-smoke-ci.yml). The workflow starts
-the default backend locally, waits for `/api/health`, runs the script against
-`http://localhost:8080`, and uploads `backend-smoke.log` for debugging.
+[`api-smoke-ci.yml`](../.github/workflows/api-smoke-ci.yml). Before starting the
+default backend, the workflow warms the Maven dependency/plugin graph with
+bounded retries. It starts Maven in batch/no-transfer-progress mode, waits for
+`/api/health`, and fails early with the last 160 backend log lines if the
+Maven/backend process exits. It then runs the script against
+`http://localhost:8080` and uploads the complete `backend-smoke.log` artifact
+for debugging.
+
+The script's endpoint, authentication, CSRF, and error-contract checks are
+unchanged. The added CI preparation and diagnostics reduce the impact of a
+transient Maven Central HTTP 429 response but still fail when dependency
+resolution remains unavailable or the backend cannot start.
 
 The CI workflow remains local-only and does not target production or staging.
 Manual local execution is still useful before opening a pull request and when

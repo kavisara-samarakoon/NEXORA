@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.40.0-backend-security-headers-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.40.0-backend-security-headers-foundation).
-> `v0.41.0-auth-cookie-security-foundation` remains in progress until
+> [`v0.41.0-auth-cookie-security-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.41.0-auth-cookie-security-foundation).
+> `v0.42.0-api-smoke-ci-resilience-foundation` remains in progress until
 > merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -350,7 +350,7 @@ requests targeting `main`:
 | Workflow | Validation |
 | --- | --- |
 | `backend-ci.yml` | Runs database-free backend tests and a separate PostgreSQL 16 job that validates the `dev` profile, Flyway migrations, and JPA schema |
-| `api-smoke-ci.yml` | Starts the default backend locally, waits for health, and runs the existing reviewer smoke script against localhost |
+| `api-smoke-ci.yml` | Warms Maven dependencies with bounded retries, starts the default backend locally, waits for health, and runs the existing reviewer smoke script against localhost |
 | `api-contract-ci.yml` | Runs the standard-library checker for the hand-maintained OpenAPI path, operation, schema, security, error, and localhost markers |
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
 | `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
@@ -370,7 +370,13 @@ repository settings rather than claims made by these workflow files.
 API Smoke CI runs [`scripts/api-smoke-test.sh`](scripts/api-smoke-test.sh)
 against a backend started inside the GitHub Actions runner. It checks public
 endpoints, auth/CSRF, protected endpoints, Sentinel insight, and shared API
-error-contract behavior without targeting a deployed service.
+error-contract behavior without targeting a deployed service. Before startup,
+the workflow warms Maven dependencies with bounded retries and uses Maven
+batch/no-transfer-progress mode for cleaner logs. The health wait fails early
+if the Maven/backend process exits and prints a bounded log tail;
+`backend-smoke.log` is still uploaded for debugging. This reduces the impact of
+transient Maven Central HTTP 429 responses without ignoring persistent
+dependency-resolution or backend-startup failures.
 
 API Contract CI runs
 [`scripts/openapi-contract-check.py`](scripts/openapi-contract-check.py) against
@@ -407,7 +413,7 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.40.0-backend-security-headers-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.40.0-backend-security-headers-foundation).
+[`v0.41.0-auth-cookie-security-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.41.0-auth-cookie-security-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

@@ -37,16 +37,57 @@ jobs:
           test -x scripts/api-smoke-test.sh
           bash -n scripts/api-smoke-test.sh
 
+      - name: Prepare Maven dependencies for smoke test
+        working-directory: backend/nexora-api
+        run: |
+          max_attempts=4
+          for attempt in $(seq 1 "${max_attempts}"); do
+            echo "Preparing Maven dependencies... attempt ${attempt}/${max_attempts}"
+            # Recheck artifacts left missing by an earlier transfer failure in this runner.
+            if mvn --batch-mode --no-transfer-progress --update-snapshots -DskipTests dependency:go-offline; then
+              echo "Maven dependencies are ready."
+              break
+            fi
+
+            if (( attempt == max_attempts )); then
+              echo "Maven dependency preparation failed after ${max_attempts} attempts."
+              exit 1
+            fi
+
+            retry_delay=$((attempt * 10))
+            echo "Maven attempt ${attempt}/${max_attempts} failed; retrying in ${retry_delay} seconds."
+            sleep "${retry_delay}"
+          done
+
       - name: Start backend for smoke test
         working-directory: backend/nexora-api
         run: |
-          nohup mvn -DskipTests spring-boot:run > ../../backend-smoke.log 2>&1 &
+          nohup mvn --batch-mode --no-transfer-progress -DskipTests spring-boot:run > ../../backend-smoke.log 2>&1 &
           echo "$!" > ../../backend-smoke.pid
 
       - name: Wait for backend health
         run: |
+          if [[ ! -s backend-smoke.pid ]]; then
+            echo "Backend PID file is missing or empty."
+            tail -n 160 backend-smoke.log || true
+            exit 1
+          fi
+
+          backend_pid="$(cat backend-smoke.pid)"
+          if [[ ! "${backend_pid}" =~ ^[0-9]+$ ]]; then
+            echo "Backend PID file does not contain a valid process ID."
+            tail -n 160 backend-smoke.log || true
+            exit 1
+          fi
+
           backend_healthy=false
           for attempt in {1..60}; do
+            if ! kill -0 "${backend_pid}" 2>/dev/null; then
+              echo "Backend process exited before becoming healthy."
+              tail -n 160 backend-smoke.log || true
+              exit 1
+            fi
+
             if curl -fsS http://localhost:8080/api/health >/dev/null; then
               echo "Backend is healthy."
               backend_healthy=true
@@ -58,7 +99,7 @@ jobs:
 
           if [[ "${backend_healthy}" != "true" ]]; then
             echo "Backend did not become healthy."
-            cat backend-smoke.log || true
+            tail -n 160 backend-smoke.log || true
             exit 1
           fi
 

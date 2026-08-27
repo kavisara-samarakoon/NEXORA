@@ -4,10 +4,21 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.40.0-backend-security-headers-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.40.0-backend-security-headers-foundation).
+[`v0.41.0-auth-cookie-security-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.41.0-auth-cookie-security-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.41.0 Auth Cookie Security foundation
+## In progress — v0.42.0 API Smoke CI Resilience foundation
+
+- Improves API Smoke CI with bounded Maven dependency warm-up retries,
+  batch/no-transfer-progress Maven mode, backend-process early-exit detection
+  during health polling, and tail-based `backend-smoke.log` diagnostics. This
+  reduces transient Maven Central HTTP 429 impact without hiding persistent
+  dependency-resolution or startup failures. It changes no backend Java
+  implementation or tests, frontend code, dependency manifests, database
+  migrations, or OpenAPI YAML. CodeQL remains manual-only, and no
+  production-readiness claim is made.
+
+## Completed test milestone — v0.41.0 Auth Cookie Security foundation
 
 - Adds focused tests for the readable, path-scoped CSRF double-submit cookie;
   refresh-cookie `HttpOnly`, path, `SameSite`, lifetime, raw-token
