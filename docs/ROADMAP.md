@@ -6,10 +6,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.39 OpenAPI contract validation foundation with a
-  lightweight standard-library checker and a separate API Contract CI workflow.
-- Keep the completed v0.38 OpenAPI contract foundation as the latest stable
-  milestone until v0.39 is merged and tagged.
+- Complete the in-progress v0.40 backend security headers foundation with
+  explicit browser-facing response headers and focused backend tests.
+- Keep the completed v0.39 OpenAPI contract validation foundation as the latest
+  stable milestone until v0.40 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -25,8 +25,8 @@ project's academic, portfolio, and product goals evolve.
 ## API contract tooling
 
 - Consider full OpenAPI linting with external tooling only after its dependency,
-  maintenance, reliability, and security implications are reviewed; v0.39 is a
-  deliberately lightweight marker/structure check.
+  maintenance, reliability, and security implications are reviewed; the
+  completed v0.39 checker is deliberately a lightweight marker/structure check.
 - Consider generated clients only after contract stability, versioning, and
   ownership expectations are defined.
 - Add Swagger UI or runtime-generated API documentation only after a separate
@@ -47,6 +47,12 @@ project's academic, portfolio, and product goals evolve.
 
 ## Deployment preparation
 
+- Verify backend response headers in a deployed environment only after an
+  approved HTTPS topology and proxy boundary exist.
+- Define frontend Content Security Policy separately when the frontend has a
+  reviewed deployment topology and asset/integration requirements.
+- Enable HSTS only after HTTPS deployment and redirect behavior are defined and
+  verified; it is intentionally outside the local v0.40 foundation.
 - Build future deployment health probes and production monitoring only on an
   approved topology with alerting and response ownership. The v0.33 safe
   runtime/configuration summary is only a lightweight foundation.

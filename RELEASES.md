@@ -4,10 +4,20 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.38.0-openapi-contract-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.38.0-openapi-contract-foundation).
+[`v0.39.0-openapi-contract-validation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.39.0-openapi-contract-validation-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.39.0 OpenAPI contract validation foundation
+## In progress — v0.40.0 Backend Security Headers foundation
+
+- Configures Spring Security to send `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a restrictive
+  `Permissions-Policy`, and cache-control headers suitable for auth-sensitive
+  API responses. Focused backend tests cover a public health response and the
+  auth CSRF bootstrap response. This milestone adds no dependencies, frontend
+  changes, database migrations, or workflow changes. CodeQL remains
+  manual-only, and no production-readiness claim is made.
+
+## Completed CI milestone — v0.39.0 OpenAPI contract validation foundation
 
 - Added `scripts/openapi-contract-check.py` and
   `.github/workflows/api-contract-ci.yml` to check the expected route/operation

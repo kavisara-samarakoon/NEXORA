@@ -25,6 +25,25 @@ clears accounts and personal wishlist changes. The `dev` profile validates JPA
 mappings against the migrated schema with `ddl-auto=validate`; Hibernate does
 not create or modify tables.
 
+### Backend security headers
+
+The Spring Security filter chain explicitly applies these headers to API
+responses:
+
+- `X-Content-Type-Options: nosniff` prevents content-type sniffing;
+- `X-Frame-Options: DENY` prevents the API response from being framed;
+- `Referrer-Policy: no-referrer` avoids sending referrer information; and
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(),
+  usb=(), fullscreen=()` disables browser capabilities the API does not need.
+
+Spring Security's cache-control writer also emits `Cache-Control` with
+`no-cache`, `no-store`, `max-age=0`, and `must-revalidate`, together with
+`Pragma: no-cache` and `Expires: 0`. This keeps auth-sensitive responses such as
+the CSRF bootstrap response from being cached. These headers complement the
+existing authentication, custom CSRF/browser request guard, abuse controls,
+and shared error contract; they do not change CORS, authentication, or CSRF
+validation behavior.
+
 ### Production-profile startup guard
 
 The v0.32 safety guard runs before normal application singletons when any active
