@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.41.0-auth-cookie-security-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.41.0-auth-cookie-security-foundation).
-> `v0.42.0-api-smoke-ci-resilience-foundation` remains in progress until
+> [`v0.42.0-api-smoke-ci-resilience-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.42.0-api-smoke-ci-resilience-foundation).
+> `v0.43.0-request-correlation-observability-foundation` remains in progress until
 > merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -62,6 +62,7 @@ security controls, and testable optional integrations.
 | Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
+| Request correlation | Safe response header, client-value validation, generated fallback, and request-scoped MDC value | Local observability foundation |
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 | Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
@@ -310,6 +311,20 @@ do not test external dependency availability or provide production monitoring.
 Prometheus, Grafana, OpenTelemetry, managed logging, alerting, dashboards, and
 operational response remain future deployment decisions.
 
+### Request correlation observability foundation
+
+Version 0.43 adds `X-NEXORA-Request-ID` to backend success and error responses.
+Clients may supply an identifier made only from the documented safe token
+characters; the backend trims and reuses valid values and replaces missing or
+unsafe values with a generated UUID. The same value is available during the
+request under the internal MDC key `nexora.request_id`, then removed when the
+request finishes.
+
+Request IDs must not contain secrets, tokens, emails, or personal data. The
+header is request-level local/development correlation only: it does not add a
+JSON response field, distributed tracing, managed log aggregation, dashboards,
+metrics, or production monitoring.
+
 ### API error contract foundation
 
 Version 0.34 standardizes targeted backend failures across authentication,
@@ -413,7 +428,7 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.41.0-auth-cookie-security-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.41.0-auth-cookie-security-foundation).
+[`v0.42.0-api-smoke-ci-resilience-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.42.0-api-smoke-ci-resilience-foundation).
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

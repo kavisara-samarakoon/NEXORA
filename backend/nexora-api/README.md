@@ -44,6 +44,25 @@ existing authentication, custom CSRF/browser request guard, abuse controls,
 and shared error contract; they do not change CORS, authentication, or CSRF
 validation behavior.
 
+### Request correlation observability
+
+Every backend response includes `X-NEXORA-Request-ID`. A client-supplied value
+is trimmed and reused only when it is 8–128 characters, starts with an ASCII
+letter or digit, and otherwise contains only ASCII letters, digits, `.`, `_`,
+`:`, or `-`. Missing, blank, oversized, whitespace-containing, control-
+character-containing, or otherwise unsafe values are replaced with a generated
+UUID; they do not cause the API request to be rejected.
+
+The selected value is available to backend processing as the request attribute
+and MDC key `nexora.request_id`, and the MDC entry is removed when processing
+finishes. It is returned as a header on success and error responses, not added
+to JSON bodies. Request IDs must never contain secrets, authorization values,
+tokens, cookies, email addresses, or other personal data.
+
+This is a lightweight local/development debugging aid. It does not provide
+distributed tracing, centralized logs, metrics, dashboards, alerting, or
+production monitoring.
+
 ### Production-profile startup guard
 
 The v0.32 safety guard runs before normal application singletons when any active

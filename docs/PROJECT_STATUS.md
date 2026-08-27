@@ -3,14 +3,22 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The `v0.42.0-api-smoke-ci-resilience-foundation` milestone is in progress. It
-adds bounded Maven dependency prefetch retries, batch/no-transfer-progress
-Maven output, fail-fast backend-process checks during health polling, and
-tail-based smoke-log diagnostics. The smoke script and API behavior are
-unchanged. The milestone changes no backend Java implementation or tests,
-frontend code, dependency manifests, database migrations, OpenAPI YAML, or
-CodeQL workflow. The latest stable development milestone remains
-`v0.41.0-auth-cookie-security-foundation` until v0.42 is merged and tagged.
+The `v0.43.0-request-correlation-observability-foundation` milestone is in
+progress. It adds a safe `X-NEXORA-Request-ID` response header, controlled reuse
+of valid client-supplied IDs, UUID fallback generation, request-scoped MDC
+availability, and focused success/error/lifecycle tests. It does not add the ID
+to JSON response bodies or change the shared error DTO. The latest stable
+development milestone remains `v0.42.0-api-smoke-ci-resilience-foundation`
+until v0.43 is merged and tagged. This milestone changes no frontend code,
+dependency manifest, database migration, OpenAPI YAML, GitHub Actions workflow,
+or authentication, session, CSRF, or CORS behavior.
+
+The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
+prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
+process checks during health polling, and tail-based smoke-log diagnostics. The
+smoke script and API behavior remained unchanged, with no backend Java
+implementation or test, frontend, dependency, migration, OpenAPI YAML, or
+CodeQL workflow changes.
 
 The v0.41 auth cookie security foundation added focused endpoint and property
 tests plus reviewer-friendly documentation for refresh-cookie issuance,
@@ -108,7 +116,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.41.0-auth-cookie-security-foundation`.
+`v0.42.0-api-smoke-ci-resilience-foundation`.
 
 ## Completed foundations
 
