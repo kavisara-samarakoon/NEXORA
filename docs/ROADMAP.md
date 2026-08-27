@@ -6,10 +6,11 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.42 API Smoke CI resilience foundation with Maven
-  dependency warm-up retries and fail-fast backend-startup diagnostics.
-- Keep the completed v0.41 auth cookie security foundation as the latest stable
-  milestone until v0.42 is merged and tagged.
+- Complete the in-progress v0.43 request correlation observability foundation
+  with a safe response header, validated client IDs, UUID fallback, request-
+  scoped MDC data, and focused tests.
+- Keep the completed v0.42 API Smoke CI resilience foundation as the latest
+  stable milestone until v0.43 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing

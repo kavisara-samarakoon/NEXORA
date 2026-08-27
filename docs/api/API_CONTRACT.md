@@ -10,8 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.41.0-auth-cookie-security-foundation` is the latest stable development
-milestone while the v0.42 API Smoke CI resilience foundation is in progress.
+`v0.42.0-api-smoke-ci-resilience-foundation` is the latest stable development
+milestone while the v0.43 request correlation observability foundation is in
+progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -135,6 +136,24 @@ the cookie. `SameSite=None` is rejected for either auth cookie unless
 profile guard requires secure refresh/CSRF cookies and rejects other core unsafe
 production settings. That guard is a startup safety foundation, not a complete
 production session design.
+
+## Cross-cutting request correlation header
+
+Backend success and error responses include:
+
+```text
+X-NEXORA-Request-ID: <safe-request-id>
+```
+
+Clients may omit this header. When supplied, its value is trimmed and reused
+only if it matches `^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$`; invalid values are
+replaced with a generated UUID rather than causing a client error. Request IDs
+must not contain secrets, tokens, cookies, email addresses, or personal data.
+
+The request ID is response-header metadata only. It is returned for successful
+and failed requests but is not added to endpoint DTOs or the shared JSON error
+body. The hand-maintained `openapi.yaml` is intentionally unchanged for this
+focused milestone.
 
 ## Standard error response contract
 

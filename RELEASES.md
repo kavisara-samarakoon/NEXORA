@@ -4,10 +4,23 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.41.0-auth-cookie-security-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.41.0-auth-cookie-security-foundation).
+[`v0.42.0-api-smoke-ci-resilience-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.42.0-api-smoke-ci-resilience-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.42.0 API Smoke CI Resilience foundation
+## In progress — v0.43.0 Request Correlation Observability foundation
+
+- Adds `X-NEXORA-Request-ID` to backend success and error responses, reuses
+  safe client-supplied values, generates UUID fallbacks for missing or invalid
+  values, and exposes the selected value during request processing under the
+  `nexora.request_id` request attribute and MDC key. Focused tests cover
+  generated, echoed, replaced, authentication-error, browser-guard-error, and
+  MDC lifecycle behavior. The ID remains response-header metadata only:
+  `ApiErrorResponse` and all other JSON body shapes are unchanged. This
+  milestone adds no frontend changes, dependencies, database migrations,
+  OpenAPI YAML edits, or workflow changes and makes no production-readiness
+  claim.
+
+## Completed CI milestone — v0.42.0 API Smoke CI Resilience foundation
 
 - Improves API Smoke CI with bounded Maven dependency warm-up retries,
   batch/no-transfer-progress Maven mode, backend-process early-exit detection
