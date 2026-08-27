@@ -4,10 +4,21 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.39.0-openapi-contract-validation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.39.0-openapi-contract-validation-foundation).
+[`v0.40.0-backend-security-headers-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.40.0-backend-security-headers-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.40.0 Backend Security Headers foundation
+## In progress — v0.41.0 Auth Cookie Security foundation
+
+- Adds focused tests for the readable, path-scoped CSRF double-submit cookie;
+  refresh-cookie `HttpOnly`, path, `SameSite`, lifetime, raw-token
+  non-disclosure and rotation behavior; logout clearing with matching
+  attributes; and the rule that `SameSite=None` requires `Secure` for both
+  cookie types. This tests-and-documentation milestone changes no runtime
+  implementation, frontend code, dependency manifests, database migrations, or
+  workflows. CodeQL remains manual-only, and no production-readiness claim is
+  made.
+
+## Completed backend milestone — v0.40.0 Backend Security Headers foundation
 
 - Configures Spring Security to send `X-Content-Type-Options: nosniff`,
   `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a restrictive

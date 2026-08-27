@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.39.0-openapi-contract-validation-foundation` is the latest stable
-development milestone while the v0.40 backend security headers foundation is
-in progress. This is documentation for a local/development MVP, not a
+`v0.40.0-backend-security-headers-foundation` is the latest stable development
+milestone while the v0.41 auth cookie security foundation is in progress. This
+is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
 Authoritative implementation sources include the controllers under
@@ -102,26 +102,39 @@ production settings. Missing, mismatched, or untrusted browser request context
 returns `csrf_failed` with HTTP 403. Repeated rejection attempts can return the
 process-local auth `rate_limited` response.
 
+| CSRF cookie attribute | Local default/behavior |
+| --- | --- |
+| Name | `nexora_csrf_token` |
+| Path | `/api/auth` |
+| Max-Age | `7200` seconds |
+| HttpOnly | `false` intentionally, so the frontend can perform the double-submit flow |
+| Secure | `false` for local HTTP only |
+| SameSite | `Lax` |
+| Header relationship | Cookie value must match `X-NEXORA-CSRF` on guarded auth POST routes |
+
 ## Refresh-session cookie model
 
 Successful register/login responses and successful refresh responses issue the
 opaque refresh token as a cookie. The default cookie contract is:
 
-| Attribute | Local default |
+| Refresh cookie attribute | Local default/behavior |
 | --- | --- |
 | Name | `nexora_refresh_token` |
-| HttpOnly | `true` |
 | Path | `/api/auth` |
-| SameSite | `Lax` |
+| Max-Age | `604800` seconds |
+| HttpOnly | `true` |
 | Secure | `false` for local HTTP only |
-| Lifetime | 7 days |
+| SameSite | `Lax` |
+| Clear behavior | Logout sends the same name/path/security attributes with `Max-Age=0` and an empty value |
 
 The raw refresh token is not returned in JSON. The server stores only its
 HMAC-SHA256 hash. Refresh sessions are in memory by default and PostgreSQL-
 backed in the `dev` profile. Rotation invalidates the prior token; logout clears
-the cookie. Cookie attributes are configurable, and the v0.32 production
-profile guard rejects core unsafe production settings. That guard is a startup
-safety foundation, not a complete production session design.
+the cookie. `SameSite=None` is rejected for either auth cookie unless
+`Secure=true`. Cookie attributes are configurable, and the v0.32 production
+profile guard requires secure refresh/CSRF cookies and rejects other core unsafe
+production settings. That guard is a startup safety foundation, not a complete
+production session design.
 
 ## Standard error response contract
 

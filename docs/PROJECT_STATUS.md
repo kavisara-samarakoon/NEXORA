@@ -3,14 +3,20 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The `v0.40.0-backend-security-headers-foundation` milestone is in progress. It
-adds explicit browser-facing HTTP security headers and cache-control behavior
-through the existing Spring Security filter chain, with focused backend tests
-for public and auth-sensitive responses. It changes no frontend code,
-dependency manifests, database migrations, or GitHub Actions workflows. The
-latest stable development milestone remains
-`v0.39.0-openapi-contract-validation-foundation` until v0.40 is merged and
-tagged.
+The `v0.41.0-auth-cookie-security-foundation` milestone is in progress. It adds
+focused endpoint and property tests plus reviewer-friendly documentation for
+refresh-cookie issuance, rotation, clearing and raw-token non-disclosure; the
+readable CSRF double-submit cookie; and the `SameSite=None`/`Secure` safety
+rule. Existing implementation behavior is unchanged. The milestone changes no
+frontend code, dependency manifests, database migrations, or GitHub Actions
+workflows. The latest stable development milestone remains
+`v0.40.0-backend-security-headers-foundation` until v0.41 is merged and tagged.
+
+The v0.40 backend security headers foundation added explicit browser-facing
+HTTP security headers and cache-control behavior through the existing Spring
+Security filter chain, with focused backend tests for public and auth-sensitive
+responses. It changed no frontend code, dependency manifests, database
+migrations, or GitHub Actions workflows.
 
 The v0.39 OpenAPI contract validation foundation added a Python
 standard-library checker for the hand-maintained OpenAPI path, operation,
@@ -95,7 +101,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.39.0-openapi-contract-validation-foundation`.
+`v0.40.0-backend-security-headers-foundation`.
 
 ## Completed foundations
 
@@ -133,6 +139,8 @@ readiness of the project. The latest stable development milestone is
 - API Contract CI validation that uses the Python standard library to check the
   hand-maintained contract's expected routes, operations, schema/security/error
   markers, and localhost-only server assumption.
+- Backend response hardening through explicit content-type, framing, referrer,
+  permissions-policy, and cache-control headers with focused MockMvc coverage.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
   Flyway V1–V10, JPA schema validation, required tables, and seed data.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
