@@ -27,8 +27,11 @@ no `jq`. See the [scripts guide](../../scripts/README.md) for safety controls an
 environment options.
 
 The manual curl flow below remains useful for learning each request, inspecting
-responses, and debugging a failed smoke-test step. The script does not start
-the backend automatically.
+responses, and debugging a failed smoke-test step. The script is the local
+automated reviewer shortcut and does not start the backend automatically.
+[`API Smoke CI`](../../.github/workflows/api-smoke-ci.yml) adds the pull-request
+automation layer by starting a local backend and running that same script; it
+does not replace manual API review when debugging behavior.
 
 ## Prerequisites
 
