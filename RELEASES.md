@@ -4,10 +4,21 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.46.0-frontend-api-client-safety-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.46.0-frontend-api-client-safety-foundation).
+[`v0.47.0-frontend-request-error-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.47.0-frontend-request-error-observability-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.47.0 Frontend Request Error Observability foundation
+## In progress — v0.48.0 Backend Request Correlation Logging foundation
+
+- Adds `nexora.request_id` MDC output with a `no-request-id` fallback to the
+  local console pattern and safely logs unexpected API errors with method, URI
+  path, status 500, and the exception stack trace. API response bodies remain
+  unchanged and contain no `requestId` field. The handler does not log request
+  headers, cookies, tokens, query strings, parameters, or request bodies. This
+  local/development foundation changes no frontend, dependency manifest,
+  migration, OpenAPI YAML, workflow, or auth/session/CSRF/CORS behavior and does
+  not make NEXORA production-ready.
+
+## Completed frontend milestone — v0.47.0 Frontend Request Error Observability foundation
 
 - Retains response-only `requestId` metadata in normalized authentication,
   Wishlist, Sentinel, and notification-preference errors and displays the safe

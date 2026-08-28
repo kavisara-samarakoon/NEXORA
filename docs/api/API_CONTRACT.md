@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.46.0-frontend-api-client-safety-foundation` is the latest stable development
-milestone while the v0.47 frontend request error observability foundation is in
-progress.
+`v0.47.0-frontend-request-error-observability-foundation` is the latest stable
+development milestone while the v0.48 backend request correlation logging
+foundation is in progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -169,6 +169,15 @@ line for local backend-log correlation. Success states and client-only
 validation errors do not display it. The frontend does not send a generated
 request ID by default, add the ID to JSON body expectations, store it, or log
 response headers. `requestId` remains absent from JSON response bodies.
+
+Local backend console logs include the same request-scoped value through the
+`nexora.request_id` MDC key and use `no-request-id` outside an HTTP request.
+When the global fallback handles an unexpected API exception, it logs only the
+HTTP method, request URI path without query data, status 500, and the exception
+stack trace. It does not read or log request headers, cookies, tokens, query
+strings, parameters, or request bodies. This local logging foundation does not
+change the response contract: `requestId` remains absent from JSON bodies, and
+the hand-maintained `openapi.yaml` remains unchanged.
 
 ## Standard error response contract
 

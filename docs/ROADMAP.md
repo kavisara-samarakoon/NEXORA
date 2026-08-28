@@ -6,11 +6,11 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.47 frontend request error observability foundation
-  by surfacing safe response request IDs in selected frontend error/support
-  states without changing request behavior.
-- Keep the completed v0.46 frontend API client safety foundation as the latest
-  stable milestone until v0.47 is merged and tagged.
+- Complete the in-progress v0.48 backend request correlation logging foundation
+  by including request-scoped MDC IDs in local console logs and safely logging
+  unexpected API failures.
+- Keep the completed v0.47 frontend request error observability foundation as
+  the latest stable milestone until v0.48 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -79,7 +79,7 @@ project's academic, portfolio, and product goals evolve.
 - Add full observability dashboards later, after metrics, tracing, managed
   logging, alert ownership, and operational response are defined. Prometheus,
   Grafana, OpenTelemetry, and external integrations remain deliberately
-  unselected.
+  unselected; the local v0.48 console pattern is not a substitute for them.
 - Select a target topology, hosting model, networking boundary, and operational
   ownership model.
 - Define backend and frontend application image requirements separately from

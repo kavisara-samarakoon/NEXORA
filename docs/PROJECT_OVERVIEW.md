@@ -10,7 +10,9 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.35.0-api-contract-documentation-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.35.0-api-contract-documentation-foundation).
+[`v0.47.0-frontend-request-error-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.47.0-frontend-request-error-observability-foundation).
+The `v0.48.0-backend-request-correlation-logging-foundation` milestone remains
+in progress until merged and tagged.
 
 ## Problem statement
 
