@@ -76,13 +76,26 @@ query strings keep their existing behavior.
 The helper can also read a trimmed `X-NEXORA-Request-ID` from backend response
 headers as optional internal debugging metadata. The frontend does not generate
 or send request IDs by default, does not add them to JSON body expectations,
-does not log response headers, and does not display request IDs in the UI in
-this milestone. Any future UI display requires a separately reviewed error-
-details experience.
+and does not log response headers.
 
 Memory-first access-token handling, the browser-managed HttpOnly refresh
 cookie, module-memory CSRF caching, `X-NEXORA-CSRF` echoing, and the single
 bounded CSRF retry remain unchanged. The shared helper contains no secrets.
+
+### Frontend request error observability
+
+Selected login, registration, Sentinel gateway, personal Wishlist, notification-
+preference, and saved-deal error/support states can show the safe
+`X-NEXORA-Request-ID` response-header value beneath their existing message. The
+small support line helps connect a local frontend failure with backend logs; it
+is not a token or session identifier, is not stored, and is never shown for
+successful states or client-only validation errors.
+
+The frontend still does not generate or send request ID headers by default.
+Request IDs remain response metadata rather than JSON body fields, and no raw
+response headers or credentials are displayed or logged. Memory-first access-
+token storage, the browser-managed HttpOnly refresh cookie, module-memory CSRF
+caching and echoing, and the bounded single CSRF retry are unchanged.
 
 ## Commands
 

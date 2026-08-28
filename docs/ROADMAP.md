@@ -6,11 +6,11 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.46 frontend API client safety foundation by
-  centralizing public API base URL handling and retaining safe response request-
-  ID awareness as internal metadata.
-- Keep the completed v0.45 frontend dependency health foundation as the latest
-  stable milestone until v0.46 is merged and tagged.
+- Complete the in-progress v0.47 frontend request error observability foundation
+  by surfacing safe response request IDs in selected frontend error/support
+  states without changing request behavior.
+- Keep the completed v0.46 frontend API client safety foundation as the latest
+  stable milestone until v0.47 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -50,9 +50,9 @@ project's academic, portfolio, and product goals evolve.
 
 ## Product UX improvements
 
-- Consider displaying response request IDs only in a separately designed error-
-  details experience with clear privacy, support, and accessibility boundaries;
-  v0.46 does not add request IDs to the UI.
+- Consider broader request-ID presentation only after reviewing privacy,
+  support, and accessibility boundaries. Copy-to-clipboard remains future work;
+  v0.47 intentionally adds no clipboard behavior.
 - Refine account and session feedback, including recovery and verification UX
   after the underlying policies are defined.
 - Improve wishlist, price-target, alert-history, and notification-preference

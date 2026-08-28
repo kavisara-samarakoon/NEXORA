@@ -43,13 +43,19 @@ export type SentinelInsightError = {
     | "request_failed"
     | "unknown_error";
   message: string;
+  requestId: string | null;
 };
 
+type SentinelInsightRequestErrorDetails = Omit<SentinelInsightError, "requestId">;
+
 export class SentinelInsightRequestError extends Error {
-  readonly details: SentinelInsightError;
+  readonly details: SentinelInsightRequestErrorDetails;
   readonly requestId: string | null;
 
-  constructor(details: SentinelInsightError, requestId: string | null = null) {
+  constructor(
+    details: SentinelInsightRequestErrorDetails,
+    requestId: string | null = null,
+  ) {
     super(details.message);
     this.name = "SentinelInsightRequestError";
     this.details = details;
@@ -196,12 +202,15 @@ export async function requestSentinelInsight(
 }
 
 export function normalizeSentinelInsightError(error: unknown): SentinelInsightError {
-  if (error instanceof SentinelInsightRequestError) return error.details;
+  if (error instanceof SentinelInsightRequestError) {
+    return { ...error.details, requestId: error.requestId };
+  }
 
   return {
     status: null,
     code: "unknown_error",
     message: "The Sentinel gateway could not complete this request. Check the local backend, then try again.",
+    requestId: null,
   };
 }
 

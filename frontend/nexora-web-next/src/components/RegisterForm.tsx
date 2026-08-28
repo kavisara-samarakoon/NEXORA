@@ -5,15 +5,19 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { normalizeAuthError, register, type RegisterPayload } from "@/lib/auth";
 import { startAuthSession } from "@/lib/auth-client";
+import RequestIdSupportText from "@/components/RequestIdSupportText";
 
 export default function RegisterForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<{
+    message: string;
+    requestId: string | null;
+  } | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setErrorMessage(null);
+    setErrorDetails(null);
     setIsSubmitting(true);
 
     const form = event.currentTarget;
@@ -32,7 +36,11 @@ export default function RegisterForm() {
       form.reset();
       router.replace("/");
     } catch (error) {
-      setErrorMessage(normalizeAuthError(error).message);
+      const details = normalizeAuthError(error);
+      setErrorDetails({
+        message: details.message,
+        requestId: details.requestId,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -42,9 +50,9 @@ export default function RegisterForm() {
     <form
       className="auth-form"
       aria-busy={isSubmitting}
-      aria-describedby={errorMessage ? "register-form-error" : undefined}
+      aria-describedby={errorDetails ? "register-form-error" : undefined}
       onSubmit={handleSubmit}
-      onChange={() => setErrorMessage(null)}
+      onChange={() => setErrorDetails(null)}
     >
       <div className="auth-form__grid">
         <div className="auth-form__field">
@@ -107,10 +115,14 @@ export default function RegisterForm() {
       </div>
 
       <div className="auth-form__message">
-        {errorMessage ? (
+        {errorDetails ? (
           <div className="auth-form__feedback auth-form__feedback--error" id="register-form-error" role="alert">
             <span aria-hidden="true">!</span>
-            <span><strong>Account not created</strong><small>{errorMessage}</small></span>
+            <span>
+              <strong>Account not created</strong>
+              <small>{errorDetails.message}</small>
+              <RequestIdSupportText requestId={errorDetails.requestId} />
+            </span>
           </div>
         ) : null}
       </div>

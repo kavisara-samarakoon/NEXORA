@@ -23,14 +23,20 @@ export type NotificationPreferenceError = {
     | "request_failed"
     | "unknown_error";
   message: string;
+  requestId: string | null;
 };
 
+type NotificationPreferenceRequestErrorDetails = Omit<
+  NotificationPreferenceError,
+  "requestId"
+>;
+
 export class NotificationPreferenceRequestError extends Error {
-  readonly details: NotificationPreferenceError;
+  readonly details: NotificationPreferenceRequestErrorDetails;
   readonly requestId: string | null;
 
   constructor(
-    details: NotificationPreferenceError,
+    details: NotificationPreferenceRequestErrorDetails,
     requestId: string | null = null,
   ) {
     super(details.message);
@@ -151,12 +157,15 @@ export function updateMyNotificationPreferences(
 export function normalizeNotificationPreferenceError(
   error: unknown,
 ): NotificationPreferenceError {
-  if (error instanceof NotificationPreferenceRequestError) return error.details;
+  if (error instanceof NotificationPreferenceRequestError) {
+    return { ...error.details, requestId: error.requestId };
+  }
 
   return {
     status: null,
     code: "unknown_error",
     message: "Something went wrong with notification preferences. Please try again.",
+    requestId: null,
   };
 }
 

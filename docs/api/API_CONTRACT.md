@@ -10,8 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.45.0-frontend-dependency-health-foundation` is the latest stable development
-milestone while the v0.46 frontend API client safety foundation is in progress.
+`v0.46.0-frontend-api-client-safety-foundation` is the latest stable development
+milestone while the v0.47 frontend request error observability foundation is in
+progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -162,9 +163,12 @@ value, and confirms `requestId` remains absent from shared error JSON. Full
 response headers and sensitive cookie or authorization values are not printed.
 
 The primary Next.js frontend can read the response header as optional internal
-request-error metadata through its shared API client helper. It does not send a
-frontend-generated request ID by default, add the ID to JSON body expectations,
-log response headers, or display the value in the UI in this milestone.
+request-error metadata through its shared API client helper. Selected frontend
+error/support states may display that response-header value as a quiet support
+line for local backend-log correlation. Success states and client-only
+validation errors do not display it. The frontend does not send a generated
+request ID by default, add the ID to JSON body expectations, store it, or log
+response headers. `requestId` remains absent from JSON response bodies.
 
 ## Standard error response contract
 

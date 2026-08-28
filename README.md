@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.45.0-frontend-dependency-health-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.45.0-frontend-dependency-health-foundation).
-> `v0.46.0-frontend-api-client-safety-foundation` remains in progress
+> [`v0.46.0-frontend-api-client-safety-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.46.0-frontend-api-client-safety-foundation).
+> `v0.47.0-frontend-request-error-observability-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -64,6 +64,7 @@ security controls, and testable optional integrations.
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
 | Request correlation | Safe response header, client-value validation, generated fallback, and request-scoped MDC value | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
+| Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 | Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
@@ -335,17 +336,31 @@ validation errors, and confirms the shared error JSON body still has no
 
 ### Frontend API client safety foundation
 
-The in-progress v0.46 foundation centralizes the primary Next.js frontend's
+The completed v0.46 foundation centralizes the primary Next.js frontend's
 browser-visible `NEXT_PUBLIC_API_BASE_URL` resolution and URL construction in a
 small shared helper. The same helper reads trimmed `X-NEXORA-Request-ID`
 response-header values as optional internal request-error metadata without
-adding request IDs to JSON bodies, displaying them in the UI, logging headers,
-or sending frontend-generated request IDs.
+adding request IDs to JSON bodies, logging headers, or sending frontend-
+generated request IDs.
 
 Access tokens remain in module memory, refresh tokens remain browser-managed
 HttpOnly cookies, and the existing CSRF cookie/header acquisition and one-retry
 behavior are unchanged. The helper handles public configuration only and does
 not expose credentials or secrets.
+
+### Frontend request error observability foundation
+
+The in-progress v0.47 foundation retains request IDs in normalized frontend
+authentication, Wishlist, Sentinel, and notification-preference errors, then
+shows the safe response-header value as a quiet support line in selected
+backend error states. Login, registration, Sentinel gateway, personal Wishlist,
+notification-preference, and saved-deal save/sync failures are covered; success
+and client-only validation states do not display an ID.
+
+The frontend does not generate or send `X-NEXORA-Request-ID` by default. It does
+not store the ID, read it from JSON bodies, or display or log raw headers,
+tokens, cookies, CSRF values, or Authorization data. Backend behavior and the
+existing memory-first authentication and bounded CSRF retry model are unchanged.
 
 ### API error contract foundation
 
@@ -453,8 +468,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.45.0-frontend-dependency-health-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.45.0-frontend-dependency-health-foundation).
-The `v0.46.0-frontend-api-client-safety-foundation` milestone is in
+[`v0.46.0-frontend-api-client-safety-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.46.0-frontend-api-client-safety-foundation).
+The `v0.47.0-frontend-request-error-observability-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

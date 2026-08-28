@@ -108,13 +108,19 @@ export type UserWishlistError = {
   status: number | null;
   code: "authentication_required" | "validation_failed" | "not_found" | "service_unavailable" | "invalid_response" | "request_failed" | "unknown_error";
   message: string;
+  requestId: string | null;
 };
 
+type UserWishlistRequestErrorDetails = Omit<UserWishlistError, "requestId">;
+
 export class UserWishlistRequestError extends Error {
-  readonly details: UserWishlistError;
+  readonly details: UserWishlistRequestErrorDetails;
   readonly requestId: string | null;
 
-  constructor(details: UserWishlistError, requestId: string | null = null) {
+  constructor(
+    details: UserWishlistRequestErrorDetails,
+    requestId: string | null = null,
+  ) {
     super(details.message);
     this.name = "UserWishlistRequestError";
     this.details = details;
@@ -320,12 +326,15 @@ export async function deleteMyWishlistItem(token: string, id: number): Promise<v
 }
 
 export function normalizeUserWishlistError(error: unknown): UserWishlistError {
-  if (error instanceof UserWishlistRequestError) return error.details;
+  if (error instanceof UserWishlistRequestError) {
+    return { ...error.details, requestId: error.requestId };
+  }
 
   return {
     status: null,
     code: "unknown_error",
     message: "Something went wrong with your wishlist. Please try again.",
+    requestId: null,
   };
 }
 

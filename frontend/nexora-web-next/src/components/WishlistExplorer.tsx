@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddWishlistItemForm from "@/components/AddWishlistItemForm";
+import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import {
   wishlistFilters,
@@ -37,7 +38,11 @@ import {
 } from "@/lib/user-wishlist";
 
 type WishlistView = "checking" | "public" | "personal" | "offline";
-type ItemMessage = { kind: "success" | "error"; text: string };
+type ItemMessage = {
+  kind: "success" | "error";
+  text: string;
+  requestId?: string | null;
+};
 type PriceHistoryState = "idle" | "loading" | "loaded" | "unavailable";
 type NumericPriceHistoryPoint = WishlistPriceHistoryPoint & { priceAmount: number };
 type NotificationPreferenceLoadState = "idle" | "loading" | "ready" | "error";
@@ -591,6 +596,9 @@ function WishlistCard({
           || (isUpdating ? "Saving alert settings…" : message?.text)
           || (canManage ? "Alert settings sync with your account." : "Sign in to manage alert settings.")}
       </small>
+      {!validationMessage && message?.kind === "error" ? (
+        <RequestIdSupportText requestId={message.requestId} />
+      ) : null}
     </article>
   );
 }
@@ -824,7 +832,11 @@ function NotificationPreferencesPanel({
           return;
         }
         setLoadState("error");
-        setMessage({ kind: "error", text: details.message });
+        setMessage({
+          kind: "error",
+          text: details.message,
+          requestId: details.requestId,
+        });
       }
     }
 
@@ -863,7 +875,11 @@ function NotificationPreferencesPanel({
         onAuthenticationRequired();
         return;
       }
-      setMessage({ kind: "error", text: details.message });
+      setMessage({
+        kind: "error",
+        text: details.message,
+        requestId: details.requestId,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -892,7 +908,12 @@ function NotificationPreferencesPanel({
       {loadState === "error" && (
         <UxStatePanel
           className="ux-state--compact wl-notification-preferences__error"
-          description={<>{message?.text || "The account preference route could not be reached."} Wishlist items and alert settings remain available.</>}
+          description={(
+            <>
+              {message?.text || "The account preference route could not be reached."} Wishlist items and alert settings remain available.
+              <RequestIdSupportText requestId={message?.requestId} />
+            </>
+          )}
           role="alert"
           title="Notification preferences unavailable"
           tone="unavailable"
@@ -945,6 +966,9 @@ function NotificationPreferencesPanel({
               role={message?.kind === "error" ? "alert" : isSaving || message ? "status" : undefined}
             >
               {isSaving ? "Saving preferences to your account…" : message?.text || "Changes are saved only when you use Save."}
+              {message?.kind === "error" ? (
+                <RequestIdSupportText requestId={message.requestId} />
+              ) : null}
             </span>
             <button type="submit" disabled={!hasChanges || isSaving}>
               {isSaving ? "Saving…" : "Save"}
@@ -1214,7 +1238,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       } else {
         setItemMessages((current) => ({
           ...current,
-          [item.id]: { kind: "error", text: details.message },
+          [item.id]: {
+            kind: "error",
+            text: details.message,
+            requestId: details.requestId,
+          },
         }));
       }
     } finally {
@@ -1255,7 +1283,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       if (details.status === 401) {
         handleAuthenticationRequired();
       } else {
-        setOperationMessage({ kind: "error", text: `${details.message} The item was not removed.` });
+        setOperationMessage({
+          kind: "error",
+          text: `${details.message} The item was not removed.`,
+          requestId: details.requestId,
+        });
       }
     } finally {
       setDeletingIds((current) => {
@@ -1374,7 +1406,14 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       {operationMessage && (
         <UxStatePanel
           className="ux-state--compact wl-operation-message"
-          description={operationMessage.text}
+          description={(
+            <>
+              {operationMessage.text}
+              {operationMessage.kind === "error" ? (
+                <RequestIdSupportText requestId={operationMessage.requestId} />
+              ) : null}
+            </>
+          )}
           role={operationMessage.kind === "error" ? "alert" : "status"}
           title={operationMessage.kind === "error" ? "Wishlist action failed" : "Wishlist updated"}
           tone={operationMessage.kind === "error" ? "error" : "success"}
