@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.46.0-frontend-api-client-safety-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.46.0-frontend-api-client-safety-foundation).
-> `v0.47.0-frontend-request-error-observability-foundation` remains in progress
+> [`v0.47.0-frontend-request-error-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.47.0-frontend-request-error-observability-foundation).
+> `v0.48.0-backend-request-correlation-logging-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -62,7 +62,7 @@ security controls, and testable optional integrations.
 | Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
-| Request correlation | Safe response header, client-value validation, generated fallback, and request-scoped MDC value | Local observability foundation |
+| Request correlation | Safe response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
@@ -334,6 +334,15 @@ echoing of one safe incoming ID, requires generated IDs on established auth and
 validation errors, and confirms the shared error JSON body still has no
 `requestId` field.
 
+The in-progress v0.48 logging foundation adds the MDC value to every local
+backend console line as `requestId=<safe-request-id>`, with `no-request-id` for
+work outside an HTTP request. Unexpected API exceptions are logged at ERROR
+with only the HTTP method, request URI path, status 500, and stack trace. The
+handler does not log request headers, cookies, tokens, query strings, request
+bodies, or parameters, and the API JSON response still has no `requestId` field.
+Managed logging, tracing, dashboards, alerting, and production incident response
+remain future deployment work.
+
 ### Frontend API client safety foundation
 
 The completed v0.46 foundation centralizes the primary Next.js frontend's
@@ -350,7 +359,7 @@ not expose credentials or secrets.
 
 ### Frontend request error observability foundation
 
-The in-progress v0.47 foundation retains request IDs in normalized frontend
+The completed v0.47 foundation retains request IDs in normalized frontend
 authentication, Wishlist, Sentinel, and notification-preference errors, then
 shows the safe response-header value as a quiet support line in selected
 backend error states. Login, registration, Sentinel gateway, personal Wishlist,
@@ -468,8 +477,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.46.0-frontend-api-client-safety-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.46.0-frontend-api-client-safety-foundation).
-The `v0.47.0-frontend-request-error-observability-foundation` milestone is in
+[`v0.47.0-frontend-request-error-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.47.0-frontend-request-error-observability-foundation).
+The `v0.48.0-backend-request-correlation-logging-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
