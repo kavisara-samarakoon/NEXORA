@@ -3,15 +3,20 @@
 **Current stage:** Local/development MVP. NEXORA is not documented as a deployed
 or production-ready service.
 
-The `v0.43.0-request-correlation-observability-foundation` milestone is in
-progress. It adds a safe `X-NEXORA-Request-ID` response header, controlled reuse
-of valid client-supplied IDs, UUID fallback generation, request-scoped MDC
-availability, and focused success/error/lifecycle tests. It does not add the ID
-to JSON response bodies or change the shared error DTO. The latest stable
-development milestone remains `v0.42.0-api-smoke-ci-resilience-foundation`
-until v0.43 is merged and tagged. This milestone changes no frontend code,
-dependency manifest, database migration, OpenAPI YAML, GitHub Actions workflow,
-or authentication, session, CSRF, or CORS behavior.
+The latest stable development milestone is
+`v0.43.0-request-correlation-observability-foundation`. It added a safe
+`X-NEXORA-Request-ID` response header, controlled reuse of valid client-supplied
+IDs, UUID fallback generation, request-scoped MDC availability, and focused
+success/error/lifecycle tests without changing JSON response bodies or the
+shared error DTO.
+
+The `v0.44.0-request-correlation-smoke-coverage-foundation` milestone is in
+progress. It extends the existing local API smoke script with internal response-
+header capture, UUID-style generated request ID checks, exact safe incoming ID
+echo validation, and auth/error response coverage while confirming `requestId`
+remains absent from error JSON. It changes no backend Java implementation or
+tests, frontend code, dependency manifest, database migration, OpenAPI YAML,
+GitHub Actions workflow, or authentication, session, CSRF, or CORS behavior.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -116,7 +121,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.42.0-api-smoke-ci-resilience-foundation`.
+`v0.43.0-request-correlation-observability-foundation`.
 
 ## Completed foundations
 
@@ -148,7 +153,10 @@ readiness of the project. The latest stable development milestone is
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
 - API Smoke CI validation that starts the default backend on localhost, waits
-  for health, runs the existing reviewer smoke script, and retains backend logs.
+  for health, runs the reviewer smoke script, validates request correlation
+  response headers, and retains backend logs.
+- Request correlation response headers with safe client-value validation, UUID
+  fallback generation, request-scoped MDC data, and focused backend coverage.
 - A hand-maintained OpenAPI 3.1 route/schema contract with explicit local-only,
   security, shared-error, and maintenance boundaries.
 - API Contract CI validation that uses the Python standard library to check the

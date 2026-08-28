@@ -19,9 +19,16 @@ deployment check, production monitor, or production-readiness claim.
   Sentinel insight endpoints.
 - An unauthenticated 401 response and a Sentinel validation response using the
   shared API error fields.
+- Generated UUID-style `X-NEXORA-Request-ID` response headers across public,
+  CSRF/authentication, protected success, and established error responses.
+- Exact response-header echoing of the safe incoming smoke ID
+  `smoke-2026.08:request_test`, plus confirmation that error JSON bodies do not
+  gain a `requestId` field.
 
-The script checks HTTP statuses and stable JSON fields without depending on
-dynamic timestamps or provider-specific response text.
+The script captures response headers in a temporary file internally and checks
+HTTP statuses, stable JSON fields, and request correlation without depending on
+dynamic timestamps or provider-specific response text. It does not print full
+response headers, cookies, CSRF tokens, or unmasked access tokens.
 
 ## Prerequisites
 
@@ -63,10 +70,12 @@ Maven/backend process exits. It then runs the script against
 `http://localhost:8080` and uploads the complete `backend-smoke.log` artifact
 for debugging.
 
-The script's endpoint, authentication, CSRF, and error-contract checks are
-unchanged. The added CI preparation and diagnostics reduce the impact of a
-transient Maven Central HTTP 429 response but still fail when dependency
-resolution remains unavailable or the backend cannot start.
+The script's endpoint, authentication, CSRF, and error-contract flow now also
+validates `X-NEXORA-Request-ID` generated values, one safe echoed value, and
+header presence on auth/error responses. The existing CI preparation and
+diagnostics reduce the impact of a transient Maven Central HTTP 429 response
+but still fail when dependency resolution remains unavailable or the backend
+cannot start.
 
 The CI workflow remains local-only and does not target production or staging.
 Manual local execution is still useful before opening a pull request and when
@@ -120,7 +129,8 @@ remain on localhost.
   identity and never asks for real account credentials.
 - Access tokens are kept in memory and displayed only as a short masked prefix.
 - Cookies are kept in a temporary cookie jar whose contents are never printed.
-- Temporary response and cookie files are deleted through an exit trap.
+- Temporary response-body, response-header, and cookie files are deleted
+  through an exit trap; full headers are never printed.
 - The script follows no redirects and sends no requests beyond the selected
   API origin.
 - The default profile keeps the generated account in memory until the backend
