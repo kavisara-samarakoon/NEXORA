@@ -11,9 +11,9 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.42.0-api-smoke-ci-resilience-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.42.0-api-smoke-ci-resilience-foundation).
-> `v0.43.0-request-correlation-observability-foundation` remains in progress until
-> merged and tagged.
+> [`v0.43.0-request-correlation-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.43.0-request-correlation-observability-foundation).
+> `v0.44.0-request-correlation-smoke-coverage-foundation` remains in progress
+> until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -325,6 +325,13 @@ header is request-level local/development correlation only: it does not add a
 JSON response field, distributed tracing, managed log aggregation, dashboards,
 metrics, or production monitoring.
 
+The in-progress v0.44 smoke coverage foundation makes the existing local API
+smoke flow validate generated `X-NEXORA-Request-ID` values on public,
+CSRF/authentication, and protected success responses. It also verifies exact
+echoing of one safe incoming ID, requires generated IDs on established auth and
+validation errors, and confirms the shared error JSON body still has no
+`requestId` field.
+
 ### API error contract foundation
 
 Version 0.34 standardizes targeted backend failures across authentication,
@@ -385,10 +392,13 @@ repository settings rather than claims made by these workflow files.
 API Smoke CI runs [`scripts/api-smoke-test.sh`](scripts/api-smoke-test.sh)
 against a backend started inside the GitHub Actions runner. It checks public
 endpoints, auth/CSRF, protected endpoints, Sentinel insight, and shared API
-error-contract behavior without targeting a deployed service. Before startup,
-the workflow warms Maven dependencies with bounded retries and uses Maven
-batch/no-transfer-progress mode for cleaner logs. The health wait fails early
-if the Maven/backend process exits and prints a bounded log tail;
+error-contract behavior without targeting a deployed service. The v0.44 smoke
+coverage also checks UUID-style generated request IDs, exact echoing of a safe
+incoming request ID, and request ID presence on auth/error responses without
+adding `requestId` to JSON bodies. Before startup, the workflow warms Maven
+dependencies with bounded retries and uses Maven batch/no-transfer-progress
+mode for cleaner logs. The health wait fails early if the Maven/backend process
+exits and prints a bounded log tail;
 `backend-smoke.log` is still uploaded for debugging. This reduces the impact of
 transient Maven Central HTTP 429 responses without ignoring persistent
 dependency-resolution or backend-startup failures.
@@ -428,7 +438,9 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.42.0-api-smoke-ci-resilience-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.42.0-api-smoke-ci-resilience-foundation).
+[`v0.43.0-request-correlation-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.43.0-request-correlation-observability-foundation).
+The `v0.44.0-request-correlation-smoke-coverage-foundation` milestone is in
+progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

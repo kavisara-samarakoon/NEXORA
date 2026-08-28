@@ -6,11 +6,11 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.43 request correlation observability foundation
-  with a safe response header, validated client IDs, UUID fallback, request-
-  scoped MDC data, and focused tests.
-- Keep the completed v0.42 API Smoke CI resilience foundation as the latest
-  stable milestone until v0.43 is merged and tagged.
+- Complete the in-progress v0.44 request correlation smoke coverage foundation
+  by validating generated and safely echoed `X-NEXORA-Request-ID` values across
+  the existing local success and error smoke flow.
+- Keep the completed v0.43 request correlation observability foundation as the
+  latest stable milestone until v0.44 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -38,7 +38,8 @@ project's academic, portfolio, and product goals evolve.
 ## CI and release follow-up
 
 - Add deployed-environment smoke tests only after approved target, credential,
-  data-lifecycle, and ownership boundaries exist.
+  data-lifecycle, and ownership boundaries exist; they remain separate from the
+  local-only v0.44 request correlation smoke coverage.
 - Add staging environment checks only after a staging topology, test-account
   lifecycle, secrets boundary, and support owner are defined.
 - Add release automation only after versioning, artifacts, approvals, rollback,

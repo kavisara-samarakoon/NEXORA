@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.42.0-api-smoke-ci-resilience-foundation` is the latest stable development
-milestone while the v0.43 request correlation observability foundation is in
-progress.
+`v0.43.0-request-correlation-observability-foundation` is the latest stable
+development milestone while the v0.44 request correlation smoke coverage
+foundation is in progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -154,6 +154,13 @@ The request ID is response-header metadata only. It is returned for successful
 and failed requests but is not added to endpoint DTOs or the shared JSON error
 body. The hand-maintained `openapi.yaml` is intentionally unchanged for this
 focused milestone.
+
+The local [`api-smoke-test.sh`](../../scripts/api-smoke-test.sh) captures
+response headers internally and validates this contract across public,
+CSRF/authentication, protected, and established error responses. It checks
+generated values with a UUID-style pattern, exactly echoes one safe incoming
+value, and confirms `requestId` remains absent from shared error JSON. Full
+response headers and sensitive cookie or authorization values are not printed.
 
 ## Standard error response contract
 

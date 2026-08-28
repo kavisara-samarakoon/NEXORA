@@ -6,10 +6,12 @@ readonly RAW_BASE_URL="${NEXORA_API_BASE_URL:-${DEFAULT_BASE_URL}}"
 readonly BASE_URL="${RAW_BASE_URL%/}"
 readonly SMOKE_ORIGIN="${NEXORA_SMOKE_ORIGIN:-http://localhost:3000}"
 readonly ALLOW_NON_LOCAL="${NEXORA_ALLOW_NON_LOCAL_SMOKE_TEST:-false}"
+readonly SMOKE_REQUEST_ID="smoke-2026.08:request_test"
 
 TEMP_DIR=""
 COOKIE_JAR=""
 RESPONSE_BODY=""
+RESPONSE_HEADERS=""
 LAST_STATUS=""
 
 pass() {
@@ -68,11 +70,13 @@ request() {
     shift 2
 
     : >"${RESPONSE_BODY}"
+    : >"${RESPONSE_HEADERS}"
     if ! LAST_STATUS="$(curl \
         --silent \
         --show-error \
         --connect-timeout 5 \
         --max-time 30 \
+        --dump-header "${RESPONSE_HEADERS}" \
         --output "${RESPONSE_BODY}" \
         --write-out '%{http_code}' \
         --request "${method}" \
@@ -131,6 +135,99 @@ if not isinstance(payload, dict) or sys.argv[2] not in payload:
 PY
 }
 
+assert_json_field_absent() {
+    local file="$1"
+    local field="$2"
+    local label="$3"
+
+    python3 - "${file}" "${field}" <<'PY' \
+        || fail "${label} unexpectedly includes JSON field '${field}'."
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as response_file:
+        payload = json.load(response_file)
+except (OSError, UnicodeError, json.JSONDecodeError):
+    raise SystemExit(1)
+
+if not isinstance(payload, dict) or sys.argv[2] in payload:
+    raise SystemExit(1)
+PY
+    pass "${label} omits JSON field '${field}'"
+}
+
+response_header_value() {
+    local header_name="$1"
+
+    python3 - "${RESPONSE_HEADERS}" "${header_name}" <<'PY'
+import sys
+
+header_path = sys.argv[1]
+header_name = sys.argv[2].lower()
+last_value = ""
+
+try:
+    with open(header_path, encoding="iso-8859-1") as header_file:
+        for raw_line in header_file:
+            line = raw_line.rstrip("\r\n")
+            name, separator, value = line.partition(":")
+            if separator and name.strip().lower() == header_name:
+                candidate = value.strip()
+                if candidate:
+                    last_value = candidate
+except (OSError, UnicodeError):
+    raise SystemExit(1)
+
+print(last_value)
+PY
+}
+
+assert_response_header_exists() {
+    local header_name="$1"
+    local label="$2"
+    local value
+
+    value="$(response_header_value "${header_name}")" \
+        || fail "${label} response header '${header_name}' could not be inspected."
+    [[ -n "${value}" ]] \
+        || fail "${label} is missing response header '${header_name}'."
+    pass "${label} includes response header '${header_name}'"
+}
+
+assert_request_id_header_exists() {
+    local label="$1"
+
+    assert_response_header_exists "X-NEXORA-Request-ID" "${label}"
+}
+
+assert_request_id_header_equals() {
+    local expected="$1"
+    local label="$2"
+    local value
+
+    value="$(response_header_value "X-NEXORA-Request-ID")" \
+        || fail "${label} request ID response header could not be inspected."
+    [[ -n "${value}" ]] \
+        || fail "${label} is missing response header 'X-NEXORA-Request-ID'."
+    [[ "${value}" == "${expected}" ]] \
+        || fail "${label} did not echo the expected safe request ID."
+    pass "${label} echoed the expected safe request ID"
+}
+
+assert_generated_request_id_header() {
+    local label="$1"
+    local value
+
+    value="$(response_header_value "X-NEXORA-Request-ID")" \
+        || fail "${label} request ID response header could not be inspected."
+    [[ -n "${value}" ]] \
+        || fail "${label} is missing response header 'X-NEXORA-Request-ID'."
+    [[ "${value}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] \
+        || fail "${label} request ID response header is not UUID-style."
+    pass "${label} includes a generated UUID-style request ID"
+}
+
 extract_json_field() {
     local file="$1"
     local field="$2"
@@ -184,6 +281,7 @@ check_public_get() {
     request GET "${path}"
     assert_status 200 "${label}"
     assert_json_document "${RESPONSE_BODY}" "${label}"
+    assert_generated_request_id_header "${label}"
 }
 
 check_protected_get() {
@@ -194,6 +292,7 @@ check_protected_get() {
     request GET "${path}" --header "Authorization: Bearer ${token}"
     assert_status 200 "${label}"
     assert_json_document "${RESPONSE_BODY}" "${label}"
+    assert_generated_request_id_header "${label}"
 }
 
 require_command curl
@@ -220,6 +319,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 COOKIE_JAR="$(mktemp "${TEMP_DIR}/cookies.XXXXXX")"
 RESPONSE_BODY="$(mktemp "${TEMP_DIR}/response.XXXXXX")"
+RESPONSE_HEADERS="$(mktemp "${TEMP_DIR}/headers.XXXXXX")"
 
 readonly SMOKE_TIMESTAMP="$(python3 - <<'PY'
 from datetime import datetime, timezone
@@ -248,12 +348,21 @@ check_public_get "/api/sentinel/status" "Sentinel status"
 check_public_get "/api/sentinel/demo" "Sentinel demo"
 
 printf '\n'
+info "Checking request correlation header"
+request GET "/api/health" \
+    --header "X-NEXORA-Request-ID: ${SMOKE_REQUEST_ID}"
+assert_status 200 "Safe request ID echo"
+assert_json_document "${RESPONSE_BODY}" "Safe request ID echo"
+assert_request_id_header_equals "${SMOKE_REQUEST_ID}" "Safe request ID echo"
+
+printf '\n'
 info "Checking CSRF and authentication flow"
 request GET "/api/auth/csrf" \
     --cookie-jar "${COOKIE_JAR}" \
     --header "Origin: ${SMOKE_ORIGIN}"
 assert_status 200 "CSRF token"
 assert_json_document "${RESPONSE_BODY}" "CSRF token"
+assert_generated_request_id_header "CSRF token"
 assert_json_field "${RESPONSE_BODY}" "csrfToken" "CSRF token"
 if ! CSRF_TOKEN="$(extract_json_field "${RESPONSE_BODY}" "csrfToken")" \
     || [[ -z "${CSRF_TOKEN}" ]]; then
@@ -275,6 +384,7 @@ request POST "/api/auth/register" \
     --data "${REGISTER_PAYLOAD}"
 assert_status 201 "Register reviewer account"
 assert_json_document "${RESPONSE_BODY}" "Register reviewer account"
+assert_generated_request_id_header "Register reviewer account"
 assert_json_field "${RESPONSE_BODY}" "token" "Register reviewer account"
 assert_json_field "${RESPONSE_BODY}" "user" "Register reviewer account"
 if ! ACCESS_TOKEN="$(extract_json_field "${RESPONSE_BODY}" "token")" \
@@ -287,6 +397,7 @@ request GET "/api/auth/me" \
     --header "Authorization: Bearer ${ACCESS_TOKEN}"
 assert_status 200 "Current authenticated user"
 assert_json_document "${RESPONSE_BODY}" "Current authenticated user"
+assert_generated_request_id_header "Current authenticated user"
 assert_json_field "${RESPONSE_BODY}" "email" "Current authenticated user"
 
 printf -v LOGIN_PAYLOAD \
@@ -302,6 +413,7 @@ request POST "/api/auth/login" \
     --data "${LOGIN_PAYLOAD}"
 assert_status 200 "Login reviewer account"
 assert_json_document "${RESPONSE_BODY}" "Login reviewer account"
+assert_generated_request_id_header "Login reviewer account"
 assert_json_field "${RESPONSE_BODY}" "token" "Login reviewer account"
 if ! LOGIN_ACCESS_TOKEN="$(extract_json_field "${RESPONSE_BODY}" "token")" \
     || [[ -z "${LOGIN_ACCESS_TOKEN}" ]]; then
@@ -322,6 +434,7 @@ request POST "/api/me/sentinel/insight" \
     --data '{"message":"Summarize this local smoke-test context safely.","context":"general"}'
 assert_status 200 "Sentinel local insight"
 assert_json_document "${RESPONSE_BODY}" "Sentinel local insight"
+assert_generated_request_id_header "Sentinel local insight"
 assert_json_field "${RESPONSE_BODY}" "mode" "Sentinel local insight"
 assert_json_field "${RESPONSE_BODY}" "answer" "Sentinel local insight"
 
@@ -331,6 +444,8 @@ request GET "/api/me/wishlist"
 assert_status 401 "Unauthenticated protected request"
 assert_json_document "${RESPONSE_BODY}" "Unauthenticated protected request"
 assert_error_contract "Unauthenticated protected request"
+assert_generated_request_id_header "Unauthenticated protected request"
+assert_json_field_absent "${RESPONSE_BODY}" "requestId" "Unauthenticated protected request"
 UNAUTHENTICATED_ERROR="$(extract_json_field "${RESPONSE_BODY}" "error")" \
     || fail "Unauthenticated response error code could not be read."
 UNAUTHENTICATED_PATH="$(extract_json_field "${RESPONSE_BODY}" "path")" \
@@ -347,6 +462,8 @@ request POST "/api/me/sentinel/insight" \
 assert_status 400 "Sentinel validation error"
 assert_json_document "${RESPONSE_BODY}" "Sentinel validation error"
 assert_error_contract "Sentinel validation error"
+assert_generated_request_id_header "Sentinel validation error"
+assert_json_field_absent "${RESPONSE_BODY}" "requestId" "Sentinel validation error"
 VALIDATION_ERROR="$(extract_json_field "${RESPONSE_BODY}" "error")" \
     || fail "Validation response error code could not be read."
 VALIDATION_STATUS="$(extract_json_field "${RESPONSE_BODY}" "status")" \

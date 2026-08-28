@@ -4,10 +4,21 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.42.0-api-smoke-ci-resilience-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.42.0-api-smoke-ci-resilience-foundation).
+[`v0.43.0-request-correlation-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.43.0-request-correlation-observability-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.43.0 Request Correlation Observability foundation
+## In progress — v0.44.0 Request Correlation Smoke Coverage foundation
+
+- Extends `scripts/api-smoke-test.sh` with temporary response-header capture,
+  UUID-style generated `X-NEXORA-Request-ID` validation across success and
+  auth/error responses, and exact echo validation for a safe incoming request
+  ID. The smoke flow also confirms the shared error JSON still has no
+  `requestId` field. This local/development MVP milestone changes no backend
+  Java implementation or tests, frontend code, dependency manifests, database
+  migrations, OpenAPI YAML, GitHub Actions workflows, or auth/session/CSRF/CORS
+  behavior, and makes no production-readiness claim.
+
+## Completed backend milestone — v0.43.0 Request Correlation Observability foundation
 
 - Adds `X-NEXORA-Request-ID` to backend success and error responses, reuses
   safe client-supplied values, generates UUID fallbacks for missing or invalid
