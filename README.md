@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.47.0-frontend-request-error-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.47.0-frontend-request-error-observability-foundation).
-> `v0.48.0-backend-request-correlation-logging-foundation` remains in progress
+> [`v0.48.0-backend-request-correlation-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.48.0-backend-request-correlation-logging-foundation).
+> `v0.49.0-backend-safe-request-summary-logging-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -334,7 +334,7 @@ echoing of one safe incoming ID, requires generated IDs on established auth and
 validation errors, and confirms the shared error JSON body still has no
 `requestId` field.
 
-The in-progress v0.48 logging foundation adds the MDC value to every local
+The completed v0.48 logging foundation adds the MDC value to every local
 backend console line as `requestId=<safe-request-id>`, with `no-request-id` for
 work outside an HTTP request. Unexpected API exceptions are logged at ERROR
 with only the HTTP method, request URI path, status 500, and stack trace. The
@@ -342,6 +342,13 @@ handler does not log request headers, cookies, tokens, query strings, request
 bodies, or parameters, and the API JSON response still has no `requestId` field.
 Managed logging, tracing, dashboards, alerting, and production incident response
 remain future deployment work.
+
+The in-progress v0.49 foundation adds one local completion summary for each API
+request from the existing correlation filter. Its message contains only the
+HTTP method, request URI path without query data, response status, and a non-
+negative `durationMs`; the request ID remains console metadata supplied by MDC.
+The summary does not read or log headers, cookies, Authorization data, tokens,
+CSRF values, query strings, parameters, request bodies, or response bodies.
 
 ### Frontend API client safety foundation
 
@@ -477,8 +484,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.47.0-frontend-request-error-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.47.0-frontend-request-error-observability-foundation).
-The `v0.48.0-backend-request-correlation-logging-foundation` milestone is in
+[`v0.48.0-backend-request-correlation-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.48.0-backend-request-correlation-logging-foundation).
+The `v0.49.0-backend-safe-request-summary-logging-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
