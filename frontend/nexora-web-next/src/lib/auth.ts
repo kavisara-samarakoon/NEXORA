@@ -1,4 +1,5 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
+import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
+
 const AUTH_REQUEST_TIMEOUT_MS = 8000;
 const AUTH_CSRF_HEADER_NAME = "X-NEXORA-CSRF";
 
@@ -38,18 +39,14 @@ export type AuthError = {
 
 export class AuthRequestError extends Error {
   readonly details: AuthError;
+  readonly requestId: string | null;
 
-  constructor(details: AuthError) {
+  constructor(details: AuthError, requestId: string | null = null) {
     super(details.message);
     this.name = "AuthRequestError";
     this.details = details;
+    this.requestId = requestId;
   }
-}
-
-function getApiBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
 }
 
 function isAuthUser(value: unknown): value is AuthUser {
@@ -90,7 +87,11 @@ function readErrorCode(value: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
-function responseError(status: number, value: unknown): AuthRequestError {
+function responseError(
+  status: number,
+  value: unknown,
+  requestId: string | null,
+): AuthRequestError {
   const backendCode = readErrorCode(value);
 
   if (status === 401) {
@@ -98,41 +99,56 @@ function responseError(status: number, value: unknown): AuthRequestError {
       backendCode === "authentication_required"
         ? "Your session is invalid or expired. Please sign in again."
         : "Invalid email, username, or password.";
-    return new AuthRequestError({ status, code: backendCode || "unauthorized", message });
+    return new AuthRequestError(
+      { status, code: backendCode || "unauthorized", message },
+      requestId,
+    );
   }
 
   if (status === 403) {
-    return new AuthRequestError({
-      status,
-      code: backendCode || "csrf_failed",
-      message: "The authentication request could not be verified. Please try again.",
-    });
+    return new AuthRequestError(
+      {
+        status,
+        code: backendCode || "csrf_failed",
+        message: "The authentication request could not be verified. Please try again.",
+      },
+      requestId,
+    );
   }
 
   if (status === 409) {
-    return new AuthRequestError({
-      status,
-      code: backendCode || "account_conflict",
-      message: "That email or username is already registered.",
-    });
+    return new AuthRequestError(
+      {
+        status,
+        code: backendCode || "account_conflict",
+        message: "That email or username is already registered.",
+      },
+      requestId,
+    );
   }
 
   if (status === 400) {
-    return new AuthRequestError({
-      status,
-      code: backendCode || "validation_failed",
-      message: "Please check the submitted details and try again.",
-    });
+    return new AuthRequestError(
+      {
+        status,
+        code: backendCode || "validation_failed",
+        message: "Please check the submitted details and try again.",
+      },
+      requestId,
+    );
   }
 
-  return new AuthRequestError({
-    status,
-    code: backendCode || "request_failed",
-    message:
-      status >= 500
-        ? "Authentication is temporarily unavailable. Please try again shortly."
-        : "The authentication request could not be completed.",
-  });
+  return new AuthRequestError(
+    {
+      status,
+      code: backendCode || "request_failed",
+      message:
+        status >= 500
+          ? "Authentication is temporarily unavailable. Please try again shortly."
+          : "The authentication request could not be completed.",
+    },
+    requestId,
+  );
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -150,7 +166,7 @@ async function authRequest(
   let response: Response;
 
   try {
-    response = await fetch(`${getApiBaseUrl()}${path}`, {
+    response = await fetch(buildApiUrl(path), {
       ...init,
       cache: "no-store",
       signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT_MS),
@@ -165,7 +181,11 @@ async function authRequest(
 
   const data = await readJson(response);
   if (!response.ok) {
-    throw responseError(response.status, data);
+    throw responseError(
+      response.status,
+      data,
+      readResponseRequestId(response),
+    );
   }
 
   return data;

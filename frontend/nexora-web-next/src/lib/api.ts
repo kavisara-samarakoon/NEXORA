@@ -35,8 +35,8 @@ import {
   type WishlistPriority,
   type WishlistStatus,
 } from "@/data/wishlist";
+import { buildApiUrl } from "@/lib/api-client";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const DEAL_STATUSES: readonly DealStatus[] = [
   "Historical Low",
   "Lowest Ever",
@@ -402,12 +402,8 @@ function isSentinelDemo(value: unknown): value is SentinelDemoData {
 }
 
 export async function getDeals(): Promise<DealsResult> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
-
   try {
-    const response = await fetch(`${apiBaseUrl}/api/deals`, {
+    const response = await fetch(buildApiUrl("/api/deals"), {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
@@ -431,9 +427,6 @@ export async function getDeals(): Promise<DealsResult> {
 export async function getExternalDeals(
   options: ExternalDealsOptions = {},
 ): Promise<ExternalDealsResult> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
   const requestedPageSize = Number.isFinite(options.pageSize)
     ? Math.floor(options.pageSize as number)
     : 12;
@@ -444,10 +437,13 @@ export async function getExternalDeals(
   if (title) query.set("title", title);
 
   try {
-    const response = await fetch(`${apiBaseUrl}/api/deals/external?${query}`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
+    const response = await fetch(
+      buildApiUrl(`/api/deals/external?${query}`),
+      {
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      },
+    );
 
     if (!response.ok) {
       throw new Error(`External deals API returned ${response.status}`);
@@ -472,12 +468,8 @@ export async function getExternalDeals(
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummaryResult> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
-
   try {
-    const response = await fetch(`${apiBaseUrl}/api/dashboard/summary`, {
+    const response = await fetch(buildApiUrl("/api/dashboard/summary"), {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
@@ -499,12 +491,8 @@ export async function getDashboardSummary(): Promise<DashboardSummaryResult> {
 }
 
 export async function getGiveaways(): Promise<GiveawaysResult> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
-
   try {
-    const response = await fetch(`${apiBaseUrl}/api/giveaways`, {
+    const response = await fetch(buildApiUrl("/api/giveaways"), {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
@@ -526,12 +514,8 @@ export async function getGiveaways(): Promise<GiveawaysResult> {
 }
 
 export async function getWishlist(): Promise<WishlistResult> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
-
   try {
-    const response = await fetch(`${apiBaseUrl}/api/wishlist`, {
+    const response = await fetch(buildApiUrl("/api/wishlist"), {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
@@ -553,12 +537,8 @@ export async function getWishlist(): Promise<WishlistResult> {
 }
 
 export async function getSecurityStatus(): Promise<SecurityStatusResult> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
-
   try {
-    const response = await fetch(`${apiBaseUrl}/api/security/status`, {
+    const response = await fetch(buildApiUrl("/api/security/status"), {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
@@ -580,17 +560,13 @@ export async function getSecurityStatus(): Promise<SecurityStatusResult> {
 }
 
 export async function getSentinel(): Promise<SentinelResult> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
-
   try {
     const [statusResponse, demoResponse] = await Promise.all([
-      fetch(`${apiBaseUrl}/api/sentinel/status`, {
+      fetch(buildApiUrl("/api/sentinel/status"), {
         cache: "no-store",
         signal: AbortSignal.timeout(3000),
       }),
-      fetch(`${apiBaseUrl}/api/sentinel/demo`, {
+      fetch(buildApiUrl("/api/sentinel/demo"), {
         cache: "no-store",
         signal: AbortSignal.timeout(3000),
       }),

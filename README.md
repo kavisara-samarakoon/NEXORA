@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.43.0-request-correlation-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.43.0-request-correlation-observability-foundation).
-> `v0.44.0-request-correlation-smoke-coverage-foundation` remains in progress
+> [`v0.45.0-frontend-dependency-health-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.45.0-frontend-dependency-health-foundation).
+> `v0.46.0-frontend-api-client-safety-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -63,6 +63,7 @@ security controls, and testable optional integrations.
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
 | Request correlation | Safe response header, client-value validation, generated fallback, and request-scoped MDC value | Local observability foundation |
+| Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 | Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
@@ -325,12 +326,26 @@ header is request-level local/development correlation only: it does not add a
 JSON response field, distributed tracing, managed log aggregation, dashboards,
 metrics, or production monitoring.
 
-The in-progress v0.44 smoke coverage foundation makes the existing local API
+The completed v0.44 smoke coverage foundation makes the existing local API
 smoke flow validate generated `X-NEXORA-Request-ID` values on public,
 CSRF/authentication, and protected success responses. It also verifies exact
 echoing of one safe incoming ID, requires generated IDs on established auth and
 validation errors, and confirms the shared error JSON body still has no
 `requestId` field.
+
+### Frontend API client safety foundation
+
+The in-progress v0.46 foundation centralizes the primary Next.js frontend's
+browser-visible `NEXT_PUBLIC_API_BASE_URL` resolution and URL construction in a
+small shared helper. The same helper reads trimmed `X-NEXORA-Request-ID`
+response-header values as optional internal request-error metadata without
+adding request IDs to JSON bodies, displaying them in the UI, logging headers,
+or sending frontend-generated request IDs.
+
+Access tokens remain in module memory, refresh tokens remain browser-managed
+HttpOnly cookies, and the existing CSRF cookie/header acquisition and one-retry
+behavior are unchanged. The helper handles public configuration only and does
+not expose credentials or secrets.
 
 ### API error contract foundation
 
@@ -438,8 +453,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.43.0-request-correlation-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.43.0-request-correlation-observability-foundation).
-The `v0.44.0-request-correlation-smoke-coverage-foundation` milestone is in
+[`v0.45.0-frontend-dependency-health-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.45.0-frontend-dependency-health-foundation).
+The `v0.46.0-frontend-api-client-safety-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

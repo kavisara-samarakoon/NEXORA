@@ -10,9 +10,8 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.43.0-request-correlation-observability-foundation` is the latest stable
-development milestone while the v0.44 request correlation smoke coverage
-foundation is in progress.
+`v0.45.0-frontend-dependency-health-foundation` is the latest stable development
+milestone while the v0.46 frontend API client safety foundation is in progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -161,6 +160,11 @@ CSRF/authentication, protected, and established error responses. It checks
 generated values with a UUID-style pattern, exactly echoes one safe incoming
 value, and confirms `requestId` remains absent from shared error JSON. Full
 response headers and sensitive cookie or authorization values are not printed.
+
+The primary Next.js frontend can read the response header as optional internal
+request-error metadata through its shared API client helper. It does not send a
+frontend-generated request ID by default, add the ID to JSON body expectations,
+log response headers, or display the value in the UI in this milestone.
 
 ## Standard error response contract
 

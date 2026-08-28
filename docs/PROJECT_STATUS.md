@@ -4,19 +4,18 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.43.0-request-correlation-observability-foundation`. It added a safe
-`X-NEXORA-Request-ID` response header, controlled reuse of valid client-supplied
-IDs, UUID fallback generation, request-scoped MDC availability, and focused
-success/error/lifecycle tests without changing JSON response bodies or the
-shared error DTO.
+`v0.45.0-frontend-dependency-health-foundation`, which records the primary
+Next.js frontend on its validated dependency baseline with reproducible install,
+lint, build, and production-dependency audit checks.
 
-The `v0.44.0-request-correlation-smoke-coverage-foundation` milestone is in
-progress. It extends the existing local API smoke script with internal response-
-header capture, UUID-style generated request ID checks, exact safe incoming ID
-echo validation, and auth/error response coverage while confirming `requestId`
-remains absent from error JSON. It changes no backend Java implementation or
-tests, frontend code, dependency manifest, database migration, OpenAPI YAML,
-GitHub Actions workflow, or authentication, session, CSRF, or CORS behavior.
+The `v0.46.0-frontend-api-client-safety-foundation` milestone is in progress.
+It centralizes browser-visible API base URL resolution and URL construction for
+the primary Next.js client and adds safe response-only awareness of
+`X-NEXORA-Request-ID` as optional internal request-error metadata. It does not
+send frontend-generated request IDs, change UI behavior, or change access-token,
+refresh-cookie, CSRF, retry, or Authorization behavior. It changes no backend
+implementation or tests, dependency manifest, database migration, OpenAPI YAML,
+or GitHub Actions workflow.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +120,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.43.0-request-correlation-observability-foundation`.
+`v0.45.0-frontend-dependency-health-foundation`.
 
 ## Completed foundations
 

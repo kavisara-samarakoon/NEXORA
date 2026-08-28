@@ -1,6 +1,6 @@
 import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const NOTIFICATION_PREFERENCE_TIMEOUT_MS = 8000;
 
 export type NotificationPreferences = {
@@ -27,16 +27,17 @@ export type NotificationPreferenceError = {
 
 export class NotificationPreferenceRequestError extends Error {
   readonly details: NotificationPreferenceError;
+  readonly requestId: string | null;
 
-  constructor(details: NotificationPreferenceError) {
+  constructor(
+    details: NotificationPreferenceError,
+    requestId: string | null = null,
+  ) {
     super(details.message);
     this.name = "NotificationPreferenceRequestError";
     this.details = details;
+    this.requestId = requestId;
   }
-}
-
-function getApiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 }
 
 function isNotificationPreferences(value: unknown): value is NotificationPreferences {
@@ -52,26 +53,38 @@ function isNotificationPreferences(value: unknown): value is NotificationPrefere
   );
 }
 
-function responseError(status: number): NotificationPreferenceRequestError {
+function responseError(
+  status: number,
+  requestId: string | null,
+): NotificationPreferenceRequestError {
   if (status === 401) {
-    return new NotificationPreferenceRequestError({
-      status,
-      code: "authentication_required",
-      message: "Please sign in again.",
-    });
+    return new NotificationPreferenceRequestError(
+      {
+        status,
+        code: "authentication_required",
+        message: "Please sign in again.",
+      },
+      requestId,
+    );
   }
   if (status === 400) {
-    return new NotificationPreferenceRequestError({
-      status,
-      code: "validation_failed",
-      message: "The notification preferences could not be validated.",
-    });
+    return new NotificationPreferenceRequestError(
+      {
+        status,
+        code: "validation_failed",
+        message: "The notification preferences could not be validated.",
+      },
+      requestId,
+    );
   }
-  return new NotificationPreferenceRequestError({
-    status,
-    code: "request_failed",
-    message: "Notification preferences could not be saved. Please try again.",
-  });
+  return new NotificationPreferenceRequestError(
+    {
+      status,
+      code: "request_failed",
+      message: "Notification preferences could not be saved. Please try again.",
+    },
+    requestId,
+  );
 }
 
 async function preferenceRequest(
@@ -81,7 +94,7 @@ async function preferenceRequest(
   let response: Response;
 
   try {
-    response = await fetch(`${getApiBaseUrl()}/api/me/notification-preferences`, {
+    response = await fetch(buildApiUrl("/api/me/notification-preferences"), {
       ...init,
       cache: "no-store",
       headers: {
@@ -98,7 +111,9 @@ async function preferenceRequest(
     });
   }
 
-  if (!response.ok) throw responseError(response.status);
+  if (!response.ok) {
+    throw responseError(response.status, readResponseRequestId(response));
+  }
 
   let data: unknown;
   try {
