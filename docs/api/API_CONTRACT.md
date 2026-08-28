@@ -10,8 +10,8 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.47.0-frontend-request-error-observability-foundation` is the latest stable
-development milestone while the v0.48 backend request correlation logging
+`v0.48.0-backend-request-correlation-logging-foundation` is the latest stable
+development milestone while the v0.49 backend safe request summary logging
 foundation is in progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
@@ -178,6 +178,15 @@ stack trace. It does not read or log request headers, cookies, tokens, query
 strings, parameters, or request bodies. This local logging foundation does not
 change the response contract: `requestId` remains absent from JSON bodies, and
 the hand-maintained `openapi.yaml` remains unchanged.
+
+The same local correlation filter emits one safe completion summary after each
+API request and before clearing MDC. The summary message includes only the HTTP
+method, request URI path without query data, response status, and non-negative
+`durationMs`. The request ID is supplied only by the existing MDC console
+pattern, not duplicated in the message or added to a JSON body. Request and
+response headers, cookies, Authorization data, tokens, CSRF values, query
+strings, parameters, and request/response bodies are not logged. The OpenAPI
+YAML remains unchanged.
 
 ## Standard error response contract
 

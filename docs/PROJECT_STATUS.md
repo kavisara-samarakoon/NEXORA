@@ -4,19 +4,20 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.47.0-frontend-request-error-observability-foundation`, which surfaces safe
-response request IDs as support metadata in selected frontend error states for
-local backend-log correlation.
+`v0.48.0-backend-request-correlation-logging-foundation`, which adds request-
+scoped MDC IDs to local console logs and safe method/path/status logging for
+unexpected API exceptions.
 
-The `v0.48.0-backend-request-correlation-logging-foundation` milestone is in
-progress. Local backend console logs include the request-scoped
-`nexora.request_id` MDC value with a safe fallback, and unexpected API errors
-are logged with method, URI path, status, and exception stack trace. Headers,
-cookies, tokens, query strings, request bodies, and parameters are not logged;
-the JSON error contract remains unchanged. This milestone changes no frontend,
-dependency manifest, database migration, OpenAPI YAML, GitHub Actions workflow,
-or auth/session/CSRF/CORS behavior. Centralized logging, production monitoring,
-tracing, dashboards, alerting, and operational response remain future work.
+The `v0.49.0-backend-safe-request-summary-logging-foundation` milestone is in
+progress. The existing correlation filter logs one local API completion summary
+with method, URI path, status, and non-negative millisecond duration before it
+removes the request-scoped MDC ID. Headers, cookies, Authorization data, tokens,
+CSRF values, query strings, parameters, and request/response bodies are not
+logged; request correlation and JSON contracts remain unchanged. This milestone
+changes no frontend, dependency manifest, database migration, OpenAPI YAML,
+GitHub Actions workflow, or auth/session/CSRF/CORS behavior. Centralized or
+managed logging, metrics, tracing, dashboards, alerting, production monitoring,
+and incident response remain future work.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +122,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.47.0-frontend-request-error-observability-foundation`.
+`v0.48.0-backend-request-correlation-logging-foundation`.
 
 ## Completed foundations
 
@@ -157,7 +158,8 @@ readiness of the project. The latest stable development milestone is
   response headers, and retains backend logs.
 - Request correlation response headers with safe client-value validation, UUID
   fallback generation, request-scoped MDC data, local console correlation, safe
-  unexpected-error logging, and focused backend coverage.
+  unexpected-error logging, safe request-completion summaries, and focused
+  backend coverage.
 - Shared frontend API configuration and selected frontend error/support request-
   ID metadata for local backend-log correlation.
 - A hand-maintained OpenAPI 3.1 route/schema contract with explicit local-only,
