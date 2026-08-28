@@ -4,10 +4,29 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.43.0-request-correlation-observability-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.43.0-request-correlation-observability-foundation).
+[`v0.45.0-frontend-dependency-health-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.45.0-frontend-dependency-health-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.44.0 Request Correlation Smoke Coverage foundation
+## In progress — v0.46.0 Frontend API Client Safety foundation
+
+- Adds a shared primary-frontend API helper that centralizes the local fallback
+  and browser-visible `NEXT_PUBLIC_API_BASE_URL` handling, normalizes API paths,
+  and reads trimmed `X-NEXORA-Request-ID` response headers as optional internal
+  request-error metadata. The frontend does not generate or send request ID
+  headers by default, display them in the UI, add them to JSON bodies, or log
+  headers. Access-token storage, refresh-cookie handling, CSRF behavior, and
+  token/header logging remain unchanged. This milestone changes no backend/API
+  behavior, dependency manifests, migrations, OpenAPI YAML, or workflows and
+  makes no production-readiness claim.
+
+## Completed frontend milestone — v0.45.0 Frontend Dependency Health foundation
+
+- Records the primary Next.js frontend dependency-health baseline with Next.js
+  16.3.2 and React 19.2.8 plus reproducible `npm ci`, lint, production build,
+  and high-severity production-dependency audit validation. This milestone does
+  not change backend/API behavior or production readiness.
+
+## Completed tooling milestone — v0.44.0 Request Correlation Smoke Coverage foundation
 
 - Extends `scripts/api-smoke-test.sh` with temporary response-header capture,
   UUID-style generated `X-NEXORA-Request-ID` validation across success and

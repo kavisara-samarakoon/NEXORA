@@ -9,8 +9,8 @@ import {
   type WishlistStatus,
 } from "@/data/wishlist";
 import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const WISHLIST_REQUEST_TIMEOUT_MS = 8000;
 const WISHLIST_STATUSES: readonly WishlistStatus[] = ["price-drop", "free-now", "tracking"];
 const WISHLIST_PRIORITIES: readonly WishlistPriority[] = ["high", "medium", "low"];
@@ -112,16 +112,14 @@ export type UserWishlistError = {
 
 export class UserWishlistRequestError extends Error {
   readonly details: UserWishlistError;
+  readonly requestId: string | null;
 
-  constructor(details: UserWishlistError) {
+  constructor(details: UserWishlistError, requestId: string | null = null) {
     super(details.message);
     this.name = "UserWishlistRequestError";
     this.details = details;
+    this.requestId = requestId;
   }
-}
-
-function getApiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 }
 
 function isWishlistItem(value: unknown): value is WishlistItem {
@@ -147,43 +145,58 @@ function isWishlistItem(value: unknown): value is WishlistItem {
   );
 }
 
-function responseError(status: number): UserWishlistRequestError {
+function responseError(
+  status: number,
+  requestId: string | null,
+): UserWishlistRequestError {
   if (status === 401) {
-    return new UserWishlistRequestError({
-      status,
-      code: "authentication_required",
-      message: "Please sign in again.",
-    });
+    return new UserWishlistRequestError(
+      {
+        status,
+        code: "authentication_required",
+        message: "Please sign in again.",
+      },
+      requestId,
+    );
   }
 
   if (status === 400) {
-    return new UserWishlistRequestError({
-      status,
-      code: "validation_failed",
-      message: "Please check the wishlist details.",
-    });
+    return new UserWishlistRequestError(
+      {
+        status,
+        code: "validation_failed",
+        message: "Please check the wishlist details.",
+      },
+      requestId,
+    );
   }
 
   if (status === 404) {
-    return new UserWishlistRequestError({
-      status,
-      code: "not_found",
-      message: "That wishlist item could not be found.",
-    });
+    return new UserWishlistRequestError(
+      {
+        status,
+        code: "not_found",
+        message: "That wishlist item could not be found.",
+      },
+      requestId,
+    );
   }
 
-  return new UserWishlistRequestError({
-    status,
-    code: "request_failed",
-    message: "The wishlist request could not be completed. Please try again.",
-  });
+  return new UserWishlistRequestError(
+    {
+      status,
+      code: "request_failed",
+      message: "The wishlist request could not be completed. Please try again.",
+    },
+    requestId,
+  );
 }
 
 async function wishlistRequest(path: string, token: string, init: RequestInit): Promise<Response> {
   let response: Response;
 
   try {
-    response = await fetch(`${getApiBaseUrl()}${path}`, {
+    response = await fetch(buildApiUrl(path), {
       ...init,
       cache: "no-store",
       headers: {
@@ -200,7 +213,9 @@ async function wishlistRequest(path: string, token: string, init: RequestInit): 
     });
   }
 
-  if (!response.ok) throw responseError(response.status);
+  if (!response.ok) {
+    throw responseError(response.status, readResponseRequestId(response));
+  }
   return response;
 }
 

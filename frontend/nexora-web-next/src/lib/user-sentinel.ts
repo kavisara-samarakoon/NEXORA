@@ -1,6 +1,6 @@
 import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const SENTINEL_REQUEST_TIMEOUT_MS = 10000;
 
 export type SentinelInsightContext = "general" | "wishlist" | "deals" | "security";
@@ -47,16 +47,14 @@ export type SentinelInsightError = {
 
 export class SentinelInsightRequestError extends Error {
   readonly details: SentinelInsightError;
+  readonly requestId: string | null;
 
-  constructor(details: SentinelInsightError) {
+  constructor(details: SentinelInsightError, requestId: string | null = null) {
     super(details.message);
     this.name = "SentinelInsightRequestError";
     this.details = details;
+    this.requestId = requestId;
   }
-}
-
-function getApiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 }
 
 function isStringList(value: unknown): value is string[] {
@@ -108,33 +106,48 @@ function isSentinelInsightResponse(value: unknown): value is SentinelInsightResp
   );
 }
 
-function responseError(status: number): SentinelInsightRequestError {
+function responseError(
+  status: number,
+  requestId: string | null,
+): SentinelInsightRequestError {
   if (status === 401) {
-    return new SentinelInsightRequestError({
-      status,
-      code: "authentication_required",
-      message: "Please sign in again to use the Sentinel gateway preview.",
-    });
+    return new SentinelInsightRequestError(
+      {
+        status,
+        code: "authentication_required",
+        message: "Please sign in again to use the Sentinel gateway preview.",
+      },
+      requestId,
+    );
   }
   if (status === 400) {
-    return new SentinelInsightRequestError({
-      status,
-      code: "validation_failed",
-      message: "Enter a message between 1 and 500 characters using a supported context.",
-    });
+    return new SentinelInsightRequestError(
+      {
+        status,
+        code: "validation_failed",
+        message: "Enter a message between 1 and 500 characters using a supported context.",
+      },
+      requestId,
+    );
   }
   if (status === 429) {
-    return new SentinelInsightRequestError({
-      status,
-      code: "rate_limit_exceeded",
-      message: "Sentinel request limit reached. Please wait before trying again.",
-    });
+    return new SentinelInsightRequestError(
+      {
+        status,
+        code: "rate_limit_exceeded",
+        message: "Sentinel request limit reached. Please wait before trying again.",
+      },
+      requestId,
+    );
   }
-  return new SentinelInsightRequestError({
-    status,
-    code: "request_failed",
-    message: "The Sentinel gateway could not complete this request. Please try again.",
-  });
+  return new SentinelInsightRequestError(
+    {
+      status,
+      code: "request_failed",
+      message: "The Sentinel gateway could not complete this request. Please try again.",
+    },
+    requestId,
+  );
 }
 
 export async function requestSentinelInsight(
@@ -144,7 +157,7 @@ export async function requestSentinelInsight(
   let response: Response;
 
   try {
-    response = await fetch(`${getApiBaseUrl()}/api/me/sentinel/insight`, {
+    response = await fetch(buildApiUrl("/api/me/sentinel/insight"), {
       method: "POST",
       cache: "no-store",
       headers: {
@@ -162,7 +175,9 @@ export async function requestSentinelInsight(
     });
   }
 
-  if (!response.ok) throw responseError(response.status);
+  if (!response.ok) {
+    throw responseError(response.status, readResponseRequestId(response));
+  }
 
   let data: unknown;
   try {

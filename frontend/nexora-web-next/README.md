@@ -65,6 +65,25 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 These values are public by design because Next.js exposes variables prefixed
 with `NEXT_PUBLIC_` to the browser. Do not place secrets in them.
 
+### Shared API client safety
+
+The shared `src/lib/api-client.ts` helper centralizes browser-visible
+`NEXT_PUBLIC_API_BASE_URL` resolution, trims configuration whitespace, removes
+trailing slashes, and retains `http://localhost:8080` as the safe local
+fallback. Frontend API modules use the same URL builder so endpoint paths and
+query strings keep their existing behavior.
+
+The helper can also read a trimmed `X-NEXORA-Request-ID` from backend response
+headers as optional internal debugging metadata. The frontend does not generate
+or send request IDs by default, does not add them to JSON body expectations,
+does not log response headers, and does not display request IDs in the UI in
+this milestone. Any future UI display requires a separately reviewed error-
+details experience.
+
+Memory-first access-token handling, the browser-managed HttpOnly refresh
+cookie, module-memory CSRF caching, `X-NEXORA-CSRF` echoing, and the single
+bounded CSRF retry remain unchanged. The shared helper contains no secrets.
+
 ## Commands
 
 ```bash
