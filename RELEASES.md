@@ -4,20 +4,32 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.45.0-frontend-dependency-health-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.45.0-frontend-dependency-health-foundation).
+[`v0.46.0-frontend-api-client-safety-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.46.0-frontend-api-client-safety-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.46.0 Frontend API Client Safety foundation
+## In progress — v0.47.0 Frontend Request Error Observability foundation
+
+- Retains response-only `requestId` metadata in normalized authentication,
+  Wishlist, Sentinel, and notification-preference errors and displays the safe
+  request ID in selected frontend error/support states. The frontend does not
+  generate or send request ID headers by default, read request IDs from JSON
+  bodies, or display or log tokens, cookies, CSRF values, Authorization headers,
+  or raw response headers. Token storage and auth/CSRF behavior remain unchanged.
+  This milestone changes no backend/API body behavior, dependency manifests,
+  migrations, OpenAPI YAML, or workflows and makes no production-readiness
+  claim.
+
+## Completed frontend milestone — v0.46.0 Frontend API Client Safety foundation
 
 - Adds a shared primary-frontend API helper that centralizes the local fallback
   and browser-visible `NEXT_PUBLIC_API_BASE_URL` handling, normalizes API paths,
   and reads trimmed `X-NEXORA-Request-ID` response headers as optional internal
   request-error metadata. The frontend does not generate or send request ID
-  headers by default, display them in the UI, add them to JSON bodies, or log
-  headers. Access-token storage, refresh-cookie handling, CSRF behavior, and
-  token/header logging remain unchanged. This milestone changes no backend/API
-  behavior, dependency manifests, migrations, OpenAPI YAML, or workflows and
-  makes no production-readiness claim.
+  headers by default, add them to JSON bodies, or log headers. Access-token
+  storage, refresh-cookie handling, CSRF behavior, and token/header logging
+  remain unchanged. This milestone changes no backend/API behavior, dependency
+  manifests, migrations, OpenAPI YAML, or workflows and makes no production-
+  readiness claim.
 
 ## Completed frontend milestone — v0.45.0 Frontend Dependency Health foundation
 

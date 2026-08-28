@@ -9,6 +9,7 @@ import {
   type GameDeal,
 } from "@/data/deals";
 import type { WishlistItem } from "@/data/wishlist";
+import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
@@ -31,6 +32,11 @@ type ExternalDealsStatus = "idle" | "loading" | "ready" | "fallback";
 type SaveMessage = {
   tone: "auth" | "error" | "success";
   text: string;
+  requestId?: string | null;
+};
+type RequestSupportMessage = {
+  text: string;
+  requestId: string | null;
 };
 
 function protectedWishlistError(error: unknown) {
@@ -237,6 +243,9 @@ function DealCard({
               {saveMessage.tone === "success" ? "Wishlist updated" : saveMessage.tone === "auth" ? "Sign in required" : "Deal not saved"}
             </strong>
             <small>{saveMessage.text}</small>
+            {saveMessage.tone !== "success" ? (
+              <RequestIdSupportText requestId={saveMessage.requestId} />
+            ) : null}
           </span>
           {saveMessage.tone === "auth" && (
             <span className="deals-card__auth-links">
@@ -363,7 +372,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const [savingDeals, setSavingDeals] = useState<Set<string>>(() => new Set());
   const [savedDeals, setSavedDeals] = useState<Set<string>>(() => new Set());
   const [savedWishlistItems, setSavedWishlistItems] = useState<readonly WishlistItem[]>([]);
-  const [wishlistSyncWarning, setWishlistSyncWarning] = useState<string | null>(null);
+  const [wishlistSyncWarning, setWishlistSyncWarning] = useState<RequestSupportMessage | null>(null);
   const [saveMessages, setSaveMessages] = useState<Record<string, SaveMessage>>({});
   const savingDealKeys = useRef(new Set<string>());
   const previousAuthToken = useRef<string | null>(null);
@@ -378,9 +387,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         token = token ?? await ensureAuthToken();
       } catch (error) {
         if (!active) return;
+        const details = normalizeAuthError(error);
         setAuthToken(null);
         setAuthChecked(true);
-        setWishlistSyncWarning(normalizeAuthError(error).message);
+        setWishlistSyncWarning({
+          text: details.message,
+          requestId: details.requestId,
+        });
         return;
       }
 
@@ -431,10 +444,16 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           clearAuthToken();
           setAuthToken(null);
           setSavedWishlistItems([]);
-          setWishlistSyncWarning("Please sign in again to sync saved deals.");
+          setWishlistSyncWarning({
+            text: "Please sign in again to sync saved deals.",
+            requestId: details.requestId,
+          });
           return;
         }
-        setWishlistSyncWarning(details.message);
+        setWishlistSyncWarning({
+          text: details.message,
+          requestId: details.requestId,
+        });
       }
     }
 
@@ -545,12 +564,14 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     try {
       token = await ensureAuthToken();
     } catch (error) {
+      const details = normalizeAuthError(error);
       setAuthChecked(true);
       setSaveMessages((current) => ({
         ...current,
         [key]: {
           tone: "error",
-          text: normalizeAuthError(error).message,
+          text: details.message,
+          requestId: details.requestId,
         },
       }));
       return;
@@ -622,6 +643,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           text: details.status === 401
             ? "Your session ended. Sign in again, then retry this save."
             : `${details.message} You can retry from this card.`,
+          requestId: details.requestId,
         },
       }));
     } finally {
@@ -790,7 +812,12 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           {wishlistSyncWarning && (
             <UxStatePanel
               className="ux-state--compact deals-wishlist-sync-warning"
-              description={<>{wishlistSyncWarning} Deal browsing still works; saved markers may be incomplete until sync succeeds.</>}
+              description={(
+                <>
+                  {wishlistSyncWarning.text} Deal browsing still works; saved markers may be incomplete until sync succeeds.
+                  <RequestIdSupportText requestId={wishlistSyncWarning.requestId} />
+                </>
+              )}
               role="status"
               title="Saved-deal sync unavailable"
               tone="unavailable"

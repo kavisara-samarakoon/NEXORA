@@ -35,13 +35,16 @@ export type AuthError = {
   status: number | null;
   code: string;
   message: string;
+  requestId: string | null;
 };
 
+type AuthRequestErrorDetails = Omit<AuthError, "requestId">;
+
 export class AuthRequestError extends Error {
-  readonly details: AuthError;
+  readonly details: AuthRequestErrorDetails;
   readonly requestId: string | null;
 
-  constructor(details: AuthError, requestId: string | null = null) {
+  constructor(details: AuthRequestErrorDetails, requestId: string | null = null) {
     super(details.message);
     this.name = "AuthRequestError";
     this.details = details;
@@ -330,11 +333,14 @@ export async function getCurrentUser(token: string): Promise<AuthUser> {
 }
 
 export function normalizeAuthError(error: unknown): AuthError {
-  if (error instanceof AuthRequestError) return error.details;
+  if (error instanceof AuthRequestError) {
+    return { ...error.details, requestId: error.requestId };
+  }
 
   return {
     status: null,
     code: "unknown_error",
     message: "Something went wrong while authenticating. Please try again.",
+    requestId: null,
   };
 }

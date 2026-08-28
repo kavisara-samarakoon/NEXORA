@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import RequestIdSupportText from "@/components/RequestIdSupportText";
 import type { ChatMessage } from "@/data/sentinel";
 import {
   AUTH_STATE_EVENT,
@@ -113,7 +114,10 @@ export default function SentinelChat({
   const [context, setContext] = useState<SentinelInsightContext>("general");
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
   const [gatewayResponse, setGatewayResponse] = useState<SentinelInsightResponse | null>(null);
-  const [gatewayError, setGatewayError] = useState<Pick<SentinelInsightError, "code" | "message"> | null>(null);
+  const [gatewayError, setGatewayError] = useState<Pick<
+    SentinelInsightError,
+    "code" | "message" | "requestId"
+  > | null>(null);
   const [showSignInHint, setShowSignInHint] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -196,7 +200,11 @@ export default function SentinelChat({
         setAuthState("anonymous");
         setShowSignInHint(true);
       } else {
-        setGatewayError({ code: details.code, message: details.message });
+        setGatewayError({
+          code: details.code,
+          message: details.message,
+          requestId: details.requestId,
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -298,6 +306,7 @@ export default function SentinelChat({
           <div className="sn-gateway-state sn-gateway-state--error" role="alert">
             <strong>{gatewayError.code === "rate_limit_exceeded" ? "Request limit reached" : "Gateway unavailable"}</strong>
             <p>{gatewayError.message} {gatewayError.code === "rate_limit_exceeded" ? "Wait briefly before returning the message to the composer." : "Check the local backend, then return the message to the composer and try again."}</p>
+            <RequestIdSupportText requestId={gatewayError.requestId} />
             {submittedMessage ? (
               <button
                 type="button"

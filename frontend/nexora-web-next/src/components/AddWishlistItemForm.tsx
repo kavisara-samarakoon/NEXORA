@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import RequestIdSupportText from "@/components/RequestIdSupportText";
 import type { WishlistItem, WishlistPriority, WishlistStatus, WishlistStore } from "@/data/wishlist";
 import {
   addMyWishlistItem,
@@ -28,7 +29,11 @@ export default function AddWishlistItemForm({
   onTokenChanged,
 }: AddWishlistItemFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ tone: "error" | "success"; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    tone: "error" | "success";
+    text: string;
+    requestId?: string | null;
+  } | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,7 +83,11 @@ export default function AddWishlistItemForm({
     } catch (error) {
       const details = normalizeUserWishlistError(error);
       if (details.status === 401) onAuthenticationRequired();
-      setMessage({ tone: "error", text: details.message });
+      setMessage({
+        tone: "error",
+        text: details.message,
+        requestId: details.requestId,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -161,6 +170,9 @@ export default function AddWishlistItemForm({
               <span>
                 <strong>{message.tone === "success" ? "Wishlist item added" : "Check this form"}</strong>
                 <small>{message.text}</small>
+                {message.tone === "error" ? (
+                  <RequestIdSupportText requestId={message.requestId} />
+                ) : null}
               </span>
             </p>
           )}

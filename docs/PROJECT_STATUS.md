@@ -4,18 +4,17 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.45.0-frontend-dependency-health-foundation`, which records the primary
-Next.js frontend on its validated dependency baseline with reproducible install,
-lint, build, and production-dependency audit checks.
+`v0.46.0-frontend-api-client-safety-foundation`, which centralizes browser-
+visible API base URL construction and safe response-only request-ID awareness
+for the primary Next.js frontend.
 
-The `v0.46.0-frontend-api-client-safety-foundation` milestone is in progress.
-It centralizes browser-visible API base URL resolution and URL construction for
-the primary Next.js client and adds safe response-only awareness of
-`X-NEXORA-Request-ID` as optional internal request-error metadata. It does not
-send frontend-generated request IDs, change UI behavior, or change access-token,
-refresh-cookie, CSRF, retry, or Authorization behavior. It changes no backend
-implementation or tests, dependency manifest, database migration, OpenAPI YAML,
-or GitHub Actions workflow.
+The `v0.47.0-frontend-request-error-observability-foundation` milestone is in
+progress. It retains response-only `X-NEXORA-Request-ID` metadata in normalized
+frontend errors and surfaces it as a quiet support line in selected backend
+error states. It does not send frontend-generated request IDs or change access-
+token storage, refresh-cookie, CSRF, retry, Authorization, endpoint, or UI
+success behavior. It changes no backend implementation or tests, dependency
+manifest, database migration, OpenAPI YAML, or GitHub Actions workflow.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -120,7 +119,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.45.0-frontend-dependency-health-foundation`.
+`v0.46.0-frontend-api-client-safety-foundation`.
 
 ## Completed foundations
 
@@ -156,6 +155,8 @@ readiness of the project. The latest stable development milestone is
   response headers, and retains backend logs.
 - Request correlation response headers with safe client-value validation, UUID
   fallback generation, request-scoped MDC data, and focused backend coverage.
+- Shared frontend API configuration and selected frontend error/support request-
+  ID metadata for local backend-log correlation.
 - A hand-maintained OpenAPI 3.1 route/schema contract with explicit local-only,
   security, shared-error, and maintenance boundaries.
 - API Contract CI validation that uses the Python standard library to check the

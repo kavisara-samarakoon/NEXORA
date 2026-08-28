@@ -22,3 +22,10 @@ export function readResponseRequestId(response: Response): string | null {
   const requestId = response.headers.get(REQUEST_ID_HEADER_NAME)?.trim();
   return requestId || null;
 }
+
+export function formatRequestIdSupportText(
+  requestId: string | null | undefined,
+): string | null {
+  const normalizedRequestId = requestId?.trim();
+  return normalizedRequestId ? `Request ID: ${normalizedRequestId}` : null;
+}
