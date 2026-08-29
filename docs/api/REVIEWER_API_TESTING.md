@@ -15,6 +15,22 @@ Reviewers can inspect the hand-maintained [`openapi.yaml`](openapi.yaml) for a
 machine-readable route and schema overview. The manual curl guide below and the
 smoke test remain the hands-on sources for verifying local API behavior.
 
+## Local reviewer preflight
+
+Before starting the backend on a fresh review machine, run the read-only
+preflight from the repository root:
+
+```bash
+scripts/reviewer-local-preflight.sh
+```
+
+It verifies Java 17+, Maven, curl, Python 3, Git, Bash, required repository
+paths, and the executable smoke/OpenAPI scripts. Node.js 20+ and npm are optional
+warnings for API-only review but are needed for frontend review. The preflight
+does not start services or prove production readiness; see the
+[scripts guide](../../scripts/README.md#reviewer-local-preflight) for its full
+safety boundary.
+
 ## Quick automated smoke test
 
 With the backend already running, execute the local-only

@@ -4,19 +4,19 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.49.0-backend-safe-request-summary-logging-foundation`, which adds one safe
-local API request-completion summary with method, query-free path, status, and
-non-negative millisecond duration alongside the request-scoped MDC ID.
+`v0.50.0-request-correlation-reviewer-runbook-foundation`, which documents the
+copyable local generated-ID, backend-log matching, JSON-boundary, safe echo,
+401-correlation, safety, and cleanup flows.
 
-The `v0.50.0-request-correlation-reviewer-runbook-foundation` milestone is in
-progress. It documents how a local reviewer captures the response-header
-request ID, matches it to the safe backend completion log, confirms JSON bodies
-remain unchanged, checks a safe incoming ID and an established 401 response,
-and cleans up temporary files. This documentation-only milestone changes no
-runtime code, frontend, tests, dependencies, database migrations, OpenAPI YAML,
-GitHub Actions workflows, smoke script, API behavior, or auth/session/CSRF/CORS
-behavior. Centralized or managed logging, metrics, tracing, dashboards,
-alerting, production monitoring, and incident response remain future work.
+The `v0.51.0-reviewer-local-preflight-foundation` milestone is in progress. It
+adds a read-only local reviewer tool that checks required commands and repository
+paths, with warnings for missing or outdated optional frontend tools. It does
+not start services, run tests, install dependencies, access the network, read
+secrets, or require PostgreSQL or optional providers. This local tooling and
+documentation milestone changes no backend or frontend runtime code, tests,
+dependencies, database migrations, OpenAPI YAML, GitHub Actions workflows,
+existing smoke/OpenAPI scripts, API behavior, or auth/session/CSRF/CORS behavior
+and does not make NEXORA production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +121,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.49.0-backend-safe-request-summary-logging-foundation`.
+`v0.50.0-request-correlation-reviewer-runbook-foundation`.
 
 ## Completed foundations
 

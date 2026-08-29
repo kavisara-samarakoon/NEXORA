@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.49.0-backend-safe-request-summary-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.49.0-backend-safe-request-summary-logging-foundation).
-> `v0.50.0-request-correlation-reviewer-runbook-foundation` remains in progress
+> [`v0.50.0-request-correlation-reviewer-runbook-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.50.0-request-correlation-reviewer-runbook-foundation).
+> `v0.51.0-reviewer-local-preflight-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -21,6 +21,7 @@ Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [OpenAPI contract](docs/api/openapi.yaml) ·
 [OpenAPI guide](docs/api/OPENAPI_CONTRACT.md) ·
 [reviewer API testing](docs/api/REVIEWER_API_TESTING.md) ·
+[reviewer local preflight](scripts/reviewer-local-preflight.sh) ·
 [API smoke test](scripts/api-smoke-test.sh) · [scripts guide](scripts/README.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
@@ -150,10 +151,14 @@ Optional development-container onboarding is documented in
 2. Scan the maturity matrix above and
    [current project status](docs/PROJECT_STATUS.md) to distinguish implemented
    features from local foundations.
-3. Run the backend tests and frontend lint/build commands in
+3. On a fresh machine, run
+   [`scripts/reviewer-local-preflight.sh`](scripts/reviewer-local-preflight.sh)
+   before starting the backend or smoke test. It checks local readiness only
+   and is not a production readiness check.
+4. Run the backend tests and frontend lint/build commands in
    [Verification](#verification).
-4. Start the local stack and follow the demo flow below.
-5. Review [SECURITY.md](SECURITY.md),
+5. Start the local stack and follow the demo flow below.
+6. Review [SECURITY.md](SECURITY.md),
    [development milestones](RELEASES.md), and the
    [roadmap](docs/ROADMAP.md) for limitations and next steps.
 
@@ -490,8 +495,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.49.0-backend-safe-request-summary-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.49.0-backend-safe-request-summary-logging-foundation).
-The `v0.50.0-request-correlation-reviewer-runbook-foundation` milestone is in
+[`v0.50.0-request-correlation-reviewer-runbook-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.50.0-request-correlation-reviewer-runbook-foundation).
+The `v0.51.0-reviewer-local-preflight-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

@@ -7,11 +7,10 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.50.0-request-correlation-reviewer-runbook-foundation` milestone with
-  copyable local request-ID capture, JSON-boundary, safe echo,
-  error-correlation, backend-log matching, and cleanup guidance.
-- Keep the completed `v0.49.0-backend-safe-request-summary-logging-foundation`
-  milestone as the latest stable milestone until v0.50 is merged and tagged.
+  `v0.51.0-reviewer-local-preflight-foundation` milestone with a read-only,
+  location-independent local command and repository-readiness check.
+- Keep the completed `v0.50.0-request-correlation-reviewer-runbook-foundation`
+  milestone as the latest stable milestone until v0.51 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing

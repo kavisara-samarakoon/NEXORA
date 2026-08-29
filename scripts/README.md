@@ -1,5 +1,33 @@
 # NEXORA Scripts
 
+## Reviewer local preflight
+
+[`reviewer-local-preflight.sh`](reviewer-local-preflight.sh) checks whether a
+reviewer's machine has the basic local tools and repository paths needed before
+backend, frontend, smoke-test, OpenAPI, or manual API review.
+
+Run it from the repository root:
+
+```bash
+scripts/reviewer-local-preflight.sh
+```
+
+The script resolves the repository root from its own path rather than the
+current working directory, so reviewers may also invoke its absolute path from
+another directory.
+
+The script checks required Git, Java 17+, Maven, curl, Python 3, and Bash
+availability plus the backend/frontend directories, reviewer documentation,
+contracts, and executable reviewer scripts. Node.js 20+ and npm are optional
+for backend/API-only review: missing or outdated frontend tools produce warnings
+because they are needed when reviewing the frontend.
+
+This is a read-only local readiness helper. It does not start the backend or
+frontend, run tests, install packages, contact external services, read secrets,
+or prove production readiness. PostgreSQL and optional providers such as Gemini
+are not required. After the preflight passes, reviewers can start the backend
+and run [`api-smoke-test.sh`](api-smoke-test.sh).
+
 ## API smoke test
 
 [`api-smoke-test.sh`](api-smoke-test.sh) provides a readable terminal check of
