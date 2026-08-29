@@ -4,20 +4,19 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.48.0-backend-request-correlation-logging-foundation`, which adds request-
-scoped MDC IDs to local console logs and safe method/path/status logging for
-unexpected API exceptions.
+`v0.49.0-backend-safe-request-summary-logging-foundation`, which adds one safe
+local API request-completion summary with method, query-free path, status, and
+non-negative millisecond duration alongside the request-scoped MDC ID.
 
-The `v0.49.0-backend-safe-request-summary-logging-foundation` milestone is in
-progress. The existing correlation filter logs one local API completion summary
-with method, URI path, status, and non-negative millisecond duration before it
-removes the request-scoped MDC ID. Headers, cookies, Authorization data, tokens,
-CSRF values, query strings, parameters, and request/response bodies are not
-logged; request correlation and JSON contracts remain unchanged. This milestone
-changes no frontend, dependency manifest, database migration, OpenAPI YAML,
-GitHub Actions workflow, or auth/session/CSRF/CORS behavior. Centralized or
-managed logging, metrics, tracing, dashboards, alerting, production monitoring,
-and incident response remain future work.
+The `v0.50.0-request-correlation-reviewer-runbook-foundation` milestone is in
+progress. It documents how a local reviewer captures the response-header
+request ID, matches it to the safe backend completion log, confirms JSON bodies
+remain unchanged, checks a safe incoming ID and an established 401 response,
+and cleans up temporary files. This documentation-only milestone changes no
+runtime code, frontend, tests, dependencies, database migrations, OpenAPI YAML,
+GitHub Actions workflows, smoke script, API behavior, or auth/session/CSRF/CORS
+behavior. Centralized or managed logging, metrics, tracing, dashboards,
+alerting, production monitoring, and incident response remain future work.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -122,7 +121,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.48.0-backend-request-correlation-logging-foundation`.
+`v0.49.0-backend-safe-request-summary-logging-foundation`.
 
 ## Completed foundations
 

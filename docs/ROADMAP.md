@@ -6,11 +6,12 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress v0.49 backend safe request summary logging foundation
-  by recording bounded method, path, status, and duration metadata with the
-  existing request-scoped MDC correlation.
-- Keep the completed v0.48 backend request correlation logging foundation as the
-  latest stable milestone until v0.49 is merged and tagged.
+- Complete the in-progress
+  `v0.50.0-request-correlation-reviewer-runbook-foundation` milestone with
+  copyable local request-ID capture, JSON-boundary, safe echo,
+  error-correlation, backend-log matching, and cleanup guidance.
+- Keep the completed `v0.49.0-backend-safe-request-summary-logging-foundation`
+  milestone as the latest stable milestone until v0.50 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -79,8 +80,8 @@ project's academic, portfolio, and product goals evolve.
 - Add full observability dashboards later, after metrics, tracing, managed
   logging, alert ownership, and operational response are defined. Prometheus,
   Grafana, OpenTelemetry, and external integrations remain deliberately
-  unselected; the local v0.48/v0.49 logging foundations are not substitutes for
-  them.
+  unselected; the local v0.48/v0.49 logging foundations and v0.50 reviewer
+  runbook are not substitutes for them.
 - Select a target topology, hosting model, networking boundary, and operational
   ownership model.
 - Define backend and frontend application image requirements separately from

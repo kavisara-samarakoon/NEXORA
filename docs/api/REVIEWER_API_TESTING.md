@@ -37,6 +37,156 @@ automated reviewer shortcut and does not start the backend automatically.
 automation layer by starting a local backend and running that same script; it
 does not replace manual API review when debugging behavior.
 
+## Request correlation debugging runbook
+
+Use this local runbook to connect the request ID returned to a client with the
+same request ID in the backend console. It demonstrates the completed request-
+correlation chain without putting the ID in a JSON response body.
+
+### 1. Start the backend and keep its logs visible
+
+In one terminal, start the backend from the repository root:
+
+```bash
+cd backend/nexora-api
+mvn spring-boot:run
+```
+
+Keep this terminal open: request IDs appear in its backend console logs. Startup
+and background-work lines may show `requestId=no-request-id`; those messages run
+outside an HTTP request scope.
+
+Run the remaining commands in a second terminal from the repository root.
+
+### 2. Send a public request and capture its response
+
+Write the response headers and JSON body to separate temporary files:
+
+```bash
+curl -sS -D /tmp/nexora-request-headers.txt \
+  -o /tmp/nexora-request-body.json \
+  http://localhost:8080/api/health
+```
+
+Inspect both files:
+
+```bash
+cat /tmp/nexora-request-headers.txt
+cat /tmp/nexora-request-body.json
+```
+
+The headers should include a generated value:
+
+```text
+X-NEXORA-Request-ID: <generated-request-id>
+```
+
+### 3. Extract the generated request ID
+
+This shell-safe extraction needs no `jq`:
+
+```bash
+export NEXORA_REQUEST_ID="$(
+  awk 'BEGIN{IGNORECASE=1} /^X-NEXORA-Request-ID:/ {
+    sub(/\r$/, "", $0)
+    sub(/^[^:]+:[[:space:]]*/, "", $0)
+    value=$0
+  } END { print value }' /tmp/nexora-request-headers.txt
+)"
+
+printf 'Captured request ID: %s\n' "${NEXORA_REQUEST_ID}"
+```
+
+### 4. Match the request ID in backend logs
+
+Look in the backend terminal for a line similar to:
+
+```text
+[requestId=<same-request-id>] ... RequestCorrelationFilter - API request completed method=GET path=/api/health status=200 durationMs=<number>
+```
+
+`requestId` comes from the MDC console pattern. The completion message
+intentionally does not duplicate it. The message contains only `method`,
+`path`, `status`, and `durationMs`; `path` is the URI path without query-string
+data.
+
+### 5. Confirm `requestId` is absent from the JSON body
+
+Use the Python standard library so `jq` is not required:
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+payload = json.loads(Path("/tmp/nexora-request-body.json").read_text())
+if isinstance(payload, dict) and "requestId" in payload:
+    raise SystemExit("requestId unexpectedly appeared in JSON body")
+print("requestId is absent from JSON body")
+PY
+```
+
+### 6. Check safe incoming request ID echo
+
+Send a deliberately non-sensitive reviewer ID:
+
+```bash
+curl -sS -D /tmp/nexora-echo-headers.txt \
+  -o /tmp/nexora-echo-body.json \
+  -H 'X-NEXORA-Request-ID: reviewer-2026.08:runbook_test' \
+  http://localhost:8080/api/health
+```
+
+The response header should echo `reviewer-2026.08:runbook_test`, and the backend
+console should show `requestId=reviewer-2026.08:runbook_test` on the matching
+completion line. The JSON body must still contain no `requestId` field.
+
+### 7. Correlate an established error response
+
+Call an account-owned route without authentication:
+
+```bash
+curl -sS -i -D /tmp/nexora-error-headers.txt \
+  -o /tmp/nexora-error-body.json \
+  http://localhost:8080/api/me/wishlist
+```
+
+Inspect the captured response:
+
+```bash
+cat /tmp/nexora-error-headers.txt
+cat /tmp/nexora-error-body.json
+```
+
+Expect HTTP 401 and an `X-NEXORA-Request-ID` response header. The response JSON
+uses shared error fields such as `error`, `message`, `status`, `path`,
+`timestampUtc`, and `retryAfterSeconds`, but does not contain `requestId`. The
+backend console should contain a matching safe completion line with
+`method=GET path=/api/me/wishlist status=401 durationMs=<number>`.
+
+### Safety boundary
+
+The completion summary logs only the request ID from the MDC console pattern
+and the bounded `method`, query-free `path`, `status`, and `durationMs` fields.
+It does not log headers, cookies, Authorization values, Bearer tokens, CSRF
+values, query strings, parameters, request bodies, or response bodies.
+
+Do not paste real tokens, cookies, CSRF values, passwords, API keys, or provider
+keys into logs, screenshots, pull requests, or issues. This runbook is local
+debugging guidance only; it is not production tracing, centralized logging,
+monitoring, alerting, or incident response. NEXORA remains not production-ready.
+
+### 8. Clean up temporary files
+
+```bash
+rm -f /tmp/nexora-request-headers.txt \
+  /tmp/nexora-request-body.json \
+  /tmp/nexora-echo-headers.txt \
+  /tmp/nexora-echo-body.json \
+  /tmp/nexora-error-headers.txt \
+  /tmp/nexora-error-body.json
+```
+
 ## Prerequisites
 
 - Java 17 or newer

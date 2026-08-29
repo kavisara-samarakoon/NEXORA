@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.48.0-backend-request-correlation-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.48.0-backend-request-correlation-logging-foundation).
-The `v0.49.0-backend-safe-request-summary-logging-foundation` milestone remains
+[`v0.49.0-backend-safe-request-summary-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.49.0-backend-safe-request-summary-logging-foundation).
+The `v0.50.0-request-correlation-reviewer-runbook-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement

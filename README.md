@@ -11,8 +11,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.48.0-backend-request-correlation-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.48.0-backend-request-correlation-logging-foundation).
-> `v0.49.0-backend-safe-request-summary-logging-foundation` remains in progress
+> [`v0.49.0-backend-safe-request-summary-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.49.0-backend-safe-request-summary-logging-foundation).
+> `v0.50.0-request-correlation-reviewer-runbook-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -343,12 +343,18 @@ bodies, or parameters, and the API JSON response still has no `requestId` field.
 Managed logging, tracing, dashboards, alerting, and production incident response
 remain future deployment work.
 
-The in-progress v0.49 foundation adds one local completion summary for each API
+The completed v0.49 foundation adds one local completion summary for each API
 request from the existing correlation filter. Its message contains only the
 HTTP method, request URI path without query data, response status, and a non-
 negative `durationMs`; the request ID remains console metadata supplied by MDC.
 The summary does not read or log headers, cookies, Authorization data, tokens,
 CSRF values, query strings, parameters, request bodies, or response bodies.
+
+The [request correlation debugging runbook](docs/api/REVIEWER_API_TESTING.md#request-correlation-debugging-runbook)
+shows reviewers how to capture `X-NEXORA-Request-ID` and match it against the
+backend console completion line. The ID remains absent from JSON bodies, no
+sensitive request or response data is logged, and the runbook makes no
+production monitoring claim.
 
 ### Frontend API client safety foundation
 
@@ -484,8 +490,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.48.0-backend-request-correlation-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.48.0-backend-request-correlation-logging-foundation).
-The `v0.49.0-backend-safe-request-summary-logging-foundation` milestone is in
+[`v0.49.0-backend-safe-request-summary-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.49.0-backend-safe-request-summary-logging-foundation).
+The `v0.50.0-request-correlation-reviewer-runbook-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
