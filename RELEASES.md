@@ -4,10 +4,21 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.49.0-backend-safe-request-summary-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.49.0-backend-safe-request-summary-logging-foundation).
+[`v0.50.0-request-correlation-reviewer-runbook-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.50.0-request-correlation-reviewer-runbook-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.50.0 Request Correlation Reviewer Runbook foundation
+## In progress — v0.51.0 Reviewer Local Preflight foundation
+
+- Adds `scripts/reviewer-local-preflight.sh` to check required local tools and
+  repository paths before review, with warnings when optional frontend tools
+  are missing or outdated. It does not start services, run tests, install
+  dependencies, access the network, read secrets, or make NEXORA production-
+  ready. This local tooling and documentation milestone changes no backend or
+  frontend runtime code, tests, dependency manifests, database migrations,
+  OpenAPI YAML, GitHub Actions workflows, existing smoke/OpenAPI scripts, or API
+  behavior.
+
+## Completed documentation milestone — v0.50.0 Request Correlation Reviewer Runbook foundation
 
 - Adds a manual reviewer runbook for capturing generated request IDs and
   matching them to backend console logs, safely echoing an incoming ID,
