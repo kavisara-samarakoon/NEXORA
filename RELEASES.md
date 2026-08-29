@@ -4,10 +4,20 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.48.0-backend-request-correlation-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.48.0-backend-request-correlation-logging-foundation).
+[`v0.49.0-backend-safe-request-summary-logging-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.49.0-backend-safe-request-summary-logging-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.49.0 Backend Safe Request Summary Logging foundation
+## In progress — v0.50.0 Request Correlation Reviewer Runbook foundation
+
+- Adds a manual reviewer runbook for capturing generated request IDs and
+  matching them to backend console logs, safely echoing an incoming ID,
+  correlating an established error response, and confirming `requestId` remains
+  absent from JSON bodies. This documentation-only milestone changes no backend
+  or frontend runtime code, tests, dependency manifests, database migrations,
+  OpenAPI YAML, GitHub Actions workflows, smoke script, or API behavior and does
+  not make NEXORA production-ready.
+
+## Completed backend milestone — v0.49.0 Backend Safe Request Summary Logging foundation
 
 - Adds one safe local API request-completion summary from the existing
   correlation filter with method, URI path, status, and `durationMs` only. The

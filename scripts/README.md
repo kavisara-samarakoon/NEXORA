@@ -30,6 +30,12 @@ HTTP statuses, stable JSON fields, and request correlation without depending on
 dynamic timestamps or provider-specific response text. It does not print full
 response headers, cookies, CSRF tokens, or unmasked access tokens.
 
+This automatically validates the request-correlation contract. For manual
+request-ID-to-backend-log tracing, follow the
+[request correlation debugging runbook](../docs/api/REVIEWER_API_TESTING.md#request-correlation-debugging-runbook).
+The smoke script captures headers internally and does not print full headers,
+cookies, or Authorization values.
+
 ## Prerequisites
 
 - Bash

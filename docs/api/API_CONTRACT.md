@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.48.0-backend-request-correlation-logging-foundation` is the latest stable
-development milestone while the v0.49 backend safe request summary logging
-foundation is in progress.
+`v0.49.0-backend-safe-request-summary-logging-foundation` is the latest stable
+development milestone while
+`v0.50.0-request-correlation-reviewer-runbook-foundation` is in progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -187,6 +187,12 @@ pattern, not duplicated in the message or added to a JSON body. Request and
 response headers, cookies, Authorization data, tokens, CSRF values, query
 strings, parameters, and request/response bodies are not logged. The OpenAPI
 YAML remains unchanged.
+
+This section is the formal request-correlation contract. The copyable manual
+flow is in the
+[`REVIEWER_API_TESTING.md` request correlation debugging runbook](REVIEWER_API_TESTING.md#request-correlation-debugging-runbook),
+while [`api-smoke-test.sh`](../../scripts/api-smoke-test.sh) provides automated
+coverage. This documentation-only runbook needs no `openapi.yaml` change.
 
 ## Standard error response contract
 
