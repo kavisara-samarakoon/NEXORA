@@ -29,7 +29,9 @@ paths, and the executable smoke/OpenAPI scripts. Node.js 20+ and npm are optiona
 warnings for API-only review but are needed for frontend review. The preflight
 does not start services or prove production readiness; see the
 [scripts guide](../../scripts/README.md#reviewer-local-preflight) for its full
-safety boundary.
+safety boundary. [`Reviewer Tooling CI`](../../.github/workflows/reviewer-tooling-ci.yml)
+guards the script's syntax, executable mode, and location-independent read-only
+run. The reviewer flow itself remains local and manual.
 
 ## Quick automated smoke test
 

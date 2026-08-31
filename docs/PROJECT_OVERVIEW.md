@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.50.0-request-correlation-reviewer-runbook-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.50.0-request-correlation-reviewer-runbook-foundation).
-The `v0.51.0-reviewer-local-preflight-foundation` milestone remains
+[`v0.51.0-reviewer-local-preflight-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.51.0-reviewer-local-preflight-foundation).
+The `v0.52.0-reviewer-preflight-ci-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -55,7 +55,7 @@ deployment.
 | Default profile | Database-free local demo with in-memory account and feature stores |
 | `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
 | Optional providers | CheapShark price/deal data, SMTP email delivery, and Gemini Sentinel responses |
-| CI | Backend tests, PostgreSQL integration validation, frontend lint/build, dependency visibility, and manual CodeQL-ready analysis |
+| CI | Backend tests, PostgreSQL integration validation, frontend lint/build, reviewer preflight validation, dependency visibility, and manual CodeQL-ready analysis |
 
 The primary frontend is `frontend/nexora-web-next`; the earlier Vite prototype
 is retained only for reference. The default local workflow does not require
@@ -101,6 +101,9 @@ cost controls, or production AI observability.
 - The primary frontend is checked with ESLint and a production build.
 - GitHub Actions cover backend, PostgreSQL, primary frontend, and lightweight
   dependency/security validation.
+- Reviewer Tooling CI checks the read-only local preflight from the repository
+  root and `/tmp`, improving setup and reviewer confidence without starting
+  services, installing dependencies, or making a production-readiness claim.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

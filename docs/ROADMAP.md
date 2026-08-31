@@ -7,10 +7,10 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.51.0-reviewer-local-preflight-foundation` milestone with a read-only,
-  location-independent local command and repository-readiness check.
-- Keep the completed `v0.50.0-request-correlation-reviewer-runbook-foundation`
-  milestone as the latest stable milestone until v0.51 is merged and tagged.
+  `v0.52.0-reviewer-preflight-ci-foundation` milestone by guarding the read-only,
+  location-independent reviewer preflight in GitHub Actions.
+- Keep the completed `v0.51.0-reviewer-local-preflight-foundation` milestone as
+  the latest stable milestone until v0.52 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing

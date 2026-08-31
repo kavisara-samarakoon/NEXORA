@@ -3,6 +3,7 @@
 [![Backend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml)
 [![Security CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml)
+[![Reviewer Tooling CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/reviewer-tooling-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/reviewer-tooling-ci.yml)
 
 NEXORA is a full-stack game-deal intelligence MVP that combines discovery,
 personal price tracking, alert history, account-scoped workflows, and a bounded
@@ -11,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.50.0-request-correlation-reviewer-runbook-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.50.0-request-correlation-reviewer-runbook-foundation).
-> `v0.51.0-reviewer-local-preflight-foundation` remains in progress
+> [`v0.51.0-reviewer-local-preflight-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.51.0-reviewer-local-preflight-foundation).
+> `v0.52.0-reviewer-preflight-ci-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -431,6 +432,7 @@ requests targeting `main`:
 | `backend-ci.yml` | Runs database-free backend tests and a separate PostgreSQL 16 job that validates the `dev` profile, Flyway migrations, and JPA schema |
 | `api-smoke-ci.yml` | Warms Maven dependencies with bounded retries, starts the default backend locally, waits for health, and runs the existing reviewer smoke script against localhost |
 | `api-contract-ci.yml` | Runs the standard-library checker for the hand-maintained OpenAPI path, operation, schema, security, error, and localhost markers |
+| `reviewer-tooling-ci.yml` | Validates the reviewer preflight script's Bash syntax, executable bit, and read-only behavior from both the repository root and `/tmp` |
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
 | `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
 | `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
@@ -466,6 +468,14 @@ the hand-maintained OpenAPI file. The lightweight checker verifies expected
 paths and operations, schema/security/error markers, and localhost-only server
 assumptions without installing an OpenAPI toolchain.
 
+Reviewer Tooling CI sets up Java 17, Python 3.12, and Node.js 20 so
+[`scripts/reviewer-local-preflight.sh`](scripts/reviewer-local-preflight.sh) can
+verify its expected tools. It checks Bash syntax and executable mode, then runs
+the read-only preflight from the repository root and from `/tmp` through its
+absolute path. It does not start the backend or frontend, run tests, install
+dependencies, run the API smoke test, read secrets, or prove production
+readiness.
+
 ## API overview
 
 | Area | Endpoints |
@@ -495,8 +505,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.50.0-request-correlation-reviewer-runbook-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.50.0-request-correlation-reviewer-runbook-foundation).
-The `v0.51.0-reviewer-local-preflight-foundation` milestone is in
+[`v0.51.0-reviewer-local-preflight-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.51.0-reviewer-local-preflight-foundation).
+The `v0.52.0-reviewer-preflight-ci-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

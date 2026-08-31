@@ -4,10 +4,22 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.50.0-request-correlation-reviewer-runbook-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.50.0-request-correlation-reviewer-runbook-foundation).
+[`v0.51.0-reviewer-local-preflight-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.51.0-reviewer-local-preflight-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.51.0 Reviewer Local Preflight foundation
+## In progress — v0.52.0 Reviewer Preflight CI foundation
+
+- Adds `.github/workflows/reviewer-tooling-ci.yml` to validate the reviewer
+  preflight script's Bash syntax, executable mode, repository-root invocation,
+  and absolute-path invocation from `/tmp`. GitHub Actions sets up Java 17,
+  Python 3.12, and Node.js 20 for the script's expected tool checks. The
+  workflow does not start services, run tests, install dependencies, run the
+  API smoke test, read secrets, or prove production readiness. This CI/tooling
+  and documentation milestone changes no backend or frontend runtime code,
+  tests, dependency manifests, database migrations, OpenAPI YAML, existing
+  smoke/OpenAPI scripts, reviewer preflight script, or API behavior.
+
+## Completed tooling milestone — v0.51.0 Reviewer Local Preflight foundation
 
 - Adds `scripts/reviewer-local-preflight.sh` to check required local tools and
   repository paths before review, with warnings when optional frontend tools
