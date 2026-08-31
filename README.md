@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.51.0-reviewer-local-preflight-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.51.0-reviewer-local-preflight-foundation).
-> `v0.52.0-reviewer-preflight-ci-foundation` remains in progress
+> [`v0.52.0-reviewer-preflight-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.52.0-reviewer-preflight-ci-foundation).
+> `v0.53.0-frontend-backend-health-visibility-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -64,6 +64,7 @@ security controls, and testable optional integrations.
 | Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
+| Frontend backend health visibility | Dashboard panel for safe local `/api/health` reachability and mode/check labels | Reviewer visibility foundation |
 | Request correlation | Safe response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
@@ -319,6 +320,13 @@ do not test external dependency availability or provide production monitoring.
 Prometheus, Grafana, OpenTelemetry, managed logging, alerting, dashboards, and
 operational response remain future deployment decisions.
 
+The primary Next.js dashboard includes a small reviewer-facing panel that reads
+`GET /api/health` without credentials and displays safe reachability, service,
+runtime mode, data mode, auth-guard check, active-profile, and checked-time
+labels. It handles an unavailable local backend with generic guidance and does
+not expose raw failures. This is local reviewer visibility only, not a
+production-readiness or deployment-health check.
+
 ### Request correlation observability foundation
 
 Version 0.43 adds `X-NEXORA-Request-ID` to backend success and error responses.
@@ -505,8 +513,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.51.0-reviewer-local-preflight-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.51.0-reviewer-local-preflight-foundation).
-The `v0.52.0-reviewer-preflight-ci-foundation` milestone is in
+[`v0.52.0-reviewer-preflight-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.52.0-reviewer-preflight-ci-foundation).
+The `v0.53.0-frontend-backend-health-visibility-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

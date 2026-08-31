@@ -7,10 +7,10 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.52.0-reviewer-preflight-ci-foundation` milestone by guarding the read-only,
-  location-independent reviewer preflight in GitHub Actions.
-- Keep the completed `v0.51.0-reviewer-local-preflight-foundation` milestone as
-  the latest stable milestone until v0.52 is merged and tagged.
+  `v0.53.0-frontend-backend-health-visibility-foundation` milestone with a
+  compact, safe local `/api/health` panel on the primary dashboard.
+- Keep the completed `v0.52.0-reviewer-preflight-ci-foundation` milestone as the
+  latest stable milestone until v0.53 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -75,7 +75,8 @@ project's academic, portfolio, and product goals evolve.
   verified; it is intentionally outside the local v0.40 foundation.
 - Build future deployment health probes and production monitoring only on an
   approved topology with alerting and response ownership. The v0.33 safe
-  runtime/configuration summary is only a lightweight foundation.
+  runtime/configuration summary and v0.53 frontend panel are only lightweight
+  local foundations.
 - Add full observability dashboards later, after metrics, tracing, managed
   logging, alert ownership, and operational response are defined. Prometheus,
   Grafana, OpenTelemetry, and external integrations remain deliberately

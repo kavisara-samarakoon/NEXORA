@@ -4,10 +4,22 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.51.0-reviewer-local-preflight-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.51.0-reviewer-local-preflight-foundation).
+[`v0.52.0-reviewer-preflight-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.52.0-reviewer-preflight-ci-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.52.0 Reviewer Preflight CI foundation
+## In progress — v0.53.0 Frontend Backend Health Visibility foundation
+
+- Adds a compact panel to the primary Next.js dashboard for the existing public
+  `/api/health` response. It displays safe local status, service, runtime mode,
+  data mode, auth-production-guard check, active profiles, and checked time,
+  with a generic startup hint when the backend is unavailable. The panel reads
+  no response headers, credentials, browser storage, cookies, tokens, CSRF
+  values, request IDs, or raw failure messages. This frontend and documentation
+  milestone changes no backend runtime behavior, API contract, OpenAPI YAML,
+  auth/session/CSRF/CORS behavior, dependency manifests, workflows, or scripts
+  and does not make NEXORA production-ready.
+
+## Completed CI milestone — v0.52.0 Reviewer Preflight CI foundation
 
 - Adds `.github/workflows/reviewer-tooling-ci.yml` to validate the reviewer
   preflight script's Bash syntax, executable mode, repository-root invocation,

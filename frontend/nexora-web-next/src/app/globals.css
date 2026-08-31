@@ -8683,6 +8683,137 @@ body::before {
   }
 }
 
+/* v0.53 frontend backend health visibility */
+.backend-health-panel {
+  display: grid;
+  gap: 20px;
+  padding: 24px 28px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-md);
+  background: var(--nx-panel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.backend-health-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.backend-health-panel__header h2 {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.backend-health-panel__header p {
+  margin-top: 5px;
+  color: var(--nx-muted);
+  font-size: 12px;
+}
+
+.backend-health-panel__status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.backend-health-panel__status::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.backend-health-panel__status--online {
+  border-color: color-mix(in srgb, var(--nx-success) 28%, transparent);
+  color: var(--nx-success);
+  background: color-mix(in srgb, var(--nx-success) 8%, transparent);
+}
+
+.backend-health-panel__status--unavailable {
+  border-color: color-mix(in srgb, var(--nx-orange) 30%, transparent);
+  color: var(--nx-orange);
+  background: color-mix(in srgb, var(--nx-orange) 9%, transparent);
+}
+
+.backend-health-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.backend-health-panel__item {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--nx-panel) 82%, transparent);
+}
+
+.backend-health-panel__item dt {
+  color: var(--nx-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.backend-health-panel__item dd {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: var(--nx-blue);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.backend-health-panel__message,
+.backend-health-panel__note {
+  color: var(--nx-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.backend-health-panel__note {
+  padding-top: 14px;
+  border-top: 1px solid var(--nx-border);
+}
+
+.backend-health-panel__note code {
+  color: var(--nx-blue);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+@media (max-width: 900px) {
+  .backend-health-panel__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .backend-health-panel {
+    padding: 20px;
+  }
+
+  .backend-health-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .backend-health-panel__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 /* Authentication foundation */
 .auth-status {

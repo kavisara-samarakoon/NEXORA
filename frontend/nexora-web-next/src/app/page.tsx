@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BackendHealthPanel from "@/components/BackendHealthPanel";
 import DashboardHero from "@/components/DashboardHero";
 import DealCard from "@/components/DealCard";
 import GiveawayCard from "@/components/GiveawayCard";
@@ -23,6 +24,7 @@ import {
   getGiveaways,
   getSecurityStatus,
 } from "@/lib/api";
+import { getBackendHealth } from "@/lib/backend-health";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -33,11 +35,18 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default async function Home() {
-  const [summaryResult, dealsResult, giveawaysResult, securityResult] = await Promise.all([
+  const [
+    summaryResult,
+    dealsResult,
+    giveawaysResult,
+    securityResult,
+    backendHealthResult,
+  ] = await Promise.all([
     getDashboardSummary(),
     getDeals(),
     getGiveaways(),
     getSecurityStatus(),
+    getBackendHealth(),
   ]);
   const deals =
     dealsResult.source === "api"
@@ -65,6 +74,8 @@ export default async function Home() {
 
         <main className="dashboard dashboard-home nx-page-reveal" id="main-content" tabIndex={-1}>
           <DashboardHero summary={summaryResult.dashboardSummary} />
+
+          <BackendHealthPanel result={backendHealthResult} />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">
