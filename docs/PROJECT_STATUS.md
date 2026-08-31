@@ -4,19 +4,20 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.51.0-reviewer-local-preflight-foundation`, which adds the read-only,
-location-independent reviewer readiness script for required tools and repository
-paths.
+`v0.52.0-reviewer-preflight-ci-foundation`, which guards the read-only reviewer
+preflight script's syntax, executable mode, and location-independent behavior in
+GitHub Actions.
 
-The `v0.52.0-reviewer-preflight-ci-foundation` milestone is in progress. It
-adds Reviewer Tooling CI to check the script's Bash syntax, executable mode,
-repository-root invocation, and absolute-path invocation from `/tmp` after
-setting up Java 17, Python 3.12, and Node.js 20. This tooling-only gate does not
-start services, run tests, install dependencies, run the API smoke test, read
-secrets, or require PostgreSQL or optional providers. It changes no backend or
-frontend runtime behavior, tests, dependency manifests, migrations, OpenAPI
-YAML, existing smoke/OpenAPI scripts, API behavior, or auth/session/CSRF/CORS
-behavior and does not make NEXORA production-ready.
+The `v0.53.0-frontend-backend-health-visibility-foundation` milestone is in
+progress. It adds a compact primary-frontend dashboard panel that reads the
+existing public `/api/health` response and presents safe local reachability,
+service, runtime mode, data mode, auth-guard check, active-profile, and checked-
+time labels. An unavailable backend produces generic local startup guidance
+without raw error details. This frontend-only visibility changes no backend,
+API contract, OpenAPI YAML, auth/session/CSRF/CORS behavior, dependencies,
+workflows, or scripts and does not make NEXORA production-ready. Production
+monitoring dashboards, centralized logs, tracing, alerting, uptime SLAs, and
+deployment health checks remain future work.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +122,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.51.0-reviewer-local-preflight-foundation`.
+`v0.52.0-reviewer-preflight-ci-foundation`.
 
 ## Completed foundations
 
@@ -161,6 +162,8 @@ readiness of the project. The latest stable development milestone is
   backend coverage.
 - Shared frontend API configuration and selected frontend error/support request-
   ID metadata for local backend-log correlation.
+- Primary-frontend dashboard visibility for safe local backend health metadata
+  and a bounded unavailable-backend state.
 - A hand-maintained OpenAPI 3.1 route/schema contract with explicit local-only,
   security, shared-error, and maintenance boundaries.
 - API Contract CI validation that uses the Python standard library to check the
@@ -248,6 +251,9 @@ readiness of the project. The latest stable development milestone is
   in memory; restarting it clears that state.
 - Runtime health/startup summaries report configuration mode and process uptime
   only; they do not probe dependencies or supply production monitoring.
+- The frontend health panel reflects one local `/api/health` response. It is not
+  a production dashboard, centralized logging or tracing system, alerting
+  service, uptime SLA, or deployed dependency probe.
 - Shared error metadata improves local diagnosis but is not centralized error
   reporting, tracing, production monitoring, or incident response.
 - CheapShark is a third-party dependency with incomplete game/store coverage.

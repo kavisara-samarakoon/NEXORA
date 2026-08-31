@@ -10,8 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.51.0-reviewer-local-preflight-foundation` is the latest stable development
-milestone while `v0.52.0-reviewer-preflight-ci-foundation` is in progress.
+`v0.52.0-reviewer-preflight-ci-foundation` is the latest stable development
+milestone while `v0.53.0-frontend-backend-health-visibility-foundation` is in
+progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -268,6 +269,11 @@ distributed production rate limiting.
 The health response currently uses milestone label
 `v0.33.0-runtime-observability-foundation`; later documentation and smoke-CI
 milestones, including v0.38, do not change that runtime field.
+
+The primary frontend may display selected safe `/api/health` fields for local
+reviewer visibility, including service, runtime/data modes, the auth-production-
+guard check, and active profiles. This presentation does not change the formal
+response contract or turn the endpoint into a production readiness probe.
 
 ## Public catalog and demo endpoints
 
