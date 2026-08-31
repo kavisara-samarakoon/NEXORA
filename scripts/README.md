@@ -28,6 +28,12 @@ or prove production readiness. PostgreSQL and optional providers such as Gemini
 are not required. After the preflight passes, reviewers can start the backend
 and run [`api-smoke-test.sh`](api-smoke-test.sh).
 
+[`Reviewer Tooling CI`](../.github/workflows/reviewer-tooling-ci.yml) also
+guards this script. CI verifies its Bash syntax and executable bit, then runs
+the preflight from the repository root and from `/tmp` using its absolute path.
+This tooling check does not start services, run tests, install packages, or
+contact application services.
+
 ## API smoke test
 
 [`api-smoke-test.sh`](api-smoke-test.sh) provides a readable terminal check of

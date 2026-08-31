@@ -4,19 +4,19 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.50.0-request-correlation-reviewer-runbook-foundation`, which documents the
-copyable local generated-ID, backend-log matching, JSON-boundary, safe echo,
-401-correlation, safety, and cleanup flows.
+`v0.51.0-reviewer-local-preflight-foundation`, which adds the read-only,
+location-independent reviewer readiness script for required tools and repository
+paths.
 
-The `v0.51.0-reviewer-local-preflight-foundation` milestone is in progress. It
-adds a read-only local reviewer tool that checks required commands and repository
-paths, with warnings for missing or outdated optional frontend tools. It does
-not start services, run tests, install dependencies, access the network, read
-secrets, or require PostgreSQL or optional providers. This local tooling and
-documentation milestone changes no backend or frontend runtime code, tests,
-dependencies, database migrations, OpenAPI YAML, GitHub Actions workflows,
-existing smoke/OpenAPI scripts, API behavior, or auth/session/CSRF/CORS behavior
-and does not make NEXORA production-ready.
+The `v0.52.0-reviewer-preflight-ci-foundation` milestone is in progress. It
+adds Reviewer Tooling CI to check the script's Bash syntax, executable mode,
+repository-root invocation, and absolute-path invocation from `/tmp` after
+setting up Java 17, Python 3.12, and Node.js 20. This tooling-only gate does not
+start services, run tests, install dependencies, run the API smoke test, read
+secrets, or require PostgreSQL or optional providers. It changes no backend or
+frontend runtime behavior, tests, dependency manifests, migrations, OpenAPI
+YAML, existing smoke/OpenAPI scripts, API behavior, or auth/session/CSRF/CORS
+behavior and does not make NEXORA production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +121,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.50.0-request-correlation-reviewer-runbook-foundation`.
+`v0.51.0-reviewer-local-preflight-foundation`.
 
 ## Completed foundations
 
@@ -166,6 +166,8 @@ readiness of the project. The latest stable development milestone is
 - API Contract CI validation that uses the Python standard library to check the
   hand-maintained contract's expected routes, operations, schema/security/error
   markers, and localhost-only server assumption.
+- Reviewer Tooling CI validation for the local preflight script's Bash syntax,
+  executable mode, repository-root run, and absolute-path run from `/tmp`.
 - Backend response hardening through explicit content-type, framing, referrer,
   permissions-policy, and cache-control headers with focused MockMvc coverage.
 - Focused auth-cookie coverage for readable CSRF double-submit behavior,
