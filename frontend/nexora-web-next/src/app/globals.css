@@ -9121,9 +9121,94 @@ body::before {
   line-height: 1.55;
 }
 
+/* v0.57 frontend portfolio evidence polish */
+.portfolio-evidence {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-md);
+  background: var(--nx-panel);
+}
+
+.portfolio-evidence__header h2 {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.portfolio-evidence__header p {
+  max-width: 780px;
+  margin-top: 5px;
+  color: var(--nx-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.portfolio-evidence__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-evidence__card {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--nx-panel) 82%, transparent);
+}
+
+.portfolio-evidence__icon {
+  display: inline-flex;
+  min-width: 32px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--nx-blue) 30%, transparent);
+  border-radius: 999px;
+  color: var(--nx-blue);
+  background: color-mix(in srgb, var(--nx-blue) 8%, transparent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.portfolio-evidence__copy {
+  min-width: 0;
+}
+
+.portfolio-evidence__copy h3 {
+  font-size: 12px;
+}
+
+.portfolio-evidence__copy p {
+  margin-top: 4px;
+  color: var(--nx-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.portfolio-evidence__boundary {
+  padding-top: 14px;
+  border-top: 1px solid var(--nx-border);
+  color: var(--nx-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 @media (max-width: 900px) {
   .data-source-summary__grid,
-  .reviewer-navigation__grid {
+  .reviewer-navigation__grid,
+  .portfolio-evidence__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -9137,13 +9222,15 @@ body::before {
 @media (max-width: 560px) {
   .data-source-summary,
   .reviewer-navigation,
-  .accessibility-review {
+  .accessibility-review,
+  .portfolio-evidence {
     padding: 20px;
   }
 
   .data-source-summary__grid,
   .reviewer-navigation__grid,
-  .accessibility-review__grid {
+  .accessibility-review__grid,
+  .portfolio-evidence__grid {
     grid-template-columns: 1fr;
   }
 

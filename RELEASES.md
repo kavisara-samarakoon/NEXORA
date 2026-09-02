@@ -4,10 +4,22 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.55.0-frontend-reviewer-navigation-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.55.0-frontend-reviewer-navigation-polish-foundation).
+[`v0.56.0-frontend-accessibility-review-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.56.0-frontend-accessibility-review-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.56.0 Frontend Accessibility Review foundation
+## In progress — v0.57.0 Frontend Portfolio Evidence Polish foundation
+
+- Adds a public-safe dashboard portfolio evidence panel, adds existing-source
+  notices to the Wishlist and Sentinel evidence pages, and documents safe
+  screenshot and evidence boundaries. This frontend/documentation presentation
+  milestone changes no backend/API contract, OpenAPI YAML, frontend API/fallback
+  behavior, auth/session/CSRF/CORS behavior, dependencies, workflows, scripts,
+  retained Vite frontend, or request-ID presentation. It does not display or
+  read secrets, tokens, cookies, CSRF values, Authorization data, request IDs,
+  raw exceptions, private data, environment values, local paths, emails, or API
+  keys, and it does not make NEXORA production-ready.
+
+## Completed frontend milestone — v0.56.0 Frontend Accessibility Review foundation
 
 - Adds a compact dashboard accessibility review panel, improves page source
   notice semantics and reviewer-navigation link labels, and clarifies disabled

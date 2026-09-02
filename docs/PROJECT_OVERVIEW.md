@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.55.0-frontend-reviewer-navigation-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.55.0-frontend-reviewer-navigation-polish-foundation).
-The `v0.56.0-frontend-accessibility-review-foundation` milestone remains
+[`v0.56.0-frontend-accessibility-review-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.56.0-frontend-accessibility-review-foundation).
+The `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -49,12 +49,13 @@ deployment.
 | Frontend data-source transparency | Primary dashboard and key-page notices expose safe API, static fallback, external-provider, and unavailable labels for reviewer clarity |
 | Reviewer navigation polish | Dashboard reviewer path and cleaner reusable source notices guide local review across primary frontend pages |
 | Accessibility review aid | Primary dashboard summarizes keyboard focus, skip-link, disabled-preview, and reduced-motion foundations for local reviewers |
+| Portfolio evidence summary | Primary dashboard presents public-safe frontend, API, security, workflow, and validation evidence without a readiness claim |
 
 ## Architecture summary
 
 | Layer | Responsibility |
 | --- | --- |
-| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, source labels, reviewer navigation, and a bounded accessibility review aid |
+| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, source labels, reviewer navigation, accessibility aid, and public-safe portfolio evidence summary |
 | Spring Boot backend | REST endpoints, validation, authentication, ownership rules, provider gateways, and scheduled foundations |
 | Default profile | Database-free local demo with in-memory account and feature stores |
 | `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
@@ -120,6 +121,11 @@ cost controls, or production AI observability.
 - A small dashboard accessibility aid highlights keyboard focus, skip-link,
   disabled-preview, and reduced-motion foundations for local review. It is not
   a formal WCAG audit or compliance claim.
+- The dashboard includes a public-safe portfolio evidence summary. Dashboard,
+  deals, giveaways, Wishlist, security, and Sentinel pages are suitable for
+  reviewer screenshots when browser account/profile areas and private user
+  content are cropped. Terminal paths, environment files, credentials, and
+  provider keys must remain outside captures.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

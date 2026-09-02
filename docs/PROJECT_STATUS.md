@@ -4,19 +4,20 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.55.0-frontend-reviewer-navigation-polish-foundation`, which adds reusable
-source notices, a dashboard reviewer path, and safer static local-review labels.
+`v0.56.0-frontend-accessibility-review-foundation`, which adds a bounded
+dashboard accessibility review aid and focused screen-reader and disabled-
+preview wording polish.
 
-The `v0.56.0-frontend-accessibility-review-foundation` milestone is in
-progress. It adds a compact dashboard accessibility review aid, clearer
-relationships for page source notices, descriptive reviewer-route link labels,
-and explicit disabled local-preview control wording. This is frontend
-accessibility review polish only: API calls, fallback behavior, backend and API
-contracts, OpenAPI YAML, auth/session/CSRF/CORS behavior, dependencies,
-workflows, scripts, and request-ID presentation remain unchanged. It is not a
-formal WCAG audit and does not make NEXORA production-ready. Formal accessibility
-assessment, production monitoring, deployment health checks, and provider
-hardening remain future work.
+The `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone is in
+progress. It adds a public-safe dashboard evidence summary, extends source
+notices to Wishlist and Sentinel, and documents safe screenshot boundaries for
+portfolio and reviewer use. This is frontend and documentation presentation
+polish only: API calls, fallback behavior, backend and API contracts, OpenAPI
+YAML, auth/session/CSRF/CORS behavior, dependencies, workflows, scripts, and
+request-ID presentation remain unchanged. It does not make NEXORA production-
+ready or claim project, employment, or business readiness. Production
+deployment, monitoring, provider hardening, formal accessibility assessment,
+and business/income readiness remain future work.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +122,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.55.0-frontend-reviewer-navigation-polish-foundation`.
+`v0.56.0-frontend-accessibility-review-foundation`.
 
 ## Completed foundations
 
@@ -133,6 +134,9 @@ readiness of the project. The latest stable development milestone is
 - A dashboard accessibility review aid documents existing keyboard focus,
   skip-link, disabled-preview, and reduced-motion foundations without claiming
   formal conformance.
+- A public-safe dashboard evidence summary and source notices on Wishlist and
+  Sentinel improve portfolio review without exposing additional user or system
+  data.
 - Spring Boot REST API with validation, security, and profile-based services.
 - JWT registration, login, and authenticated account lookup.
 - PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.

@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.55.0-frontend-reviewer-navigation-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.55.0-frontend-reviewer-navigation-polish-foundation).
-> `v0.56.0-frontend-accessibility-review-foundation` remains in progress
+> [`v0.56.0-frontend-accessibility-review-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.56.0-frontend-accessibility-review-foundation).
+> `v0.57.0-frontend-portfolio-evidence-polish-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -68,6 +68,7 @@ security controls, and testable optional integrations.
 | Frontend data-source transparency | Dashboard summary and key-page notices distinguish local backend API data from bundled static fallback previews | Reviewer visibility foundation |
 | Frontend reviewer navigation | Dashboard reviewer path, reusable page source notices, and local-review status wording | Reviewer UX foundation |
 | Frontend accessibility review | Dashboard review aid highlights keyboard focus, skip-link, disabled-preview, and reduced-motion foundations | Reviewer accessibility foundation |
+| Frontend portfolio evidence | Dashboard evidence summary and source-labelled key pages support public-safe project review | Portfolio presentation foundation |
 | Request correlation | Safe response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
@@ -179,6 +180,16 @@ Optional development-container onboarding is documented in
 4. Review generated alerts and notification preferences.
 5. Try Sentinel in deterministic local mode; optional providers can be
    configured separately.
+
+### Public-safe portfolio captures
+
+The dashboard, deals, giveaways, Wishlist, security, and Sentinel pages provide
+useful project evidence with visible source labels and reviewer guidance. When
+capturing screenshots, crop browser account/profile UI and any private user
+content. Avoid terminal windows that reveal usernames or local filesystem
+paths, and never include `.env` files, tokens, cookies, API keys, passwords, or
+private user data. These captures demonstrate local development work only and
+do not establish production readiness.
 
 ## Local setup
 
@@ -520,8 +531,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.55.0-frontend-reviewer-navigation-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.55.0-frontend-reviewer-navigation-polish-foundation).
-The `v0.56.0-frontend-accessibility-review-foundation` milestone is in
+[`v0.56.0-frontend-accessibility-review-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.56.0-frontend-accessibility-review-foundation).
+The `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PageSourceNotice from "@/components/PageSourceNotice";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -22,6 +23,11 @@ export default async function WishlistPage() {
       <div className="main-shell">
         <Topbar />
         <main className="dashboard wishlist-page nx-page-reveal" id="main-content" tabIndex={-1}>
+          <PageSourceNotice
+            label="Wishlist data"
+            endpoint="/api/wishlist"
+            source={source}
+          />
           <WishlistExplorer wishlistItems={wishlistItems} source={source} />
         </main>
       </div>
