@@ -5,6 +5,7 @@ import DataSourceSummaryPanel from "@/components/DataSourceSummaryPanel";
 import DashboardHero from "@/components/DashboardHero";
 import DealCard from "@/components/DealCard";
 import GiveawayCard from "@/components/GiveawayCard";
+import ReviewerNavigationPanel from "@/components/ReviewerNavigationPanel";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import StatusPanels from "@/components/StatusPanels";
@@ -117,6 +118,8 @@ export default async function Home() {
               },
             ]}
           />
+
+          <ReviewerNavigationPanel />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">

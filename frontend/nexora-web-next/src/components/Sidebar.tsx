@@ -165,8 +165,8 @@ export default function Sidebar() {
           <div className="sidebar__connection">
             <span className="status-dot" aria-hidden="true" />
             <span>
-              <small>Network</small>
-              <strong>All systems normal</strong>
+              <small>Local review</small>
+              <strong>Health shown on dashboard</strong>
             </span>
           </div>
           <span className="sidebar__version">NEXORA / 01</span>

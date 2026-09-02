@@ -22,7 +22,7 @@ export default function Topbar() {
       <div className="topbar__actions">
         <div className="topbar__status">
           <span className="status-dot" aria-hidden="true" />
-          Online
+          Local preview
         </div>
         <button className="icon-button icon-button--emoji" type="button" aria-label="Notifications unavailable in this preview" title="Notifications are unavailable in this preview" disabled>
           <span aria-hidden="true">🔔</span>

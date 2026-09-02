@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.53.0-frontend-backend-health-visibility-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.53.0-frontend-backend-health-visibility-foundation).
-The `v0.54.0-frontend-data-source-transparency-foundation` milestone remains
+[`v0.54.0-frontend-data-source-transparency-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.54.0-frontend-data-source-transparency-foundation).
+The `v0.55.0-frontend-reviewer-navigation-polish-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -47,12 +47,13 @@ deployment.
 | Sentinel | Authenticated deterministic local responses or optional backend-only Gemini responses |
 | Backend health visibility | Primary dashboard surfaces safe local reachability, runtime/data modes, auth-guard state, and active profiles |
 | Frontend data-source transparency | Primary dashboard and key-page notices expose safe API, static fallback, external-provider, and unavailable labels for reviewer clarity |
+| Reviewer navigation polish | Dashboard reviewer path and cleaner reusable source notices guide local review across primary frontend pages |
 
 ## Architecture summary
 
 | Layer | Responsibility |
 | --- | --- |
-| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, and safe reviewer-facing source labels |
+| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, source labels, and reviewer-friendly navigation |
 | Spring Boot backend | REST endpoints, validation, authentication, ownership rules, provider gateways, and scheduled foundations |
 | Default profile | Database-free local demo with in-memory account and feature stores |
 | `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
@@ -112,6 +113,9 @@ cost controls, or production AI observability.
 - The primary dashboard and deals, giveaways, and security pages expose safe
   source labels so reviewers can distinguish API-connected data from bundled
   fallback previews. These UI labels do not change the underlying API contract.
+- The dashboard includes a public-safe suggested reviewer path, and the key-page
+  source notices use one reusable compact layout. This guidance adds no API,
+  auth, or route-selection behavior.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.54.0-frontend-data-source-transparency-foundation` milestone with safe
-  dashboard source summaries and compact source notices on key primary-frontend
-  pages.
+  `v0.55.0-frontend-reviewer-navigation-polish-foundation` milestone with a
+  dashboard reviewer path, reusable key-page source notices, and safe static
+  local-review labels.
 - Keep the completed
-  `v0.53.0-frontend-backend-health-visibility-foundation` milestone as the
-  latest stable milestone until v0.54 is merged and tagged.
+  `v0.54.0-frontend-data-source-transparency-foundation` milestone as the latest
+  stable milestone until v0.55 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
