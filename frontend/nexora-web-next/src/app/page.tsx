@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BackendHealthPanel from "@/components/BackendHealthPanel";
+import DataSourceSummaryPanel from "@/components/DataSourceSummaryPanel";
 import DashboardHero from "@/components/DashboardHero";
 import DealCard from "@/components/DealCard";
 import GiveawayCard from "@/components/GiveawayCard";
@@ -76,6 +77,46 @@ export default async function Home() {
           <DashboardHero summary={summaryResult.dashboardSummary} />
 
           <BackendHealthPanel result={backendHealthResult} />
+
+          <DataSourceSummaryPanel
+            items={[
+              {
+                id: "backend-health",
+                label: "Backend health",
+                endpoint: "/api/health",
+                source: backendHealthResult.source,
+                note: "Local backend reachability and safe runtime labels.",
+              },
+              {
+                id: "dashboard-summary",
+                label: "Dashboard summary",
+                endpoint: "/api/dashboard/summary",
+                source: summaryResult.source,
+                note: "Dashboard totals and network overview.",
+              },
+              {
+                id: "deals",
+                label: "Deals",
+                endpoint: "/api/deals",
+                source: dealsResult.source,
+                note: "Deal cards shown on this dashboard.",
+              },
+              {
+                id: "giveaways",
+                label: "Giveaways",
+                endpoint: "/api/giveaways",
+                source: giveawaysResult.source,
+                note: "Giveaway cards shown on this dashboard.",
+              },
+              {
+                id: "security-status",
+                label: "Security status",
+                endpoint: "/api/security/status",
+                source: securityResult.source,
+                note: "Security and protection preview panels.",
+              },
+            ]}
+          />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">

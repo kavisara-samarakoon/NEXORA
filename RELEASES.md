@@ -4,10 +4,22 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.52.0-reviewer-preflight-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.52.0-reviewer-preflight-ci-foundation).
+[`v0.53.0-frontend-backend-health-visibility-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.53.0-frontend-backend-health-visibility-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.53.0 Frontend Backend Health Visibility foundation
+## In progress — v0.54.0 Frontend Data Source Transparency foundation
+
+- Adds a primary-dashboard data-source summary that distinguishes local backend
+  API results from bundled static fallback previews, plus compact source notices
+  on the deals, giveaways, and security pages. The labels are local reviewer
+  visibility only and do not provide production monitoring. This milestone
+  changes no backend/API contract, OpenAPI YAML, auth/session/CSRF/CORS behavior,
+  dependencies, workflows, scripts, or retained Vite frontend. It does not read
+  or display secrets, tokens, cookies, CSRF values, Authorization data, request
+  IDs, response headers, browser storage, or raw exceptions, and it does not
+  make NEXORA production-ready.
+
+## Completed frontend milestone — v0.53.0 Frontend Backend Health Visibility foundation
 
 - Adds a compact panel to the primary Next.js dashboard for the existing public
   `/api/health` response. It displays safe local status, service, runtime mode,
