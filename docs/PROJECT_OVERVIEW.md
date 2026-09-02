@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
-The `v0.61.0-backend-cors-request-id-exposure-foundation` milestone remains
+[`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
+The `v0.62.0-backend-notification-preference-enforcement-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -42,8 +42,8 @@ deployment.
 | Accounts and sessions | Registration, login, refresh rotation, logout, and current-account lookup |
 | Personal wishlist | Account-owned add, update, alert configuration, and removal flows |
 | Price intelligence | Price targets, evaluation transitions, history snapshots, and compact history views |
-| Alert history | Account-scoped generated events with read and delivery state |
-| Notifications | Stored account preferences with disabled-by-default log/email delivery foundations |
+| Alert history | Account-scoped generated target-reached events with history metadata |
+| Notifications | Stored account preferences enforced before disabled-by-default log/email dispatch foundations |
 | Sentinel | Authenticated deterministic local responses or optional backend-only Gemini responses |
 | Backend health visibility | Primary dashboard surfaces safe local reachability, runtime/data modes, auth-guard state, and active profiles |
 | Frontend data-source transparency | Primary dashboard and key-page notices expose safe API, static fallback, external-provider, and unavailable labels for reviewer clarity |
@@ -145,6 +145,10 @@ cost controls, or production AI observability.
   JavaScript on an existing trusted frontend origin. It does not expose
   Authorization, Cookie, Set-Cookie, CSRF values, tokens, secrets, or private
   data, and it does not change API JSON bodies or frontend UI behavior.
+- Target-reached wishlist events are recorded before the backend checks saved
+  email and target-reached preferences for outbound dispatch. Disabled choices
+  suppress dispatch without removing history; this adds no delivery/read-state
+  fields, outbox, retry worker, scheduler, or notification provider.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

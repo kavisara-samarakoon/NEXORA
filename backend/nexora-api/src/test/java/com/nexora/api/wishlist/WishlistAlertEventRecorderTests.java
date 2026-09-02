@@ -4,6 +4,10 @@ import com.nexora.api.notifications.AlertNotificationRequest;
 import com.nexora.api.notifications.EmailNotificationSender;
 import com.nexora.api.notifications.NotificationDispatcher;
 import com.nexora.api.notifications.NotificationProperties;
+import com.nexora.api.notifications.NotificationSender;
+import com.nexora.api.notifications.preferences.InMemoryUserNotificationPreferenceService;
+import com.nexora.api.notifications.preferences.NotificationPreferenceResponse;
+import com.nexora.api.notifications.preferences.UserNotificationPreferenceService;
 import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
 import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItem;
@@ -27,10 +31,12 @@ class WishlistAlertEventRecorderTests {
     @Test
     void savesTargetReachedEventBeforeDispatchingNotification() {
         WishlistAlertEventRepository repository = mock(WishlistAlertEventRepository.class);
-        NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
+        NotificationSender sender = mock(NotificationSender.class);
+        NotificationDispatcher dispatcher = enabledDispatcher(sender);
+        UserNotificationPreferenceService preferences = preferences(true, true);
         when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
-                repository, dispatcher);
+                repository, dispatcher, preferences);
 
         recorder.recordTargetReachedEvent(
                 7L,
@@ -42,9 +48,10 @@ class WishlistAlertEventRecorderTests {
                 ArgumentCaptor.forClass(WishlistAlertEvent.class);
         ArgumentCaptor<AlertNotificationRequest> requestCaptor =
                 ArgumentCaptor.forClass(AlertNotificationRequest.class);
-        InOrder inOrder = inOrder(repository, dispatcher);
+        InOrder inOrder = inOrder(repository, preferences, sender);
         inOrder.verify(repository).saveAndFlush(eventCaptor.capture());
-        inOrder.verify(dispatcher).dispatchTargetReached(requestCaptor.capture());
+        inOrder.verify(preferences).getPreferences(7L);
+        inOrder.verify(sender).send(requestCaptor.capture());
 
         WishlistAlertEvent event = eventCaptor.getValue();
         AlertNotificationRequest request = requestCaptor.getValue();
@@ -70,8 +77,10 @@ class WishlistAlertEventRecorderTests {
     void nonTargetReachedEvaluationDoesNotSaveOrDispatch() {
         WishlistAlertEventRepository repository = mock(WishlistAlertEventRepository.class);
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
+        UserNotificationPreferenceService preferences = mock(
+                UserNotificationPreferenceService.class);
         WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
-                repository, dispatcher);
+                repository, dispatcher, preferences);
 
         recorder.recordTargetReachedEvent(
                 7L,
@@ -79,18 +88,76 @@ class WishlistAlertEventRecorderTests {
                 new WishlistAlertEvaluation(
                         false, "watching", "Still above target price."));
 
-        verifyNoInteractions(repository, dispatcher);
+        verifyNoInteractions(repository, dispatcher, preferences);
+    }
+
+    @Test
+    void emailDisabledStillSavesEventWithoutDispatching() {
+        WishlistAlertEventRepository repository = savingRepository();
+        NotificationSender sender = mock(NotificationSender.class);
+        WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
+                repository,
+                enabledDispatcher(sender),
+                preferences(false, true));
+
+        recorder.recordTargetReachedEvent(
+                7L,
+                item(),
+                new WishlistAlertEvaluation(
+                        true, "target-reached", "Target price reached."));
+
+        verify(repository).saveAndFlush(any());
+        verifyNoInteractions(sender);
+    }
+
+    @Test
+    void targetReachedDisabledStillSavesEventWithoutDispatching() {
+        WishlistAlertEventRepository repository = savingRepository();
+        NotificationSender sender = mock(NotificationSender.class);
+        WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
+                repository,
+                enabledDispatcher(sender),
+                preferences(true, false));
+
+        recorder.recordTargetReachedEvent(
+                7L,
+                item(),
+                new WishlistAlertEvaluation(
+                        true, "target-reached", "Target price reached."));
+
+        verify(repository).saveAndFlush(any());
+        verifyNoInteractions(sender);
+    }
+
+    @Test
+    void defaultPreferencesStillSaveEventAndSuppressEmailDispatch() {
+        WishlistAlertEventRepository repository = savingRepository();
+        NotificationSender sender = mock(NotificationSender.class);
+        WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
+                repository,
+                enabledDispatcher(sender),
+                new InMemoryUserNotificationPreferenceService());
+
+        recorder.recordTargetReachedEvent(
+                7L,
+                item(),
+                new WishlistAlertEvaluation(
+                        true, "target-reached", "Target price reached."));
+
+        verify(repository).saveAndFlush(any());
+        verifyNoInteractions(sender);
     }
 
     @Test
     void dispatcherFailureDoesNotEscapeAfterEventIsSaved() {
         WishlistAlertEventRepository repository = mock(WishlistAlertEventRepository.class);
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
+        UserNotificationPreferenceService preferences = preferences(true, true);
         when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         doThrow(new IllegalStateException("dispatcher unavailable"))
                 .when(dispatcher).dispatchTargetReached(any());
         WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
-                repository, dispatcher);
+                repository, dispatcher, preferences);
 
         assertDoesNotThrow(() -> recorder.recordTargetReachedEvent(
                 7L,
@@ -112,8 +179,9 @@ class WishlistAlertEventRecorderTests {
         properties.setEnabled(true);
         properties.setProvider("email");
         NotificationDispatcher dispatcher = new NotificationDispatcher(properties, emailSender);
+        UserNotificationPreferenceService preferences = preferences(true, true);
         WishlistAlertEventRecorder recorder = new WishlistAlertEventRecorder(
-                repository, dispatcher);
+                repository, dispatcher, preferences);
 
         assertDoesNotThrow(() -> recorder.recordTargetReachedEvent(
                 7L,
@@ -124,6 +192,33 @@ class WishlistAlertEventRecorderTests {
         InOrder inOrder = inOrder(repository, emailSender);
         inOrder.verify(repository).saveAndFlush(any());
         inOrder.verify(emailSender).send(any());
+    }
+
+    private static WishlistAlertEventRepository savingRepository() {
+        WishlistAlertEventRepository repository = mock(WishlistAlertEventRepository.class);
+        when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        return repository;
+    }
+
+    private static NotificationDispatcher enabledDispatcher(NotificationSender sender) {
+        NotificationProperties properties = new NotificationProperties();
+        properties.setEnabled(true);
+        properties.setProvider("log");
+        return new NotificationDispatcher(properties, sender);
+    }
+
+    private static UserNotificationPreferenceService preferences(
+            boolean emailEnabled,
+            boolean targetReachedEnabled) {
+        UserNotificationPreferenceService service = mock(
+                UserNotificationPreferenceService.class);
+        when(service.getPreferences(7L)).thenReturn(new NotificationPreferenceResponse(
+                emailEnabled,
+                true,
+                targetReachedEnabled,
+                true,
+                true));
+        return service;
     }
 
     private static WishlistItem item() {

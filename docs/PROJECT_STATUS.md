@@ -4,18 +4,18 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`, which fixes
-confirmed primary-frontend layout, semantic, and demo-content truthfulness
-issues without changing backend or API behavior.
+`v0.61.0-backend-cors-request-id-exposure-foundation`, which exposes only the
+safe request-ID response header through the existing trusted-origin CORS policy.
 
-The `v0.61.0-backend-cors-request-id-exposure-foundation` milestone is in
-progress. It exposes only the safe `X-NEXORA-Request-ID` response header through
-the existing trusted-origin CORS policy. Allowed origins, methods, request
-headers, and credential behavior remain unchanged. Authorization, Cookie,
-Set-Cookie, CSRF values, tokens, secrets, and private data are not exposed.
-Request-ID generation/validation, API JSON bodies, auth/session/CSRF behavior,
-frontend UI behavior, dependencies, migrations, OpenAPI YAML, workflows, and
-scripts remain unchanged, as does production readiness.
+The `v0.62.0-backend-notification-preference-enforcement-foundation` milestone
+is in progress. It preserves target-reached event/history recording, then
+requires saved email and target-reached preferences before outbound wishlist
+alert dispatch. Either disabled preference suppresses dispatch; both enabled
+preferences retain it, and the existing email-disabled default remains safe.
+API JSON response shapes, frontend behavior, auth/session/CSRF/CORS/request-ID
+behavior, dependencies, migrations, OpenAPI YAML, workflows, scripts, and
+production readiness remain unchanged. No delivery/read-state fields, outbox,
+retry worker, scheduler, or provider are added.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -120,7 +120,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`.
+`v0.61.0-backend-cors-request-id-exposure-foundation`.
 
 ## Completed foundations
 
@@ -153,7 +153,8 @@ readiness of the project. The latest stable development milestone is
 - Disabled-by-default notification dispatcher with log and optional email
   providers.
 - Authenticated notification preferences with owner-scoped Bearer GET/PATCH
-  APIs, PostgreSQL/in-memory storage, safe defaults, and Wishlist UI controls.
+  APIs, PostgreSQL/in-memory storage, safe defaults, Wishlist UI controls, and
+  email/target-reached preference enforcement before outbound alert dispatch.
 - Authenticated Sentinel AI gateway with a deterministic local default/fallback
   and an optional backend-only Gemini REST provider that is disabled by default.
   Sentinel can use bounded backend-generated owner-scoped Wishlist,
@@ -273,9 +274,9 @@ readiness of the project. The latest stable development milestone is
 - CheapShark is a third-party dependency with incomplete game/store coverage.
 - Scheduled price refresh is `dev`-profile, single-process, and disabled by
   default.
-- Email delivery requires explicit SMTP configuration. Email preference is
-  opt-in, but no credentials are committed and no verified-recipient workflow
-  exists.
+- Email delivery requires explicit SMTP configuration plus enabled account
+  email and target-reached preferences. No credentials are committed and no
+  verified-recipient workflow exists.
 - Notification delivery has no persistent status, retries, outbox, or
   asynchronous after-commit processing.
 - The Wishlist page has notification preference controls, but no provider,
@@ -349,8 +350,8 @@ readiness of the project. The latest stable development milestone is
    additional audit events, approved production event
    retention/privacy/access-control/integrity rules, monitoring, alert
    thresholds, and incident-response workflows.
-5. Define verified recipients, dispatcher preference enforcement, durable
-   delivery state, and retry/outbox processing.
+5. Define verified recipients, durable delivery state, retry/outbox processing,
+   and provider operational policy.
 6. Extend the compact price-history view only after defining aggregation,
    retention, and advanced-chart requirements.
 7. Define privacy, safety, evaluation, moderation, managed provider-key,
