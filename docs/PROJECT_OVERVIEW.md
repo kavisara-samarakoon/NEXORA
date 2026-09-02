@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
-The `v0.62.0-backend-notification-preference-enforcement-foundation` milestone remains
+[`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
+The `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -82,11 +82,16 @@ in-memory store is bounded and resets on restart. Optional cleanup of old safe
 events is disabled by default, uses a 30-day default, and can also prune the
 development PostgreSQL store.
 
-These controls are local/development foundations. Abuse counters are
-process-local, event recording and cleanup are best-effort, and retention is
-not a production privacy or compliance policy. See [SECURITY.md](../SECURITY.md)
-and the [auth production-policy plan](security/auth-production-policy-plan.md)
-for the remaining decisions.
+These controls are local/development foundations. Login and registration abuse
+buckets combine the operation with a digest of the normalized candidate account
+identifier, keeping repeated attempts scoped without retaining the raw
+identifier in the key. The counters remain process-local and in-memory; they
+are not distributed rate limiting, CAPTCHA, DDoS protection, bot protection, or
+production-grade abuse prevention. Event recording and cleanup are best-effort,
+and retention is not a production privacy or compliance policy. See
+[SECURITY.md](../SECURITY.md) and the
+[auth production-policy plan](security/auth-production-policy-plan.md) for the
+remaining decisions.
 
 ## AI and Sentinel foundations
 
@@ -149,6 +154,10 @@ cost controls, or production AI observability.
   email and target-reached preferences for outbound dispatch. Disabled choices
   suppress dispatch without removing history; this adds no delivery/read-state
   fields, outbox, retry worker, scheduler, or notification provider.
+- Login and registration abuse-limit windows are scoped by operation and a
+  normalized candidate-identifier digest, preventing unrelated candidate
+  subjects from sharing one bucket while preserving same-subject limits and
+  the existing safe 429 response contract.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

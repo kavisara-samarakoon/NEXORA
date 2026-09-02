@@ -10,12 +10,13 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.61.0-backend-cors-request-id-exposure-foundation` is the latest stable
-development milestone while
-`v0.62.0-backend-notification-preference-enforcement-foundation` is in progress.
-The v0.62 milestone gates outbound target-reached wishlist alert dispatch on
-saved email and target-reached preferences after recording the existing event.
-API JSON response shapes and OpenAPI YAML are unchanged.
+`v0.62.0-backend-notification-preference-enforcement-foundation` is the latest
+stable development milestone while
+`v0.63.0-backend-auth-abuse-limit-keying-foundation` is in progress. The v0.63
+milestone scopes login and registration abuse windows by operation and a digest
+of the normalized candidate account identifier. Same-subject attempts remain
+limited while unrelated candidate subjects no longer share a bucket. Endpoint
+paths, API JSON response shapes, and OpenAPI YAML are unchanged.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -258,8 +259,15 @@ and the matching body field:
 }
 ```
 
-These counters are process-local, reset when the backend restarts, and are not
-distributed production rate limiting.
+Login and registration counters use the operation plus a SHA-256 digest of the
+trimmed, case-normalized candidate account identifier. Repeated attempts for the
+same candidate subject share a window; unrelated candidate subjects do not.
+Configured thresholds and windows and the 429 response shape above are
+unchanged. The counters remain process-local and in-memory, reset when the
+backend restarts, and are not distributed rate limiting, CAPTCHA, DDoS
+protection, bot protection, or production-grade abuse prevention. Auth token,
+session, CSRF, CORS, and request-ID behavior is unchanged except for this abuse-
+limit bucket keying, and frontend behavior is unchanged.
 
 ## Runtime health and status endpoints
 
@@ -444,7 +452,8 @@ architecture or operations plan.
   management UI, or complete account-wide revocation policy.
 - CSRF/origin rules are a focused local browser-auth foundation. Reverse-proxy,
   forwarded-header, and production CORS/cookie decisions remain incomplete.
-- Auth and Sentinel rate limits are process-local and reset on restart.
+- Auth and Sentinel rate limits are process-local and reset on restart. Scoped
+  login and registration buckets do not coordinate across instances.
 - `/api/security/status` is static demo content and must not be used as evidence
   of a real account or infrastructure security state.
 - `/api/health` is public and deliberately bounded, but it is not a database,

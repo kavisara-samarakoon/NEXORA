@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class InMemoryAuthAbuseCounterStore {
 
     private final Clock clock;
-    private final ConcurrentHashMap<AuthAbuseLimit, AttemptWindow> windows = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<AuthAbuseKey, AttemptWindow> windows = new ConcurrentHashMap<>();
 
     @Autowired
     public InMemoryAuthAbuseCounterStore() {
@@ -22,13 +22,18 @@ public class InMemoryAuthAbuseCounterStore {
         this.clock = clock;
     }
 
-    public AuthAbuseDecision check(AuthAbuseLimit limit, int maxAttempts, int windowSeconds) {
+    public AuthAbuseDecision check(
+            AuthAbuseLimit limit,
+            String subject,
+            int maxAttempts,
+            int windowSeconds) {
         long nowMillis = clock.millis();
         long windowMillis = windowSeconds * 1_000L;
+        AuthAbuseKey key = AuthAbuseKey.scoped(limit, subject);
         windows.entrySet().removeIf(entry -> isExpired(entry.getValue(), nowMillis, windowMillis));
 
         AtomicReference<AuthAbuseDecision> decision = new AtomicReference<>();
-        windows.compute(limit, (ignored, existing) -> {
+        windows.compute(key, (ignored, existing) -> {
             if (existing == null || isExpired(existing, nowMillis, windowMillis)) {
                 decision.set(AuthAbuseDecision.permitted());
                 return new AttemptWindow(nowMillis, 1);

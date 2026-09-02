@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.62.0-backend-notification-preference-enforcement-foundation` milestone by
-  enforcing saved email and target-reached choices before outbound wishlist
-  alert dispatch while preserving event history.
+  `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone by replacing
+  operation-global login and registration windows with scoped candidate-
+  identifier digest buckets while retaining same-subject limits.
 - Keep the completed
-  `v0.61.0-backend-cors-request-id-exposure-foundation` milestone as the latest
-  stable milestone until v0.62 is merged and tagged.
+  `v0.62.0-backend-notification-preference-enforcement-foundation` milestone as
+  the latest stable milestone until v0.63 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -116,8 +116,9 @@ project's academic, portfolio, and product goals evolve.
   configuration.
 - Add account verification, recovery, complete revocation/session management,
   and a reviewed authorization model.
-- Replace process-local auth abuse controls with a distributed design and define
-  credential-stuffing and bot protections.
+- Replace the process-local, scoped auth abuse controls with a distributed
+  design and separately define credential-stuffing and bot protections. CAPTCHA
+  and DDoS protection also remain outside the current local foundation.
 - Approve auth-event privacy, retention, access-control, integrity, monitoring,
   alerting, and incident-response policies.
 - Review repository security settings and add a dependable backend
@@ -139,7 +140,7 @@ project's academic, portfolio, and product goals evolve.
 - Validate the problem and workflows with research participants before making
   claims about demand or prioritizing commercialization.
 - Treat business, income, employment, and broader portfolio readiness as future
-  evidence-based decisions; the reviewer panels through v0.62 describe
+  evidence-based decisions; the reviewer panels through v0.63 describe
   implemented local foundations only.
 - Evaluate additional data providers, stores, and regional pricing based on
   licensing, reliability, attribution, and operating cost.

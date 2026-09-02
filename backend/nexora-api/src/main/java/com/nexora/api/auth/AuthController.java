@@ -67,7 +67,7 @@ public class AuthController {
             HttpServletRequest servletRequest,
             @Valid @RequestBody RegisterRequest request) {
         browserRequestGuard.validate(servletRequest);
-        abuseGuard.check(AuthAbuseLimit.REGISTER);
+        abuseGuard.check(AuthAbuseLimit.REGISTER, request.email());
         try {
             AuthResponse response = authService.register(request);
             ResponseEntity<AuthResponse> result = withRefreshCookie(response, HttpStatus.CREATED);
@@ -90,7 +90,7 @@ public class AuthController {
             HttpServletRequest servletRequest,
             @Valid @RequestBody LoginRequest request) {
         browserRequestGuard.validate(servletRequest);
-        abuseGuard.check(AuthAbuseLimit.LOGIN);
+        abuseGuard.check(AuthAbuseLimit.LOGIN, request.emailOrUsername());
         try {
             AuthResponse response = authService.login(request);
             ResponseEntity<AuthResponse> result = withRefreshCookie(response, HttpStatus.OK);

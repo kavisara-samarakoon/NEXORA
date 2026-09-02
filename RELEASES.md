@@ -4,10 +4,25 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
+[`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.62.0 Backend Notification Preference Enforcement foundation
+## In progress — v0.63.0 Backend Auth Abuse Limit Keying foundation
+
+- Changes login and registration abuse limits from operation-global buckets to
+  scoped buckets containing the operation and a SHA-256 digest of the trimmed,
+  case-normalized candidate account identifier. Repeated attempts for the same
+  subject remain limited, while an unrelated subject does not consume that
+  window; raw identifiers and credentials are not stored in limiter keys.
+- Existing configured limits and windows, safe 429 error shape, endpoint paths,
+  and auth success/failure behavior remain unchanged. The counter remains an
+  in-memory, process-local, best-effort local control that resets on restart.
+- Frontend behavior, auth tokens, refresh sessions, CSRF, CORS, request-ID
+  behavior, dependencies, migrations, OpenAPI YAML, workflows, and scripts are
+  unchanged. No distributed rate limiter, CAPTCHA, DDoS protection, or bot
+  protection is added, and production readiness is unchanged.
+
+## Completed backend milestone — v0.62.0 Backend Notification Preference Enforcement foundation
 
 - Enforces the current account's saved `emailEnabled` and
   `targetReachedEnabled` preferences after a target-reached wishlist alert event

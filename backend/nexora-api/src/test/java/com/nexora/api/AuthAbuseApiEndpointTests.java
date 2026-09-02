@@ -57,7 +57,7 @@ class AuthAbuseApiEndpointTests {
     private AuthSecurityEventStore securityEventStore;
 
     @Test
-    void selectedAuthRoutesAndRepeatedBrowserRejectionsReturnSafe429Responses() throws Exception {
+    void scopedLoginAndRegistrationBucketsPreserveSafeAuthLimitResponses() throws Exception {
         CsrfContext csrf = csrfContext();
 
         expectOriginFailure(authPostFromOrigin("/api/auth/login", csrf, "https://attacker.example")
@@ -67,23 +67,33 @@ class AuthAbuseApiEndpointTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson("still-not-recorded@example.com", "still-not-recorded-password")));
 
-        Credentials user = uniqueUser();
+        Credentials firstUser = uniqueUser();
         MvcResult registered = mockMvc.perform(authPost("/api/auth/register", csrf)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registerJson(user)))
+                        .content(registerJson(firstUser)))
                 .andExpect(status().isCreated())
                 .andReturn();
         expectRateLimited(authPost("/api/auth/register", csrf)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(registerJson(uniqueUser())));
+                .content(registerJson(firstUser)));
+
+        Credentials secondUser = uniqueUser();
+        mockMvc.perform(authPost("/api/auth/register", csrf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(secondUser)))
+                .andExpect(status().isCreated());
 
         mockMvc.perform(authPost("/api/auth/login", csrf)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginJson(user.email(), user.password())))
+                        .content(loginJson(firstUser.email(), firstUser.password())))
                 .andExpect(status().isOk());
         expectRateLimited(authPost("/api/auth/login", csrf)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(loginJson(user.email(), "not-the-password")));
+                .content(loginJson(firstUser.email(), "not-the-password")));
+        mockMvc.perform(authPost("/api/auth/login", csrf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson(secondUser.email(), secondUser.password())))
+                .andExpect(status().isOk());
 
         MvcResult refreshed = mockMvc.perform(authPost("/api/auth/refresh", csrf)
                         .cookie(refreshCookie(registered)))
