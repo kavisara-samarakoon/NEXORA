@@ -200,9 +200,9 @@ export function mapDashboardSecurityItems(
         icon,
         tone,
         label: item.label,
-        value: item.description,
-        status: item.status,
-        statusType,
+        value: "Static capability preview — not live security telemetry",
+        status: "Preview",
+        statusType: "warn",
       };
     });
 }
@@ -210,16 +210,11 @@ export function mapDashboardSecurityItems(
 export function mapDashboardNetworkItems(
   summary: DashboardSummary,
 ): NetworkItem[] {
-  const statuses: readonly NetworkItem["status"][] = [
-    summary.activeDealsCount > 0 ? "online" : "degraded",
-    summary.activeGiveawaysCount > 0 ? "online" : "degraded",
-    summary.activePriceAlertsCount > 0 ? "online" : "degraded",
-    summary.sentinelStatus === "Demo Mode" ? "degraded" : "online",
-  ];
+  void summary;
 
-  return networkItems.map((item, index) => ({
+  return networkItems.map((item) => ({
     ...item,
-    status: statuses[index] ?? item.status,
+    status: "degraded",
   }));
 }
 
@@ -228,71 +223,71 @@ export const securityItems = [
     id: 1,
     icon: "lock",
     tone: "green",
-    label: "SSL / TLS Encryption",
-    value: "All connections encrypted",
-    status: "Secure",
-    statusType: "ok",
+    label: "Transport security capability",
+    value: "Static sample — deployment transport is not measured",
+    status: "Preview",
+    statusType: "warn",
   },
   {
     id: 2,
     icon: "network",
     tone: "blue",
-    label: "Network Firewall",
-    value: "3 threats blocked today",
-    status: "Active",
-    statusType: "ok",
+    label: "Network protection capability",
+    value: "Not connected to live security telemetry",
+    status: "Preview",
+    statusType: "warn",
   },
   {
     id: 3,
     icon: "warning",
     tone: "orange",
-    label: "DDoS Protection",
-    value: "Monitoring 12 endpoints",
-    status: "Warning",
+    label: "Traffic protection capability",
+    value: "Static capability preview only",
+    status: "Planned",
     statusType: "warn",
   },
   {
     id: 4,
     icon: "sentinel",
     tone: "purple",
-    label: "AI Threat Detection",
-    value: "Sentinel scanning active",
-    status: "Online",
-    statusType: "ok",
+    label: "Sentinel safety guidance",
+    value: "Local preview — no live threat scanning",
+    status: "Preview",
+    statusType: "warn",
   },
 ] satisfies readonly SecurityItem[];
 
 export const networkItems = [
   {
     id: 1,
-    name: "Deal Aggregator",
-    latency: "24ms",
-    uptime: "99.98%",
-    uptimeValue: 99.98,
-    status: "online",
+    name: "Deal feed preview",
+    latency: "Not measured",
+    uptime: "Not measured",
+    uptimeValue: 0,
+    status: "degraded",
   },
   {
     id: 2,
-    name: "Giveaway Tracker",
-    latency: "31ms",
-    uptime: "99.95%",
-    uptimeValue: 99.95,
-    status: "online",
+    name: "Giveaway feed preview",
+    latency: "Not measured",
+    uptime: "Not measured",
+    uptimeValue: 0,
+    status: "degraded",
   },
   {
     id: 3,
-    name: "Price Alert Engine",
-    latency: "18ms",
-    uptime: "100%",
-    uptimeValue: 100,
-    status: "online",
+    name: "Price alert preview",
+    latency: "Not measured",
+    uptime: "Not measured",
+    uptimeValue: 0,
+    status: "degraded",
   },
   {
     id: 4,
-    name: "Sentinel AI Core",
-    latency: "142ms",
-    uptime: "99.87%",
-    uptimeValue: 99.87,
+    name: "Sentinel capability preview",
+    latency: "Not measured",
+    uptime: "Not measured",
+    uptimeValue: 0,
     status: "degraded",
   },
 ] satisfies readonly NetworkItem[];

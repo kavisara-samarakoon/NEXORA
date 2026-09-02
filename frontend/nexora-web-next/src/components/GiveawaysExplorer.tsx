@@ -93,6 +93,7 @@ function GiveawayCard({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={giveaway.claimed}
+          aria-valuetext={`${giveaway.claimed}% claimed`}
         >
           <span className={`ga-card__progress-fill ga-card__progress-fill--${progressTone}`} style={{ width: `${giveaway.claimed}%` }} />
         </div>

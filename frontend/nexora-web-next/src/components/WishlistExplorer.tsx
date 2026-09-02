@@ -892,7 +892,7 @@ function NotificationPreferencesPanel({
           <span>Account controls</span>
           <strong id="wishlist-notification-preferences-title">Notification preferences</strong>
         </div>
-        <span className="wl-notification-preferences__badge">Bearer API</span>
+        <span className="wl-notification-preferences__badge">Account</span>
       </div>
 
       {loadState === "loading" && (

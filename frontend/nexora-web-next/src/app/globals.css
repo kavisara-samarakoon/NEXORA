@@ -392,7 +392,7 @@ input:focus-visible {
   box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.085), 0 0 20px rgba(255, 122, 0, 0.06);
 }
 
-.topbar__search kbd {
+.topbar__search-badge {
   position: absolute;
   right: 10px;
   padding: 4px 7px;
@@ -1584,7 +1584,7 @@ input:focus-visible {
 }
 
 @media (max-width: 560px) {
-  .topbar__search kbd {
+  .topbar__search-badge {
     display: none;
   }
 
@@ -7982,8 +7982,8 @@ body::before {
 
 .topbar__search { width: min(100%, 480px); }
 .topbar__search-icon { position: absolute; top: 50%; left: 14px; z-index: 1; font-size: 14px; opacity: 0.65; transform: translateY(-50%); pointer-events: none; }
-.topbar__search input { height: 40px; padding: 0 16px 0 40px; border-radius: 28px; font-size: 14px; }
-.topbar__search kbd { display: none; }
+.topbar__search input { height: 40px; padding: 0 82px 0 40px; border-radius: 28px; font-size: 14px; }
+.topbar__search-badge { display: block; }
 .topbar__actions { gap: 8px; }
 .topbar__status { margin-right: 6px; font-size: 10px; }
 .icon-button { width: 40px; height: 40px; border-color: transparent; border-radius: 50%; background: transparent; }
@@ -12242,5 +12242,39 @@ textarea {
   .sidebar,
   .sidebar-scrim {
     transition: none !important;
+  }
+}
+
+/* v0.60 frontend UI truthfulness and layout polish */
+.auth-form__grid {
+  align-items: start;
+}
+
+.auth-form__grid > .auth-form__field {
+  align-content: start;
+}
+
+.dashboard {
+  padding-bottom: calc(156px + env(safe-area-inset-bottom));
+}
+
+.topbar__search input[readonly] {
+  cursor: default;
+}
+
+.st-section-note {
+  margin: -6px 0 2px;
+  color: var(--nx-subtle);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+@media (max-width: 780px) {
+  .dashboard {
+    padding-bottom: calc(132px + env(safe-area-inset-bottom));
+  }
+
+  .topbar__search-badge {
+    display: none;
   }
 }

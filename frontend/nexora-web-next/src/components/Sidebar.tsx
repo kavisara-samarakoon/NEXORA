@@ -58,7 +58,6 @@ export default function Sidebar() {
       <button
         className={`sidebar-scrim${isOpen ? " sidebar-scrim--visible" : ""}`}
         type="button"
-        aria-label="Close navigation"
         aria-hidden="true"
         tabIndex={-1}
         onClick={() => setIsOpen(false)}
@@ -104,7 +103,6 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon" aria-hidden="true">🔥</span>
             Deals
-            <span className="nav-item__badge" aria-label="24 deal entries">24</span>
           </Link>
           <Link
             className={`nav-item${pathname.startsWith("/giveaways") ? " nav-item--active" : ""}`}
@@ -114,7 +112,6 @@ export default function Sidebar() {
           >
             <span className="nav-item__icon" aria-hidden="true">🎁</span>
             Giveaways
-            <span className="nav-item__badge" aria-label="7 giveaway entries">7</span>
           </Link>
           <Link
             className={`nav-item${pathname.startsWith("/wishlist") ? " nav-item--active" : ""}`}

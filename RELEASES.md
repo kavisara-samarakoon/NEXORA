@@ -4,10 +4,28 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.58.0-frontend-empty-loading-error-state-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.58.0-frontend-empty-loading-error-state-polish-foundation).
+[`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.59.0 Frontend Screenshot-Safe Reviewer Mode Polish foundation
+## In progress — v0.60.0 Frontend UI Truthfulness and Layout Polish foundation
+
+- Fixes primary-frontend register alignment and fixed Sentinel-button spacing,
+  removes the redundant Sentinel button from its destination page, and clarifies
+  small UI semantics and accessibility labels.
+- Replaces personal-looking Settings samples, fabricated-looking security
+  telemetry, hardcoded navigation counts, and live-looking decorative labels
+  with explicit static-preview, demo, sample, planned, or not-connected wording.
+  Settings remains a static preview and is not connected to the signed-in
+  account. Security values are local samples, not real account signals,
+  production monitoring, or uptime evidence.
+- This frontend/documentation-only milestone changes no backend or API behavior,
+  authentication/session/CSRF/CORS behavior, frontend fetch or fallback
+  behavior, dependency manifest, workflow, script, retained Vite frontend, or
+  OpenAPI YAML. It adds no runtime feature flags, storage access, polling,
+  timers, retries, masking, or network calls, and it does not change production
+  readiness.
+
+## Completed frontend milestone — v0.59.0 Frontend Screenshot-Safe Reviewer Mode Polish foundation
 
 - Adds dashboard screenshot-safe review guidance and documents public-safe
   capture rules for portfolio, GitHub, lecturer, and reviewer screenshots. This

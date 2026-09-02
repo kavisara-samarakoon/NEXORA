@@ -4,19 +4,19 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.58.0-frontend-empty-loading-error-state-polish-foundation`, which improves
-reviewer-facing loading, fallback, empty, unavailable, and manual retry states
-in the primary frontend.
+`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`, which adds
+static dashboard guidance for public-safe portfolio and reviewer captures.
 
-The `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone
-is in progress. It adds a static dashboard checklist and documentation for
-public-safe portfolio and reviewer captures. This is frontend/documentation
-screenshot guidance only: runtime privacy and security behavior, backend and API
-contracts, frontend API/fallback behavior, OpenAPI YAML, AuthStatus and
-auth/session/CSRF/CORS behavior, dependencies, workflows, scripts, and
-request-ID presentation remain unchanged. It adds no runtime screenshot mode,
-feature flag, identity masking, storage access, polling, auto-refresh, timers,
-retry loops, or network calls and does not make NEXORA production-ready.
+The `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone
+is in progress. It fixes confirmed primary-frontend layout, semantic, and
+demo-content truthfulness issues. Settings remains a static preview that is not
+connected to the signed-in account, and security metrics are explicitly local
+samples rather than real telemetry or production monitoring. Backend/API,
+frontend fetch/fallback, authentication/session/CSRF/CORS/AuthStatus,
+dependencies, workflows, scripts, retained Vite frontend, OpenAPI YAML, and
+request-ID behavior remain unchanged. It adds no runtime feature flags, storage
+access, polling, auto-refresh, timers, retry loops, masking, or network calls and
+does not change production readiness.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +121,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.58.0-frontend-empty-loading-error-state-polish-foundation`.
+`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`.
 
 ## Completed foundations
 
@@ -138,6 +138,8 @@ readiness of the project. The latest stable development milestone is
   data.
 - A dashboard screenshot-safe review checklist documents capture boundaries
   without adding a runtime mode, masking identity, or changing account data.
+- Frontend truthfulness polish marks Settings and Security content as static
+  preview/sample data and removes live-looking counts and telemetry claims.
 - Spring Boot REST API with validation, security, and profile-based services.
 - JWT registration, login, and authenticated account lookup.
 - PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.

@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.58.0-frontend-empty-loading-error-state-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.58.0-frontend-empty-loading-error-state-polish-foundation).
-The `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone remains
+[`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation).
+The `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -137,6 +137,10 @@ cost controls, or production AI observability.
   Sentinel screenshots are local MVP evidence, not proof of production
   deployment, monitoring, privacy controls, accessibility certification, or
   broader readiness.
+- The primary frontend labels Settings as a static preview unrelated to the
+  signed-in account and labels Security metrics and decorative activity as
+  samples rather than live account telemetry or production monitoring. The
+  v0.60 work changes presentation only, not API or authentication behavior.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 
@@ -150,6 +154,10 @@ cost controls, or production AI observability.
 - Notification delivery has no durable outbox, retry policy, verified-recipient
   flow, or production observability.
 - External deal matching has provider coverage and title/store matching limits.
+- Settings is a static preview; its controls are not saved or enforced and are
+  not connected to the signed-in account.
+- Security scores, sessions, events, and capability states on the current page
+  are local samples, not real account telemetry, uptime, or monitoring.
 - Production auth policy, privacy and retention rules, monitoring, alerting,
   access control, and incident response remain unresolved.
 

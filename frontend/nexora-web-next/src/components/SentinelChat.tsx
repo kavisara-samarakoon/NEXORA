@@ -97,7 +97,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
 
       <footer>
         <span>{response.context} context</span>
-        <time dateTime={response.createdAt}>Transient response — not saved</time>
+        <span>Transient response — not saved</span>
       </footer>
     </article>
   );

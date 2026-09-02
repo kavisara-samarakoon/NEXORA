@@ -10,10 +10,11 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.58.0-frontend-empty-loading-error-state-polish-foundation` is the latest stable
+`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` is the latest stable
 development milestone while
-`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` is in progress.
-The v0.59 screenshot-safe reviewer guidance does not change this API contract.
+`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` is in progress.
+The v0.60 frontend layout, semantics, and demo-content truthfulness polish does
+not change this API contract, authentication behavior, or OpenAPI YAML.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
