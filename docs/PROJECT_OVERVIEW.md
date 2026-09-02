@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation).
-The `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone remains
+[`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
+The `v0.61.0-backend-cors-request-id-exposure-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -141,6 +141,10 @@ cost controls, or production AI observability.
   signed-in account and labels Security metrics and decorative activity as
   samples rather than live account telemetry or production monitoring. The
   v0.60 work changes presentation only, not API or authentication behavior.
+- The backend CORS policy exposes only `X-NEXORA-Request-ID` to browser
+  JavaScript on an existing trusted frontend origin. It does not expose
+  Authorization, Cookie, Set-Cookie, CSRF values, tokens, secrets, or private
+  data, and it does not change API JSON bodies or frontend UI behavior.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

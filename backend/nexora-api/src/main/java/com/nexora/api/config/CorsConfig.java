@@ -1,6 +1,7 @@
 package com.nexora.api.config;
 
 import com.nexora.api.auth.csrf.AuthCsrfProperties;
+import com.nexora.api.observability.RequestCorrelationFilter;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -24,6 +25,7 @@ public class CorsConfig implements WebMvcConfigurer {
                         HttpHeaders.CONTENT_TYPE,
                         HttpHeaders.AUTHORIZATION,
                         authCsrfProperties.headerName())
+                .exposedHeaders(RequestCorrelationFilter.HEADER_NAME)
                 .allowCredentials(true);
     }
 }

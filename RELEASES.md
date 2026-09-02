@@ -4,10 +4,25 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation).
+[`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.60.0 Frontend UI Truthfulness and Layout Polish foundation
+## In progress — v0.61.0 Backend CORS Request-ID Exposure foundation
+
+- Exposes only the safe `X-NEXORA-Request-ID` response header through CORS so
+  browser JavaScript on an existing trusted frontend origin can read the
+  backend correlation value. Existing allowed origins, methods, request
+  headers, and credential behavior remain unchanged.
+- Focused tests verify the exposure header, the response request-ID header,
+  preserved trusted-origin/preflight behavior, and the exclusion of
+  Authorization, Cookie, Set-Cookie, and CSRF headers from the exposed-header
+  list.
+- Request-ID generation and validation, API JSON bodies, auth/session/CSRF
+  behavior, frontend UI behavior, dependencies, migrations, OpenAPI YAML,
+  workflows, and scripts remain unchanged. No tokens, secrets, or private data
+  are exposed, and production readiness is unchanged.
+
+## Completed frontend milestone — v0.60.0 Frontend UI Truthfulness and Layout Polish foundation
 
 - Fixes primary-frontend register alignment and fixed Sentinel-button spacing,
   removes the redundant Sentinel button from its destination page, and clarifies

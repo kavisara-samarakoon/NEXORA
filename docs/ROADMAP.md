@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone
-  with confirmed primary-frontend layout, semantics, and demo-content
-  truthfulness fixes.
+  `v0.61.0-backend-cors-request-id-exposure-foundation` milestone by exposing
+  only the safe response request-ID header through the existing trusted-origin
+  CORS policy and retaining focused regression coverage.
 - Keep the completed
-  `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone
-  as the latest stable milestone until v0.60 is merged and tagged.
+  `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone as
+  the latest stable milestone until v0.61 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -139,7 +139,7 @@ project's academic, portfolio, and product goals evolve.
 - Validate the problem and workflows with research participants before making
   claims about demand or prioritizing commercialization.
 - Treat business, income, employment, and broader portfolio readiness as future
-  evidence-based decisions; the reviewer panels through v0.60 describe
+  evidence-based decisions; the reviewer panels through v0.61 describe
   implemented local foundations only.
 - Evaluate additional data providers, stores, and regional pricing based on
   licensing, reliability, attribution, and operating cost.
