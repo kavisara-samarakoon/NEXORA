@@ -9044,6 +9044,83 @@ body::before {
   line-height: 1.45;
 }
 
+/* v0.56 frontend accessibility review */
+.accessibility-review {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-md);
+  background: var(--nx-panel);
+}
+
+.accessibility-review__header h2 {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.accessibility-review__header p {
+  max-width: 760px;
+  margin-top: 5px;
+  color: var(--nx-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.accessibility-review__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accessibility-review__item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--nx-panel) 82%, transparent);
+}
+
+.accessibility-review__icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--nx-success) 30%, transparent);
+  border-radius: 999px;
+  color: var(--nx-success);
+  background: color-mix(in srgb, var(--nx-success) 8%, transparent);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.accessibility-review__item h3 {
+  font-size: 12px;
+}
+
+.accessibility-review__item p {
+  margin-top: 4px;
+  color: var(--nx-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.accessibility-review__boundary {
+  padding-top: 14px;
+  border-top: 1px solid var(--nx-border);
+  color: var(--nx-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 @media (max-width: 900px) {
   .data-source-summary__grid,
   .reviewer-navigation__grid {
@@ -9059,12 +9136,14 @@ body::before {
 
 @media (max-width: 560px) {
   .data-source-summary,
-  .reviewer-navigation {
+  .reviewer-navigation,
+  .accessibility-review {
     padding: 20px;
   }
 
   .data-source-summary__grid,
-  .reviewer-navigation__grid {
+  .reviewer-navigation__grid,
+  .accessibility-review__grid {
     grid-template-columns: 1fr;
   }
 

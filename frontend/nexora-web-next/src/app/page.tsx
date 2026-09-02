@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AccessibilityReviewPanel from "@/components/AccessibilityReviewPanel";
 import BackendHealthPanel from "@/components/BackendHealthPanel";
 import DataSourceSummaryPanel from "@/components/DataSourceSummaryPanel";
 import DashboardHero from "@/components/DashboardHero";
@@ -120,6 +121,8 @@ export default async function Home() {
           />
 
           <ReviewerNavigationPanel />
+
+          <AccessibilityReviewPanel />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">

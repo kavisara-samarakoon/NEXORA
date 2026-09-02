@@ -4,10 +4,22 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.54.0-frontend-data-source-transparency-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.54.0-frontend-data-source-transparency-foundation).
+[`v0.55.0-frontend-reviewer-navigation-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.55.0-frontend-reviewer-navigation-polish-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.55.0 Frontend Reviewer Navigation Polish foundation
+## In progress — v0.56.0 Frontend Accessibility Review foundation
+
+- Adds a compact dashboard accessibility review panel, improves page source
+  notice semantics and reviewer-navigation link labels, and clarifies disabled
+  local-preview control wording. This frontend accessibility-review milestone
+  changes no backend/API contract, OpenAPI YAML, auth/session/CSRF/CORS behavior,
+  dependencies, workflows, scripts, retained Vite frontend, API/fallback
+  behavior, or request-ID presentation. It does not display or read secrets,
+  tokens, cookies, CSRF values, Authorization data, raw exceptions, private
+  data, environment values, or local filesystem paths. It does not claim a
+  formal WCAG audit or make NEXORA production-ready.
+
+## Completed frontend milestone — v0.55.0 Frontend Reviewer Navigation Polish foundation
 
 - Adds a reusable page source notice to the deals, giveaways, and security
   pages, a six-route reviewer path panel to the dashboard, and safer static
