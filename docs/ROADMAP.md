@@ -7,12 +7,16 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone
-  with a static dashboard capture checklist and aligned public-safe screenshot
-  guidance.
+  `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone
+  with confirmed primary-frontend layout, semantics, and demo-content
+  truthfulness fixes.
 - Keep the completed
-  `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone as the
-  latest stable milestone until v0.59 is merged and tagged.
+  `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone
+  as the latest stable milestone until v0.60 is merged and tagged.
+- Keep Settings connected to no account data until a separately scoped product
+  and API design exists; its current controls and profile remain static preview
+  content. Keep Security scores and events labelled as local samples rather
+  than monitoring or telemetry.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -135,7 +139,7 @@ project's academic, portfolio, and product goals evolve.
 - Validate the problem and workflows with research participants before making
   claims about demand or prioritizing commercialization.
 - Treat business, income, employment, and broader portfolio readiness as future
-  evidence-based decisions; the reviewer panels through v0.59 describe
+  evidence-based decisions; the reviewer panels through v0.60 describe
   implemented local foundations only.
 - Evaluate additional data providers, stores, and regional pricing based on
   licensing, reliability, attribution, and operating cost.

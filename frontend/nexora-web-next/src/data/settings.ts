@@ -32,10 +32,10 @@ export type ConnectedPlatform = {
 };
 
 export const profileFields = [
-  { id: "display-name", label: "Display Name", value: "Kavisara", icon: "user" },
-  { id: "email", label: "Email", value: "gamer@nexora.gg", icon: "mail" },
-  { id: "language", label: "Language", value: "English (US)", icon: "globe" },
-  { id: "timezone", label: "Timezone", value: "Asia/Colombo (UTC+5:30)", icon: "clock" },
+  { id: "display-name", label: "Display Name", value: "Demo Player", icon: "user" },
+  { id: "email", label: "Email", value: "demo.player@example.com", icon: "mail" },
+  { id: "language", label: "Language", value: "Example language", icon: "globe" },
+  { id: "timezone", label: "Timezone", value: "Example timezone", icon: "clock" },
 ] satisfies readonly ProfileField[];
 
 export const notificationPreferences = [
@@ -47,15 +47,15 @@ export const notificationPreferences = [
 ] satisfies readonly Preference[];
 
 export const securityPreferences = [
-  { id: "two-factor", label: "Two-Factor Authentication", description: "Protect your account with an authenticator app", enabled: true },
-  { id: "login-notifications", label: "Login Notifications", description: "Alert on new device sign-ins", enabled: true },
-  { id: "session-timeout", label: "Auto Session Timeout", description: "End sessions after 30 minutes of inactivity", enabled: false },
-  { id: "mask-api-keys", label: "API Key Visibility", description: "Mask API keys throughout the dashboard", enabled: true },
+  { id: "two-factor", label: "Two-Factor Authentication", description: "Demo-only preference; no authenticator workflow is connected", enabled: false },
+  { id: "login-notifications", label: "Login Notifications", description: "Demo-only preference; sign-in alerts are not enforced", enabled: false },
+  { id: "session-timeout", label: "Auto Session Timeout", description: "Demo-only preference; inactivity timeout is not enforced", enabled: false },
+  { id: "sensitive-value-reminder", label: "Sensitive value reminder", description: "Demo-only reminder that secrets should never be shown in the interface.", enabled: true },
 ] satisfies readonly Preference[];
 
 export const connectedPlatforms = [
-  { id: "steam", name: "Steam", shortName: "ST", connected: true, account: "@kavisara_steam" },
-  { id: "epic", name: "Epic Games", shortName: "EP", connected: true, account: "@kavisara_epic" },
+  { id: "steam", name: "Steam", shortName: "ST", connected: true, account: "@demo_steam" },
+  { id: "epic", name: "Epic Games", shortName: "EP", connected: true, account: "@demo_epic" },
   { id: "gog", name: "GOG", shortName: "GG", connected: false },
   { id: "prime", name: "Prime Gaming", shortName: "PG", connected: false },
 ] satisfies readonly ConnectedPlatform[];
@@ -69,15 +69,15 @@ export const appearancePreferences = [
 ] satisfies readonly Preference[];
 
 export const accountSystemStatus = [
-  { label: "Profile", value: "Demo Mode", badge: "Demo", tone: "blue" },
-  { label: "Notifications", value: "UI Ready", badge: "Ready", tone: "green" },
-  { label: "Platform Links", value: "Future backend support", badge: "Future", tone: "orange" },
-  { label: "Security", value: "Planned session controls", badge: "Planned", tone: "purple" },
+  { label: "Profile", value: "Static settings preview", badge: "Demo", tone: "blue" },
+  { label: "Notifications", value: "Preview controls only", badge: "Demo", tone: "green" },
+  { label: "Platform Links", value: "Demo examples only", badge: "Demo", tone: "orange" },
+  { label: "Security", value: "Not connected", badge: "Planned", tone: "purple" },
 ] as const;
 
 export const accountOverview = [
-  { label: "Account Type", value: "Demo" },
-  { label: "Member Since", value: "2025" },
-  { label: "Linked Platforms", value: "2 / 4" },
-  { label: "Active Alerts", value: "4" },
+  { label: "Account Type", value: "Static preview" },
+  { label: "Member Since", value: "Not connected" },
+  { label: "Linked Platforms", value: "Demo examples" },
+  { label: "Active Alerts", value: "Not connected" },
 ] as const;

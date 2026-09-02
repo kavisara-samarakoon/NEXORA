@@ -315,8 +315,8 @@ function DealNetworkStatus({
       <div className="deals-network__header">
         <span className="deals-network__header-icon" aria-hidden="true">📡</span>
         <div>
-          <span>System telemetry</span>
-          <h2 id="deal-network-title">Deal Network Status</h2>
+          <span>Feed source</span>
+          <h2 id="deal-network-title">Deal Feed Status</h2>
         </div>
         <span className={`deals-network__live deals-network__live--${isExternalLive ? "active" : isExternalLoading ? "loading" : isExternalFallback ? "fallback" : "curated"}`}>
           <span aria-hidden="true" /> {stateLabel}
@@ -340,10 +340,13 @@ function DealNetworkStatus({
         ))}
       </div>
 
-      <div className="deals-network__graph">
+      <div
+        className="deals-network__graph"
+        aria-label="Static illustration — not live network data"
+      >
         <div className="deals-network__graph-label">
-          <span>Network activity</span>
-          <strong>{stateLabel}</strong>
+          <span>Feed indicator</span>
+          <strong>Static illustration</strong>
         </div>
         <div className="deals-network__bars" aria-hidden="true">
           {networkActivity.map((height, index) => (

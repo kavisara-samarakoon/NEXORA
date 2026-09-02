@@ -54,8 +54,10 @@ function ProtectionSection({
               <ProtectionIconGraphic icon={item.icon} />
             </span>
             <div className="sc-protection-card__copy">
-              <div><h3>{item.label}</h3><span className={`sc-protection-card__status sc-protection-card__status--${item.statusType}`}>{item.status}</span></div>
-              <p>{item.description}</p>
+              <div><h3>{item.label}</h3><span className={`sc-protection-card__status sc-protection-card__status--${item.statusType}`}>{planned ? "Planned" : "Preview"}</span></div>
+              <p>{planned
+                ? "Capability preview — not connected to live network protection."
+                : "Static capability preview — not connected to account telemetry."}</p>
             </div>
           </article>
         ))}
@@ -79,7 +81,7 @@ function SecurityTimeline() {
           <article className="sc-timeline__event" key={event.id}>
             <div className="sc-timeline__rail"><span className={`sc-timeline__dot sc-timeline__dot--${event.type}`} /></div>
             <span className={`sc-timeline__icon sc-timeline__icon--${event.type}`} aria-hidden="true"><TimelineIcon icon={event.icon} /></span>
-            <div className="sc-timeline__copy"><div><h3>{event.title}</h3><time>{event.time}</time></div><p>{event.detail}</p></div>
+            <div className="sc-timeline__copy"><div><h3>{event.title}</h3><span>{event.time}</span></div><p>{event.detail}</p></div>
           </article>
         ))}
       </div>
@@ -88,27 +90,23 @@ function SecurityTimeline() {
 }
 
 function SecurityOperations({
-  securityScore,
   source,
-  status,
 }: {
-  securityScore: number;
   source: SecurityStatusResult["source"];
-  status: string;
 }) {
   const isApiSource = source === "api";
   const operations = [
-    { label: "Auth Layer", value: "Demo mode", badge: "Demo", tone: "green", icon: "lock" },
-    { label: "API Security", value: "Protection planned", badge: "Planned", tone: "orange", icon: "shield" },
-    { label: "Monitoring", value: isApiSource ? "Backend status API" : "Interface ready", badge: isApiSource ? "API" : "Ready", tone: "blue", icon: "chart" },
-    { label: "Incident Response", value: "Backend support later", badge: "Future", tone: "purple", icon: "alert" },
+    { label: "Auth layout", value: "Static capability preview", badge: "Demo", tone: "green", icon: "lock" },
+    { label: "API protection", value: "Not connected", badge: "Planned", tone: "orange", icon: "shield" },
+    { label: "Preview source", value: isApiSource ? "Local sample API payload" : "Bundled static sample", badge: "Preview", tone: "blue", icon: "chart" },
+    { label: "Incident response", value: "Not connected", badge: "Planned", tone: "purple", icon: "alert" },
   ] as const;
 
   return (
     <aside className="sc-operations" aria-labelledby="security-operations-title">
       <div className="sc-operations__header">
         <span className="sc-operations__header-icon" aria-hidden="true">📡</span>
-        <div><span>Defense telemetry</span><h2 id="security-operations-title">Security Ops Status</h2></div>
+        <div><span>Capability preview</span><h2 id="security-operations-title">Security Demo Status</h2></div>
         <span className="sc-operations__live sc-operations__live--demo"><span aria-hidden="true" /> Demo</span>
       </div>
       <div className="sc-operations__items">
@@ -131,11 +129,10 @@ function SecurityOperations({
           <svg viewBox="0 0 120 120" aria-hidden="true">
             <defs><linearGradient id="security-score-gradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#58F5A5" /><stop offset="100%" stopColor="#00D4FF" /></linearGradient></defs>
             <circle cx="60" cy="60" r="50" className="sc-score__track" />
-            <circle cx="60" cy="60" r="50" className="sc-score__value" pathLength="100" style={{ strokeDasharray: `${securityScore} 100` }} />
           </svg>
-          <div><strong>{securityScore}%</strong><span>{status}</span></div>
+          <div><strong>Demo</strong><span>Preview</span></div>
         </div>
-        <div className="sc-score__legend"><span><i /> Identity</span><span><i /> Network</span><span><i /> Monitor</span></div>
+        <div className="sc-score__legend"><span><i /> Identity layout</span><span><i /> Network plan</span><span><i /> Sample signal</span></div>
       </div>
     </aside>
   );
@@ -144,16 +141,8 @@ function SecurityOperations({
 export default function SecurityCenter({ securityStatus, source }: SecurityStatusResult) {
   const {
     accountProtection,
-    activeSessions,
-    alertCount,
     networkProtection,
-    protectedApis,
-    securityScore,
-    status,
   } = securityStatus;
-  const secureAccountItems = accountProtection.filter(
-    (item) => item.statusType === "ok",
-  ).length;
 
   return (
     <>
@@ -164,30 +153,30 @@ export default function SecurityCenter({ securityStatus, source }: SecurityStatu
         <div className="sc-hero__content">
           <div className="sc-hero__copy">
             <div className="sc-hero__tag"><span aria-hidden="true" /> Security interface preview</div>
-            <h1 id="security-title"><span className="page-title-emoji" aria-hidden="true">🛡️</span><span>Cyber Security Command Center</span></h1>
-            <p>Review the connected authentication foundation alongside clearly labelled roadmap demonstrations for account, API, and network controls.</p>
+            <h1 id="security-title"><span className="page-title-emoji" aria-hidden="true">🛡️</span><span>Security Capability Preview</span></h1>
+            <p>Review the connected authentication foundation alongside static examples of planned account, API, and network controls.</p>
           </div>
-          <div className="sc-hero__stats" aria-label="Security summary">
-            <div><strong>{securityScore}%</strong><span>Security score</span></div>
-            <div><strong>{activeSessions}</strong><span>Active sessions</span></div>
-            <div><strong>{protectedApis}</strong><span>Protected APIs</span></div>
-            <div><strong>{alertCount}</strong><span>{alertCount === 1 ? "Alert detected" : "Alerts detected"}</span></div>
+          <div className="sc-hero__stats" aria-label="Static security preview summary">
+            <div><strong>Demo</strong><span>Demo score</span></div>
+            <div><strong>Sample</strong><span>Session preview</span></div>
+            <div><strong>Planned</strong><span>Capability preview</span></div>
+            <div><strong>Static</strong><span>Example account signal</span></div>
           </div>
         </div>
       </section>
 
       <div className="sc-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Authentication foundation active</strong> — Basic account registration, login, and access-token identity are connected. The remaining security controls shown here are roadmap demonstrations, not production guarantees.</p>
+        <p><strong>Authentication foundation connected; telemetry not connected</strong> — Basic account registration, login, and access-token identity exist. Scores, sessions, activity entries, protection states, and operational panels on this page are static preview labels, not account facts, live monitoring, or production guarantees.</p>
       </div>
 
       <div className="sc-layout">
         <div className="sc-content">
-          <ProtectionSection badge={`${secureAccountItems}/${accountProtection.length} secure`} id="account-protection-title" items={accountProtection} title="Account Protection" />
+          <ProtectionSection badge="Static preview" id="account-protection-title" items={accountProtection} title="Account Capability Preview" />
           <ProtectionSection badge="Roadmap" id="network-protection-title" items={networkProtection} planned title="API & Network Protection" />
           <SecurityTimeline />
         </div>
-        <SecurityOperations securityScore={securityScore} source={source} status={status} />
+        <SecurityOperations source={source} />
       </div>
     </>
   );

@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { DashboardSummary } from "@/lib/api";
 
 const heroStats = [
-  { value: "12,847", label: "Deals tracked", tone: "orange" },
-  { value: "342", label: "Free games now", tone: "blue" },
-  { value: "98.7%", label: "Uptime", tone: "green" },
+  { value: "Preview", label: "Deals feed", tone: "orange" },
+  { value: "Sample", label: "Giveaways", tone: "blue" },
+  { value: "Local", label: "Review mode", tone: "green" },
 ] as const;
 
 export default function DashboardHero({
@@ -29,7 +29,7 @@ export default function DashboardHero({
       <div className="dashboard-hero__content">
         <div className="dashboard-hero__tag">
           <span aria-hidden="true" />
-          Live platform
+          {summary ? "Backend API" : "Local preview"}
         </div>
         <h1 id="dashboard-title">
           Every Game. Every Deal.<br />
@@ -52,7 +52,7 @@ export default function DashboardHero({
         </div>
       </div>
 
-      <div className="dashboard-hero__stats" aria-label="Platform statistics">
+      <div className="dashboard-hero__stats" aria-label={summary ? "Backend dashboard statistics" : "Preview dashboard statistics"}>
         {stats.map((stat) => (
           <div className="hero-stat" key={stat.label}>
             <strong className={`hero-stat__value hero-stat__value--${stat.tone}`}>

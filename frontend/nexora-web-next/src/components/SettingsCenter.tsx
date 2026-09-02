@@ -94,15 +94,15 @@ export default function SettingsCenter() {
         <div className="st-hero__orb st-hero__orb--purple" />
         <div className="st-hero__scanlines" />
         <div className="st-hero__content">
-          <div className="st-hero__tag"><span aria-hidden="true" /> Account control</div>
-          <h1 id="settings-title"><span className="page-title-emoji" aria-hidden="true">⚙️</span><strong>Account Control Center</strong></h1>
-          <p>Profile preferences, notification settings, security options, and future connected platform management — all in one place.</p>
+          <div className="st-hero__tag"><span aria-hidden="true" /> Settings preview</div>
+          <h1 id="settings-title"><span className="page-title-emoji" aria-hidden="true">⚙️</span><strong>Static Settings Preview</strong></h1>
+          <p>Explore sample profile, preference, and platform layouts without changing the signed-in account.</p>
         </div>
       </section>
 
       <div className="st-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Frontend Settings Demo</strong> — Toggles affect this rendered preview only. Profile editing, platform management, and persistent account settings are unavailable in this static view.</p>
+        <p><strong>Static settings preview</strong> — This sample profile is not the signed-in account. Toggles affect this rendered preview only and are not saved or enforced. Profile editing, platform management, and persistent account settings remain unavailable.</p>
       </div>
 
       {preferenceMessage ? <p className="ux-inline-status st-demo-feedback" role="status">{preferenceMessage}</p> : null}
@@ -111,11 +111,11 @@ export default function SettingsCenter() {
         <div className="st-content">
           <section className="st-card st-profile" aria-labelledby="profile-title">
             <div className="st-profile__identity">
-              <div className="st-profile__avatar" aria-hidden="true"><span>KS</span><i /></div>
+              <div className="st-profile__avatar" aria-hidden="true"><span>DP</span><i /></div>
               <div className="st-profile__copy">
                 <small>Static demo profile</small>
-                <h2 id="profile-title">Kavisara</h2>
-                <p>Demo User <span>•</span> NEXORA Member</p>
+                <h2 id="profile-title">Demo Player</h2>
+                <p>Example identity <span>•</span> Not the signed-in profile</p>
               </div>
               <button className="st-outline-button" type="button" disabled aria-label="Edit profile unavailable in this static settings preview" title="Profile editing is not connected in this preview">✏️ Edit Profile</button>
             </div>
@@ -131,12 +131,14 @@ export default function SettingsCenter() {
           </section>
 
           <section className="st-card" aria-labelledby="notifications-title">
-            <SectionHeading id="notifications-title" icon="bell" eyebrow="Signal routing" title="Notification Preferences" />
+            <SectionHeading id="notifications-title" icon="bell" eyebrow="Demo controls" title="Notification Preferences" />
+            <p className="st-section-note">Static settings preview only — these choices are not saved or enforced.</p>
             <PreferenceRows items={notificationPreferences} values={preferences} onToggle={togglePreference} />
           </section>
 
           <section className="st-card" aria-labelledby="security-preferences-title">
-            <SectionHeading id="security-preferences-title" icon="shield" eyebrow="Account hardening" title="Security Preferences" />
+            <SectionHeading id="security-preferences-title" icon="shield" eyebrow="Capability preview" title="Security Preferences" />
+            <p className="st-section-note">Demo controls only — they do not represent active account protection.</p>
             <PreferenceRows items={securityPreferences} values={preferences} onToggle={togglePreference} />
           </section>
 
@@ -152,13 +154,13 @@ export default function SettingsCenter() {
                   <span className={`st-platform__mark st-platform__mark--${platform.id}`} aria-hidden="true">{platform.shortName}</span>
                   <div className="st-platform__copy">
                     <h3>{platform.name}</h3>
-                    <p>{platform.account ?? "Not connected"}</p>
+                    <p>{platform.account ?? "Planned — not connected"}</p>
                   </div>
                   <span className={`st-platform__state${platform.connected ? " st-platform__state--connected" : ""}`}>
-                    <i aria-hidden="true" /> {platform.connected ? "Linked" : "Connect"}
+                    <i aria-hidden="true" /> {platform.connected ? "Demo linked" : "Planned"}
                   </span>
                   <button type="button" disabled aria-label={`${platform.connected ? "Manage" : "Connect"} ${platform.name} unavailable in this static settings preview`} title="Platform management is not connected in this preview">
-                    {platform.connected ? "Manage" : "Connect"}
+                    {platform.connected ? "Demo only" : "Planned"}
                   </button>
                 </article>
               ))}
@@ -187,7 +189,7 @@ export default function SettingsCenter() {
         <aside className="st-status" aria-labelledby="account-status-title">
           <div className="st-status__header">
             <span className="st-status__header-icon" aria-hidden="true">📡</span>
-            <div><span>Account telemetry</span><h2 id="account-status-title">Account System Status</h2></div>
+            <div><span>Preview summary</span><h2 id="account-status-title">Settings Preview Status</h2></div>
             <span className="st-status__live st-status__live--demo"><i aria-hidden="true" /> Demo</span>
           </div>
           <div className="st-status__items">
@@ -202,7 +204,7 @@ export default function SettingsCenter() {
             ))}
           </div>
           <div className="st-overview">
-            <div className="st-overview__label"><span>Account overview</span><strong>NX-01</strong></div>
+            <div className="st-overview__label"><span>Demo account overview</span><strong>Sample</strong></div>
             {accountOverview.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
           </div>
           <div className="st-status__network" aria-hidden="true">

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import PageSourceNotice from "@/components/PageSourceNotice";
-import SentinelButton from "@/components/SentinelButton";
 import SentinelExperience from "@/components/SentinelExperience";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -31,7 +30,6 @@ export default async function SentinelPage() {
           <SentinelExperience {...sentinel} />
         </main>
       </div>
-      <SentinelButton />
     </div>
   );
 }

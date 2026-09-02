@@ -11,11 +11,12 @@ export default function Topbar() {
         <input
           id="nexora-search"
           type="search"
-          placeholder="Search games, deals, giveaways..."
+          placeholder="Search preview — use page filters below"
           autoComplete="off"
           aria-describedby="nexora-search-help"
+          readOnly
         />
-        <kbd aria-hidden="true">Preview</kbd>
+        <span className="topbar__search-badge" aria-hidden="true">Preview</span>
         <span className="sr-only" id="nexora-search-help">Global search is an interface preview and does not submit a search.</span>
       </div>
 
