@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.57.0-frontend-portfolio-evidence-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.57.0-frontend-portfolio-evidence-polish-foundation).
-The `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone remains
+[`v0.58.0-frontend-empty-loading-error-state-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.58.0-frontend-empty-loading-error-state-polish-foundation).
+The `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -51,12 +51,13 @@ deployment.
 | Accessibility review aid | Primary dashboard summarizes keyboard focus, skip-link, disabled-preview, and reduced-motion foundations for local reviewers |
 | Portfolio evidence summary | Primary dashboard presents public-safe frontend, API, security, workflow, and validation evidence without a readiness claim |
 | Frontend state explanations | Primary frontend gives reviewers safe interpretations of loading, bundled fallback, displayed-empty, unavailable, and manual retry states |
+| Screenshot-safe review guidance | Primary dashboard documents public capture pages, cropping boundaries, private-identity avoidance, and accurate local-MVP claims |
 
 ## Architecture summary
 
 | Layer | Responsibility |
 | --- | --- |
-| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, source labels, reviewer navigation, accessibility and state-review aids, and public-safe portfolio evidence summary |
+| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, source labels, reviewer navigation, accessibility, state-review and screenshot-safe aids, and public-safe portfolio evidence summary |
 | Spring Boot backend | REST endpoints, validation, authentication, ownership rules, provider gateways, and scheduled foundations |
 | Default profile | Database-free local demo with in-memory account and feature stores |
 | `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
@@ -131,6 +132,11 @@ cost controls, or production AI observability.
   unavailable, and retry states with reviewer-safe wording. Retry controls are
   manual and add no polling, timers, or background refresh; the dashboard aid
   is not production monitoring.
+- The primary dashboard includes screenshot-safe review guidance for public
+  project captures. Dashboard, Deals, Giveaways, Wishlist, Security, and
+  Sentinel screenshots are local MVP evidence, not proof of production
+  deployment, monitoring, privacy controls, accessibility certification, or
+  broader readiness.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

@@ -4,21 +4,19 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.57.0-frontend-portfolio-evidence-polish-foundation`, which adds a public-
-safe dashboard evidence summary, broader key-page source notices, and safe
-screenshot boundaries for portfolio and reviewer use.
+`v0.58.0-frontend-empty-loading-error-state-polish-foundation`, which improves
+reviewer-facing loading, fallback, empty, unavailable, and manual retry states
+in the primary frontend.
 
-The `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone is
-in progress. It polishes primary Next.js frontend wording and semantic structure
-for loading, bundled fallback, displayed-empty, unavailable, and manual retry
-states, with a compact dashboard interpretation aid. This is frontend and
-documentation state-clarity polish only: backend and API contracts, frontend
-API/fallback behavior, OpenAPI YAML, auth/session/CSRF/CORS behavior,
-dependencies, workflows, scripts, and request-ID presentation remain unchanged.
-It adds no polling, auto-refresh, timers, new network calls, or retry loops and
-does not make NEXORA production-ready. Production deployment, monitoring,
-provider hardening, formal accessibility assessment, and business/income
-readiness remain future work.
+The `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone
+is in progress. It adds a static dashboard checklist and documentation for
+public-safe portfolio and reviewer captures. This is frontend/documentation
+screenshot guidance only: runtime privacy and security behavior, backend and API
+contracts, frontend API/fallback behavior, OpenAPI YAML, AuthStatus and
+auth/session/CSRF/CORS behavior, dependencies, workflows, scripts, and
+request-ID presentation remain unchanged. It adds no runtime screenshot mode,
+feature flag, identity masking, storage access, polling, auto-refresh, timers,
+retry loops, or network calls and does not make NEXORA production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -123,7 +121,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.57.0-frontend-portfolio-evidence-polish-foundation`.
+`v0.58.0-frontend-empty-loading-error-state-polish-foundation`.
 
 ## Completed foundations
 
@@ -138,6 +136,8 @@ readiness of the project. The latest stable development milestone is
 - A public-safe dashboard evidence summary and source notices on Wishlist and
   Sentinel improve portfolio review without exposing additional user or system
   data.
+- A dashboard screenshot-safe review checklist documents capture boundaries
+  without adding a runtime mode, masking identity, or changing account data.
 - Spring Boot REST API with validation, security, and profile-based services.
 - JWT registration, login, and authenticated account lookup.
 - PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.

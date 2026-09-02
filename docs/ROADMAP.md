@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone with
-  clearer loading, fallback, empty, unavailable, and manual retry states in the
-  primary frontend plus aligned reviewer documentation.
+  `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone
+  with a static dashboard capture checklist and aligned public-safe screenshot
+  guidance.
 - Keep the completed
-  `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone as the latest
-  stable milestone until v0.58 is merged and tagged.
+  `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone as the
+  latest stable milestone until v0.59 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -83,6 +83,9 @@ project's academic, portfolio, and product goals evolve.
 - Keep production deployment, centralized observability, uptime monitoring,
   and real external-provider hardening as future work with explicit ownership
   and operational boundaries.
+- Treat real production privacy controls, identity-protection features, and
+  deployment hardening as future reviewed work; static screenshot guidance is
+  not a runtime privacy control.
 - Add full observability dashboards later, after metrics, tracing, managed
   logging, alert ownership, and operational response are defined. Prometheus,
   Grafana, OpenTelemetry, and external integrations remain deliberately
@@ -132,8 +135,8 @@ project's academic, portfolio, and product goals evolve.
 - Validate the problem and workflows with research participants before making
   claims about demand or prioritizing commercialization.
 - Treat business, income, employment, and broader portfolio readiness as future
-  evidence-based decisions; the v0.57 evidence summary and v0.58 state guide
-  describe implemented local foundations only.
+  evidence-based decisions; the reviewer panels through v0.59 describe
+  implemented local foundations only.
 - Evaluate additional data providers, stores, and regional pricing based on
   licensing, reliability, attribution, and operating cost.
 - Explore collaboration or sharing features only after privacy and ownership

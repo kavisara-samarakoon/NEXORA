@@ -8,6 +8,7 @@ import DealCard from "@/components/DealCard";
 import GiveawayCard from "@/components/GiveawayCard";
 import PortfolioEvidencePanel from "@/components/PortfolioEvidencePanel";
 import ReviewerNavigationPanel from "@/components/ReviewerNavigationPanel";
+import ScreenshotSafeReviewPanel from "@/components/ScreenshotSafeReviewPanel";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import StateReviewPanel from "@/components/StateReviewPanel";
@@ -129,6 +130,8 @@ export default async function Home() {
           <PortfolioEvidencePanel />
 
           <StateReviewPanel />
+
+          <ScreenshotSafeReviewPanel />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">
