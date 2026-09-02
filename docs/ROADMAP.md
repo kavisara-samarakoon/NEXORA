@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone with a
-  public-safe dashboard evidence summary, broader key-page source notices, and
-  safe screenshot guidance.
+  `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone with
+  clearer loading, fallback, empty, unavailable, and manual retry states in the
+  primary frontend plus aligned reviewer documentation.
 - Keep the completed
-  `v0.56.0-frontend-accessibility-review-foundation` milestone as the latest
-  stable milestone until v0.57 is merged and tagged.
+  `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone as the latest
+  stable milestone until v0.58 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -21,9 +21,9 @@ project's academic, portfolio, and product goals evolve.
   need it, preserving domain-specific codes and avoiding raw exception or
   request disclosure.
 - Continue keyboard, label, ARIA, focus, reduced-motion, and UX-state
-  accessibility review after the v0.56 local review aid. A formal accessibility
-  audit and conformance assessment remain future work and do not change backend,
-  API, security, deployment readiness, or production status.
+  accessibility review after the v0.58 state-clarity polish. A formal
+  accessibility audit and conformance assessment remain future work and do not
+  change backend, API, security, deployment readiness, or production status.
 - Keep the retained Vite prototype clearly separated from the primary product.
 
 ## API contract tooling
@@ -132,8 +132,8 @@ project's academic, portfolio, and product goals evolve.
 - Validate the problem and workflows with research participants before making
   claims about demand or prioritizing commercialization.
 - Treat business, income, employment, and broader portfolio readiness as future
-  evidence-based decisions; the v0.57 summary describes implemented project
-  foundations only.
+  evidence-based decisions; the v0.57 evidence summary and v0.58 state guide
+  describe implemented local foundations only.
 - Evaluate additional data providers, stores, and regional pricing based on
   licensing, reliability, attribution, and operating cost.
 - Explore collaboration or sharing features only after privacy and ownership

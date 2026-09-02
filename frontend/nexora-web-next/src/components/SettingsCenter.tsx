@@ -84,7 +84,7 @@ export default function SettingsCenter() {
 
   function togglePreference(id: string) {
     setPreferences((current) => ({ ...current, [id]: !current[id] }));
-    setPreferenceMessage("Demo preference updated in this browser view. It was not saved to an account.");
+    setPreferenceMessage("Preview preference updated for this rendered view only. No account setting was saved.");
   }
 
   return (
@@ -102,7 +102,7 @@ export default function SettingsCenter() {
 
       <div className="st-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Frontend Settings Demo</strong> — Toggles and fields are visual-only. Persistent account settings will be connected to the future NEXORA backend.</p>
+        <p><strong>Frontend Settings Demo</strong> — Toggles affect this rendered preview only. Profile editing, platform management, and persistent account settings are unavailable in this static view.</p>
       </div>
 
       {preferenceMessage ? <p className="ux-inline-status st-demo-feedback" role="status">{preferenceMessage}</p> : null}
@@ -117,14 +117,14 @@ export default function SettingsCenter() {
                 <h2 id="profile-title">Kavisara</h2>
                 <p>Demo User <span>•</span> NEXORA Member</p>
               </div>
-              <button className="st-outline-button" type="button" disabled aria-label="Edit profile unavailable in this static settings demo" title="Profile editing requires the future backend">✏️ Edit Profile</button>
+              <button className="st-outline-button" type="button" disabled aria-label="Edit profile unavailable in this static settings preview" title="Profile editing is not connected in this preview">✏️ Edit Profile</button>
             </div>
             <div className="st-profile__fields">
               {profileFields.map((field) => (
                 <div className="st-profile-field" key={field.id}>
                   <span className="st-profile-field__icon" aria-hidden="true"><SettingsGlyph name={field.icon} /></span>
                   <div><small>{field.label}</small><strong>{field.value}</strong></div>
-                  <button type="button" disabled aria-label={`Edit ${field.label} unavailable in this static settings demo`} title="Editing requires the future backend">Edit</button>
+                  <button type="button" disabled aria-label={`Edit ${field.label} unavailable in this static settings preview`} title="Editing is not connected in this preview">Edit</button>
                 </div>
               ))}
             </div>
@@ -157,7 +157,7 @@ export default function SettingsCenter() {
                   <span className={`st-platform__state${platform.connected ? " st-platform__state--connected" : ""}`}>
                     <i aria-hidden="true" /> {platform.connected ? "Linked" : "Connect"}
                   </span>
-                  <button type="button" disabled aria-label={`${platform.connected ? "Manage" : "Connect"} ${platform.name} unavailable in this static settings demo`} title="Platform management requires the future backend">
+                  <button type="button" disabled aria-label={`${platform.connected ? "Manage" : "Connect"} ${platform.name} unavailable in this static settings preview`} title="Platform management is not connected in this preview">
                     {platform.connected ? "Manage" : "Connect"}
                   </button>
                 </article>
@@ -176,10 +176,10 @@ export default function SettingsCenter() {
               <div><small>Restricted actions</small><h2 id="danger-title">Danger Zone</h2></div>
             </div>
             <div className="st-danger__actions">
-              <div><strong>Clear NEXORA Data</strong><p>Unavailable in this static settings demo. No account data is changed here.</p></div>
-              <button type="button" disabled aria-label="Clear NEXORA data unavailable in this static settings demo" title="This static demo does not store account data">Clear Data</button>
-              <div><strong>Delete Account</strong><p>Unavailable in this static settings demo and requires a separate verified backend workflow.</p></div>
-              <button type="button" disabled aria-label="Delete account unavailable in this static settings demo" title="Account deletion requires the future backend">Delete Account</button>
+              <div><strong>Clear NEXORA Data</strong><p>Unavailable in this static settings preview. This control does not change account data.</p></div>
+              <button type="button" disabled aria-label="Clear NEXORA data unavailable in this static settings preview" title="This static preview does not clear account data">Clear Data</button>
+              <div><strong>Delete Account</strong><p>Unavailable in this static settings preview. Account deletion needs a separate verified backend workflow.</p></div>
+              <button type="button" disabled aria-label="Delete account unavailable in this static settings preview" title="Account deletion is not connected in this preview">Delete Account</button>
             </div>
           </section>
         </div>

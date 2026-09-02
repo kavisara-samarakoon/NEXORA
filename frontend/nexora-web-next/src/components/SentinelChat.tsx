@@ -76,7 +76,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
       {response.mode === "local-fallback" && response.fallbackReason && (
         <div className="sn-gateway-response__fallback-reason">
           <strong>Local fallback used</strong>
-          <p>{fallbackReasonCopy[response.fallbackReason]} Sentinel returned a local deterministic response instead. This response is transient.</p>
+          <p>{fallbackReasonCopy[response.fallbackReason]} Sentinel returned a local deterministic response instead. This response is transient, and the public static samples remain available.</p>
         </div>
       )}
 
@@ -239,8 +239,8 @@ export default function SentinelChat({
         {authState === "authenticated"
           ? "Uses bounded, backend-generated NEXORA context"
           : authState === "unavailable"
-            ? "Static samples remain available while account access is unavailable"
-            : "Sign in to use bounded NEXORA context"}
+            ? "Static samples remain available while the local session route is unavailable"
+            : "Sign in with a local backend session to use bounded NEXORA context"}
         <strong>No conversation saved</strong>
       </p>
 
@@ -288,8 +288,8 @@ export default function SentinelChat({
           >
             <strong>{authState === "unavailable" ? "Session check unavailable" : "Sign in required"}</strong>
             <p>{authState === "unavailable"
-              ? "The local authentication route could not be reached. Static samples remain available; check the backend server before trying the gateway again."
-              : "This composer uses the authenticated local gateway. Static sample messages remain available, and NEXORA will not save this conversation."}</p>
+              ? "The local authentication route could not be reached. Static samples remain available; the authenticated gateway needs a reachable local backend and session."
+              : "This composer needs a local backend session for the authenticated gateway. Static sample messages remain available, and NEXORA will not save this conversation."}</p>
             <Link href="/login">{authState === "unavailable" ? "Open sign in" : "Sign in"}</Link>
           </div>
         )}
@@ -297,7 +297,7 @@ export default function SentinelChat({
         {authState === "unavailable" && !showSignInHint && (
           <div className="sn-gateway-state sn-gateway-state--unavailable">
             <strong>Session check unavailable</strong>
-            <p>The local authentication route could not be reached. Static samples remain available; check the backend server before using the gateway.</p>
+            <p>The local authentication route could not be reached. Static samples remain available; the authenticated gateway needs a reachable local backend and session.</p>
             <Link href="/login">Open sign in</Link>
           </div>
         )}
@@ -305,7 +305,7 @@ export default function SentinelChat({
         {gatewayError && (
           <div className="sn-gateway-state sn-gateway-state--error" role="alert">
             <strong>{gatewayError.code === "rate_limit_exceeded" ? "Request limit reached" : "Gateway unavailable"}</strong>
-            <p>{gatewayError.message} {gatewayError.code === "rate_limit_exceeded" ? "Wait briefly before returning the message to the composer." : "Check the local backend, then return the message to the composer and try again."}</p>
+            <p>{gatewayError.message} {gatewayError.code === "rate_limit_exceeded" ? "Wait briefly, then return the message to the composer and submit it manually." : "Check the local backend and session, then return the message to the composer and submit it manually."} Returning a message does not retry automatically.</p>
             <RequestIdSupportText requestId={gatewayError.requestId} />
             {submittedMessage ? (
               <button

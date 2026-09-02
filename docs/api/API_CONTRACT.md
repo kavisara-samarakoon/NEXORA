@@ -10,9 +10,10 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.56.0-frontend-accessibility-review-foundation` is the latest stable
+`v0.57.0-frontend-portfolio-evidence-polish-foundation` is the latest stable
 development milestone while
-`v0.57.0-frontend-portfolio-evidence-polish-foundation` is in progress.
+`v0.58.0-frontend-empty-loading-error-state-polish-foundation` is in progress.
+The v0.58 frontend state-clarity work does not change this API contract.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 

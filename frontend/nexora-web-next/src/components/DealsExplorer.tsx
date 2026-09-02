@@ -752,7 +752,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         {isExternalFallback && (
           <UxStatePanel
             className="ux-state--inline deals-mode-panel__warning"
-            description="The external feed could not be reached. NEXORA is still showing its bundled curated deal set."
+            description="The external provider route could not be reached. NEXORA is still showing its bundled curated deal set; retry remains a manual check of the live feed."
             role="status"
             title="Curated fallback active"
             tone="fallback"
@@ -801,7 +801,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           {authChecked && !authToken && (
             <UxStatePanel
               className="ux-state--compact deals-auth-notice"
-              description="Browsing and local alert toggles remain available. An account is required only to save a deal to your personal wishlist."
+              description="Browsing and local alert toggles remain available without an account. Sign in only when you want to save a displayed deal to your personal wishlist."
               title="Sign in to save deals"
               tone="auth"
             >
@@ -814,7 +814,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               className="ux-state--compact deals-wishlist-sync-warning"
               description={(
                 <>
-                  {wishlistSyncWarning.text} Deal browsing still works; saved markers may be incomplete until sync succeeds.
+                  {wishlistSyncWarning.text} Deal browsing still works; saved markers describe only the last successful account sync and may be incomplete until a later sync succeeds.
                   <RequestIdSupportText requestId={wishlistSyncWarning.requestId} />
                 </>
               )}
@@ -824,14 +824,14 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
             />
           )}
           <div className="deals-results-bar">
-            <span><strong>{filteredDeals.length}</strong> deals detected</span>
+            <span><strong>{filteredDeals.length}</strong> displayed deals</span>
             <span>{sourceLabel}</span>
           </div>
           <div className="deals-grid" aria-busy={isExternalLoading}>
             {isExternalLoading && (
               <UxStatePanel
                 className="ux-state--grid"
-                description={<>Requesting current external offers. Curated deals remain visible below while the request finishes.<UxSkeleton lines={2} /></>}
+                description={<>Waiting for the external provider response. Bundled curated deals remain visible below while this manual request finishes.<UxSkeleton lines={2} /></>}
                 role="status"
                 title="Loading live external deals"
                 tone="loading"
@@ -856,8 +856,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               <UxStatePanel
                 className="ux-state--grid deals-empty"
                 description={activeExternalTitle
-                  ? <>The external feed returned no offers for “{activeExternalTitle}”. Try another title or load the full feed.</>
-                  : "The external feed returned no offers. Switch to Curated Deals to keep browsing NEXORA’s bundled set."}
+                  ? <>The external feed returned no displayed offers for “{activeExternalTitle}”. This result does not establish that every store has no matching deal; try another title or load the full feed.</>
+                  : "The external feed returned no displayed offers for this request. This does not establish global store availability; switch to Curated Deals to keep browsing NEXORA’s bundled set."}
                 role="status"
                 title="No live external deals found"
                 tone="empty"
@@ -869,7 +869,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
             {visibleDeals.length > 0 && filteredDeals.length === 0 && (
               <UxStatePanel
                 className="ux-state--grid deals-empty"
-                description={<>No displayed deals match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter. Reset the view to show every available deal.</>}
+                description={<>No deals in the currently displayed set match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter. This filtered view does not describe every store listing; reset it to show the full loaded set.</>}
                 role="status"
                 title="No matching deal signals"
                 tone="empty"

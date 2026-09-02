@@ -64,9 +64,9 @@ export default function AuthStatus() {
 
   if (authState.status === "loading") {
     return (
-      <div className="auth-status auth-status--loading" role="status" aria-label="Checking account session">
+      <div className="auth-status auth-status--loading" role="status" aria-busy="true" aria-label="Checking local account session">
         <span className="auth-status__pulse" aria-hidden="true" />
-        <span>Checking account</span>
+        <span>Checking session</span>
       </div>
     );
   }
@@ -109,10 +109,10 @@ export default function AuthStatus() {
       <div
         className="auth-status auth-status--unavailable"
         role="status"
-        aria-label={`Account status unavailable. ${authState.message}`}
+        aria-label={`Local account status unavailable. ${authState.message}`}
         title={authState.message}
       >
-        <span className="auth-status__unavailable-copy">Account unavailable</span>
+        <span className="auth-status__unavailable-copy">Session unavailable</span>
         <Link href="/login">Sign in</Link>
       </div>
     );

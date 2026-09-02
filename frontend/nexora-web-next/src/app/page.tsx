@@ -10,6 +10,7 @@ import PortfolioEvidencePanel from "@/components/PortfolioEvidencePanel";
 import ReviewerNavigationPanel from "@/components/ReviewerNavigationPanel";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
+import StateReviewPanel from "@/components/StateReviewPanel";
 import StatusPanels from "@/components/StatusPanels";
 import Topbar from "@/components/Topbar";
 import {
@@ -126,6 +127,8 @@ export default async function Home() {
           <AccessibilityReviewPanel />
 
           <PortfolioEvidencePanel />
+
+          <StateReviewPanel />
 
           <section className="dashboard-section" aria-labelledby="giveaways-title">
             <div className="section-heading">

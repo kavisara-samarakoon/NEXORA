@@ -53,11 +53,11 @@ export default function UxStatePanel({
   return (
     <div
       className={`ux-state ux-state--${tone}${className ? ` ${className}` : ""}`}
-      role={role}
+      role={role ?? "group"}
       aria-atomic={role ? true : undefined}
       aria-busy={tone === "loading" ? true : undefined}
-      aria-describedby={role ? descriptionId : undefined}
-      aria-labelledby={role ? titleId : undefined}
+      aria-describedby={descriptionId}
+      aria-labelledby={titleId}
     >
       <span className="ux-state__icon" aria-hidden="true">{icon ?? stateIcons[tone]}</span>
       <div className="ux-state__body">
