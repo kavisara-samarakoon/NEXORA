@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
-> `v0.62.0-backend-notification-preference-enforcement-foundation` remains in progress
+> [`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
+> `v0.63.0-backend-auth-abuse-limit-keying-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -104,8 +104,11 @@ personal wishlist endpoints under `/api/me/wishlist`.
   origin/referrer values.
 - Security-event recording and configured cleanup are best-effort so event-store
   failures do not break normal authentication behavior.
-- Auth abuse controls are process-local and reset on restart; they are not
-  distributed production rate limiting.
+- Auth abuse controls are process-local and reset on restart. Login and
+  registration use operation-plus-candidate-identifier digest buckets so one
+  candidate subject does not consume an unrelated subject's window. This is
+  best-effort local throttling, not distributed rate limiting, bot protection,
+  DDoS protection, or CAPTCHA.
 - The opaque refresh cookie is `HttpOnly`, scoped to `/api/auth`, and
   `SameSite=Lax` by default. The CSRF cookie uses the same narrow path and
   SameSite default but is intentionally readable for the double-submit flow.
@@ -377,7 +380,7 @@ echoing of one safe incoming ID, requires generated IDs on established auth and
 validation errors, and confirms the shared error JSON body still has no
 `requestId` field.
 
-The in-progress v0.61 CORS exposure foundation allows browser JavaScript on an
+The completed v0.61 CORS exposure foundation allows browser JavaScript on an
 already trusted frontend origin to read only the safe `X-NEXORA-Request-ID`
 response header. It does not expose Authorization, Cookie, Set-Cookie, CSRF
 values, tokens, secrets, or private data. Request-ID generation and validation,
@@ -466,7 +469,7 @@ CheapShark wishlist snapshots and the email provider must be selected
 explicitly. Real email delivery additionally requires external Spring mail/SMTP
 configuration; no SMTP credentials are committed.
 
-The in-progress v0.62 preference-enforcement foundation records an existing
+The completed v0.62 preference-enforcement foundation records an existing
 target-reached alert event before checking the account's saved notification
 preferences. Outbound dispatcher invocation requires both `emailEnabled` and
 `targetReachedEnabled`; either disabled value suppresses dispatch. The existing
@@ -559,15 +562,18 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
-The `v0.62.0-backend-notification-preference-enforcement-foundation` milestone is in
-progress until it is merged and tagged.
-It enforces saved email and target-reached notification preferences before
-outbound wishlist alert dispatch while retaining existing event/history
-recording. API JSON bodies, frontend behavior, auth/session/CSRF/CORS/request-ID
-behavior, dependencies, migrations, workflows, scripts, and OpenAPI YAML remain
-unchanged. It adds no delivery/read-state fields, outbox, retry worker,
-scheduler, or provider, and production readiness is unchanged.
+[`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
+The `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone is in
+progress until it is merged and tagged. It changes login and registration
+abuse limits from operation-global buckets to operation-plus-normalized-
+candidate-identifier digest buckets. Repeated attempts for the same candidate
+subject remain limited, while unrelated subjects no longer share that window.
+Configured limits, windows, endpoint paths, 429 and other API JSON shapes,
+frontend behavior, auth token/session/CSRF/CORS/request-ID behavior,
+dependencies, migrations, workflows, scripts, and OpenAPI YAML remain
+unchanged. The limiter remains process-local and in-memory; no distributed
+rate limiting, CAPTCHA, DDoS protection, or bot protection is added, and
+production readiness is unchanged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

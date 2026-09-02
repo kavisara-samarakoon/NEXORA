@@ -33,7 +33,7 @@ class AuthAbuseGuardTests {
                 new AuthSecurityEventService(new CollectingEventStore()));
 
         for (int attempt = 0; attempt < 25; attempt++) {
-            assertDoesNotThrow(() -> guard.check(AuthAbuseLimit.LOGIN));
+            assertDoesNotThrow(() -> guard.check(AuthAbuseLimit.LOGIN, "player@example.com"));
         }
         assertEquals(0, store.activeWindowCount());
     }
@@ -48,10 +48,10 @@ class AuthAbuseGuardTests {
                 new InMemoryAuthAbuseCounterStore(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)),
                 new AuthSecurityEventService(events));
 
-        guard.check(AuthAbuseLimit.LOGIN);
+        guard.check(AuthAbuseLimit.LOGIN, "player@example.com");
         AuthRateLimitExceededException exception = assertThrows(
                 AuthRateLimitExceededException.class,
-                () -> guard.check(AuthAbuseLimit.LOGIN));
+                () -> guard.check(AuthAbuseLimit.LOGIN, "PLAYER@example.com"));
 
         assertEquals(60, exception.retryAfterSeconds());
         AuthSecurityEvent event = events.findAll().get(0);

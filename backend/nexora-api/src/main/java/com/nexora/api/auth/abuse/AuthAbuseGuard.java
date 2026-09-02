@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthAbuseGuard {
 
+    private static final String SHARED_SUBJECT = "shared-operation-subject";
+
     private final AuthAbuseControlProperties properties;
     private final InMemoryAuthAbuseCounterStore counterStore;
     private final AuthSecurityEventService securityEventService;
@@ -20,12 +22,17 @@ public class AuthAbuseGuard {
     }
 
     public void check(AuthAbuseLimit limit) {
+        check(limit, SHARED_SUBJECT);
+    }
+
+    public void check(AuthAbuseLimit limit, String subject) {
         if (!properties.isEnabled()) {
             return;
         }
 
         AuthAbuseDecision decision = counterStore.check(
                 limit,
+                subject,
                 properties.boundedMaxAttempts(limit),
                 properties.boundedWindowSeconds());
         if (!decision.allowed()) {

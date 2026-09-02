@@ -4,18 +4,21 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.61.0-backend-cors-request-id-exposure-foundation`, which exposes only the
-safe request-ID response header through the existing trusted-origin CORS policy.
+`v0.62.0-backend-notification-preference-enforcement-foundation`, which enforces
+saved email and target-reached choices before outbound wishlist alert dispatch
+without changing existing alert event/history recording.
 
-The `v0.62.0-backend-notification-preference-enforcement-foundation` milestone
-is in progress. It preserves target-reached event/history recording, then
-requires saved email and target-reached preferences before outbound wishlist
-alert dispatch. Either disabled preference suppresses dispatch; both enabled
-preferences retain it, and the existing email-disabled default remains safe.
-API JSON response shapes, frontend behavior, auth/session/CSRF/CORS/request-ID
-behavior, dependencies, migrations, OpenAPI YAML, workflows, scripts, and
-production readiness remain unchanged. No delivery/read-state fields, outbox,
-retry worker, scheduler, or provider are added.
+The `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone is in
+progress. Login and registration limits use buckets scoped by operation and a
+digest of the normalized candidate account identifier. Repeated attempts for
+one candidate subject remain limited, but that subject no longer consumes an
+unrelated subject's login or registration window. Existing limit values,
+windows, endpoint paths, 429 and other API JSON response shapes, frontend
+behavior, and auth token/session/CSRF/CORS/request-ID behavior are unchanged.
+Dependencies, migrations, OpenAPI YAML, workflows, scripts, and production
+readiness are also unchanged. The limiter remains process-local and in-memory;
+this is not distributed rate limiting, CAPTCHA, DDoS protection, bot
+protection, or production-grade abuse prevention.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -120,7 +123,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.61.0-backend-cors-request-id-exposure-foundation`.
+`v0.62.0-backend-notification-preference-enforcement-foundation`.
 
 ## Completed foundations
 
@@ -247,12 +250,14 @@ readiness of the project. The latest stable development milestone is
   owner enables it, a daily UTC task prunes only old safe metadata. The
   in-memory store remains capped at 500 events and resets on restart; the `dev`
   store deletes old rows from the existing Flyway V10 table.
-- Local-development auth abuse controls use a thread-safe fixed window and only
-  five route/purpose keys for register, login, refresh, logout, and repeated
-  CSRF/origin rejection attempts. Limited requests receive a safe `429` with
-  `Retry-After`/`retryAfterSeconds`, and `AUTH_RATE_LIMITED` events contain only
-  a typed reason code with no user ID or request data. Counters reset on backend
-  restart and do not coordinate across processes.
+- Local-development auth abuse controls use a thread-safe fixed window. Login
+  and registration keys combine the operation with a digest of the normalized
+  candidate account identifier; refresh, logout, and repeated CSRF/origin
+  rejection retain their existing shared operation subjects. Limited requests
+  receive the existing safe `429` with `Retry-After`/`retryAfterSeconds`, and
+  `AUTH_RATE_LIMITED` events contain only a typed reason code with no user ID or
+  request data. Counters reset on backend restart and do not coordinate across
+  processes.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
 - Optional local devcontainer foundation with Java 17, Maven, Node.js 20, npm,
