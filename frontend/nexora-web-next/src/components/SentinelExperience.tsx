@@ -86,7 +86,7 @@ export default function SentinelExperience({
 
       <div className="sn-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Contextual gateway preview</strong> — Static samples remain public. Signed-in requests can use bounded backend summaries for Wishlist, Deals, Giveaways, alerts, and prices. Responses are transient, conversations are not saved, and provider failures use an explicitly labelled local fallback.</p>
+        <p><strong>Contextual gateway preview</strong> — Static samples remain public and available without the gateway. Signed-in requests need a reachable local backend session to use bounded summaries for Wishlist, Deals, Giveaways, alerts, and prices. Responses are transient, conversations are not saved, and provider failures use an explicitly labelled local fallback.</p>
       </div>
 
       <div className="sn-layout">

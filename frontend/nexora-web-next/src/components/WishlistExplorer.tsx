@@ -272,15 +272,15 @@ function PriceHistoryPanel({
       )}
 
       {state === "loading" && (
-        <div className="wl-card__history-state wl-card__history-state--loading" role="status">
+        <div className="wl-card__history-state wl-card__history-state--loading" role="status" aria-busy="true">
           <div aria-hidden="true"><span /><span /><span /></div>
-          <p><strong>Loading price history</strong><small>Requesting recent snapshots for this account item.</small></p>
+          <p><strong>Loading price history</strong><small>Waiting for recent snapshots stored for this account item.</small></p>
         </div>
       )}
 
       {state === "unavailable" && (
         <div className="wl-card__history-state wl-card__history-state--error" role="status">
-          <p><strong>Price history unavailable</strong><small>The history route could not be reached. This item and its alert settings still work.</small></p>
+          <p><strong>Price history unavailable</strong><small>The account history route could not be reached. This item and its alert settings remain available; retry is manual.</small></p>
           <button type="button" aria-label={`Retry price history for ${itemTitle}`} onClick={onLoad}>Retry history</button>
         </div>
       )}
@@ -288,7 +288,7 @@ function PriceHistoryPanel({
       {state === "loaded" && points.length === 0 && (
         <div className="wl-card__history-state wl-card__history-state--empty" role="status">
           <strong>No snapshots yet</strong>
-          <p>This account item has no recorded observations yet. New snapshots will appear here after they are stored.</p>
+          <p>No snapshots are stored for this account item. This is an account-history state, not a statement about every store price.</p>
         </div>
       )}
 
@@ -700,7 +700,7 @@ function WishlistAlertPanel({
         {view === "checking" && (
           <UxStatePanel
             className="ux-state--compact wl-alert-history__empty"
-            description={<>Checking for account alert events.<UxSkeleton lines={2} /></>}
+            description={<>Waiting for the account session and recent alert events.<UxSkeleton lines={2} /></>}
             role="status"
             title="Loading alert history"
             tone="loading"
@@ -719,7 +719,7 @@ function WishlistAlertPanel({
         {view === "offline" && (
           <UxStatePanel
             className="ux-state--compact wl-alert-history__empty"
-            description="The account wishlist service could not be reached. Public preview items remain available."
+            description="The account wishlist service could not be reached. Separate public preview items remain available, but they do not include personal alert history."
             role="status"
             title="Alert history unavailable"
             tone="unavailable"
@@ -728,7 +728,7 @@ function WishlistAlertPanel({
         {view === "personal" && alertEventsMessage && (
           <UxStatePanel
             className="ux-state--compact wl-alert-history__empty wl-alert-history__empty--warning"
-            description={alertEventsMessage}
+            description={<>{alertEventsMessage} Personal wishlist items remain available, and this notice does not start an automatic retry.</>}
             role="status"
             title="Alert history unavailable"
             tone="unavailable"
@@ -737,7 +737,7 @@ function WishlistAlertPanel({
         {view === "personal" && alertEventsLoading && alertEvents.length === 0 && !alertEventsMessage && (
           <UxStatePanel
             className="ux-state--compact wl-alert-history__empty"
-            description={<>Requesting recent target-reached events.<UxSkeleton lines={2} /></>}
+            description={<>Waiting for recent target-reached events stored with this account.<UxSkeleton lines={2} /></>}
             role="status"
             title="Loading alert history"
             tone="loading"
@@ -746,7 +746,7 @@ function WishlistAlertPanel({
         {view === "personal" && !alertEventsLoading && alertEvents.length === 0 && !alertEventsMessage && (
           <UxStatePanel
             className="ux-state--compact wl-alert-history__empty"
-            description="Events will appear after an active account alert first reaches its saved target."
+            description="No target-reached events are stored for this account view. Events can appear after an active account alert reaches its saved target."
             title="No target-reached events yet"
             tone="empty"
           />
@@ -898,7 +898,7 @@ function NotificationPreferencesPanel({
       {loadState === "loading" && (
         <UxStatePanel
           className="ux-state--compact wl-notification-preferences__state"
-          description={<>Requesting the preferences stored with this account.<UxSkeleton lines={3} /></>}
+          description={<>Waiting for notification preferences stored with this account.<UxSkeleton lines={3} /></>}
           role="status"
           title="Loading notification preferences"
           tone="loading"
@@ -910,7 +910,7 @@ function NotificationPreferencesPanel({
           className="ux-state--compact wl-notification-preferences__error"
           description={(
             <>
-              {message?.text || "The account preference route could not be reached."} Wishlist items and alert settings remain available.
+              {message?.text || "The account preference route could not be reached."} Wishlist items and alert settings remain available. Retry preferences starts one manual request.
               <RequestIdSupportText requestId={message?.requestId} />
             </>
           )}
@@ -1305,7 +1305,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const heroCopy = isPersonal
     ? "See backend-computed alert status and recent target events while managing alert settings. Notification delivery is planned for later."
     : view === "offline"
-      ? "Wishlist service offline — showing the public preview so this page stays useful."
+      ? "The personal wishlist service is unavailable, so the separate public preview remains visible for local review."
       : "Explore the public wishlist preview. Sign in to manage a wishlist stored with your NEXORA account.";
 
   return (
@@ -1339,7 +1339,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       >
         <div>
           <strong>
-            {isPersonal ? "Personal wishlist" : view === "offline" ? "Wishlist service offline — showing public preview" : view === "checking" ? "Checking your account" : "Public wishlist preview"}
+            {isPersonal ? "Personal wishlist" : view === "offline" ? "Personal wishlist unavailable — showing public preview" : view === "checking" ? "Loading your personal wishlist" : "Public wishlist preview"}
           </strong>
           <span>
             {isPersonal
@@ -1347,7 +1347,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
               : view === "offline"
                 ? serviceMessage || "Cannot reach the NEXORA wishlist service."
                 : view === "checking"
-                  ? "The public preview remains available while your personal wishlist loads."
+                  ? "The public preview remains available while NEXORA waits for the local session and account wishlist response."
                   : serviceMessage || "Sign in to manage your personal wishlist."}
           </span>
         </div>
@@ -1446,7 +1446,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             {isPersonal && displayedItems.length === 0 && (
               <UxStatePanel
                 className="ux-state--grid wl-empty"
-                description="Add a game above to create the first item stored with this account. Public preview items are separate and will not be copied automatically."
+                description="No items are stored in this personal account view. Add a game above to create the first one; public preview items are separate and are not copied automatically."
                 role="status"
                 title="Your personal wishlist is empty"
                 tone="empty"
@@ -1457,7 +1457,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             {displayedItems.length > 0 && filteredItems.length === 0 && (
               <UxStatePanel
                 className="ux-state--grid wl-empty"
-                description={<>No games match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter in this {isPersonal ? "personal wishlist" : "public preview"}.</>}
+                description={<>No displayed games match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter in this {isPersonal ? "personal wishlist" : "public preview"}. This does not change or describe items outside the current view.</>}
                 role="status"
                 title="No matching wishlist signals"
                 tone="empty"

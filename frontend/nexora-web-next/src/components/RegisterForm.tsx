@@ -111,7 +111,7 @@ export default function RegisterForm() {
           aria-describedby="register-password-hint"
           required
         />
-        <small className="ux-helper" id="register-password-hint">Use 8–72 characters. This form submits to the configured local NEXORA authentication API.</small>
+        <small className="ux-helper" id="register-password-hint">Use 8–72 characters. Account creation needs the configured local NEXORA authentication API.</small>
       </div>
 
       <div className="auth-form__message">
@@ -129,7 +129,7 @@ export default function RegisterForm() {
 
       <button className="auth-form__submit" type="submit" disabled={isSubmitting}>
         {isSubmitting ? <span className="auth-form__spinner" aria-hidden="true" /> : null}
-        {isSubmitting ? "Creating account…" : "Create account"}
+        {isSubmitting ? "Creating local account…" : "Create account"}
       </button>
 
       <p className="auth-form__switch">

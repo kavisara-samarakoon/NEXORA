@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.56.0-frontend-accessibility-review-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.56.0-frontend-accessibility-review-foundation).
-> `v0.57.0-frontend-portfolio-evidence-polish-foundation` remains in progress
+> [`v0.57.0-frontend-portfolio-evidence-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.57.0-frontend-portfolio-evidence-polish-foundation).
+> `v0.58.0-frontend-empty-loading-error-state-polish-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -69,6 +69,7 @@ security controls, and testable optional integrations.
 | Frontend reviewer navigation | Dashboard reviewer path, reusable page source notices, and local-review status wording | Reviewer UX foundation |
 | Frontend accessibility review | Dashboard review aid highlights keyboard focus, skip-link, disabled-preview, and reduced-motion foundations | Reviewer accessibility foundation |
 | Frontend portfolio evidence | Dashboard evidence summary and source-labelled key pages support public-safe project review | Portfolio presentation foundation |
+| Frontend state clarity | Reviewer-safe loading, fallback, empty, unavailable, and manual retry explanations across primary frontend workflows | Reviewer UX foundation |
 | Request correlation | Safe response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
@@ -170,8 +171,11 @@ Optional development-container onboarding is documented in
 
 ## Local demo flow
 
-1. Follow the dashboard reviewer path, review the data-source and accessibility
-   aids, and use the reusable source notices on deals, giveaways, and security.
+1. Follow the dashboard reviewer path, review the data-source, accessibility,
+   portfolio evidence, and state-review aids, and use the reusable source
+   notices on deals, giveaways, and security. The state guide distinguishes
+   loading, bundled fallback, displayed-empty, unavailable, and manual retry
+   states; retry controls do not add polling or auto-refresh.
    Keyboard reviewers can confirm visible focus, the skip link, clearly named
    disabled preview controls, and reduced-motion support. These aids support
    local review; they are not production monitoring or a formal WCAG audit.
@@ -531,8 +535,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.56.0-frontend-accessibility-review-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.56.0-frontend-accessibility-review-foundation).
-The `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone is in
+[`v0.57.0-frontend-portfolio-evidence-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.57.0-frontend-portfolio-evidence-polish-foundation).
+The `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

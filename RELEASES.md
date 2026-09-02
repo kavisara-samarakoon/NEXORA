@@ -4,10 +4,23 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.56.0-frontend-accessibility-review-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.56.0-frontend-accessibility-review-foundation).
+[`v0.57.0-frontend-portfolio-evidence-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.57.0-frontend-portfolio-evidence-polish-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.57.0 Frontend Portfolio Evidence Polish foundation
+## In progress — v0.58.0 Frontend Empty Loading Error State Polish foundation
+
+- Polishes reviewer-facing loading, fallback, empty, unavailable, and retry
+  wording across the primary Next.js frontend and adds a compact dashboard state
+  review aid. This frontend/documentation state-clarity milestone changes no
+  backend/API contract, OpenAPI YAML, frontend API/fallback behavior,
+  auth/session/CSRF/CORS behavior, dependencies, workflows, scripts, retained
+  Vite frontend, or request-ID presentation. It adds no polling, auto-refresh,
+  timers, new network calls, or retry loops. It does not display or read secrets,
+  tokens, cookies, CSRF values, Authorization data, request IDs beyond existing
+  support text, raw exceptions, private data, environment values, local paths,
+  emails, or API keys, and it does not make NEXORA production-ready.
+
+## Completed frontend milestone — v0.57.0 Frontend Portfolio Evidence Polish foundation
 
 - Adds a public-safe dashboard portfolio evidence panel, adds existing-source
   notices to the Wishlist and Sentinel evidence pages, and documents safe

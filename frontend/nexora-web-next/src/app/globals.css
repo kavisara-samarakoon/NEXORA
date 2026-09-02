@@ -9205,10 +9205,89 @@ body::before {
   line-height: 1.55;
 }
 
+/* v0.58 frontend state review polish */
+.state-review {
+  display: grid;
+  gap: 16px;
+  padding: 22px 26px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-md);
+  background: var(--nx-panel);
+}
+
+.state-review__header h2 {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.state-review__header p {
+  max-width: 780px;
+  margin-top: 5px;
+  color: var(--nx-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.state-review__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.state-review__item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-sm);
+  background: var(--nx-panel);
+}
+
+.state-review__icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-sm);
+  color: var(--nx-blue);
+  background: var(--nx-panel);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.state-review__item h3 {
+  font-size: 11px;
+}
+
+.state-review__item p {
+  margin-top: 3px;
+  color: var(--nx-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.state-review__boundary {
+  padding-top: 12px;
+  border-top: 1px solid var(--nx-border);
+  color: var(--nx-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 @media (max-width: 900px) {
   .data-source-summary__grid,
   .reviewer-navigation__grid,
-  .portfolio-evidence__grid {
+  .portfolio-evidence__grid,
+  .state-review__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -9223,14 +9302,16 @@ body::before {
   .data-source-summary,
   .reviewer-navigation,
   .accessibility-review,
-  .portfolio-evidence {
+  .portfolio-evidence,
+  .state-review {
     padding: 20px;
   }
 
   .data-source-summary__grid,
   .reviewer-navigation__grid,
   .accessibility-review__grid,
-  .portfolio-evidence__grid {
+  .portfolio-evidence__grid,
+  .state-review__grid {
     grid-template-columns: 1fr;
   }
 

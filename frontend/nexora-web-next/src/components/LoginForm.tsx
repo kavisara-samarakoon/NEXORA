@@ -64,7 +64,7 @@ export default function LoginForm() {
           maxLength={320}
           required
         />
-        <small className="ux-helper" id="login-identifier-hint">Use the email address or username linked to your local NEXORA account.</small>
+        <small className="ux-helper" id="login-identifier-hint">Use the identifier linked to your local NEXORA account. Sign-in needs the configured local backend.</small>
       </div>
 
       <div className="auth-form__field">
@@ -85,7 +85,7 @@ export default function LoginForm() {
           <div className="auth-form__feedback auth-form__feedback--error" id="login-form-error" role="alert">
             <span aria-hidden="true">!</span>
             <span>
-              <strong>Sign-in failed</strong>
+              <strong>Sign-in not completed</strong>
               <small>{errorDetails.message}</small>
               <RequestIdSupportText requestId={errorDetails.requestId} />
             </span>
@@ -95,7 +95,7 @@ export default function LoginForm() {
 
       <button className="auth-form__submit" type="submit" disabled={isSubmitting}>
         {isSubmitting ? <span className="auth-form__spinner" aria-hidden="true" /> : null}
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isSubmitting ? "Checking local account…" : "Sign in"}
       </button>
 
       <p className="auth-form__switch">

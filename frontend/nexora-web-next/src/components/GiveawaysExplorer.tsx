@@ -251,7 +251,7 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
       {source !== "api" && (
         <UxStatePanel
           className="ux-state--compact ga-source-fallback"
-          description="The backend giveaway feed could not be reached, so this page is showing bundled preview entries. Dates and availability may not be current."
+          description="The backend giveaway feed could not be reached, so this page is showing bundled local demo entries. These preview dates and availability may not be current; confirm any promotion with the listed store."
           title="Static fallback feed"
           tone="fallback"
         />
@@ -312,9 +312,9 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
                 className="ux-state--grid ga-empty"
                 description={giveaways.length === 0
                   ? source === "api"
-                    ? "The backend feed returned no giveaway entries. Check again later or confirm current promotions with each store."
-                    : "No bundled preview entries are available. This does not confirm that stores have no active promotions."
-                  : <>No entries match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter.</>}
+                    ? "The backend feed returned no displayed giveaway entries. This does not prove that no real-world promotions exist; confirm current availability with each store."
+                    : "No bundled local demo entries are available. This does not prove that stores have no active real-world promotions."
+                  : <>No entries in this displayed feed match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter. This filtered view does not describe every real-world promotion.</>}
                 role="status"
                 title={giveaways.length === 0 ? "No giveaway entries available" : "No matching giveaways"}
                 tone="empty"

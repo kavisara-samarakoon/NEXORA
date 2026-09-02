@@ -4,20 +4,21 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.56.0-frontend-accessibility-review-foundation`, which adds a bounded
-dashboard accessibility review aid and focused screen-reader and disabled-
-preview wording polish.
+`v0.57.0-frontend-portfolio-evidence-polish-foundation`, which adds a public-
+safe dashboard evidence summary, broader key-page source notices, and safe
+screenshot boundaries for portfolio and reviewer use.
 
-The `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone is in
-progress. It adds a public-safe dashboard evidence summary, extends source
-notices to Wishlist and Sentinel, and documents safe screenshot boundaries for
-portfolio and reviewer use. This is frontend and documentation presentation
-polish only: API calls, fallback behavior, backend and API contracts, OpenAPI
-YAML, auth/session/CSRF/CORS behavior, dependencies, workflows, scripts, and
-request-ID presentation remain unchanged. It does not make NEXORA production-
-ready or claim project, employment, or business readiness. Production
-deployment, monitoring, provider hardening, formal accessibility assessment,
-and business/income readiness remain future work.
+The `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone is
+in progress. It polishes primary Next.js frontend wording and semantic structure
+for loading, bundled fallback, displayed-empty, unavailable, and manual retry
+states, with a compact dashboard interpretation aid. This is frontend and
+documentation state-clarity polish only: backend and API contracts, frontend
+API/fallback behavior, OpenAPI YAML, auth/session/CSRF/CORS behavior,
+dependencies, workflows, scripts, and request-ID presentation remain unchanged.
+It adds no polling, auto-refresh, timers, new network calls, or retry loops and
+does not make NEXORA production-ready. Production deployment, monitoring,
+provider hardening, formal accessibility assessment, and business/income
+readiness remain future work.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -122,7 +123,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.56.0-frontend-accessibility-review-foundation`.
+`v0.57.0-frontend-portfolio-evidence-polish-foundation`.
 
 ## Completed foundations
 

@@ -44,12 +44,12 @@ export default function AddWishlistItemForm({
     const targetPrice = normalizeTargetPriceInput(readRequiredText(formData, "targetPrice"));
 
     if (!title || !currentPrice) {
-      setMessage({ tone: "error", text: "Enter both a game title and its current price." });
+      setMessage({ tone: "error", text: "Enter a game title and the current price label before adding this item." });
       return;
     }
 
     if (!targetPrice) {
-      setMessage({ tone: "error", text: "Enter a valid price such as $15.00 or FREE." });
+      setMessage({ tone: "error", text: "Enter a target price in a supported format, such as $15.00 or FREE." });
       return;
     }
 
@@ -79,7 +79,7 @@ export default function AddWishlistItemForm({
       onTokenChanged(result.token);
       onAdded(item);
       form.reset();
-      setMessage({ tone: "success", text: `${item.title} was added to your personal wishlist.` });
+      setMessage({ tone: "success", text: `${item.title} is now stored in this account’s personal wishlist.` });
     } catch (error) {
       const details = normalizeUserWishlistError(error);
       if (details.status === 401) onAuthenticationRequired();
@@ -168,7 +168,7 @@ export default function AddWishlistItemForm({
             <p className={`wl-form-message wl-form-message--${message.tone}`} id="wl-add-message" role={message.tone === "error" ? "alert" : "status"}>
               <span aria-hidden="true">{message.tone === "success" ? "✓" : "!"}</span>
               <span>
-                <strong>{message.tone === "success" ? "Wishlist item added" : "Check this form"}</strong>
+                <strong>{message.tone === "success" ? "Wishlist item added" : "Wishlist item not added"}</strong>
                 <small>{message.text}</small>
                 {message.tone === "error" ? (
                   <RequestIdSupportText requestId={message.requestId} />
