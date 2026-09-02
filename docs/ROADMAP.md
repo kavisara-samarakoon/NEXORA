@@ -7,10 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.53.0-frontend-backend-health-visibility-foundation` milestone with a
-  compact, safe local `/api/health` panel on the primary dashboard.
-- Keep the completed `v0.52.0-reviewer-preflight-ci-foundation` milestone as the
-  latest stable milestone until v0.53 is merged and tagged.
+  `v0.54.0-frontend-data-source-transparency-foundation` milestone with safe
+  dashboard source summaries and compact source notices on key primary-frontend
+  pages.
+- Keep the completed
+  `v0.53.0-frontend-backend-health-visibility-foundation` milestone as the
+  latest stable milestone until v0.54 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -60,7 +62,7 @@ project's academic, portfolio, and product goals evolve.
 - Explore clearer price-history summaries and comparisons after defining data
   aggregation and retention requirements.
 - Improve provider attribution and explain when live data falls back to local
-  data.
+  data beyond the bounded v0.54 reviewer-transparency labels.
 
 ## Deployment preparation
 
@@ -77,6 +79,9 @@ project's academic, portfolio, and product goals evolve.
   approved topology with alerting and response ownership. The v0.33 safe
   runtime/configuration summary and v0.53 frontend panel are only lightweight
   local foundations.
+- Keep production deployment, centralized observability, uptime monitoring,
+  and real external-provider hardening as future work with explicit ownership
+  and operational boundaries.
 - Add full observability dashboards later, after metrics, tracing, managed
   logging, alert ownership, and operational response are defined. Prometheus,
   Grafana, OpenTelemetry, and external integrations remain deliberately

@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.52.0-reviewer-preflight-ci-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.52.0-reviewer-preflight-ci-foundation).
-The `v0.53.0-frontend-backend-health-visibility-foundation` milestone remains
+[`v0.53.0-frontend-backend-health-visibility-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.53.0-frontend-backend-health-visibility-foundation).
+The `v0.54.0-frontend-data-source-transparency-foundation` milestone remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -46,12 +46,13 @@ deployment.
 | Notifications | Stored account preferences with disabled-by-default log/email delivery foundations |
 | Sentinel | Authenticated deterministic local responses or optional backend-only Gemini responses |
 | Backend health visibility | Primary dashboard surfaces safe local reachability, runtime/data modes, auth-guard state, and active profiles |
+| Frontend data-source transparency | Primary dashboard and key-page notices expose safe API, static fallback, external-provider, and unavailable labels for reviewer clarity |
 
 ## Architecture summary
 
 | Layer | Responsibility |
 | --- | --- |
-| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, and reviewer-facing backend health visibility |
+| Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, and safe reviewer-facing source labels |
 | Spring Boot backend | REST endpoints, validation, authentication, ownership rules, provider gateways, and scheduled foundations |
 | Default profile | Database-free local demo with in-memory account and feature stores |
 | `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
@@ -108,6 +109,9 @@ cost controls, or production AI observability.
 - The primary dashboard safely surfaces selected `/api/health` labels or generic
   local startup guidance when the backend is unavailable. It is not production
   monitoring or a deployment health check.
+- The primary dashboard and deals, giveaways, and security pages expose safe
+  source labels so reviewers can distinguish API-connected data from bundled
+  fallback previews. These UI labels do not change the underlying API contract.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 

@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.52.0-reviewer-preflight-ci-foundation` is the latest stable development
-milestone while `v0.53.0-frontend-backend-health-visibility-foundation` is in
-progress.
+`v0.53.0-frontend-backend-health-visibility-foundation` is the latest stable
+development milestone while
+`v0.54.0-frontend-data-source-transparency-foundation` is in progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -274,6 +274,12 @@ The primary frontend may display selected safe `/api/health` fields for local
 reviewer visibility, including service, runtime/data modes, the auth-production-
 guard check, and active profiles. This presentation does not change the formal
 response contract or turn the endpoint into a production readiness probe.
+
+The primary frontend also derives safe UI-only source labels for reviewer
+clarity: `Backend API`, `Static fallback`, `Backend external provider`, and
+`Unavailable`. These labels describe whether the frontend used an API result or
+its existing safe preview fallback; they are not response fields, do not change
+the formal API contract, and do not require a change to `openapi.yaml`.
 
 ## Public catalog and demo endpoints
 

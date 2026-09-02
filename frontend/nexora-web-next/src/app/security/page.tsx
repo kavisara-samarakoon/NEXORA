@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import DataSourceBadge from "@/components/DataSourceBadge";
 import SecurityCenter from "@/components/SecurityCenter";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import { getSecurityStatus } from "@/lib/api";
+import { getFrontendDataSourceDetails } from "@/lib/data-source";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -15,6 +17,7 @@ export const metadata: Metadata = createPageMetadata({
 
 export default async function SecurityPage() {
   const { securityStatus, source } = await getSecurityStatus();
+  const { detail } = getFrontendDataSourceDetails(source);
 
   return (
     <div className="app-shell">
@@ -22,6 +25,17 @@ export default async function SecurityPage() {
       <div className="main-shell">
         <Topbar />
         <main className="dashboard security-page nx-page-reveal" id="main-content" tabIndex={-1}>
+          <aside
+            className="data-source-notice"
+            aria-label="Security status data source"
+          >
+            <div className="data-source-notice__copy">
+              <strong>Security status data</strong>
+              <code>/api/security/status</code>
+            </div>
+            <DataSourceBadge source={source} />
+            <p className="data-source-note">{detail}</p>
+          </aside>
           <SecurityCenter securityStatus={securityStatus} source={source} />
         </main>
       </div>
