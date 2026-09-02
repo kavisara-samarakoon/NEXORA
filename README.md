@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.54.0-frontend-data-source-transparency-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.54.0-frontend-data-source-transparency-foundation).
-> `v0.55.0-frontend-reviewer-navigation-polish-foundation` remains in progress
+> [`v0.55.0-frontend-reviewer-navigation-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.55.0-frontend-reviewer-navigation-polish-foundation).
+> `v0.56.0-frontend-accessibility-review-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -67,6 +67,7 @@ security controls, and testable optional integrations.
 | Frontend backend health visibility | Dashboard panel for safe local `/api/health` reachability and mode/check labels | Reviewer visibility foundation |
 | Frontend data-source transparency | Dashboard summary and key-page notices distinguish local backend API data from bundled static fallback previews | Reviewer visibility foundation |
 | Frontend reviewer navigation | Dashboard reviewer path, reusable page source notices, and local-review status wording | Reviewer UX foundation |
+| Frontend accessibility review | Dashboard review aid highlights keyboard focus, skip-link, disabled-preview, and reduced-motion foundations | Reviewer accessibility foundation |
 | Request correlation | Safe response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
@@ -168,11 +169,11 @@ Optional development-container onboarding is documented in
 
 ## Local demo flow
 
-1. Follow the dashboard reviewer path, review the data-source summary, and use
-   the reusable source notices on deals, giveaways, and security to distinguish
-   local backend API data from bundled static fallback previews. Then browse
-   and filter deals and giveaways without an account. This guidance is for
-   local review, not production monitoring.
+1. Follow the dashboard reviewer path, review the data-source and accessibility
+   aids, and use the reusable source notices on deals, giveaways, and security.
+   Keyboard reviewers can confirm visible focus, the skip link, clearly named
+   disabled preview controls, and reduced-motion support. These aids support
+   local review; they are not production monitoring or a formal WCAG audit.
 2. Register a local account and sign in through the cookie-based browser flow.
 3. Add a game to the wishlist, set a target price, and inspect price history.
 4. Review generated alerts and notification preferences.
@@ -519,8 +520,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.54.0-frontend-data-source-transparency-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.54.0-frontend-data-source-transparency-foundation).
-The `v0.55.0-frontend-reviewer-navigation-polish-foundation` milestone is in
+[`v0.55.0-frontend-reviewer-navigation-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.55.0-frontend-reviewer-navigation-polish-foundation).
+The `v0.56.0-frontend-accessibility-review-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

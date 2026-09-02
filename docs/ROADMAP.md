@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.55.0-frontend-reviewer-navigation-polish-foundation` milestone with a
-  dashboard reviewer path, reusable key-page source notices, and safe static
-  local-review labels.
+  `v0.56.0-frontend-accessibility-review-foundation` milestone with a compact
+  dashboard review aid and focused screen-reader and disabled-preview wording
+  polish.
 - Keep the completed
-  `v0.54.0-frontend-data-source-transparency-foundation` milestone as the latest
-  stable milestone until v0.55 is merged and tagged.
+  `v0.55.0-frontend-reviewer-navigation-polish-foundation` milestone as the
+  latest stable milestone until v0.56 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -21,8 +21,9 @@ project's academic, portfolio, and product goals evolve.
   need it, preserving domain-specific codes and avoiding raw exception or
   request disclosure.
 - Continue keyboard, label, ARIA, focus, reduced-motion, and UX-state
-  accessibility review after the v0.31 frontend polish; this work does not
-  change backend, API, security, deployment readiness, or production status.
+  accessibility review after the v0.56 local review aid. A formal accessibility
+  audit and conformance assessment remain future work and do not change backend,
+  API, security, deployment readiness, or production status.
 - Keep the retained Vite prototype clearly separated from the primary product.
 
 ## API contract tooling

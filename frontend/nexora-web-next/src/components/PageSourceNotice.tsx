@@ -16,16 +16,25 @@ export default function PageSourceNotice({
   source,
 }: PageSourceNoticeProps) {
   const { detail } = getFrontendDataSourceDetails(source);
+  const idBase =
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "page-source";
+  const labelId = `${idBase}-source-label`;
+  const detailId = `${idBase}-source-detail`;
+  const metaId = `${idBase}-source-meta`;
 
   return (
     <aside
       className="page-source-notice"
-      aria-label={`${label} source information`}
+      aria-labelledby={labelId}
+      aria-describedby={`${detailId} ${metaId}`}
     >
       <div className="page-source-notice__copy">
-        <strong>{label}</strong>
-        <p>{detail}</p>
-        <p className="page-source-notice__meta">
+        <strong id={labelId}>{label}</strong>
+        <p id={detailId}>{detail}</p>
+        <p className="page-source-notice__meta" id={metaId}>
           Endpoint: <code>{endpoint}</code>
         </p>
       </div>

@@ -24,11 +24,11 @@ export default function Topbar() {
           <span className="status-dot" aria-hidden="true" />
           Local preview
         </div>
-        <button className="icon-button icon-button--emoji" type="button" aria-label="Notifications unavailable in this preview" title="Notifications are unavailable in this preview" disabled>
+        <button className="icon-button icon-button--emoji" type="button" aria-label="Notifications are disabled in the local preview" title="Notifications are disabled in the local preview" disabled>
           <span aria-hidden="true">🔔</span>
           <span className="notification-dot" aria-hidden="true" />
         </button>
-        <button className="icon-button icon-button--emoji" type="button" aria-label="Messages unavailable in this preview" title="Messages are unavailable in this preview" disabled>
+        <button className="icon-button icon-button--emoji" type="button" aria-label="Messages are disabled in the local preview" title="Messages are disabled in the local preview" disabled>
           <span aria-hidden="true">💬</span>
         </button>
         <AuthStatus />

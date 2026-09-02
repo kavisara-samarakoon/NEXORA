@@ -57,7 +57,11 @@ export default function ReviewerNavigationPanel() {
         <ul className="reviewer-navigation__grid">
           {reviewerRoutes.map((route) => (
             <li key={route.href}>
-              <Link className="reviewer-navigation__card" href={route.href}>
+              <Link
+                className="reviewer-navigation__card"
+                href={route.href}
+                aria-label={`Review ${route.label} page: ${route.detail}`}
+              >
                 <span
                   className="reviewer-navigation__card-icon"
                   aria-hidden="true"
