@@ -1,6 +1,8 @@
 package com.nexora.api.wishlist;
 
 import com.nexora.api.notifications.NotificationDispatcher;
+import com.nexora.api.notifications.preferences.NotificationPreferenceResponse;
+import com.nexora.api.notifications.preferences.UserNotificationPreferenceService;
 import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
 import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
@@ -15,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -258,12 +261,17 @@ class DatabaseUserWishlistServiceTests {
             WishlistPriceHistoryService historyService) {
         when(eventRepository.saveAndFlush(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        UserNotificationPreferenceService preferences = mock(
+                UserNotificationPreferenceService.class);
+        when(preferences.getPreferences(anyLong()))
+                .thenReturn(NotificationPreferenceResponse.defaults());
         return new DatabaseUserWishlistService(
                 repository,
                 eventRepository,
                 new WishlistAlertEventRecorder(
                         eventRepository,
-                        mock(NotificationDispatcher.class)
+                        mock(NotificationDispatcher.class),
+                        preferences
                 ),
                 historyService
         );

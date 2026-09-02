@@ -2,6 +2,8 @@ package com.nexora.api.wishlist;
 
 import com.nexora.api.notifications.AlertNotificationRequest;
 import com.nexora.api.notifications.NotificationDispatcher;
+import com.nexora.api.notifications.preferences.NotificationPreferenceResponse;
+import com.nexora.api.notifications.preferences.UserNotificationPreferenceService;
 import com.nexora.api.wishlist.persistence.WishlistAlertEvent;
 import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItem;
@@ -19,12 +21,15 @@ public class WishlistAlertEventRecorder {
 
     private final WishlistAlertEventRepository wishlistAlertEventRepository;
     private final NotificationDispatcher notificationDispatcher;
+    private final UserNotificationPreferenceService notificationPreferenceService;
 
     public WishlistAlertEventRecorder(
             WishlistAlertEventRepository wishlistAlertEventRepository,
-            NotificationDispatcher notificationDispatcher) {
+            NotificationDispatcher notificationDispatcher,
+            UserNotificationPreferenceService notificationPreferenceService) {
         this.wishlistAlertEventRepository = wishlistAlertEventRepository;
         this.notificationDispatcher = notificationDispatcher;
+        this.notificationPreferenceService = notificationPreferenceService;
     }
 
     public void recordTargetReachedEvent(
@@ -50,24 +55,29 @@ public class WishlistAlertEventRecorder {
                         null
                 ));
 
-        AlertNotificationRequest notificationRequest = new AlertNotificationRequest(
-                savedEvent.getUserId(),
-                savedEvent.getWishlistItemId(),
-                savedEvent.getItemTitle(),
-                savedEvent.getStore(),
-                savedEvent.getCurrentPrice(),
-                savedEvent.getTargetPrice(),
-                savedEvent.getEvaluationState(),
-                savedEvent.getMessage()
-        );
         try {
-            notificationDispatcher.dispatchTargetReached(notificationRequest);
-        } catch (RuntimeException exception) {
-            LOGGER.warn(
-                    "Notification dispatch failed after saving alert event for "
-                            + "wishlist item {} ({})",
+            NotificationPreferenceResponse preferences =
+                    notificationPreferenceService.getPreferences(savedEvent.getUserId());
+            if (!preferences.emailEnabled() || !preferences.targetReachedEnabled()) {
+                return;
+            }
+
+            AlertNotificationRequest notificationRequest = new AlertNotificationRequest(
+                    savedEvent.getUserId(),
                     savedEvent.getWishlistItemId(),
-                    exception.getMessage()
+                    savedEvent.getItemTitle(),
+                    savedEvent.getStore(),
+                    savedEvent.getCurrentPrice(),
+                    savedEvent.getTargetPrice(),
+                    savedEvent.getEvaluationState(),
+                    savedEvent.getMessage()
+            );
+            notificationDispatcher.dispatchTargetReached(notificationRequest);
+        } catch (RuntimeException ignored) {
+            LOGGER.warn(
+                    "Notification preference check or dispatch failed after saving alert event "
+                            + "for wishlist item {}",
+                    savedEvent.getWishlistItemId()
             );
         }
     }

@@ -4,10 +4,27 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
+[`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.61.0 Backend CORS Request-ID Exposure foundation
+## In progress — v0.62.0 Backend Notification Preference Enforcement foundation
+
+- Enforces the current account's saved `emailEnabled` and
+  `targetReachedEnabled` preferences after a target-reached wishlist alert event
+  is recorded and before the existing outbound dispatcher is invoked. Either
+  disabled value suppresses dispatch; both enabled values preserve dispatch.
+  The existing default, which has email disabled, remains fail-safe.
+- Existing alert event/history recording and global notification provider
+  configuration semantics remain unchanged. Preference lookup or dispatch
+  failure does not undo the already recorded event and does not log exception
+  contents.
+- API JSON response shapes and frontend behavior are unchanged. No
+  delivery/read-state fields, notification outbox, retry worker, scheduler, or
+  provider is added. Dependencies, migrations, OpenAPI YAML, workflows,
+  scripts, auth/session/CSRF/CORS/request-ID behavior, and production readiness
+  are unchanged.
+
+## Completed backend milestone — v0.61.0 Backend CORS Request-ID Exposure foundation
 
 - Exposes only the safe `X-NEXORA-Request-ID` response header through CORS so
   browser JavaScript on an existing trusted frontend origin can read the

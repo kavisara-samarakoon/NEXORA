@@ -10,12 +10,12 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` is the latest stable
+`v0.61.0-backend-cors-request-id-exposure-foundation` is the latest stable
 development milestone while
-`v0.61.0-backend-cors-request-id-exposure-foundation` is in progress. The v0.61
-milestone exposes only `X-NEXORA-Request-ID` as a CORS-readable response header;
-API JSON bodies, authentication/session/CSRF behavior, and OpenAPI YAML are
-unchanged.
+`v0.62.0-backend-notification-preference-enforcement-foundation` is in progress.
+The v0.62 milestone gates outbound target-reached wishlist alert dispatch on
+saved email and target-reached preferences after recording the existing event.
+API JSON response shapes and OpenAPI YAML are unchanged.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -380,6 +380,14 @@ numeric amount/currency, source, and observation time.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/api/me/notification-preferences` | Protected | Get current account preferences, creating defaults when absent | None | `200`; five boolean preference fields | `authentication_required`, `internal_error` | Defaults: email false; in-app, target-reached, price-drop, and free-game true. |
 | PATCH | `/api/me/notification-preferences` | Protected | Partially update current account preferences | One or more of `emailEnabled`, `inAppEnabled`, `targetReachedEnabled`, `priceDropEnabled`, `freeGameEnabled` | `200`; complete updated preference response | `authentication_required`, `validation_failed`, `internal_error` | Empty updates and malformed/unknown input are rejected. This configures preferences; it does not promise production delivery. |
+
+For the existing target-reached wishlist event path, event/history recording
+occurs before outbound dispatch eligibility is checked. Dispatch requires both
+`emailEnabled` and `targetReachedEnabled`; either disabled value suppresses it.
+When no saved preference exists, the established defaults apply, including
+`emailEnabled=false`. This changes no response field and adds no delivery/read
+state, outbox, retry worker, scheduler, or provider. Global notification
+delivery remains independently disabled by default.
 
 ## Protected Sentinel insight endpoint
 

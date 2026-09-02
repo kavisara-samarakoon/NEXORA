@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
-> `v0.61.0-backend-cors-request-id-exposure-foundation` remains in progress
+> [`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
+> `v0.62.0-backend-notification-preference-enforcement-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -60,7 +60,7 @@ security controls, and testable optional integrations.
 | Price targets and alerts | Set thresholds, generate alerts, and review generated alert history | Implemented MVP |
 | Price history | Record and query snapshots used by deal and alert workflows | Implemented foundation |
 | Price refresh | Run manual or scheduled refresh through stored or optional external providers | Optional foundation |
-| Notifications | Store preferences and optionally deliver through SMTP | Optional foundation |
+| Notifications | Store account preferences, enforce email and target-reached choices before dispatch, and optionally deliver through SMTP | Optional foundation |
 | Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
@@ -466,6 +466,16 @@ CheapShark wishlist snapshots and the email provider must be selected
 explicitly. Real email delivery additionally requires external Spring mail/SMTP
 configuration; no SMTP credentials are committed.
 
+The in-progress v0.62 preference-enforcement foundation records an existing
+target-reached alert event before checking the account's saved notification
+preferences. Outbound dispatcher invocation requires both `emailEnabled` and
+`targetReachedEnabled`; either disabled value suppresses dispatch. The existing
+default has email disabled, so an account without saved preferences does not
+dispatch outbound notifications. Global notification configuration remains the
+dispatcher's responsibility. API JSON shapes and alert-history fields are
+unchanged, and no delivery/read-state fields, outbox, retry worker, scheduler,
+or provider are added.
+
 ## Continuous integration
 
 GitHub Actions validates both primary applications on pushes to `main` and pull
@@ -549,14 +559,15 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
-The `v0.61.0-backend-cors-request-id-exposure-foundation` milestone is in
+[`v0.61.0-backend-cors-request-id-exposure-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.61.0-backend-cors-request-id-exposure-foundation).
+The `v0.62.0-backend-notification-preference-enforcement-foundation` milestone is in
 progress until it is merged and tagged.
-It exposes only the safe `X-NEXORA-Request-ID` response header through the
-existing trusted-origin CORS policy. API JSON bodies, request-ID generation and
-validation, auth/session/CSRF behavior, frontend behavior, dependencies,
-migrations, workflows, scripts, and OpenAPI YAML remain unchanged. Sensitive
-headers and values are not exposed, and production readiness is unchanged.
+It enforces saved email and target-reached notification preferences before
+outbound wishlist alert dispatch while retaining existing event/history
+recording. API JSON bodies, frontend behavior, auth/session/CSRF/CORS/request-ID
+behavior, dependencies, migrations, workflows, scripts, and OpenAPI YAML remain
+unchanged. It adds no delivery/read-state fields, outbox, retry worker,
+scheduler, or provider, and production readiness is unchanged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and
