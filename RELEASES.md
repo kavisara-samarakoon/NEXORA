@@ -4,10 +4,21 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.53.0-frontend-backend-health-visibility-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.53.0-frontend-backend-health-visibility-foundation).
+[`v0.54.0-frontend-data-source-transparency-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.54.0-frontend-data-source-transparency-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.54.0 Frontend Data Source Transparency foundation
+## In progress — v0.55.0 Frontend Reviewer Navigation Polish foundation
+
+- Adds a reusable page source notice to the deals, giveaways, and security
+  pages, a six-route reviewer path panel to the dashboard, and safer static
+  local-preview wording in the topbar and sidebar. This frontend presentation
+  milestone changes no backend/API contract, OpenAPI YAML,
+  auth/session/CSRF/CORS behavior, dependencies, workflows, scripts, or retained
+  Vite frontend. It does not display or read secrets, tokens, cookies, CSRF
+  values, Authorization data, request IDs, raw exceptions, private data, or
+  local paths, and it does not make NEXORA production-ready.
+
+## Completed frontend milestone — v0.54.0 Frontend Data Source Transparency foundation
 
 - Adds a primary-dashboard data-source summary that distinguishes local backend
   API results from bundled static fallback previews, plus compact source notices

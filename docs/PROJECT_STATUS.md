@@ -4,21 +4,19 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.53.0-frontend-backend-health-visibility-foundation`, which adds safe local
-backend reachability and runtime labels to the primary dashboard without
-changing the backend health contract.
+`v0.54.0-frontend-data-source-transparency-foundation`, which adds safe source
+labels for distinguishing local backend API results from bundled static
+fallback previews.
 
-The `v0.54.0-frontend-data-source-transparency-foundation` milestone is in
-progress. It adds safe source labels that help reviewers distinguish data
-loaded from the local backend API from bundled static fallback previews. The
-home dashboard summarizes backend health, dashboard summary, deals, giveaways,
-and security-status sources, while the deals, giveaways, and security pages
-show compact source notices. This frontend-only transparency changes no
-fallback behavior, backend, API contract, OpenAPI YAML, auth/session/CSRF/CORS
-behavior, dependencies, workflows, or scripts and does not make NEXORA
-production-ready. Production monitoring dashboards, centralized logs, tracing,
-alerting, uptime SLAs, deployment health checks, and provider hardening remain
-future work.
+The `v0.55.0-frontend-reviewer-navigation-polish-foundation` milestone is in
+progress. It adds a reusable page source notice, a six-route reviewer path on
+the dashboard, and safer static local-review wording in the topbar and sidebar.
+This is frontend UI polish only: API calls, fallback behavior, backend and API
+contracts, OpenAPI YAML, auth/session/CSRF/CORS behavior, dependencies,
+workflows, and scripts remain unchanged. It does not make NEXORA production-
+ready. Production monitoring dashboards, centralized logs, tracing, alerting,
+uptime SLAs, deployment health checks, and provider hardening remain future
+work.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -123,13 +121,15 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.53.0-frontend-backend-health-visibility-foundation`.
+`v0.54.0-frontend-data-source-transparency-foundation`.
 
 ## Completed foundations
 
 - Next.js App Router frontend with responsive feature pages and typed fallbacks.
 - Reviewer-facing frontend source labels distinguish local API-connected data
   from bundled static fallback preview states without changing data behavior.
+- A compact dashboard reviewer path and reusable key-page source notice improve
+  local navigation clarity without adding route, API, or auth logic.
 - Spring Boot REST API with validation, security, and profile-based services.
 - JWT registration, login, and authenticated account lookup.
 - PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.

@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.53.0-frontend-backend-health-visibility-foundation` is the latest stable
+`v0.54.0-frontend-data-source-transparency-foundation` is the latest stable
 development milestone while
-`v0.54.0-frontend-data-source-transparency-foundation` is in progress.
+`v0.55.0-frontend-reviewer-navigation-polish-foundation` is in progress.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -280,6 +280,10 @@ clarity: `Backend API`, `Static fallback`, `Backend external provider`, and
 `Unavailable`. These labels describe whether the frontend used an API result or
 its existing safe preview fallback; they are not response fields, do not change
 the formal API contract, and do not require a change to `openapi.yaml`.
+
+The dashboard reviewer navigation and reusable page source notice are frontend
+presentation only. They add no routes, requests, response fields, or auth
+behavior and do not change this API contract or `openapi.yaml`.
 
 ## Public catalog and demo endpoints
 
