@@ -4,10 +4,25 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.57.0-frontend-portfolio-evidence-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.57.0-frontend-portfolio-evidence-polish-foundation).
+[`v0.58.0-frontend-empty-loading-error-state-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.58.0-frontend-empty-loading-error-state-polish-foundation).
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.58.0 Frontend Empty Loading Error State Polish foundation
+## In progress — v0.59.0 Frontend Screenshot-Safe Reviewer Mode Polish foundation
+
+- Adds dashboard screenshot-safe review guidance and documents public-safe
+  capture rules for portfolio, GitHub, lecturer, and reviewer screenshots. This
+  frontend/documentation milestone adds no runtime screenshot mode, feature
+  flags, masking logic, storage access, polling, auto-refresh, timers, retry
+  loops, or new network calls. It changes no backend/API contract, OpenAPI YAML,
+  frontend API/fallback behavior, auth/session/CSRF/CORS behavior, AuthStatus,
+  dependencies, workflows, scripts, retained Vite frontend, or request-ID
+  presentation. It does not display or read secrets, tokens, cookies, CSRF
+  values, Authorization data, request IDs beyond existing support text, raw
+  exceptions, private data, environment values, local paths, emails, or API
+  keys. It does not make NEXORA production-ready, WCAG-certified, or
+  employment-ready.
+
+## Completed frontend milestone — v0.58.0 Frontend Empty Loading Error State Polish foundation
 
 - Polishes reviewer-facing loading, fallback, empty, unavailable, and retry
   wording across the primary Next.js frontend and adds a compact dashboard state

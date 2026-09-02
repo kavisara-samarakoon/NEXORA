@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.57.0-frontend-portfolio-evidence-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.57.0-frontend-portfolio-evidence-polish-foundation).
-> `v0.58.0-frontend-empty-loading-error-state-polish-foundation` remains in progress
+> [`v0.58.0-frontend-empty-loading-error-state-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.58.0-frontend-empty-loading-error-state-polish-foundation).
+> `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -70,6 +70,7 @@ security controls, and testable optional integrations.
 | Frontend accessibility review | Dashboard review aid highlights keyboard focus, skip-link, disabled-preview, and reduced-motion foundations | Reviewer accessibility foundation |
 | Frontend portfolio evidence | Dashboard evidence summary and source-labelled key pages support public-safe project review | Portfolio presentation foundation |
 | Frontend state clarity | Reviewer-safe loading, fallback, empty, unavailable, and manual retry explanations across primary frontend workflows | Reviewer UX foundation |
+| Screenshot-safe reviewer guidance | Dashboard checklist documents public-safe capture boundaries without changing runtime identity or privacy behavior | Portfolio review foundation |
 | Request correlation | Safe response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
@@ -172,7 +173,8 @@ Optional development-container onboarding is documented in
 ## Local demo flow
 
 1. Follow the dashboard reviewer path, review the data-source, accessibility,
-   portfolio evidence, and state-review aids, and use the reusable source
+   portfolio evidence, state-review, and screenshot-safe review aids, and use
+   the reusable source
    notices on deals, giveaways, and security. The state guide distinguishes
    loading, bundled fallback, displayed-empty, unavailable, and manual retry
    states; retry controls do not add polling or auto-refresh.
@@ -187,13 +189,17 @@ Optional development-container onboarding is documented in
 
 ### Public-safe portfolio captures
 
-The dashboard, deals, giveaways, Wishlist, security, and Sentinel pages provide
-useful project evidence with visible source labels and reviewer guidance. When
-capturing screenshots, crop browser account/profile UI and any private user
-content. Avoid terminal windows that reveal usernames or local filesystem
-paths, and never include `.env` files, tokens, cookies, API keys, passwords, or
-private user data. These captures demonstrate local development work only and
-do not establish production readiness.
+The dashboard `ScreenshotSafeReviewPanel` identifies Dashboard, Deals,
+Giveaways, Wishlist, Security, and Sentinel as the clearest public-safe capture
+pages. Crop browser tabs, the address bar, bookmarks, extensions, account menus,
+and desktop notifications. Use an anonymous or safe demo account, or crop
+signed-in account/profile areas before sharing.
+
+Keep terminal usernames and local filesystem paths outside captures. Never show
+`.env` files, API keys, tokens, cookies, passwords, CSRF values, Authorization
+data, private user data, emails, or raw errors. Screenshots are local MVP
+evidence only; they do not prove production deployment, monitoring, formal
+accessibility certification, privacy guarantees, or production readiness.
 
 ## Local setup
 
@@ -535,8 +541,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.57.0-frontend-portfolio-evidence-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.57.0-frontend-portfolio-evidence-polish-foundation).
-The `v0.58.0-frontend-empty-loading-error-state-polish-foundation` milestone is in
+[`v0.58.0-frontend-empty-loading-error-state-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.58.0-frontend-empty-loading-error-state-polish-foundation).
+The `v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation` milestone is in
 progress until it is merged and tagged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier

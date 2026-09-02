@@ -9283,11 +9283,92 @@ body::before {
   line-height: 1.5;
 }
 
+/* v0.59 frontend screenshot-safe reviewer polish */
+.screenshot-safe-review {
+  display: grid;
+  gap: 16px;
+  padding: 22px 26px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-md);
+  background: var(--nx-panel);
+}
+
+.screenshot-safe-review__header h2 {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.screenshot-safe-review__header p {
+  max-width: 780px;
+  margin-top: 5px;
+  color: var(--nx-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.screenshot-safe-review__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.screenshot-safe-review__item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-sm);
+  background: var(--nx-panel);
+}
+
+.screenshot-safe-review__icon {
+  display: inline-flex;
+  min-width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--radius-sm);
+  color: var(--nx-orange);
+  background: var(--nx-panel);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.screenshot-safe-review__item h3 {
+  font-size: 11px;
+}
+
+.screenshot-safe-review__item p {
+  margin-top: 3px;
+  color: var(--nx-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.screenshot-safe-review__boundary {
+  padding-top: 12px;
+  border-top: 1px solid var(--nx-border);
+  color: var(--nx-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 @media (max-width: 900px) {
   .data-source-summary__grid,
   .reviewer-navigation__grid,
   .portfolio-evidence__grid,
-  .state-review__grid {
+  .state-review__grid,
+  .screenshot-safe-review__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -9303,7 +9384,8 @@ body::before {
   .reviewer-navigation,
   .accessibility-review,
   .portfolio-evidence,
-  .state-review {
+  .state-review,
+  .screenshot-safe-review {
     padding: 20px;
   }
 
@@ -9311,7 +9393,8 @@ body::before {
   .reviewer-navigation__grid,
   .accessibility-review__grid,
   .portfolio-evidence__grid,
-  .state-review__grid {
+  .state-review__grid,
+  .screenshot-safe-review__grid {
     grid-template-columns: 1fr;
   }
 
