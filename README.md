@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation).
-> `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` remains in progress
+> [`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
+> `v0.61.0-backend-cors-request-id-exposure-foundation` remains in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -71,8 +71,8 @@ security controls, and testable optional integrations.
 | Frontend portfolio evidence | Dashboard evidence summary and source-labelled key pages support public-safe project review | Portfolio presentation foundation |
 | Frontend state clarity | Reviewer-safe loading, fallback, empty, unavailable, and manual retry explanations across primary frontend workflows | Reviewer UX foundation |
 | Screenshot-safe reviewer guidance | Dashboard checklist documents public-safe capture boundaries without changing runtime identity or privacy behavior | Portfolio review foundation |
-| Frontend UI truthfulness | Layout fixes and explicit static-preview labels prevent demo settings, security samples, search, and decorative indicators from appearing live | In-progress frontend polish |
-| Request correlation | Safe response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
+| Frontend UI truthfulness | Layout fixes and explicit static-preview labels prevent demo settings, security samples, search, and decorative indicators from appearing live | Frontend polish foundation |
+| Request correlation | Safe CORS-exposed response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
@@ -377,6 +377,13 @@ echoing of one safe incoming ID, requires generated IDs on established auth and
 validation errors, and confirms the shared error JSON body still has no
 `requestId` field.
 
+The in-progress v0.61 CORS exposure foundation allows browser JavaScript on an
+already trusted frontend origin to read only the safe `X-NEXORA-Request-ID`
+response header. It does not expose Authorization, Cookie, Set-Cookie, CSRF
+values, tokens, secrets, or private data. Request-ID generation and validation,
+API JSON bodies, authentication/session/CSRF behavior, frontend UI behavior,
+and production readiness are unchanged.
+
 The completed v0.48 logging foundation adds the MDC value to every local
 backend console line as `requestId=<safe-request-id>`, with `no-request-id` for
 work outside an HTTP request. Unexpected API exceptions are logged at ERROR
@@ -542,15 +549,14 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation).
-The `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone is in
+[`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation).
+The `v0.61.0-backend-cors-request-id-exposure-foundation` milestone is in
 progress until it is merged and tagged.
-It fixes primary-frontend layout, semantic, and demo-content truthfulness issues
-only. Settings remains a static preview that is not connected to the signed-in
-account, and security metrics remain local samples rather than real telemetry or
-production monitoring. Backend and API behavior, authentication, dependencies,
-workflows, scripts, the retained Vite frontend, and OpenAPI YAML are unchanged;
-production readiness is also unchanged.
+It exposes only the safe `X-NEXORA-Request-ID` response header through the
+existing trusted-origin CORS policy. API JSON bodies, request-ID generation and
+validation, auth/session/CSRF behavior, frontend behavior, dependencies,
+migrations, workflows, scripts, and OpenAPI YAML remain unchanged. Sensitive
+headers and values are not exposed, and production readiness is unchanged.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

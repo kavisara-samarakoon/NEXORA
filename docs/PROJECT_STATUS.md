@@ -4,19 +4,18 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`, which adds
-static dashboard guidance for public-safe portfolio and reviewer captures.
+`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`, which fixes
+confirmed primary-frontend layout, semantic, and demo-content truthfulness
+issues without changing backend or API behavior.
 
-The `v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation` milestone
-is in progress. It fixes confirmed primary-frontend layout, semantic, and
-demo-content truthfulness issues. Settings remains a static preview that is not
-connected to the signed-in account, and security metrics are explicitly local
-samples rather than real telemetry or production monitoring. Backend/API,
-frontend fetch/fallback, authentication/session/CSRF/CORS/AuthStatus,
-dependencies, workflows, scripts, retained Vite frontend, OpenAPI YAML, and
-request-ID behavior remain unchanged. It adds no runtime feature flags, storage
-access, polling, auto-refresh, timers, retry loops, masking, or network calls and
-does not change production readiness.
+The `v0.61.0-backend-cors-request-id-exposure-foundation` milestone is in
+progress. It exposes only the safe `X-NEXORA-Request-ID` response header through
+the existing trusted-origin CORS policy. Allowed origins, methods, request
+headers, and credential behavior remain unchanged. Authorization, Cookie,
+Set-Cookie, CSRF values, tokens, secrets, and private data are not exposed.
+Request-ID generation/validation, API JSON bodies, auth/session/CSRF behavior,
+frontend UI behavior, dependencies, migrations, OpenAPI YAML, workflows, and
+scripts remain unchanged, as does production readiness.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -121,7 +120,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.59.0-frontend-screenshot-safe-reviewer-mode-polish-foundation`.
+`v0.60.0-frontend-ui-truthfulness-and-layout-polish-foundation`.
 
 ## Completed foundations
 
@@ -172,7 +171,9 @@ readiness of the project. The latest stable development milestone is
 - Request correlation response headers with safe client-value validation, UUID
   fallback generation, request-scoped MDC data, local console correlation, safe
   unexpected-error logging, safe request-completion summaries, and focused
-  backend coverage.
+  backend coverage. Trusted-origin CORS exposes only the safe response request
+  ID to browser JavaScript, not authentication, cookie, CSRF, or secret-bearing
+  headers.
 - Shared frontend API configuration and selected frontend error/support request-
   ID metadata for local backend-log correlation.
 - Primary-frontend dashboard visibility for safe local backend health metadata
