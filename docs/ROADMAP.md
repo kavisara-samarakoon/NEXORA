@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.56.0-frontend-accessibility-review-foundation` milestone with a compact
-  dashboard review aid and focused screen-reader and disabled-preview wording
-  polish.
+  `v0.57.0-frontend-portfolio-evidence-polish-foundation` milestone with a
+  public-safe dashboard evidence summary, broader key-page source notices, and
+  safe screenshot guidance.
 - Keep the completed
-  `v0.55.0-frontend-reviewer-navigation-polish-foundation` milestone as the
-  latest stable milestone until v0.56 is merged and tagged.
+  `v0.56.0-frontend-accessibility-review-foundation` milestone as the latest
+  stable milestone until v0.57 is merged and tagged.
 - Keep reviewer documentation, setup instructions, and milestone labels aligned
   with the implemented repository state.
 - Improve test organization and focused verification guidance without reducing
@@ -131,6 +131,9 @@ project's academic, portfolio, and product goals evolve.
 
 - Validate the problem and workflows with research participants before making
   claims about demand or prioritizing commercialization.
+- Treat business, income, employment, and broader portfolio readiness as future
+  evidence-based decisions; the v0.57 summary describes implemented project
+  foundations only.
 - Evaluate additional data providers, stores, and regional pricing based on
   licensing, reliability, attribution, and operating cost.
 - Explore collaboration or sharing features only after privacy and ownership
