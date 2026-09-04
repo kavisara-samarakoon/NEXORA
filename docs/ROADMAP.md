@@ -8,7 +8,8 @@ project's academic, portfolio, and product goals evolve.
 
 - Complete the in-progress
   `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` milestone
-  by aligning Dependency Review as an enforced high-severity pull-request job.
+  by truthfully retaining Dependency Review as advisory after GitHub CI proved
+  enforcement unsupported by the repository's current security configuration.
 - Keep the completed
   `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
   as the latest stable milestone until v0.65 is merged and tagged.
@@ -43,10 +44,12 @@ project's academic, portfolio, and product goals evolve.
 
 ## CI and release follow-up
 
-- Keep Dependency Review enforced for newly introduced high or critical known
-  vulnerabilities, with npm audit and Maven dependency-tree visibility handled
-  by their existing separate checks. Branch protection remains an owner-managed
-  repository setting.
+- Keep Dependency Review advisory with `continue-on-error: true` and retain
+  `fail-on-severity: high` as the intended threshold when evaluation is
+  supported. Defer an enforceable gate until the required GitHub Dependency
+  Graph and repository security capability are available. Do not describe the
+  current check as rejecting or merge-blocking; npm audit and Maven dependency-
+  tree visibility remain separate CI controls.
 - Add deployed-environment smoke tests only after approved target, credential,
   data-lifecycle, and ownership boundaries exist; they remain separate from the
   local-only v0.44 request correlation smoke coverage.

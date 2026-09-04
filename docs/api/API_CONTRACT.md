@@ -13,11 +13,15 @@ milestone added lightweight structural validation around it.
 `v0.64.0-backend-production-profile-persistence-guard-foundation` is the latest
 stable development milestone while
 `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` is in
-progress. The v0.65 milestone makes Dependency Review fail its pull-request job
-for newly introduced high or critical known vulnerabilities. It changes CI
-policy only; endpoint paths, API JSON response shapes, backend/frontend runtime
-behavior, dependencies, and OpenAPI YAML are unchanged. The npm audit and Maven
-dependency-tree checks remain separate.
+progress. GitHub CI proved that enforceable Dependency Review is unsupported by
+the repository's current GitHub security configuration, so it remains advisory
+with intentional `continue-on-error: true`. The configured
+`fail-on-severity: high` remains the intended threshold when evaluation is
+supported, not a rejecting or merge-blocking claim. Enforceable use is deferred
+until the required Dependency Graph and repository security capability are
+available. This changes CI policy only; endpoint paths, API JSON response
+shapes, backend/frontend runtime behavior, dependencies, and OpenAPI YAML are
+unchanged. The npm audit and Maven dependency-tree checks remain separate.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 

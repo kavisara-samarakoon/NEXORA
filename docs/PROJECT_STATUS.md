@@ -9,16 +9,20 @@ production-like profiles fail closed unless the existing database-backed
 profile is active.
 
 The `v0.65.0-security-ci-dependency-review-policy-alignment-foundation`
-milestone is in progress. Dependency Review is aligned as an enforced
-pull-request job: newly introduced high or critical known vulnerabilities fail
-under the existing high-severity threshold instead of being masked by advisory
-failure handling. Read-only permissions and pull-request-only execution remain;
-the job summary replaces the write-dependent pull-request comment. The npm
-audit gate and Maven dependency-tree visibility remain separate checks. This
+milestone is in progress. GitHub CI validation proved that enforceable
+Dependency Review is currently unsupported by this repository's GitHub security
+configuration, so the workflow remains advisory with intentional
+`continue-on-error: true`. Its `fail-on-severity: high` setting remains the
+intended threshold when dependency changes can be evaluated, but Dependency
+Review is not a rejecting or merge-blocking control. Enforceable use is deferred
+until the required GitHub Dependency Graph and repository security capability
+are available; no security product is claimed as enabled. Read-only permissions,
+pull-request-only execution, and job-summary reporting remain. The npm audit
+gate and Maven dependency-tree visibility remain separate CI controls. This
 changes CI policy only. Application runtime, frontend/backend source behavior,
 endpoint paths, API JSON response shapes, dependencies, migrations, OpenAPI
-YAML, and scripts are unchanged. Production readiness is improved in CI
-governance only, but NEXORA remains not production-ready.
+YAML, and scripts are unchanged. No deployment, cloud, Docker, Redis, provider,
+or runtime feature is added, and NEXORA remains not production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -206,9 +210,9 @@ readiness of the project. The latest stable development milestone is
 - Manual CodeQL-ready workflow for scoped Java and JavaScript/TypeScript analysis,
   using a manual Maven build for Java. Automatic CodeQL upload is disabled while
   private-repository code scanning is unavailable.
-- Enforced Dependency Review workflow for pull requests to `main`, configured
-  to fail on newly introduced high or critical known vulnerabilities while
-  retaining read-only permissions and job-summary reporting.
+- Advisory Dependency Review workflow for pull requests to `main`, retaining
+  `fail-on-severity: high` as the intended evaluation threshold while the
+  repository lacks the required GitHub security capability for enforcement.
 - [Repository security hardening guide](security/repository-security-hardening.md)
   covering implemented workflows and the GitHub security settings that remain
   manual or plan-dependent.

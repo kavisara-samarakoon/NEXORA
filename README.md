@@ -500,7 +500,7 @@ requests targeting `main`:
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
 | `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
 | `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
-| `dependency-review.yml` | Enforces pull-request dependency review and fails for newly introduced high or critical known vulnerabilities |
+| `dependency-review.yml` | Runs advisory pull-request dependency review with an intended high-severity threshold when repository support is available |
 
 The frontend workflow does not build the retained Vite prototype. Backend CI
 keeps the normal test suite database-free and runs PostgreSQL validation in a
@@ -512,12 +512,16 @@ does not deploy NEXORA. Dependency Review works best with the dependency graph
 enabled; secret scanning, push protection, alert policy, and required checks are
 repository settings rather than claims made by these workflow files.
 
-The v0.65 policy-alignment foundation removes the advisory failure override
-from Dependency Review. Newly introduced high or critical known vulnerabilities
-now fail its pull-request job; low and moderate findings remain below the
-configured failure threshold. Results remain available in the job summary
-without granting write access for pull-request comments. The production npm
-audit gate and Maven dependency-tree visibility remain separate checks.
+GitHub CI validation for v0.65 proved that enforceable Dependency Review is
+currently unsupported by this repository's GitHub security configuration. The
+workflow therefore remains advisory through intentional
+`continue-on-error: true`; `fail-on-severity: high` remains the intended review
+threshold when the action can evaluate dependency changes. Dependency Review
+must not be treated as a rejecting or merge-blocking control. Enforceable use is
+deferred until the required GitHub Dependency Graph and repository security
+capability are available. Results use the job summary without write access for
+pull-request comments. The production npm audit gate and Maven dependency-tree
+visibility remain separate CI controls.
 
 API Smoke CI runs [`scripts/api-smoke-test.sh`](scripts/api-smoke-test.sh)
 against a backend started inside the GitHub Actions runner. It checks public
@@ -579,13 +583,18 @@ The latest stable development milestone is
 `v0.64.0-backend-production-profile-persistence-guard-foundation`.
 The `v0.65.0-security-ci-dependency-review-policy-alignment-foundation`
 milestone is in progress until it is merged and tagged. It aligns Dependency
-Review as an enforced pull-request job for newly introduced high or critical
-known vulnerabilities by removing advisory failure handling. Existing npm
-audit and Maven dependency-tree checks remain separate. This changes CI policy
-only: application runtime behavior, frontend/backend source behavior, endpoint
-paths, API JSON response shapes, dependencies, migrations, scripts, and OpenAPI
-YAML are unchanged. Production readiness is improved in CI governance only;
-NEXORA remains not production-ready.
+Review with the repository's actual capability after GitHub CI proved that
+enforcement is currently unsupported by the configured GitHub security
+features. Dependency Review remains advisory with intentional
+`continue-on-error: true`, while `fail-on-severity: high` records the intended
+threshold when evaluation is supported. It is not a rejecting or merge-blocking
+control; enforceable use is deferred until the required GitHub Dependency Graph
+and repository security capability are available. Existing npm audit and Maven
+dependency-tree checks remain separate. This changes CI policy only:
+application runtime behavior, frontend/backend source behavior, endpoint paths,
+API JSON response shapes, dependencies, migrations, scripts, and OpenAPI YAML
+are unchanged. No deployment, cloud, Docker, Redis, provider, or runtime feature
+was added, and NEXORA remains not production-ready.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

@@ -12,20 +12,23 @@ Older headings retain the wording used when each milestone was recorded.
 `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` remains in
 progress until it is merged and tagged.
 
-- Removes advisory failure handling from the pull-request Dependency Review
-  job, so newly introduced high or critical known vulnerabilities fail the
-  check under the existing `fail-on-severity: high` policy. Job and step names
-  now describe enforcement rather than advisory review.
-- Keeps read-only permissions and pull-request-only execution. Results remain
-  in the job summary without a write-permission-dependent pull-request comment.
-  The production npm audit gate and Maven dependency-tree visibility remain
-  separate checks; no new action, tool, dependency, suppression, or allow list
-  is added.
+- GitHub CI validation proved that enforceable Dependency Review is currently
+  unsupported by this repository's GitHub security configuration. Dependency
+  Review therefore remains advisory with intentional `continue-on-error: true`
+  and must not be represented as a rejecting or merge-blocking control.
+- Retains `fail-on-severity: high` as the intended threshold when the action can
+  evaluate dependency changes, plus pull-request-only execution, read-only
+  permissions, and job-summary reporting. Enforceable use is deferred until the
+  required GitHub Dependency Graph and repository security capability are
+  available; no security product is claimed as enabled.
+- The production npm audit gate and Maven dependency-tree visibility remain
+  separate CI controls. No new action, tool, dependency, suppression, or allow
+  list is added.
 - This is a CI-policy and documentation milestone only. Application runtime,
   frontend/backend source behavior, endpoint paths, API JSON response shapes,
-  dependencies, migrations, OpenAPI YAML, and scripts are unchanged. Production
-  readiness is improved in CI governance only, but NEXORA remains not
-  production-ready.
+  dependencies, migrations, OpenAPI YAML, and scripts are unchanged. No
+  deployment, cloud, Docker, Redis, provider, or runtime feature is added, and
+  NEXORA remains not production-ready.
 
 ## Completed backend milestone — v0.64.0 Backend Production Profile Persistence Guard foundation
 

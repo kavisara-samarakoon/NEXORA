@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   review-dependency-changes:
-    name: Enforced dependency review
+    name: Advisory dependency review
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -23,7 +23,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Enforce high-severity dependency policy
+      - name: Review high-severity dependency changes
         uses: actions/dependency-review-action@v4
+        continue-on-error: true
         with:
           fail-on-severity: high
