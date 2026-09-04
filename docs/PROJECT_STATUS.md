@@ -4,21 +4,21 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.62.0-backend-notification-preference-enforcement-foundation`, which enforces
-saved email and target-reached choices before outbound wishlist alert dispatch
-without changing existing alert event/history recording.
+`v0.63.0-backend-auth-abuse-limit-keying-foundation`, which scopes login and
+registration limits by operation and a digest of the normalized candidate
+account identifier while retaining same-subject limits.
 
-The `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone is in
-progress. Login and registration limits use buckets scoped by operation and a
-digest of the normalized candidate account identifier. Repeated attempts for
-one candidate subject remain limited, but that subject no longer consumes an
-unrelated subject's login or registration window. Existing limit values,
-windows, endpoint paths, 429 and other API JSON response shapes, frontend
-behavior, and auth token/session/CSRF/CORS/request-ID behavior are unchanged.
-Dependencies, migrations, OpenAPI YAML, workflows, scripts, and production
-readiness are also unchanged. The limiter remains process-local and in-memory;
-this is not distributed rate limiting, CAPTCHA, DDoS protection, bot
-protection, or production-grade abuse prevention.
+The `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
+is in progress. Its early startup guard rejects `prod` or `production` unless
+the existing `dev` database-backed profile is also active, so production-like
+startup fails closed rather than selecting in-memory demo persistence. Default
+local/demo mode and existing `dev` behavior remain unchanged. Endpoint paths,
+API JSON response shapes, frontend behavior, auth/session/CSRF/CORS/request-ID/
+AuthAbuse/NotificationDispatcher behavior, dependencies, migrations, OpenAPI
+YAML, workflows, and scripts are unchanged. No production deployment, Docker
+or cloud setup, Redis, distributed storage, or new provider is added. This is a
+guard foundation, not full deployment readiness: production readiness is
+improved, but NEXORA is still not production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -123,7 +123,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.62.0-backend-notification-preference-enforcement-foundation`.
+`v0.63.0-backend-auth-abuse-limit-keying-foundation`.
 
 ## Completed foundations
 
@@ -143,6 +143,8 @@ readiness of the project. The latest stable development milestone is
 - Frontend truthfulness polish marks Settings and Security content as static
   preview/sample data and removes live-looking counts and telemetry claims.
 - Spring Boot REST API with validation, security, and profile-based services.
+- Production-like profile persistence guard that requires the existing `dev`
+  database-backed profile instead of allowing in-memory demo stores.
 - JWT registration, login, and authenticated account lookup.
 - PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.
 - Public demo wishlist and isolated authenticated personal wishlists.
@@ -269,6 +271,8 @@ readiness of the project. The latest stable development milestone is
 
 - The default backend profile stores accounts and personal wishlist changes only
   in memory; restarting it clears that state.
+- Production-like persistence currently reuses the `dev` database profile; a
+  complete production configuration and deployment design remain future work.
 - Runtime health/startup summaries report configuration mode and process uptime
   only; they do not probe dependencies or supply production monitoring.
 - The frontend health panel reflects one local `/api/health` response. It is not
@@ -319,10 +323,11 @@ readiness of the project. The latest stable development milestone is
   dependency-resolution visibility only.
 - The backend/frontend refresh-session and local CSRF/trusted-origin foundations
   exist, and v0.32 fails closed on a bounded set of unsafe production-profile
-  auth settings. Persistent production store selection, complete
-  CSRF/origin/proxy behavior, deployed CORS/cookie topology, session-family
-  reuse handling, and complete revocation/session-management UX are not
-  implemented.
+  auth settings. v0.64 prevents production-like startup with in-memory demo
+  stores by requiring the existing `dev` database profile, but a complete
+  production persistence configuration, CSRF/origin/proxy behavior, deployed
+  CORS/cookie topology, session-family reuse handling, and complete revocation/
+  session-management UX are not implemented.
 - The local auth security-event cleanup mechanism is not a production
   retention/privacy/compliance policy and supplies no production access-control,
   integrity, request-context enrichment, dashboard, monitoring, alerting, SIEM,
@@ -347,9 +352,9 @@ readiness of the project. The latest stable development milestone is
 2. Review a production application-container strategy only after deployment,
    operations, networking, and secret-management requirements are defined.
 3. Select a deployment topology and formally review the auth production-policy
-   plan before extending the initial fail-closed guard to persistent-store and
-   deployment requirements, then implement the reviewed HTTPS/cookie/CORS/
-   proxy/no-origin rules and complete session reuse/revocation behavior.
+   plan before replacing the v0.64 `dev`-profile persistence bridge with a
+   complete production configuration, then implement the reviewed HTTPS/cookie/
+   CORS/proxy/no-origin rules and complete session reuse/revocation behavior.
 4. Define account verification, password recovery, production distributed
    authentication abuse controls and credential-stuffing/bot defenses,
    additional audit events, approved production event

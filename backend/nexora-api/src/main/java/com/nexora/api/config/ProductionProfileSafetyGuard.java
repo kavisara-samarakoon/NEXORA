@@ -73,6 +73,8 @@ public final class ProductionProfileSafetyGuard
     }
 
     static void validate(Environment environment) {
+        ProductionProfilePersistenceGuard.validate(environment);
+
         if (environment == null
                 || !environment.acceptsProfiles(Profiles.of("prod", "production"))) {
             return;
