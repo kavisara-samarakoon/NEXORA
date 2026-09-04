@@ -3,6 +3,10 @@
 NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
+The latest stable milestone is
+`v0.64.0-backend-production-profile-persistence-guard-foundation`, while
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation` is in
+progress.
 
 ## Repository-defined automation
 
@@ -12,7 +16,7 @@ GitHub settings that the repository owner must configure and review separately.
 | Frontend CI | Installs the primary Next.js dependencies, runs ESLint, and creates a production build for validation only. |
 | Security CI | Gates on high-severity production npm audit findings and retains the JSON report; exports the Maven dependency tree as a visibility artifact. |
 | CodeQL | Manual CodeQL-ready workflow for Java and JavaScript/TypeScript. Automatic upload is disabled while private-repository code scanning is unavailable. |
-| Dependency Review | Reviews dependency changes on pull requests to `main` and fails for newly introduced high or critical known vulnerabilities. |
+| Dependency Review | Enforces review of dependency changes on pull requests to `main` and fails for newly introduced high or critical known vulnerabilities. |
 | Dependabot | Checks GitHub Actions, Maven, and primary Next.js npm dependencies weekly; routine minor/patch updates are grouped and major updates remain manual. |
 
 The CodeQL-ready workflow scopes analysis to `backend/nexora-api` and
@@ -24,6 +28,14 @@ The Maven dependency tree is not a vulnerability scan. OWASP Dependency-Check
 was evaluated but is not a mandatory workflow because its initial external data
 downloads and no-key vulnerability-feed behavior can be slow or unreliable.
 This avoids turning a third-party feed outage into a repository-wide PR block.
+
+The v0.65 alignment removes Dependency Review's advisory failure override while
+retaining `fail-on-severity: high`, pull-request-only execution, and read-only
+permissions. High and critical additions fail the job; low and moderate findings
+remain below this configured threshold. The workflow uses its job summary rather
+than requesting write access for pull-request comments. It does not run npm
+audit or Maven vulnerability scanning; the existing production npm audit gate
+and Maven dependency-tree visibility remain separate.
 
 ## GitHub settings to review manually
 
@@ -84,8 +96,11 @@ npm audit --omit=dev --audit-level=high
 git diff --check
 ```
 
-Dependency Review requires GitHub event and repository context, so final verification occurs on a pull request.
-CodeQL upload additionally requires code scanning to be enabled/available for the repository. No real credentials are
+Dependency Review requires GitHub event and repository context, so final
+verification occurs on a pull request. Its job now fails when the configured
+high-severity policy is violated; making that check merge-blocking still
+requires an owner-managed branch rule. CodeQL upload additionally requires code
+scanning to be enabled/available for the repository. No real credentials are
 needed for either workflow.
 
 ## Remaining gaps

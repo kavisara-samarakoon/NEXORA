@@ -10,13 +10,14 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.63.0-backend-auth-abuse-limit-keying-foundation` is the latest stable
-development milestone while
-`v0.64.0-backend-production-profile-persistence-guard-foundation` is in
-progress. The v0.64 startup guard rejects `prod` or `production` without the
-existing `dev` database-backed profile instead of allowing in-memory demo
-persistence. Endpoint paths, API JSON response shapes, and OpenAPI YAML are
-unchanged.
+`v0.64.0-backend-production-profile-persistence-guard-foundation` is the latest
+stable development milestone while
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation` is in
+progress. The v0.65 milestone makes Dependency Review fail its pull-request job
+for newly introduced high or critical known vulnerabilities. It changes CI
+policy only; endpoint paths, API JSON response shapes, backend/frontend runtime
+behavior, dependencies, and OpenAPI YAML are unchanged. The npm audit and Maven
+dependency-tree checks remain separate.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 

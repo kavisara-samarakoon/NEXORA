@@ -7,12 +7,11 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
-  by preventing `prod` or `production` from starting with in-memory demo
-  persistence while reusing the existing `dev` database-backed profile.
+  `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` milestone
+  by aligning Dependency Review as an enforced high-severity pull-request job.
 - Keep the completed
-  `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone as the latest
-  stable milestone until v0.64 is merged and tagged.
+  `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
+  as the latest stable milestone until v0.65 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -44,6 +43,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## CI and release follow-up
 
+- Keep Dependency Review enforced for newly introduced high or critical known
+  vulnerabilities, with npm audit and Maven dependency-tree visibility handled
+  by their existing separate checks. Branch protection remains an owner-managed
+  repository setting.
 - Add deployed-environment smoke tests only after approved target, credential,
   data-lifecycle, and ownership boundaries exist; they remain separate from the
   local-only v0.44 request correlation smoke coverage.
