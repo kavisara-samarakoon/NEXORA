@@ -23,9 +23,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Review newly introduced high-severity vulnerabilities
+      - name: Review high-severity dependency changes
         uses: actions/dependency-review-action@v4
         continue-on-error: true
         with:
           fail-on-severity: high
-          comment-summary-in-pr: always

@@ -3,6 +3,10 @@
 NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
+The latest stable milestone is
+`v0.64.0-backend-production-profile-persistence-guard-foundation`, while
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation` is in
+progress.
 
 ## Repository-defined automation
 
@@ -12,7 +16,7 @@ GitHub settings that the repository owner must configure and review separately.
 | Frontend CI | Installs the primary Next.js dependencies, runs ESLint, and creates a production build for validation only. |
 | Security CI | Gates on high-severity production npm audit findings and retains the JSON report; exports the Maven dependency tree as a visibility artifact. |
 | CodeQL | Manual CodeQL-ready workflow for Java and JavaScript/TypeScript. Automatic upload is disabled while private-repository code scanning is unavailable. |
-| Dependency Review | Reviews dependency changes on pull requests to `main` and fails for newly introduced high or critical known vulnerabilities. |
+| Dependency Review | Runs advisory review of dependency changes on pull requests to `main`; `fail-on-severity: high` records the intended threshold when repository support is available. |
 | Dependabot | Checks GitHub Actions, Maven, and primary Next.js npm dependencies weekly; routine minor/patch updates are grouped and major updates remain manual. |
 
 The CodeQL-ready workflow scopes analysis to `backend/nexora-api` and
@@ -24,6 +28,19 @@ The Maven dependency tree is not a vulnerability scan. OWASP Dependency-Check
 was evaluated but is not a mandatory workflow because its initial external data
 downloads and no-key vulnerability-feed behavior can be slow or unreliable.
 This avoids turning a third-party feed outage into a repository-wide PR block.
+
+GitHub CI validation for v0.65 proved that enforceable Dependency Review is
+currently unsupported by this repository's GitHub security configuration. The
+workflow therefore intentionally uses `continue-on-error: true` and remains
+advisory. `fail-on-severity: high` records the intended threshold when the action
+can evaluate dependency changes, but the current check must not be represented
+as rejecting or merge-blocking. Enforceable use is deferred until the required
+GitHub Dependency Graph and repository security capability are available; this
+guide does not claim that any additional security product is enabled. The
+workflow retains pull-request-only execution, read-only permissions, and job-
+summary reporting rather than requesting write access for comments. It does not
+run npm audit or Maven vulnerability scanning; the existing production npm audit
+gate and Maven dependency-tree visibility remain separate.
 
 ## GitHub settings to review manually
 
@@ -41,9 +58,12 @@ visibility, account plan, and GitHub product changes.
   code scanning becomes available, choose either CodeQL default setup or this
   repository's workflow to avoid duplicate analyses.
 - Add branch protection or a ruleset for `main`, then require the stable backend,
-  frontend, security, and dependency-review checks only after their job names
-  and behavior have been confirmed on a pull request. Require CodeQL only after
-  code scanning is enabled and stable for this repository.
+  frontend, and security checks after their job names and behavior have been
+  confirmed on a pull request. Do not treat the current advisory Dependency
+  Review job as a required rejecting control. Reconsider it only after the
+  required repository capability is available and enforcement is revalidated.
+  Require CodeQL only after code scanning is enabled and stable for this
+  repository.
 - Limit GitHub Actions permissions to read by default and retain the explicit
   workflow exceptions required for CodeQL result upload.
 
@@ -84,15 +104,20 @@ npm audit --omit=dev --audit-level=high
 git diff --check
 ```
 
-Dependency Review requires GitHub event and repository context, so final verification occurs on a pull request.
-CodeQL upload additionally requires code scanning to be enabled/available for the repository. No real credentials are
-needed for either workflow.
+Dependency Review requires GitHub event and repository context, so final
+verification occurs on a pull request. Current CI evidence shows that this
+repository cannot rely on it as an enforceable gate, so the job remains
+advisory. CodeQL upload additionally requires code scanning to be enabled and
+available for the repository. No real credentials are needed for either
+workflow.
 
 ## Remaining gaps
 
 - No deployed production environment or production operations guide.
 - No production secret-management platform or monitoring/SIEM integration.
 - No mandatory full Maven vulnerability scanner.
+- No enforceable Dependency Review gate under the repository's current GitHub
+  security capability; the workflow remains advisory.
 - No guarantee that plan-dependent GitHub security settings are enabled.
 - No production-grade distributed rate limiting or production AI
   observability/moderation pipeline.

@@ -10,13 +10,18 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.63.0-backend-auth-abuse-limit-keying-foundation` is the latest stable
-development milestone while
-`v0.64.0-backend-production-profile-persistence-guard-foundation` is in
-progress. The v0.64 startup guard rejects `prod` or `production` without the
-existing `dev` database-backed profile instead of allowing in-memory demo
-persistence. Endpoint paths, API JSON response shapes, and OpenAPI YAML are
-unchanged.
+`v0.64.0-backend-production-profile-persistence-guard-foundation` is the latest
+stable development milestone while
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation` is in
+progress. GitHub CI proved that enforceable Dependency Review is unsupported by
+the repository's current GitHub security configuration, so it remains advisory
+with intentional `continue-on-error: true`. The configured
+`fail-on-severity: high` remains the intended threshold when evaluation is
+supported, not a rejecting or merge-blocking claim. Enforceable use is deferred
+until the required Dependency Graph and repository security capability are
+available. This changes CI policy only; endpoint paths, API JSON response
+shapes, backend/frontend runtime behavior, dependencies, and OpenAPI YAML are
+unchanged. The npm audit and Maven dependency-tree checks remain separate.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 

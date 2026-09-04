@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.63.0-backend-auth-abuse-limit-keying-foundation`.
-The `v0.64.0-backend-production-profile-persistence-guard-foundation` remains
+`v0.64.0-backend-production-profile-persistence-guard-foundation`.
+The `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -63,7 +63,7 @@ deployment.
 | `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
 | Production-like profile guard | `prod`/`production` requires the existing `dev` persistent profile and otherwise fails startup closed |
 | Optional providers | CheapShark price/deal data, SMTP email delivery, and Gemini Sentinel responses |
-| CI | Backend tests, PostgreSQL integration validation, frontend lint/build, reviewer preflight validation, dependency visibility, and manual CodeQL-ready analysis |
+| CI | Backend tests, PostgreSQL integration validation, frontend lint/build, reviewer preflight validation, advisory Dependency Review, separate npm audit and Maven dependency-tree checks, and manual CodeQL-ready analysis |
 
 The primary frontend is `frontend/nexora-web-next`; the earlier Vite prototype
 is retained only for reference. The default local workflow does not require
@@ -120,6 +120,14 @@ cost controls, or production AI observability.
 - The primary frontend is checked with ESLint and a production build.
 - GitHub Actions cover backend, PostgreSQL, primary frontend, and lightweight
   dependency/security validation.
+- GitHub CI proved that enforceable Dependency Review is unsupported by the
+  repository's current GitHub security configuration. It therefore remains
+  advisory through intentional `continue-on-error: true`, with
+  `fail-on-severity: high` retained as the intended threshold when evaluation
+  is available. It is not a rejecting or merge-blocking control; enforcement is
+  deferred until the required Dependency Graph and repository security
+  capability are available. Read-only permissions and job-summary reporting
+  remain, while npm audit and the Maven dependency tree stay separate controls.
 - Reviewer Tooling CI checks the read-only local preflight from the repository
   root and `/tmp`, improving setup and reviewer confidence without starting
   services, installing dependencies, or making a production-readiness claim.

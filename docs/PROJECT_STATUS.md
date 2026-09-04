@@ -4,21 +4,25 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.63.0-backend-auth-abuse-limit-keying-foundation`, which scopes login and
-registration limits by operation and a digest of the normalized candidate
-account identifier while retaining same-subject limits.
+`v0.64.0-backend-production-profile-persistence-guard-foundation`, which makes
+production-like profiles fail closed unless the existing database-backed
+profile is active.
 
-The `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
-is in progress. Its early startup guard rejects `prod` or `production` unless
-the existing `dev` database-backed profile is also active, so production-like
-startup fails closed rather than selecting in-memory demo persistence. Default
-local/demo mode and existing `dev` behavior remain unchanged. Endpoint paths,
-API JSON response shapes, frontend behavior, auth/session/CSRF/CORS/request-ID/
-AuthAbuse/NotificationDispatcher behavior, dependencies, migrations, OpenAPI
-YAML, workflows, and scripts are unchanged. No production deployment, Docker
-or cloud setup, Redis, distributed storage, or new provider is added. This is a
-guard foundation, not full deployment readiness: production readiness is
-improved, but NEXORA is still not production-ready.
+The `v0.65.0-security-ci-dependency-review-policy-alignment-foundation`
+milestone is in progress. GitHub CI validation proved that enforceable
+Dependency Review is currently unsupported by this repository's GitHub security
+configuration, so the workflow remains advisory with intentional
+`continue-on-error: true`. Its `fail-on-severity: high` setting remains the
+intended threshold when dependency changes can be evaluated, but Dependency
+Review is not a rejecting or merge-blocking control. Enforceable use is deferred
+until the required GitHub Dependency Graph and repository security capability
+are available; no security product is claimed as enabled. Read-only permissions,
+pull-request-only execution, and job-summary reporting remain. The npm audit
+gate and Maven dependency-tree visibility remain separate CI controls. This
+changes CI policy only. Application runtime, frontend/backend source behavior,
+endpoint paths, API JSON response shapes, dependencies, migrations, OpenAPI
+YAML, and scripts are unchanged. No deployment, cloud, Docker, Redis, provider,
+or runtime feature is added, and NEXORA remains not production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -123,7 +127,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.63.0-backend-auth-abuse-limit-keying-foundation`.
+`v0.64.0-backend-production-profile-persistence-guard-foundation`.
 
 ## Completed foundations
 
@@ -206,8 +210,9 @@ readiness of the project. The latest stable development milestone is
 - Manual CodeQL-ready workflow for scoped Java and JavaScript/TypeScript analysis,
   using a manual Maven build for Java. Automatic CodeQL upload is disabled while
   private-repository code scanning is unavailable.
-- Dependency Review workflow for pull requests to `main`, configured to reject
-  newly introduced high or critical known vulnerabilities.
+- Advisory Dependency Review workflow for pull requests to `main`, retaining
+  `fail-on-severity: high` as the intended evaluation threshold while the
+  repository lacks the required GitHub security capability for enforcement.
 - [Repository security hardening guide](security/repository-security-hardening.md)
   covering implemented workflows and the GitHub security settings that remain
   manual or plan-dependent.

@@ -4,13 +4,33 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.63.0-backend-auth-abuse-limit-keying-foundation`.
+`v0.64.0-backend-production-profile-persistence-guard-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.64.0 Backend Production Profile Persistence Guard foundation
+## In progress — v0.65.0 Security CI Dependency Review Policy Alignment foundation
 
-`v0.64.0-backend-production-profile-persistence-guard-foundation` remains in
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation` remains in
 progress until it is merged and tagged.
+
+- GitHub CI validation proved that enforceable Dependency Review is currently
+  unsupported by this repository's GitHub security configuration. Dependency
+  Review therefore remains advisory with intentional `continue-on-error: true`
+  and must not be represented as a rejecting or merge-blocking control.
+- Retains `fail-on-severity: high` as the intended threshold when the action can
+  evaluate dependency changes, plus pull-request-only execution, read-only
+  permissions, and job-summary reporting. Enforceable use is deferred until the
+  required GitHub Dependency Graph and repository security capability are
+  available; no security product is claimed as enabled.
+- The production npm audit gate and Maven dependency-tree visibility remain
+  separate CI controls. No new action, tool, dependency, suppression, or allow
+  list is added.
+- This is a CI-policy and documentation milestone only. Application runtime,
+  frontend/backend source behavior, endpoint paths, API JSON response shapes,
+  dependencies, migrations, OpenAPI YAML, and scripts are unchanged. No
+  deployment, cloud, Docker, Redis, provider, or runtime feature is added, and
+  NEXORA remains not production-ready.
+
+## Completed backend milestone — v0.64.0 Backend Production Profile Persistence Guard foundation
 
 - Adds an early backend startup guard for the production-like `prod` and
   `production` profiles. Either profile without the existing `dev` database-
