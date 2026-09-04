@@ -29,6 +29,19 @@ class ProductionProfileSafetyGuardTests {
     }
 
     @Test
+    void productionProfileWithoutDevFailsPersistenceCheckBeforeAuthPolicy() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("production");
+
+        IllegalStateException exception = assertUnsafe(environment);
+
+        assertTrue(exception.getMessage().contains(
+                "Production-like profiles require persistent storage"));
+        assertTrue(exception.getMessage().contains(
+                "must not run with in-memory demo persistence"));
+    }
+
+    @Test
     void productionProfileRejectsLocalJwtDefault() {
         MockEnvironment environment = safeProductionEnvironment();
         environment.setProperty(
@@ -210,7 +223,7 @@ class ProductionProfileSafetyGuardTests {
 
     private static MockEnvironment safeProductionEnvironment(String profile) {
         MockEnvironment environment = new MockEnvironment();
-        environment.setActiveProfiles(profile);
+        environment.setActiveProfiles(profile, "dev");
         environment.setProperty("nexora.auth.jwt-secret", STRONG_VALUE_ONE);
         environment.setProperty("nexora.auth.refresh-token-hash-secret", STRONG_VALUE_TWO);
         environment.setProperty("nexora.auth.refresh-token-cookie-secure", "true");

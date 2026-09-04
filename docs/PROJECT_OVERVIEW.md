@@ -10,8 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-[`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
-The `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone remains
+`v0.63.0-backend-auth-abuse-limit-keying-foundation`.
+The `v0.64.0-backend-production-profile-persistence-guard-foundation` remains
 in progress until merged and tagged.
 
 ## Problem statement
@@ -61,6 +61,7 @@ deployment.
 | Spring Boot backend | REST endpoints, validation, authentication, ownership rules, provider gateways, and scheduled foundations |
 | Default profile | Database-free local demo with in-memory account and feature stores |
 | `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
+| Production-like profile guard | `prod`/`production` requires the existing `dev` persistent profile and otherwise fails startup closed |
 | Optional providers | CheapShark price/deal data, SMTP email delivery, and Gemini Sentinel responses |
 | CI | Backend tests, PostgreSQL integration validation, frontend lint/build, reviewer preflight validation, dependency visibility, and manual CodeQL-ready analysis |
 
@@ -92,6 +93,12 @@ and retention is not a production privacy or compliance policy. See
 [SECURITY.md](../SECURITY.md) and the
 [auth production-policy plan](security/auth-production-policy-plan.md) for the
 remaining decisions.
+
+The in-progress v0.64 persistence guard prevents `prod` or `production` from
+starting with in-memory demo persistence. `prod,dev` and `production,dev` reuse
+the existing database-backed stores, while default local/demo and `dev` startup
+remain unchanged. This improves production safety but is not a complete
+production configuration or production-readiness claim.
 
 ## AI and Sentinel foundations
 
@@ -158,6 +165,9 @@ cost controls, or production AI observability.
   normalized candidate-identifier digest, preventing unrelated candidate
   subjects from sharing one bucket while preserving same-subject limits and
   the existing safe 429 response contract.
+- Production-like profiles fail closed unless the existing `dev` database-
+  backed persistence profile is active; this adds no deployment, Docker or
+  cloud setup, Redis, distributed storage, runtime network call, or provider.
 - CodeQL remains manual-only while private-repository code scanning is
   unavailable.
 
@@ -166,6 +176,8 @@ cost controls, or production AI observability.
 - No production deployment, continuous-delivery pipeline, application release
   images, operations guide, backups, or disaster-recovery workflow.
 - Default-profile account and personal data are in memory and reset on restart.
+- Production-like persistence currently reuses the `dev` database profile; a
+  full production profile and deployment topology remain future work.
 - Schedulers, auth abuse counters, and Sentinel safety counters do not
   coordinate across processes.
 - Notification delivery has no durable outbox, retry policy, verified-recipient

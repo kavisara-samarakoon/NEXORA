@@ -4,10 +4,29 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-[`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
+`v0.63.0-backend-auth-abuse-limit-keying-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.63.0 Backend Auth Abuse Limit Keying foundation
+## In progress — v0.64.0 Backend Production Profile Persistence Guard foundation
+
+`v0.64.0-backend-production-profile-persistence-guard-foundation` remains in
+progress until it is merged and tagged.
+
+- Adds an early backend startup guard for the production-like `prod` and
+  `production` profiles. Either profile without the existing `dev` database-
+  backed persistence profile fails closed instead of selecting in-memory demo
+  accounts, sessions, preferences, catalogs, security events, or wishlists.
+- Default local/demo startup and existing `dev` database-backed behavior remain
+  unchanged. `prod,dev` and `production,dev` pass this persistence guard and
+  continue through the existing production-profile configuration safety checks.
+- Endpoint paths, API JSON response shapes, frontend behavior, auth/session/
+  CSRF/CORS/request-ID/AuthAbuse/NotificationDispatcher behavior, dependencies,
+  migrations, OpenAPI YAML, workflows, and scripts are unchanged. No production
+  deployment, Docker or cloud setup, Redis, distributed storage, runtime network
+  call, or new provider is added. Production readiness is improved, but NEXORA
+  is still not production-ready.
+
+## Completed backend milestone — v0.63.0 Backend Auth Abuse Limit Keying foundation
 
 - Changes login and registration abuse limits from operation-global buckets to
   scoped buckets containing the operation and a SHA-256 digest of the trimmed,

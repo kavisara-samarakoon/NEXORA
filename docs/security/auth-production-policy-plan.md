@@ -4,10 +4,11 @@
 
 This document defines the authentication, session, CSRF, CORS, cookie, secret,
 and operational decisions NEXORA must review before any real deployment. It
-originated as a production-policy planning artifact. v0.32 implements only the
-bounded startup checks identified below; the rest remains planning. The
-milestone changes no API contract, database schema, dependency, or deployment
-workflow.
+originated as a production-policy planning artifact. v0.32 implements the
+bounded auth-configuration startup checks identified below, and v0.64 adds a
+bounded persistence-profile guard; the rest remains planning. Neither
+milestone changes the API contract, database schema, dependencies, or
+deployment workflow.
 
 NEXORA remains a local/development MVP and is not production-ready. The startup
 guard is not equivalent to implementing or validating this complete policy. A
@@ -83,12 +84,17 @@ The following controls exist today:
   missing, wildcard, local/development, or non-HTTPS trusted origins. Failures
   name configuration properties without including secret values. Default and
   `dev` profiles do not enforce this production-only policy.
+- The v0.64 persistence guard rejects `prod` or `production` unless the existing
+  `dev` database-backed profile is also active. This prevents production-like
+  startup with the in-memory demo stores while preserving default local/demo
+  and existing `dev` behavior.
 
-These are local-development foundations plus one production-profile startup
-gate, not assurance that the application is safe for Internet exposure. There
-is no complete production configuration, deployed topology, persistent
-production store selection, secret manager, reverse-proxy policy, operations
-guide, or security monitoring integration.
+These are local-development foundations plus bounded production-profile startup
+guards, not assurance that the application is safe for Internet exposure. There
+is no complete or dedicated production configuration, deployed topology, secret
+manager, reverse-proxy policy, operations guide, or security monitoring
+integration. The persistence guard currently reuses the development database
+profile rather than providing a production datastore design.
 
 Repository CodeQL remains manual-only until code scanning is enabled/available;
 these local authentication foundations do not change that workflow policy.
@@ -97,19 +103,21 @@ these local authentication foundations do not change that workflow policy.
 
 Before deployment, NEXORA must have a dedicated production configuration that
 fails closed instead of inheriting local defaults. v0.32 begins this work by
-validating core auth settings whenever `prod` or `production` is active. It
-does not create a production properties file or resolve the remaining database,
-topology, proxy, and operations requirements.
+validating core auth settings whenever `prod` or `production` is active. v0.64
+also requires the existing `dev` persistent profile for production-like
+startup. These guards do not create a production properties file or resolve
+the remaining database, topology, proxy, and operations requirements.
 
 Required policy:
 
 - A production profile must use persistent PostgreSQL user and refresh-session
   stores. It must never select the default in-memory stores.
-- Production startup now fails when the JWT/refresh hash secret,
+- Production startup now fails when persistent stores are not selected through
+  the existing `dev` profile, or when the JWT/refresh hash secret,
   trusted-origin allowlist, refresh-cookie scope/Secure setting, or CSRF
   enabled/Secure setting is absent, invalid, or still local/placeholder. A
-  future production configuration must extend fail-closed validation to the
-  required persistent database and other selected deployment settings.
+  future production configuration must replace the `dev` bridge and validate
+  the required database and other selected deployment settings.
 - The JWT signing secret must be cryptographically strong, unique to the
   environment, externally managed, revocable/rotatable, and never use the
   repository default.
@@ -292,9 +300,12 @@ behavior, and real-browser verification still require deployed evidence.
 - [x] Unit-test the v0.32 fail-closed guard for inactive profiles, absent/local/
       placeholder/short/coupled auth secrets, secure-cookie and CSRF settings,
       trusted origins, aggregated messages, and secret-value non-disclosure.
-- [ ] Extend production configuration validation to persistent-store selection,
-      database requirements, and remaining deployment settings once the
-      topology and operations design is approved.
+- [x] Unit-test the v0.64 persistence guard for default and `dev` startup,
+      rejected `prod`/`production`, accepted production-like plus `dev`
+      combinations, and safe failure messaging.
+- [ ] Replace the temporary `dev` persistence bridge with an approved production
+      configuration and validate database requirements plus remaining deployment
+      settings once the topology and operations design is approved.
 - [ ] Unit-test refresh and CSRF cookie issuance and clearing attributes,
       including `Secure`, `HttpOnly`, `SameSite`, path, maximum age, and domain
       absence.

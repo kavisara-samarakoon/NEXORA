@@ -10,13 +10,13 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.62.0-backend-notification-preference-enforcement-foundation` is the latest
-stable development milestone while
-`v0.63.0-backend-auth-abuse-limit-keying-foundation` is in progress. The v0.63
-milestone scopes login and registration abuse windows by operation and a digest
-of the normalized candidate account identifier. Same-subject attempts remain
-limited while unrelated candidate subjects no longer share a bucket. Endpoint
-paths, API JSON response shapes, and OpenAPI YAML are unchanged.
+`v0.63.0-backend-auth-abuse-limit-keying-foundation` is the latest stable
+development milestone while
+`v0.64.0-backend-production-profile-persistence-guard-foundation` is in
+progress. The v0.64 startup guard rejects `prod` or `production` without the
+existing `dev` database-backed profile instead of allowing in-memory demo
+persistence. Endpoint paths, API JSON response shapes, and OpenAPI YAML are
+unchanged.
 This is documentation for a local/development MVP, not a
 production API specification or availability commitment.
 
@@ -37,6 +37,7 @@ the documentation should be corrected.
 | Browser auth protection | CSRF cookie/header match plus trusted origin/referrer checks on cookie-sensitive auth POST routes |
 | Default storage | In-memory local/demo services; state resets when the backend restarts |
 | Optional persisted mode | PostgreSQL through the Spring `dev` profile |
+| Production-like profiles | `prod`/`production` must be combined with `dev` or startup fails closed |
 | API versioning | No version prefix is currently implemented |
 | OpenAPI schema | [`openapi.yaml`](openapi.yaml) is hand-maintained and guarded by the local checker plus API Contract CI; no Swagger/OpenAPI runtime dependency or generated contract is provided |
 
@@ -143,6 +144,14 @@ the cookie. `SameSite=None` is rejected for either auth cookie unless
 profile guard requires secure refresh/CSRF cookies and rejects other core unsafe
 production settings. That guard is a startup safety foundation, not a complete
 production session design.
+
+The v0.64 persistence guard also prevents `prod` or `production` from starting
+unless `dev` activates the existing database-backed stores. Default local/demo
+and existing `dev` behavior remain unchanged. This changes no endpoint path,
+request or response JSON shape, frontend behavior, or auth/session/CSRF/CORS/
+request-ID behavior. It adds no production deployment, Docker or cloud setup,
+Redis, distributed storage, or provider, and NEXORA remains not
+production-ready.
 
 ## Cross-cutting request correlation header
 

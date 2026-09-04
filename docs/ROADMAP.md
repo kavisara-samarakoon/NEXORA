@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone by replacing
-  operation-global login and registration windows with scoped candidate-
-  identifier digest buckets while retaining same-subject limits.
+  `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
+  by preventing `prod` or `production` from starting with in-memory demo
+  persistence while reusing the existing `dev` database-backed profile.
 - Keep the completed
-  `v0.62.0-backend-notification-preference-enforcement-foundation` milestone as
-  the latest stable milestone until v0.63 is merged and tagged.
+  `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone as the latest
+  stable milestone until v0.64 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -140,7 +140,7 @@ project's academic, portfolio, and product goals evolve.
 - Validate the problem and workflows with research participants before making
   claims about demand or prioritizing commercialization.
 - Treat business, income, employment, and broader portfolio readiness as future
-  evidence-based decisions; the reviewer panels through v0.63 describe
+  evidence-based decisions; the reviewer panels through v0.64 describe
   implemented local foundations only.
 - Evaluate additional data providers, stores, and regional pricing based on
   licensing, reliability, attribution, and operating cost.

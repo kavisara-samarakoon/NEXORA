@@ -63,7 +63,7 @@ class RuntimeHealthServiceTests {
     }
 
     @Test
-    void productionProfileReportsGuardActiveWithHonestDataMode() {
+    void productionAndDevProfilesReportGuardActiveWithPersistentDataMode() {
         MockEnvironment environment = new MockEnvironment()
                 .withProperty(
                         "nexora.auth.jwt-secret",
@@ -76,15 +76,15 @@ class RuntimeHealthServiceTests {
                 .withProperty("nexora.auth.csrf.enabled", "true")
                 .withProperty("nexora.auth.csrf.cookie-secure", "true")
                 .withProperty("nexora.auth.trusted-origins", "https://app.nexora.example");
-        environment.setActiveProfiles("production");
+        environment.setActiveProfiles("production", "dev");
 
         HealthResponse health = service(environment).getHealth();
 
         assertEquals("production", health.runtimeMode());
-        assertEquals(List.of("production"), health.activeProfiles());
-        assertEquals("in-memory-demo", health.dataMode());
+        assertEquals(List.of("production", "dev"), health.activeProfiles());
+        assertEquals("postgres-dev", health.dataMode());
         assertEquals("active", health.checks().get("authProductionGuard"));
-        assertEquals("not-configured-by-runtime-profile", health.checks().get("database"));
+        assertEquals("configured-by-dev-profile", health.checks().get("database"));
     }
 
     @Test

@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> [`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
-> `v0.63.0-backend-auth-abuse-limit-keying-foundation` remains in progress
+> `v0.63.0-backend-auth-abuse-limit-keying-foundation`.
+> `v0.64.0-backend-production-profile-persistence-guard-foundation` is in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -46,7 +46,8 @@ security controls, and testable optional integrations.
   refresh-token rotation, safe auth security events, local abuse controls, and
   retention cleanup all have documented limits. The `prod` and `production`
   profiles also fail startup when core auth secrets, secure-cookie settings, or
-  trusted origins retain unsafe local values.
+  trusted origins retain unsafe local values, or when the existing `dev`
+  database-backed persistence profile is absent.
 - Experimental capabilities are labelled honestly. Local foundations are not
   presented as production operations or compliance controls.
 
@@ -78,6 +79,7 @@ security controls, and testable optional integrations.
 | API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 | Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
+| Production-profile persistence guard | `prod`/`production` fail closed unless the existing `dev` database-backed profile is also active | Backend safety foundation |
 
 “Foundation” means the capability is implemented and testable for local
 development; it does not imply production-scale operations.
@@ -90,6 +92,7 @@ development; it does not imply production-scale operations.
 | Backend | Spring Boot REST API with Spring Security, validation, JPA, and scheduling |
 | Default backend profile | Database-free demo catalogs plus in-memory accounts and personal wishlist state |
 | `dev` backend profile | PostgreSQL, Flyway V1–V10, and JPA-backed catalog, account, refresh-session, auth-security-event, wishlist, alert, price-history, and notification-preference data |
+| Production-like profile guard | `prod` or `production` requires `dev` so in-memory demo persistence cannot be selected |
 | External data | CheapShark for live deals and optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
 | Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, local API smoke testing, OpenAPI contract checking, frontend lint/build, dependency checks, manual CodeQL-ready scanning, and pull-request dependency review |
@@ -313,17 +316,19 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Production-profile safety foundation
 
 When either `prod` or `production` is active, the backend performs an early,
-fail-closed check of core authentication configuration. It rejects missing,
-short, coupled, local-default, or obvious placeholder JWT and refresh-token hash
+fail-closed check of persistence selection before its existing core
+authentication configuration checks. A production-like profile without the
+existing `dev` database-backed profile is rejected instead of starting with
+in-memory demo persistence. The auth checks continue to reject missing, short,
+coupled, local-default, or obvious placeholder JWT and refresh-token hash
 secrets; insecure refresh/CSRF cookies; disabled CSRF protection; an unsafe
 refresh-cookie path; and missing, wildcard, local, development-port, or
-non-HTTPS trusted origins. Failure messages identify property names without
-printing configured secret values.
+non-HTTPS trusted origins. Failure messages do not print configured values.
 
 An illustrative environment checklist is:
 
 ```text
-SPRING_PROFILES_ACTIVE=production
+SPRING_PROFILES_ACTIVE=production,dev
 NEXORA_JWT_SECRET=<strong external secret of at least 48 bytes>
 NEXORA_REFRESH_TOKEN_HASH_SECRET=<separate strong external secret of at least 48 bytes>
 NEXORA_REFRESH_TOKEN_COOKIE_SECURE=true
@@ -332,10 +337,12 @@ NEXORA_AUTH_CSRF_ENABLED=true
 NEXORA_AUTH_TRUSTED_ORIGINS=https://your-frontend-domain.example
 ```
 
-These are placeholders, not deployable values. The guard does not create a
-production configuration, select persistent storage, configure HTTPS or a
-reverse proxy, or make NEXORA production-ready. Default and `dev` startup keep
-their existing local-development behavior.
+These are placeholders, not deployable values. The current safe combination
+reuses the existing `dev` profile for PostgreSQL-backed stores; it is not a
+redesign of production configuration. Default local/demo startup and existing
+`dev` database-backed startup remain unchanged. This guard foundation adds no
+production deployment, Docker or cloud setup, Redis, distributed storage, or
+new provider, and it does not make NEXORA production-ready.
 
 ### Runtime observability foundation
 
@@ -562,18 +569,19 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-[`v0.62.0-backend-notification-preference-enforcement-foundation`](https://github.com/kavisara-samarakoon/NEXORA/tree/v0.62.0-backend-notification-preference-enforcement-foundation).
-The `v0.63.0-backend-auth-abuse-limit-keying-foundation` milestone is in
-progress until it is merged and tagged. It changes login and registration
-abuse limits from operation-global buckets to operation-plus-normalized-
-candidate-identifier digest buckets. Repeated attempts for the same candidate
-subject remain limited, while unrelated subjects no longer share that window.
-Configured limits, windows, endpoint paths, 429 and other API JSON shapes,
-frontend behavior, auth token/session/CSRF/CORS/request-ID behavior,
-dependencies, migrations, workflows, scripts, and OpenAPI YAML remain
-unchanged. The limiter remains process-local and in-memory; no distributed
-rate limiting, CAPTCHA, DDoS protection, or bot protection is added, and
-production readiness is unchanged.
+`v0.63.0-backend-auth-abuse-limit-keying-foundation`.
+The `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
+is in progress until it is merged and tagged. It adds an early startup guard so
+`prod` or `production` without the existing `dev` persistent-storage profile
+fails closed instead of selecting in-memory demo persistence. Default
+local/demo mode and existing `dev` database-backed behavior remain unchanged.
+Endpoint paths, API JSON response shapes, frontend behavior, auth/session/CSRF/
+CORS/request-ID/AuthAbuse/NotificationDispatcher behavior, dependencies,
+migrations, workflows, scripts, and OpenAPI YAML remain unchanged. This is a
+guard foundation, not full production deployment readiness; it adds no
+production deployment, Docker or cloud setup, Redis, distributed storage, or
+new provider. Production readiness is improved, but NEXORA is still not
+production-ready.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and
@@ -598,9 +606,11 @@ availability, scale, security-assurance, or compliance claim.
   visibility rather than a full vulnerability scan.
 - Access tokens are memory-first and the refresh token uses an HttpOnly cookie.
   The v0.32 production-profile gate rejects a narrow set of unsafe startup
-  values, but complete cookie/CORS/origin/proxy policy, persistent production
-  session storage, revocation controls, account verification, recovery, and
-  operational auditing remain incomplete.
+  values, and the v0.64 guard prevents production-like profiles from selecting
+  in-memory demo persistence. The accepted combination currently reuses the
+  development database profile; complete production configuration, cookie/
+  CORS/origin/proxy policy, revocation controls, account verification,
+  recovery, and operational auditing remain incomplete.
 - The v0.33 health/startup summaries are lightweight local visibility, not
   production dependency probes, metrics, tracing, log aggregation, alerting, or
   an uptime guarantee.
