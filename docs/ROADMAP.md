@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone by
-  updating official GitHub action majors for Node 24 action-runtime
-  compatibility without changing application toolchains or workflow policy.
+  `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone by
+  bounding the process-local external-deals cache, cleaning expired entries,
+  and sharing concurrent same-key provider loads.
 - Keep the completed
-  `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone as the
-  latest stable milestone until v0.67 is merged and tagged.
+  `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone as the
+  latest stable milestone until v0.68 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -96,6 +96,9 @@ project's academic, portfolio, and product goals evolve.
 - Keep production deployment, centralized observability, uptime monitoring,
   and real external-provider hardening as future work with explicit ownership
   and operational boundaries.
+- Consider distributed external-deals caching or rate limiting only with a
+  future approved topology; v0.68 intentionally provides process-local bounds
+  and same-key load sharing only.
 - Treat real production privacy controls, identity-protection features, and
   deployment hardening as future reviewed work; static screenshot guidance is
   not a runtime privacy control.

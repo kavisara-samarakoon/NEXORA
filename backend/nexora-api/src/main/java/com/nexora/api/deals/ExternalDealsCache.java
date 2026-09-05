@@ -5,17 +5,21 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ExternalDealsCache {
 
+    static final int MAX_DEALS_ENTRIES = 128;
+
     private final ExternalDealsProperties properties;
     private final Clock clock;
-    private final ConcurrentHashMap<ExternalDealsCacheKey, ExternalDealsCacheEntry<List<CheapSharkDealResponse>>>
-            deals = new ConcurrentHashMap<>();
+    private final int maxDealsEntries;
+    private final LinkedHashMap<ExternalDealsCacheKey, ExternalDealsCacheEntry<List<CheapSharkDealResponse>>>
+            deals = new LinkedHashMap<>(16, 0.75f, true);
     private volatile ExternalDealsCacheEntry<Map<String, String>> storeLookup;
 
     @Autowired
@@ -24,24 +28,44 @@ public class ExternalDealsCache {
     }
 
     ExternalDealsCache(ExternalDealsProperties properties, Clock clock) {
+        this(properties, clock, MAX_DEALS_ENTRIES);
+    }
+
+    ExternalDealsCache(ExternalDealsProperties properties, Clock clock, int maxDealsEntries) {
         this.properties = properties;
         this.clock = clock;
+        this.maxDealsEntries = Math.max(1, maxDealsEntries);
     }
 
-    ExternalDealsCacheEntry<List<CheapSharkDealResponse>> getDeals(ExternalDealsCacheKey key) {
-        return deals.get(key);
+    synchronized ExternalDealsCacheEntry<List<CheapSharkDealResponse>> getDeals(
+            ExternalDealsCacheKey key) {
+        ExternalDealsCacheEntry<List<CheapSharkDealResponse>> entry = deals.get(key);
+        if (entry != null && !entry.isFresh(clock.instant())) {
+            deals.remove(key);
+        }
+        return entry;
     }
 
-    void putDeals(ExternalDealsCacheKey key, List<CheapSharkDealResponse> responses) {
+    synchronized void putDeals(
+            ExternalDealsCacheKey key,
+            List<CheapSharkDealResponse> responses) {
         Instant now = clock.instant();
+        removeExpiredDeals(now);
+        if (!deals.containsKey(key)) {
+            evictDealsAtCapacity();
+        }
         deals.put(key, new ExternalDealsCacheEntry<>(
                 List.copyOf(responses),
                 now.plus(properties.getCache().dealsTtl())
         ));
     }
 
-    ExternalDealsCacheEntry<Map<String, String>> getStoreLookup() {
-        return storeLookup;
+    synchronized ExternalDealsCacheEntry<Map<String, String>> getStoreLookup() {
+        ExternalDealsCacheEntry<Map<String, String>> entry = storeLookup;
+        if (entry != null && !entry.isFresh(clock.instant())) {
+            storeLookup = null;
+        }
+        return entry;
     }
 
     synchronized void putStoreLookup(Map<String, String> lookup) {
@@ -56,8 +80,27 @@ public class ExternalDealsCache {
         return entry != null && entry.isFresh(clock.instant());
     }
 
-    public void clear() {
+    synchronized int dealEntryCount() {
+        return deals.size();
+    }
+
+    public synchronized void clear() {
         deals.clear();
         storeLookup = null;
+    }
+
+    private void removeExpiredDeals(Instant now) {
+        deals.entrySet().removeIf(entry -> !entry.getValue().isFresh(now));
+    }
+
+    private void evictDealsAtCapacity() {
+        while (deals.size() >= maxDealsEntries) {
+            Iterator<ExternalDealsCacheKey> iterator = deals.keySet().iterator();
+            if (!iterator.hasNext()) {
+                return;
+            }
+            iterator.next();
+            iterator.remove();
+        }
     }
 }

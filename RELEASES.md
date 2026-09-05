@@ -4,13 +4,30 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
+`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.67.0 CI Node 24 Action Runtime Compatibility foundation
+## In progress — v0.68.0 Backend External Deals Resource Bounds foundation
 
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation` remains in progress
+`v0.68.0-backend-external-deals-resource-bounds-foundation` remains in progress
 until it is merged and tagged.
+
+- Bounds the in-process external-deals response cache to a fixed maximum and
+  removes expired entries during cache reads and insertions.
+- Uses deterministic least-recently-used eviction after expired-entry cleanup
+  and shares concurrent same-key provider loads to reduce cache-miss traffic
+  amplification. Per-key in-flight state is removed after success or failure.
+- Preserves CheapShark integration, stale-cache/local fallback behavior, the
+  public endpoint, query parameters, status behavior, and response shape.
+- This backend resilience milestone changes no frontend, dependency, migration,
+  OpenAPI YAML, workflow, script, auth/session/CSRF/CORS/request-ID, Wishlist,
+  notification, Sentinel, health, or production-profile behavior. It adds no
+  distributed cache or rate limiter, and NEXORA remains not production-ready.
+
+## Completed CI milestone — v0.67.0 CI Node 24 Action Runtime Compatibility foundation
+
+`v0.67.0-ci-node24-action-runtime-compatibility-foundation` is the latest stable
+development milestone.
 
 - Updates official GitHub Actions majors to current Node 24-compatible action
   runtimes without changing workflow triggers, jobs, commands, working

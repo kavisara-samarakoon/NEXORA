@@ -4,17 +4,15 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
+`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
 
-The `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone is in
-progress. It updates official GitHub Actions majors for Node 24 action-runtime
-compatibility while retaining Java 17 for backend validation and Node.js 20 for
-frontend validation. This is workflow/tooling maintenance only: triggers,
-commands, permissions, application frontend/backend source and runtime behavior,
-dependencies, API endpoint paths and JSON response shapes, OpenAPI YAML, and
-scripts remain unchanged. Dependency Review remains advisory under the current
-repository capability limitation. No deployment or production runtime feature
-is added, and NEXORA remains not production-ready.
+The `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone is in
+progress. It bounds the process-local external-deals response cache, removes
+expired entries on reads and insertions, and shares concurrent same-key provider
+loads. Existing provider failure and local fallback behavior remain intact. API
+paths and JSON response shapes, OpenAPI YAML, frontend behavior, dependencies,
+workflows, and scripts are unchanged. No distributed cache or rate limiter is
+added, and NEXORA remains not production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -119,7 +117,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
+`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
 
 ## Completed foundations
 
@@ -145,7 +143,8 @@ readiness of the project. The latest stable development milestone is
 - PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.
 - Public demo wishlist and isolated authenticated personal wishlists.
 - Wishlist alert configuration, evaluation, transition events, and history UI.
-- CheapShark external deals, redirect links, caching, and local fallback.
+- CheapShark external deals, redirect links, bounded process-local caching,
+  same-key load sharing, and local fallback.
 - Opt-in wishlist price refresh scheduler with stored and CheapShark providers.
 - Wishlist price-history foundation with PostgreSQL and in-memory snapshots, an
   owner-scoped Bearer API, and a compact on-demand frontend history view.
@@ -278,6 +277,8 @@ readiness of the project. The latest stable development milestone is
 - Shared error metadata improves local diagnosis but is not centralized error
   reporting, tracing, production monitoring, or incident response.
 - CheapShark is a third-party dependency with incomplete game/store coverage.
+- External-deals cache and in-flight load controls are process-local, not a
+  distributed cache or distributed rate limiter.
 - Scheduled price refresh is `dev`-profile, single-process, and disabled by
   default.
 - Email delivery requires explicit SMTP configuration plus enabled account

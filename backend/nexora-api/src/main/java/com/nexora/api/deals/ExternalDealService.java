@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class ExternalDealService {
@@ -19,6 +23,10 @@ public class ExternalDealService {
     private final DealCatalogService localDeals;
     private final ExternalDealsProperties properties;
     private final ExternalDealsCache cache;
+    private final ConcurrentHashMap<ExternalDealsCacheKey, CompletableFuture<List<CheapSharkDealResponse>>>
+            dealLoads = new ConcurrentHashMap<>();
+    private final AtomicReference<CompletableFuture<Map<String, String>>> storeLookupLoad =
+            new AtomicReference<>();
 
     public ExternalDealService(
             CheapSharkDealClient cheapSharkDealClient,
@@ -97,20 +105,28 @@ public class ExternalDealService {
             return cached.value();
         }
 
+        CompletableFuture<List<CheapSharkDealResponse>> newLoad = new CompletableFuture<>();
+        CompletableFuture<List<CheapSharkDealResponse>> activeLoad =
+                dealLoads.putIfAbsent(cacheKey, newLoad);
+        if (activeLoad != null) {
+            return await(activeLoad);
+        }
+
         try {
-            List<CheapSharkDealResponse> responses = cheapSharkDealClient.getDeals(
+            List<CheapSharkDealResponse> responses = loadDealResponses(
+                    cacheKey,
                     effectivePageSize,
                     effectiveTitle,
-                    upperPrice
+                    upperPrice,
+                    cached
             );
-            cache.putDeals(cacheKey, responses);
+            newLoad.complete(responses);
             return responses;
-        } catch (RuntimeException exception) {
-            if (cached != null) {
-                LOGGER.warn("CheapShark deals refresh failed; serving stale cached deals");
-                return cached.value();
-            }
-            throw exception;
+        } catch (RuntimeException | Error failure) {
+            newLoad.completeExceptionally(failure);
+            throw failure;
+        } finally {
+            dealLoads.remove(cacheKey, newLoad);
         }
     }
 
@@ -121,6 +137,65 @@ public class ExternalDealService {
             return cached.value();
         }
 
+        CompletableFuture<Map<String, String>> newLoad = new CompletableFuture<>();
+        while (!storeLookupLoad.compareAndSet(null, newLoad)) {
+            CompletableFuture<Map<String, String>> activeLoad = storeLookupLoad.get();
+            if (activeLoad != null) {
+                return await(activeLoad);
+            }
+        }
+
+        try {
+            Map<String, String> lookup = loadStoreLookup(cached);
+            newLoad.complete(lookup);
+            return lookup;
+        } catch (RuntimeException | Error failure) {
+            newLoad.completeExceptionally(failure);
+            throw failure;
+        } finally {
+            storeLookupLoad.compareAndSet(newLoad, null);
+        }
+    }
+
+    private List<CheapSharkDealResponse> loadDealResponses(
+            ExternalDealsCacheKey cacheKey,
+            int effectivePageSize,
+            String effectiveTitle,
+            BigDecimal upperPrice,
+            ExternalDealsCacheEntry<List<CheapSharkDealResponse>> initialCached) {
+        ExternalDealsCacheEntry<List<CheapSharkDealResponse>> latestCached = cache.getDeals(cacheKey);
+        if (cache.isFresh(latestCached)) {
+            return latestCached.value();
+        }
+        ExternalDealsCacheEntry<List<CheapSharkDealResponse>> stale =
+                initialCached != null ? initialCached : latestCached;
+
+        try {
+            List<CheapSharkDealResponse> responses = cheapSharkDealClient.getDeals(
+                    effectivePageSize,
+                    effectiveTitle,
+                    upperPrice
+            );
+            cache.putDeals(cacheKey, responses);
+            return responses;
+        } catch (RuntimeException exception) {
+            if (stale != null) {
+                LOGGER.warn("CheapShark deals refresh failed; serving stale cached deals");
+                return stale.value();
+            }
+            throw exception;
+        }
+    }
+
+    private Map<String, String> loadStoreLookup(
+            ExternalDealsCacheEntry<Map<String, String>> initialCached) {
+        ExternalDealsCacheEntry<Map<String, String>> latestCached = cache.getStoreLookup();
+        if (cache.isFresh(latestCached)) {
+            return latestCached.value();
+        }
+        ExternalDealsCacheEntry<Map<String, String>> stale =
+                initialCached != null ? initialCached : latestCached;
+
         try {
             Map<String, String> lookup = cheapSharkStoreDirectory.toLookup(
                     cheapSharkDealClient.getStores()
@@ -128,12 +203,27 @@ public class ExternalDealService {
             cache.putStoreLookup(lookup);
             return lookup;
         } catch (RuntimeException exception) {
-            if (cached != null) {
+            if (stale != null) {
                 LOGGER.warn("CheapShark stores refresh failed; serving stale cached store lookup");
-                return cached.value();
+                return stale.value();
             }
             LOGGER.warn("CheapShark stores unavailable; using fallback store labels");
             return Map.of();
+        }
+    }
+
+    private static <T> T await(CompletableFuture<T> load) {
+        try {
+            return load.join();
+        } catch (CompletionException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            if (cause instanceof Error error) {
+                throw error;
+            }
+            throw exception;
         }
     }
 
