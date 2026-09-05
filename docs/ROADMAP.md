@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone by
-  suppressing the fixed Sentinel launcher at viewport widths up to and
-  including 768px while preserving responsive-navigation access.
+  `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone by
+  updating official GitHub action majors for Node 24 action-runtime
+  compatibility without changing application toolchains or workflow policy.
 - Keep the completed
-  `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` milestone
-  as the latest stable milestone until v0.66 is merged and tagged.
+  `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone as the
+  latest stable milestone until v0.67 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -44,6 +44,9 @@ project's academic, portfolio, and product goals evolve.
 
 ## CI and release follow-up
 
+- Preserve Java 17 and Node.js 20 as the current application validation inputs
+  after the v0.67 official-action Node 24 runtime compatibility update. Treat
+  future application toolchain changes as separate, deliberately tested work.
 - Keep Dependency Review advisory with `continue-on-error: true` and retain
   `fail-on-severity: high` as the intended threshold when evaluation is
   supported. Defer an enforceable gate until the required GitHub Dependency
