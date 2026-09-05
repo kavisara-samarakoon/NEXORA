@@ -1,11 +1,16 @@
 package com.nexora.api.wishlist;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,11 +23,27 @@ public class InMemoryUserWishlistService implements UserWishlistService {
     private final AtomicLong ids = new AtomicLong();
     private final AtomicLong alertEventIds = new AtomicLong();
     private final Map<Long, StoredWishlistItem> items = new ConcurrentHashMap<>();
-    private final Map<Long, StoredAlertEvent> alertEvents = new ConcurrentHashMap<>();
+    private final Map<Long, Deque<WishlistAlertEventResponse>> alertEventsByUser = new HashMap<>();
     private final WishlistPriceHistoryService wishlistPriceHistoryService;
+    private final int alertEventResponseLimit;
+    private final int alertEventRetentionLimit;
 
+    @Autowired
     public InMemoryUserWishlistService(WishlistPriceHistoryService wishlistPriceHistoryService) {
+        this(
+                wishlistPriceHistoryService,
+                WishlistAlertHistoryPolicy.RESPONSE_LIMIT,
+                WishlistAlertHistoryPolicy.IN_MEMORY_RETENTION_PER_USER
+        );
+    }
+
+    InMemoryUserWishlistService(
+            WishlistPriceHistoryService wishlistPriceHistoryService,
+            int alertEventResponseLimit,
+            int alertEventRetentionLimit) {
         this.wishlistPriceHistoryService = wishlistPriceHistoryService;
+        this.alertEventResponseLimit = Math.max(1, alertEventResponseLimit);
+        this.alertEventRetentionLimit = Math.max(1, alertEventRetentionLimit);
     }
 
     @Override
@@ -35,17 +56,19 @@ public class InMemoryUserWishlistService implements UserWishlistService {
     }
 
     @Override
-    public List<WishlistAlertEventResponse> getWishlistAlertEvents(long userId) {
-        return alertEvents.values().stream()
-                .filter(event -> event.userId() == userId)
-                .map(StoredAlertEvent::event)
-                .sorted((first, second) -> {
-                    int timestampOrder = second.createdAt().compareTo(first.createdAt());
-                    return timestampOrder != 0
-                            ? timestampOrder
-                            : Long.compare(second.id(), first.id());
-                })
-                .toList();
+    public synchronized List<WishlistAlertEventResponse> getWishlistAlertEvents(long userId) {
+        Deque<WishlistAlertEventResponse> retainedEvents = alertEventsByUser.get(userId);
+        if (retainedEvents == null || retainedEvents.isEmpty()) {
+            return List.of();
+        }
+
+        List<WishlistAlertEventResponse> recentEvents = new ArrayList<>(
+                Math.min(alertEventResponseLimit, retainedEvents.size()));
+        var iterator = retainedEvents.descendingIterator();
+        while (iterator.hasNext() && recentEvents.size() < alertEventResponseLimit) {
+            recentEvents.add(iterator.next());
+        }
+        return List.copyOf(recentEvents);
     }
 
     @Override
@@ -129,12 +152,16 @@ public class InMemoryUserWishlistService implements UserWishlistService {
                 item,
                 LocalDateTime.now(ZoneOffset.UTC)
         );
-        alertEvents.put(eventId, new StoredAlertEvent(userId, event));
+        Deque<WishlistAlertEventResponse> retainedEvents = alertEventsByUser.computeIfAbsent(
+                userId,
+                ignored -> new ArrayDeque<>()
+        );
+        retainedEvents.addLast(event);
+        while (retainedEvents.size() > alertEventRetentionLimit) {
+            retainedEvents.removeFirst();
+        }
     }
 
     private record StoredWishlistItem(long userId, WishlistItem item, boolean active) {
-    }
-
-    private record StoredAlertEvent(long userId, WishlistAlertEventResponse event) {
     }
 }

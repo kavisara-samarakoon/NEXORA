@@ -10,16 +10,18 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
-The `v0.68.0-backend-external-deals-resource-bounds-foundation` remains
+`v0.68.0-backend-external-deals-resource-bounds-foundation`.
+The `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` remains
 in progress until merged and tagged.
 
-v0.68 bounds the process-local external-deals response cache, cleans expired
-entries during reads and insertions, and shares concurrent same-key provider
-loads. CheapShark failures still use the existing stale or curated local
-fallback paths. API paths and JSON response shapes, OpenAPI YAML, frontend
-behavior, dependencies, workflows, and scripts are unchanged. This is not a
-distributed cache or rate limiter, and NEXORA remains not production-ready.
+v0.69 bounds the authenticated Wishlist alert-event response to the latest 50
+events, keeps the latest 100 events per account in local-demo memory, and uses
+a bounded newest-first database query in the `dev` profile. API paths and JSON
+event shapes, OpenAPI YAML, frontend behavior, dependencies, workflows,
+scripts, and notification preference enforcement are unchanged. This is not
+archival or audit-log retention, and it adds no background database deletion,
+production retention/backup policy, or distributed storage. NEXORA remains not
+production-ready.
 
 ## Problem statement
 

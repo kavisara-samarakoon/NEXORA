@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone by
-  bounding the process-local external-deals cache, cleaning expired entries,
-  and sharing concurrent same-key provider loads.
+  `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` milestone by
+  bounding the recent alert-event response, local-demo per-account retention,
+  and database-backed recent lookup.
 - Keep the completed
-  `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone as the
-  latest stable milestone until v0.68 is merged and tagged.
+  `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone as the
+  latest stable milestone until v0.69 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -73,6 +73,9 @@ project's academic, portfolio, and product goals evolve.
   after the underlying policies are defined.
 - Improve wishlist, price-target, alert-history, and notification-preference
   flows while preserving account ownership boundaries.
+- Define archival, background database deletion, and production retention and
+  backup policies separately; v0.69 provides bounded recent retrieval and
+  local-demo retention only.
 - Explore clearer price-history summaries and comparisons after defining data
   aggregation and retention requirements.
 - Improve provider attribution and explain when live data falls back to local

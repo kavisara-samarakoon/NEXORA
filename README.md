@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
-> `v0.68.0-backend-external-deals-resource-bounds-foundation` is in progress
+> `v0.68.0-backend-external-deals-resource-bounds-foundation`.
+> `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -487,6 +487,14 @@ dispatcher's responsibility. API JSON shapes and alert-history fields are
 unchanged, and no delivery/read-state fields, outbox, retry worker, scheduler,
 or provider are added.
 
+The in-progress v0.69 lifecycle foundation returns at most the latest 50
+account-scoped Wishlist alert events in newest-first order. Local-demo mode
+retains at most the latest 100 in-memory events per account, evicting the oldest
+deterministically, while the database-backed `dev` path performs a bounded
+recent-event query instead of loading the account's full history. This is not
+archival or audit-log retention: no background database deletion job,
+production retention/backup policy, or distributed storage was added.
+
 ## Continuous integration
 
 GitHub Actions validates both primary applications on pushes to `main` and pull
@@ -503,7 +511,7 @@ requests targeting `main`:
 | `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
 | `dependency-review.yml` | Runs advisory pull-request dependency review with an intended high-severity threshold when repository support is available |
 
-The in-progress v0.67 workflow/tooling milestone updates official GitHub action
+The completed v0.67 workflow/tooling milestone updated official GitHub action
 majors to current Node 24-compatible releases. This action execution runtime is
 separate from the application toolchains: backend validation remains on Java 17
 and frontend validation remains on Node.js 20. Workflow triggers, commands,
@@ -587,15 +595,16 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
-The `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone is in
-progress until it is merged and tagged. v0.68 caps the in-process external-deals
-response cache, removes expired entries during reads and insertions, and shares
-same-key cache-miss provider loads. Existing CheapShark failure handling and
-curated local fallback remain unchanged. API paths and JSON response shapes,
-OpenAPI YAML, frontend behavior, dependencies, workflows, and scripts are
-unchanged. This adds no distributed cache or rate limiter, and NEXORA remains
-not production-ready.
+`v0.68.0-backend-external-deals-resource-bounds-foundation`.
+The `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` milestone is
+in progress until it is merged and tagged. v0.69 bounds the authenticated
+Wishlist alert-event response to the latest 50 entries, retains at most 100
+in-memory events per account in local-demo mode, and uses a bounded recent-event
+database query in the `dev` profile. API paths and JSON event shapes, OpenAPI
+YAML, frontend behavior, dependencies, workflows, scripts, and notification
+preference enforcement are unchanged. No background database deletion,
+archival/audit-log retention, production retention/backup policy, or distributed
+storage is added, and NEXORA remains not production-ready.
 
 The completed v0.67 milestone updated official GitHub action majors for Node 24
 action-runtime compatibility without changing application toolchains or runtime

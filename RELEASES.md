@@ -4,13 +4,31 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
+`v0.68.0-backend-external-deals-resource-bounds-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.68.0 Backend External Deals Resource Bounds foundation
+## In progress — v0.69.0 Backend Wishlist Alert History Lifecycle foundation
 
-`v0.68.0-backend-external-deals-resource-bounds-foundation` remains in progress
-until it is merged and tagged.
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` remains in
+progress until it is merged and tagged.
+
+- Returns at most the latest 50 authenticated, account-scoped Wishlist alert
+  events in newest-first order without changing the response array or event
+  object shape.
+- Retains at most the latest 100 in-memory events per account in local-demo
+  mode, deterministically evicting the oldest, and uses a user-scoped bounded
+  recent lookup for the database-backed `dev` profile.
+- Preserves Wishlist ownership, event creation, notification preference
+  enforcement, endpoint paths, shared errors, and existing fallback behavior.
+- This is bounded recent history, not archival or audit-log retention. It adds
+  no background database deletion job, production retention/backup policy,
+  migration, dependency, distributed storage, frontend, workflow, script, or
+  OpenAPI YAML change. NEXORA remains not production-ready.
+
+## Completed backend milestone — v0.68.0 Backend External Deals Resource Bounds foundation
+
+`v0.68.0-backend-external-deals-resource-bounds-foundation` is the latest stable
+development milestone.
 
 - Bounds the in-process external-deals response cache to a fixed maximum and
   removes expired entries during cache reads and insertions.
