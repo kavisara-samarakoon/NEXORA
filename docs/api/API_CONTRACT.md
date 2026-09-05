@@ -10,9 +10,8 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is the
-latest stable development milestone while
-`v0.70.0-backend-health-version-semantics-foundation` is in progress.
+`v0.70.0-backend-health-version-semantics-foundation` is the latest stable
+development milestone. No next milestone has started.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured

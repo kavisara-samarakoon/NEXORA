@@ -6,13 +6,13 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Complete the in-progress
-  `v0.70.0-backend-health-version-semantics-foundation` milestone by clarifying
-  the v0.33 observability-contract baseline with an explicit additive field and
-  a backward-compatible legacy alias.
-- Keep the completed
-  `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` milestone as the
-  latest stable milestone until v0.70 is merged and tagged.
+- Treat the completed
+  `v0.70.0-backend-health-version-semantics-foundation` milestone as the latest
+  stable milestone. No next milestone has started.
+- Consider
+  `v0.71.0-backend-external-provider-request-budget-foundation` as the
+  recommended next candidate. It has not started and is not an active
+  milestone.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather

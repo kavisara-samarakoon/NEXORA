@@ -4,8 +4,8 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`, while
-`v0.70.0-backend-health-version-semantics-foundation` is in progress.
+`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
+started.
 
 ## Repository-defined automation
 

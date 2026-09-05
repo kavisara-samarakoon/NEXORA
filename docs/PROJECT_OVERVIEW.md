@@ -10,9 +10,8 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
-The `v0.70.0-backend-health-version-semantics-foundation` remains
-in progress until merged and tagged.
+`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
+started.
 
 v0.70 adds `observabilityContractMilestone` to `/api/health` and preserves the
 existing `milestone` key as a legacy alias. Both identify the v0.33 health and
@@ -103,7 +102,7 @@ and retention is not a production privacy or compliance policy. See
 [auth production-policy plan](security/auth-production-policy-plan.md) for the
 remaining decisions.
 
-The in-progress v0.64 persistence guard prevents `prod` or `production` from
+The completed v0.64 persistence guard prevents `prod` or `production` from
 starting with in-memory demo persistence. `prod,dev` and `production,dev` reuse
 the existing database-backed stores, while default local/demo and `dev` startup
 remain unchanged. This improves production safety but is not a complete
