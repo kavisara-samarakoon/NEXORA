@@ -8,10 +8,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -142,6 +149,78 @@ class ExternalDealServiceCacheTests {
                 () -> assertEquals(Duration.ofSeconds(1), cache.dealsTtl()),
                 () -> assertEquals(Duration.ofSeconds(1), cache.storesTtl())
         );
+    }
+
+    @Test
+    void concurrentSameKeyMissesShareProviderLoads() throws Exception {
+        int callerCount = 8;
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(60, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        ExternalDealService service = service(client, localDeals, properties, clock);
+        CountDownLatch callersReady = new CountDownLatch(callerCount);
+        CountDownLatch startCallers = new CountDownLatch(1);
+        CountDownLatch providerStarted = new CountDownLatch(1);
+        CountDownLatch releaseProvider = new CountDownLatch(1);
+
+        when(client.getDeals(12, "shared", null)).thenAnswer(invocation -> {
+            providerStarted.countDown();
+            assertTrue(releaseProvider.await(5, TimeUnit.SECONDS));
+            return List.of(response("Shared result", "1"));
+        });
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+
+        ExecutorService executor = Executors.newFixedThreadPool(callerCount);
+        try {
+            List<Future<List<Deal>>> results = new ArrayList<>();
+            for (int caller = 0; caller < callerCount; caller++) {
+                results.add(executor.submit(() -> {
+                    callersReady.countDown();
+                    assertTrue(startCallers.await(5, TimeUnit.SECONDS));
+                    return service.getDeals("shared", null, null);
+                }));
+            }
+
+            assertTrue(callersReady.await(5, TimeUnit.SECONDS));
+            startCallers.countDown();
+            assertTrue(providerStarted.await(5, TimeUnit.SECONDS));
+            releaseProvider.countDown();
+
+            for (Future<List<Deal>> result : results) {
+                assertEquals("Shared result", result.get(5, TimeUnit.SECONDS).get(0).title());
+            }
+        } finally {
+            releaseProvider.countDown();
+            executor.shutdownNow();
+        }
+
+        verify(client, times(1)).getDeals(12, "shared", null);
+        verify(client, times(1)).getStores();
+        verify(localDeals, never()).getDeals();
+    }
+
+    @Test
+    void failedSingleFlightIsRemovedSoLaterRequestCanRetry() {
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(60, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        List<Deal> fallback = List.of(localDeal());
+        ExternalDealService service = service(client, localDeals, properties, clock);
+
+        when(client.getDeals(12, "retry", null))
+                .thenThrow(new CheapSharkClientException("provider unavailable"))
+                .thenReturn(List.of(response("Recovered result", "1")));
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+        when(localDeals.getDeals()).thenReturn(fallback);
+
+        assertEquals(fallback, service.getDeals("retry", null, null));
+        assertEquals("Recovered result", service.getDeals("retry", null, null).get(0).title());
+
+        verify(client, times(2)).getDeals(12, "retry", null);
+        verify(client, times(1)).getStores();
+        verify(localDeals, times(1)).getDeals();
     }
 
     private static ExternalDealService service(

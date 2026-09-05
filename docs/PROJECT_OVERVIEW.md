@@ -10,18 +10,16 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
-The `v0.67.0-ci-node24-action-runtime-compatibility-foundation` remains
+`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
+The `v0.68.0-backend-external-deals-resource-bounds-foundation` remains
 in progress until merged and tagged.
 
-v0.67 updates official GitHub Actions majors for Node 24 action-runtime
-compatibility. The backend validation Java version remains 17 and the frontend
-validation Node.js version remains 20; application frontend/backend source and
-runtime behavior are unchanged. Dependencies, API endpoint paths and JSON
-response shapes, OpenAPI YAML, and scripts are unchanged. Dependency Review
-remains advisory because the repository capability limitation is unchanged.
-This milestone adds no production or deployment behavior, and NEXORA remains
-not production-ready.
+v0.68 bounds the process-local external-deals response cache, cleans expired
+entries during reads and insertions, and shares concurrent same-key provider
+loads. CheapShark failures still use the existing stale or curated local
+fallback paths. API paths and JSON response shapes, OpenAPI YAML, frontend
+behavior, dependencies, workflows, and scripts are unchanged. This is not a
+distributed cache or rate limiter, and NEXORA remains not production-ready.
 
 ## Problem statement
 
@@ -47,7 +45,7 @@ deployment.
 
 | Capability | Current scope |
 | --- | --- |
-| Deal and giveaway discovery | Curated data with typed fallbacks, filtering, and optional live CheapShark access |
+| Deal and giveaway discovery | Curated data with typed fallbacks, filtering, and optional live CheapShark access with bounded process-local caching |
 | Accounts and sessions | Registration, login, refresh rotation, logout, and current-account lookup |
 | Personal wishlist | Account-owned add, update, alert configuration, and removal flows |
 | Price intelligence | Price targets, evaluation transitions, history snapshots, and compact history views |
@@ -202,7 +200,9 @@ cost controls, or production AI observability.
   coordinate across processes.
 - Notification delivery has no durable outbox, retry policy, verified-recipient
   flow, or production observability.
-- External deal matching has provider coverage and title/store matching limits.
+- External deal matching has provider coverage and title/store matching limits;
+  its bounded cache and same-key load sharing remain process-local rather than
+  distributed infrastructure.
 - Settings is a static preview; its controls are not saved or enforced and are
   not connected to the signed-in account.
 - Security scores, sessions, events, and capability states on the current page

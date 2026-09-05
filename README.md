@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
-> `v0.67.0-ci-node24-action-runtime-compatibility-foundation` is in progress
+> `v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
+> `v0.68.0-backend-external-deals-resource-bounds-foundation` is in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -80,6 +80,7 @@ security controls, and testable optional integrations.
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 | Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
 | Production-profile persistence guard | `prod`/`production` fail closed unless the existing `dev` database-backed profile is also active | Backend safety foundation |
+| External-deals resource bounds | Bounded in-process response cache, expired-entry cleanup, and same-key provider-load sharing | Backend resilience foundation |
 
 “Foundation” means the capability is implemented and testable for local
 development; it does not imply production-scale operations.
@@ -586,20 +587,19 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
-The `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone is in
-progress until it is merged and tagged. v0.67 updates official GitHub Actions
-majors for Node 24 action-runtime compatibility while preserving the existing
-Java 17 backend test input and Node.js 20 frontend test/build input. It is
-workflow/tooling maintenance only: application frontend/backend source and
-runtime behavior, API contracts, endpoint paths, JSON response shapes,
-dependencies, OpenAPI YAML, and scripts are unchanged. Dependency Review
-remains advisory because of the repository capability limitation. No production
-or deployment behavior is added, and NEXORA remains not production-ready.
+`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
+The `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone is in
+progress until it is merged and tagged. v0.68 caps the in-process external-deals
+response cache, removes expired entries during reads and insertions, and shares
+same-key cache-miss provider loads. Existing CheapShark failure handling and
+curated local fallback remain unchanged. API paths and JSON response shapes,
+OpenAPI YAML, frontend behavior, dependencies, workflows, and scripts are
+unchanged. This adds no distributed cache or rate limiter, and NEXORA remains
+not production-ready.
 
-The completed v0.66 milestone suppresses the floating Sentinel launcher at
-viewport widths up to and including 768px while preserving responsive
-navigation, desktop access, and the dedicated `/sentinel` route behavior.
+The completed v0.67 milestone updated official GitHub action majors for Node 24
+action-runtime compatibility without changing application toolchains or runtime
+behavior.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and
@@ -636,6 +636,8 @@ availability, scale, security-assurance, or compliance claim.
   scheduling guarantees.
 - CheapShark coverage and conservative title/store matching cannot resolve every
   game or store.
+- External-deals caching and same-key load sharing remain process-local; there is
+  no distributed cache or distributed rate limiter.
 - Notification preferences are account-scoped, but notifications have no
   persistent delivery status, retries, outbox, or asynchronous after-commit
   delivery.
