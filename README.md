@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
-> `v0.66.0-frontend-sentinel-responsive-clearance-foundation` is in progress
+> `v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
+> `v0.67.0-ci-node24-action-runtime-compatibility-foundation` is in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -502,6 +502,12 @@ requests targeting `main`:
 | `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
 | `dependency-review.yml` | Runs advisory pull-request dependency review with an intended high-severity threshold when repository support is available |
 
+The in-progress v0.67 workflow/tooling milestone updates official GitHub action
+majors to current Node 24-compatible releases. This action execution runtime is
+separate from the application toolchains: backend validation remains on Java 17
+and frontend validation remains on Node.js 20. Workflow triggers, commands,
+permissions, and Dependency Review's advisory policy are unchanged.
+
 The frontend workflow does not build the retained Vite prototype. Backend CI
 keeps the normal test suite database-free and runs PostgreSQL validation in a
 separate service-backed job. Dependabot checks GitHub Actions, backend Maven,
@@ -580,18 +586,20 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
-The `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone is in
-progress until it is merged and tagged. Post-v0.65 browser QA confirmed that
-the fixed Sentinel launcher could obstruct dashboard content at tablet width
-and a Settings toggle at mobile width. v0.66 suppresses the floating launcher
-at viewport widths up to and including 768px; Sentinel remains available
-through the responsive navigation. Desktop launcher behavior above 768px and
-the existing absence of the redundant launcher on `/sentinel` remain
-unchanged. This CSS-only clearance fix changes no backend, API, authentication,
-session, or runtime-health behavior. Endpoint paths, API JSON response shapes,
-dependencies, OpenAPI YAML, workflows, and scripts are unchanged. NEXORA
-remains not production-ready.
+`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
+The `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone is in
+progress until it is merged and tagged. v0.67 updates official GitHub Actions
+majors for Node 24 action-runtime compatibility while preserving the existing
+Java 17 backend test input and Node.js 20 frontend test/build input. It is
+workflow/tooling maintenance only: application frontend/backend source and
+runtime behavior, API contracts, endpoint paths, JSON response shapes,
+dependencies, OpenAPI YAML, and scripts are unchanged. Dependency Review
+remains advisory because of the repository capability limitation. No production
+or deployment behavior is added, and NEXORA remains not production-ready.
+
+The completed v0.66 milestone suppresses the floating Sentinel launcher at
+viewport widths up to and including 768px while preserving responsive
+navigation, desktop access, and the dedicated `/sentinel` route behavior.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

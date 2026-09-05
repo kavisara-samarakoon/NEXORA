@@ -4,13 +4,33 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
+`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.66.0 Frontend Sentinel Responsive Clearance foundation
+## In progress — v0.67.0 CI Node 24 Action Runtime Compatibility foundation
 
-`v0.66.0-frontend-sentinel-responsive-clearance-foundation` remains in
-progress until it is merged and tagged.
+`v0.67.0-ci-node24-action-runtime-compatibility-foundation` remains in progress
+until it is merged and tagged.
+
+- Updates official GitHub Actions majors to current Node 24-compatible action
+  runtimes without changing workflow triggers, jobs, commands, working
+  directories, concurrency, artifacts, or permissions.
+- Keeps the backend CI Java version at 17 and the frontend CI/reviewer toolchain
+  Node.js version at 20. The GitHub action runtime update does not change either
+  application runtime or its tested toolchain version.
+- Dependency Review remains advisory with `continue-on-error: true`,
+  `fail-on-severity: high`, pull-request-only execution, and read-only
+  permissions because the repository capability limitation is unchanged.
+- This is workflow/tooling maintenance only. Frontend/backend source and runtime
+  behavior, dependencies, API endpoint paths and JSON response shapes, OpenAPI
+  YAML, and scripts are unchanged. No production, deployment, Docker, cloud,
+  Redis, provider, or runtime feature is added, and NEXORA remains not
+  production-ready.
+
+## Completed frontend milestone — v0.66.0 Frontend Sentinel Responsive Clearance foundation
+
+`v0.66.0-frontend-sentinel-responsive-clearance-foundation` is the latest stable
+development milestone.
 
 - Post-v0.65 browser QA confirmed that the fixed Sentinel launcher obstructed
   Backend Health and Data Source Transparency content at 768px and overlapped a

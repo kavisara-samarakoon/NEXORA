@@ -4,22 +4,17 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`, which
-truthfully retains Dependency Review as advisory under the repository's current
-GitHub security capability.
+`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
 
-The `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone is in
-progress. Post-v0.65 browser QA confirmed that the fixed Sentinel launcher
-overlapped dashboard status content at 768px and a Settings toggle at 390px.
-The launcher is now suppressed through CSS at viewport widths up to and
-including 768px, so it cannot obscure content or intercept touch input. Sentinel
-remains reachable through responsive navigation. Desktop behavior above 768px
-and the existing no-launcher behavior on `/sentinel` remain unchanged. Backend,
-API, auth/session/CSRF/CORS/request-ID, Wishlist, notification-preference,
-Sentinel gateway, and runtime-health behavior are unchanged. Endpoint paths,
-API JSON response shapes, dependencies, migrations, OpenAPI YAML, workflows,
-and scripts are unchanged. No deployment, cloud, Docker, Redis, provider, or
-runtime feature is added, and NEXORA remains not production-ready.
+The `v0.67.0-ci-node24-action-runtime-compatibility-foundation` milestone is in
+progress. It updates official GitHub Actions majors for Node 24 action-runtime
+compatibility while retaining Java 17 for backend validation and Node.js 20 for
+frontend validation. This is workflow/tooling maintenance only: triggers,
+commands, permissions, application frontend/backend source and runtime behavior,
+dependencies, API endpoint paths and JSON response shapes, OpenAPI YAML, and
+scripts remain unchanged. Dependency Review remains advisory under the current
+repository capability limitation. No deployment or production runtime feature
+is added, and NEXORA remains not production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-

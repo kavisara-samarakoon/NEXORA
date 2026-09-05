@@ -10,18 +10,18 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
-The `v0.66.0-frontend-sentinel-responsive-clearance-foundation` remains
+`v0.66.0-frontend-sentinel-responsive-clearance-foundation`.
+The `v0.67.0-ci-node24-action-runtime-compatibility-foundation` remains
 in progress until merged and tagged.
 
-Post-v0.65 browser QA confirmed that the fixed Sentinel launcher could obstruct
-tablet dashboard content and a mobile Settings control. v0.66 hides that
-floating launcher through CSS at viewport widths up to and including 768px.
-Sentinel remains available through responsive navigation; desktop launcher
-behavior above 768px and the existing `/sentinel` route behavior remain
-unchanged. This changes no backend, API, authentication, session, runtime-health,
-dependency, workflow, or script behavior, and NEXORA remains not
-production-ready.
+v0.67 updates official GitHub Actions majors for Node 24 action-runtime
+compatibility. The backend validation Java version remains 17 and the frontend
+validation Node.js version remains 20; application frontend/backend source and
+runtime behavior are unchanged. Dependencies, API endpoint paths and JSON
+response shapes, OpenAPI YAML, and scripts are unchanged. Dependency Review
+remains advisory because the repository capability limitation is unchanged.
+This milestone adds no production or deployment behavior, and NEXORA remains
+not production-ready.
 
 ## Problem statement
 
@@ -129,6 +129,9 @@ cost controls, or production AI observability.
 - The primary frontend is checked with ESLint and a production build.
 - GitHub Actions cover backend, PostgreSQL, primary frontend, and lightweight
   dependency/security validation.
+- Official GitHub action majors are maintained on Node 24-compatible releases;
+  this action runtime is separate from the preserved Java 17 and Node.js 20
+  application validation inputs.
 - GitHub CI proved that enforceable Dependency Review is unsupported by the
   repository's current GitHub security configuration. It therefore remains
   advisory through intentional `continue-on-error: true`, with
