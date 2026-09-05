@@ -4,13 +4,31 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.68.0-backend-external-deals-resource-bounds-foundation`.
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.69.0 Backend Wishlist Alert History Lifecycle foundation
+## In progress — v0.70.0 Backend Health Version Semantics foundation
 
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` remains in
-progress until it is merged and tagged.
+`v0.70.0-backend-health-version-semantics-foundation` remains in progress until
+it is merged and tagged.
+
+- Adds `observabilityContractMilestone` to `GET /api/health` with the existing
+  `v0.33.0-runtime-observability-foundation` contract-baseline value.
+- Retains `milestone` as a backward-compatible legacy alias with the same value;
+  neither field represents the current repository release tag.
+- Preserves the endpoint, HTTP behavior, runtime modes, sanitized profiles,
+  providers, checks, timing fields, and existing JSON fields. The frontend
+  parser accepts the additive field while tolerating older backends, with no
+  new dashboard display.
+- OpenAPI YAML changes only to describe the additive health field. Auth, deals,
+  Wishlist, Sentinel, notifications, production-profile guards, dependencies,
+  workflows, scripts, deployment, and production behavior are unchanged.
+  NEXORA remains not production-ready.
+
+## Completed backend milestone — v0.69.0 Backend Wishlist Alert History Lifecycle foundation
+
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is the latest
+stable development milestone.
 
 - Returns at most the latest 50 authenticated, account-scoped Wishlist alert
   events in newest-first order without changing the response array or event

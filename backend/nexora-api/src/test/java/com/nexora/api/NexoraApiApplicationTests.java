@@ -69,6 +69,8 @@ class NexoraApiApplicationTests {
                 .andExpect(jsonPath("$.service").value("NEXORA API"))
                 .andExpect(jsonPath("$.milestone")
                         .value("v0.33.0-runtime-observability-foundation"))
+                .andExpect(jsonPath("$.observabilityContractMilestone")
+                        .value("v0.33.0-runtime-observability-foundation"))
                 .andExpect(jsonPath("$.runtimeMode").value("local-demo"))
                 .andExpect(jsonPath("$.activeProfiles[0]").value("default"))
                 .andExpect(jsonPath("$.dataMode").value("in-memory-demo"))

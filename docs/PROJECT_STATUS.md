@@ -4,18 +4,17 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.68.0-backend-external-deals-resource-bounds-foundation`.
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
 
-The `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` milestone is
-in progress. It returns the latest 50 authenticated Wishlist alert events,
-retains the latest 100 in-memory events per account in local-demo mode, and uses
-a bounded recent query in the database-backed `dev` profile. Newest-first,
-account-scoped behavior is preserved. API paths and JSON response shapes,
-OpenAPI YAML, frontend behavior, dependencies, workflows, scripts, and
-notification preference enforcement are unchanged. This is not archival or
-audit-log retention; no background database deletion job, production
-retention/backup policy, or distributed storage is added. NEXORA remains not
-production-ready.
+The `v0.70.0-backend-health-version-semantics-foundation` milestone is in
+progress. It adds `observabilityContractMilestone` to `/api/health` and retains
+`milestone` as a legacy alias; both carry the v0.33 health-contract baseline,
+not the current repository release. This is additive and backward-compatible.
+The endpoint and runtime health behavior, existing JSON fields, auth, deals,
+Wishlist, Sentinel, notifications, production-profile guards, dependencies,
+workflows, and scripts are unchanged. The frontend only accepts the optional
+field, with no visible change. OpenAPI YAML is updated solely for the additive
+field, and NEXORA remains not production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -87,6 +86,10 @@ cookies, tokens, API keys, or full environment data. This is not external
 dependency monitoring, metrics, tracing, alerting, managed logging, or a
 production-readiness claim.
 
+The v0.70 clarification explicitly names that v0.33 baseline as
+`observabilityContractMilestone`. The original `milestone` key remains as a
+legacy alias and is not current-release metadata.
+
 The v0.32 production-profile safety foundation adds an early backend startup
 guard for the `prod` and `production` profiles. It fails closed when core auth
 secrets are missing, short, coupled, local defaults, or obvious placeholders;
@@ -120,7 +123,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.68.0-backend-external-deals-resource-bounds-foundation`.
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
 
 ## Completed foundations
 

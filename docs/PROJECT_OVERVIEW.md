@@ -10,18 +10,18 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.68.0-backend-external-deals-resource-bounds-foundation`.
-The `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` remains
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
+The `v0.70.0-backend-health-version-semantics-foundation` remains
 in progress until merged and tagged.
 
-v0.69 bounds the authenticated Wishlist alert-event response to the latest 50
-events, keeps the latest 100 events per account in local-demo memory, and uses
-a bounded newest-first database query in the `dev` profile. API paths and JSON
-event shapes, OpenAPI YAML, frontend behavior, dependencies, workflows,
-scripts, and notification preference enforcement are unchanged. This is not
-archival or audit-log retention, and it adds no background database deletion,
-production retention/backup policy, or distributed storage. NEXORA remains not
-production-ready.
+v0.70 adds `observabilityContractMilestone` to `/api/health` and preserves the
+existing `milestone` key as a legacy alias. Both identify the v0.33 health and
+runtime-observability contract baseline rather than the current project
+release. Existing runtime health behavior and JSON fields remain unchanged; the
+frontend parser tolerates the additive field without new UI. OpenAPI YAML is
+updated only for that field. No auth, deals, Wishlist, Sentinel, notification,
+production-profile, dependency, workflow, script, deployment, or production
+behavior changes are included. NEXORA remains not production-ready.
 
 ## Problem statement
 
@@ -146,6 +146,8 @@ cost controls, or production AI observability.
 - The primary dashboard safely surfaces selected `/api/health` labels or generic
   local startup guidance when the backend is unavailable. It is not production
   monitoring or a deployment health check.
+- Health contract metadata explicitly identifies its v0.33 observability
+  baseline; it does not claim to report the current repository release.
 - The primary dashboard and deals, giveaways, and security pages expose safe
   source labels so reviewers can distinguish API-connected data from bundled
   fallback previews. These UI labels do not change the underlying API contract.

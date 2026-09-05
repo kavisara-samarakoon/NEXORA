@@ -703,6 +703,7 @@ components:
         - status
         - service
         - milestone
+        - observabilityContractMilestone
         - runtimeMode
         - activeProfiles
         - dataMode
@@ -720,6 +721,11 @@ components:
           type: string
         milestone:
           type: string
+          description: Backward-compatible legacy alias for observabilityContractMilestone; not the current repository release.
+        observabilityContractMilestone:
+          type: string
+          description: Health and runtime-observability contract baseline; not the current repository release.
+          example: v0.33.0-runtime-observability-foundation
         runtimeMode:
           type: string
         activeProfiles:
