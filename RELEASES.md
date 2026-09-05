@@ -4,13 +4,14 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
+`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
+started.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.70.0 Backend Health Version Semantics foundation
+## Completed backend milestone — v0.70.0 Backend Health Version Semantics foundation
 
-`v0.70.0-backend-health-version-semantics-foundation` remains in progress until
-it is merged and tagged.
+`v0.70.0-backend-health-version-semantics-foundation` is the latest stable
+development milestone.
 
 - Adds `observabilityContractMilestone` to `GET /api/health` with the existing
   `v0.33.0-runtime-observability-foundation` contract-baseline value.
@@ -27,8 +28,8 @@ it is merged and tagged.
 
 ## Completed backend milestone — v0.69.0 Backend Wishlist Alert History Lifecycle foundation
 
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is the latest
-stable development milestone.
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` completed the
+bounded Wishlist alert-history lifecycle foundation.
 
 - Returns at most the latest 50 authenticated, account-scoped Wishlist alert
   events in newest-first order without changing the response array or event

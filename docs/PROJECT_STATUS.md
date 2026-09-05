@@ -4,10 +4,11 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
+`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
+started.
 
-The `v0.70.0-backend-health-version-semantics-foundation` milestone is in
-progress. It adds `observabilityContractMilestone` to `/api/health` and retains
+The completed `v0.70.0-backend-health-version-semantics-foundation` milestone
+adds `observabilityContractMilestone` to `/api/health` and retains
 `milestone` as a legacy alias; both carry the v0.33 health-contract baseline,
 not the current repository release. This is additive and backward-compatible.
 The endpoint and runtime health behavior, existing JSON fields, auth, deals,
@@ -123,7 +124,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
+`v0.70.0-backend-health-version-semantics-foundation`.
 
 ## Completed foundations
 

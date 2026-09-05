@@ -12,9 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
-> `v0.70.0-backend-health-version-semantics-foundation` is in progress
-> until merged and tagged.
+> `v0.70.0-backend-health-version-semantics-foundation`.
+> No next milestone has started.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -353,7 +352,7 @@ startup/check times, process uptime, and configuration-level check summaries.
 Application startup also writes one bounded line containing the same safe mode
 and provider labels.
 
-The in-progress v0.70 semantics foundation keeps `milestone` as a backward-
+The completed v0.70 semantics foundation keeps `milestone` as a backward-
 compatible legacy alias and adds `observabilityContractMilestone`; both identify
 the `v0.33.0-runtime-observability-foundation` health-contract baseline, not the
 current repository release. Current release status remains in project and
@@ -493,7 +492,7 @@ dispatcher's responsibility. API JSON shapes and alert-history fields are
 unchanged, and no delivery/read-state fields, outbox, retry worker, scheduler,
 or provider are added.
 
-The in-progress v0.69 lifecycle foundation returns at most the latest 50
+The completed v0.69 lifecycle foundation returns at most the latest 50
 account-scoped Wishlist alert events in newest-first order. Local-demo mode
 retains at most the latest 100 in-memory events per account, evicting the oldest
 deterministically, while the database-backed `dev` path performs a bounded
@@ -601,9 +600,8 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation`.
-The `v0.70.0-backend-health-version-semantics-foundation` milestone is in
-progress until it is merged and tagged. v0.70 adds the explicit
+`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
+started. The completed v0.70 milestone adds the explicit
 `observabilityContractMilestone` health field while retaining `milestone` as a
 legacy alias with the same v0.33 contract-baseline value. The endpoint path,
 status behavior, and existing JSON fields are unchanged. The primary frontend
@@ -612,6 +610,10 @@ older backends. OpenAPI YAML changes only for the additive health field. Auth,
 deals, Wishlist, Sentinel, notifications, production-profile guards,
 dependencies, workflows, scripts, and runtime health behavior are unchanged,
 and NEXORA remains not production-ready.
+
+The recommended next candidate is
+`v0.71.0-backend-external-provider-request-budget-foundation`; it has not
+started and is not an active milestone.
 
 The completed v0.67 milestone updated official GitHub action majors for Node 24
 action-runtime compatibility without changing application toolchains or runtime
