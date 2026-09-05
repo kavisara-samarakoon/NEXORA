@@ -8596,6 +8596,18 @@ body::before {
   .sc-hero__stats > div { min-width: 0; flex: 1; }
 }
 
+@media (min-width: 769px) {
+  .app-shell:has(> .sentinel-button-shell) .topbar {
+    padding-right: 252px;
+  }
+
+  .app-shell > .sentinel-button-shell {
+    top: 13px;
+    right: 28px;
+    bottom: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .main-shell { margin-left: 0; }
   .topbar { padding: 0 16px 0 64px; }
@@ -8667,7 +8679,7 @@ body::before {
   .st-outline-button { position: static; width: 100%; }
   .st-profile__fields { grid-template-columns: 1fr; }
   .st-danger__actions { grid-template-columns: 1fr; }
-  .sentinel-button-shell { right: 20px; bottom: 20px; }
+  .sentinel-button-shell { display: none; }
   .sentinel-button { padding: 12px 20px; font-size: 13px; }
 }
 

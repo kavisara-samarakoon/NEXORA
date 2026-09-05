@@ -10,9 +10,18 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.64.0-backend-production-profile-persistence-guard-foundation`.
-The `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` remains
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
+The `v0.66.0-frontend-sentinel-responsive-clearance-foundation` remains
 in progress until merged and tagged.
+
+Post-v0.65 browser QA confirmed that the fixed Sentinel launcher could obstruct
+tablet dashboard content and a mobile Settings control. v0.66 hides that
+floating launcher through CSS at viewport widths up to and including 768px.
+Sentinel remains available through responsive navigation; desktop launcher
+behavior above 768px and the existing `/sentinel` route behavior remain
+unchanged. This changes no backend, API, authentication, session, runtime-health,
+dependency, workflow, or script behavior, and NEXORA remains not
+production-ready.
 
 ## Problem statement
 

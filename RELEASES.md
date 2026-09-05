@@ -4,13 +4,28 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.64.0-backend-production-profile-persistence-guard-foundation`.
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In progress — v0.65.0 Security CI Dependency Review Policy Alignment foundation
+## In progress — v0.66.0 Frontend Sentinel Responsive Clearance foundation
 
-`v0.65.0-security-ci-dependency-review-policy-alignment-foundation` remains in
+`v0.66.0-frontend-sentinel-responsive-clearance-foundation` remains in
 progress until it is merged and tagged.
+
+- Post-v0.65 browser QA confirmed that the fixed Sentinel launcher obstructed
+  Backend Health and Data Source Transparency content at 768px and overlapped a
+  Settings toggle at 390px, where it could intercept the intended tap.
+- Suppresses the floating launcher with CSS at viewport widths up to and
+  including 768px. Sentinel remains available through the existing responsive
+  navigation, desktop launcher behavior above 768px is unchanged, and the
+  dedicated `/sentinel` route retains its existing no-launcher behavior.
+- This frontend clearance milestone changes no backend, API, auth/session/CSRF/
+  CORS/request-ID, Wishlist, notification-preference, Sentinel gateway, runtime-
+  health, endpoint, or API JSON response behavior. Dependencies, OpenAPI YAML,
+  workflows, and scripts are unchanged; no deployment or runtime feature is
+  added, and NEXORA remains not production-ready.
+
+## Completed security milestone — v0.65.0 Security CI Dependency Review Policy Alignment foundation
 
 - GitHub CI validation proved that enforceable Dependency Review is currently
   unsupported by this repository's GitHub security configuration. Dependency

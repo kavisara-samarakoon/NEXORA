@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.64.0-backend-production-profile-persistence-guard-foundation`.
-> `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` is in progress
+> `v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
+> `v0.66.0-frontend-sentinel-responsive-clearance-foundation` is in progress
 > until merged and tagged.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
@@ -580,21 +580,18 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.64.0-backend-production-profile-persistence-guard-foundation`.
-The `v0.65.0-security-ci-dependency-review-policy-alignment-foundation`
-milestone is in progress until it is merged and tagged. It aligns Dependency
-Review with the repository's actual capability after GitHub CI proved that
-enforcement is currently unsupported by the configured GitHub security
-features. Dependency Review remains advisory with intentional
-`continue-on-error: true`, while `fail-on-severity: high` records the intended
-threshold when evaluation is supported. It is not a rejecting or merge-blocking
-control; enforceable use is deferred until the required GitHub Dependency Graph
-and repository security capability are available. Existing npm audit and Maven
-dependency-tree checks remain separate. This changes CI policy only:
-application runtime behavior, frontend/backend source behavior, endpoint paths,
-API JSON response shapes, dependencies, migrations, scripts, and OpenAPI YAML
-are unchanged. No deployment, cloud, Docker, Redis, provider, or runtime feature
-was added, and NEXORA remains not production-ready.
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
+The `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone is in
+progress until it is merged and tagged. Post-v0.65 browser QA confirmed that
+the fixed Sentinel launcher could obstruct dashboard content at tablet width
+and a Settings toggle at mobile width. v0.66 suppresses the floating launcher
+at viewport widths up to and including 768px; Sentinel remains available
+through the responsive navigation. Desktop launcher behavior above 768px and
+the existing absence of the redundant launcher on `/sentinel` remain
+unchanged. This CSS-only clearance fix changes no backend, API, authentication,
+session, or runtime-health behavior. Endpoint paths, API JSON response shapes,
+dependencies, OpenAPI YAML, workflows, and scripts are unchanged. NEXORA
+remains not production-ready.
 Recent milestones progressively added browser auth hardening, safe auth security
 events, local abuse controls, and local event-retention cleanup. Earlier
 milestones established the deal, wishlist, alert, notification, refresh, and

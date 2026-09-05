@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` milestone
-  by truthfully retaining Dependency Review as advisory after GitHub CI proved
-  enforcement unsupported by the repository's current security configuration.
+  `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone by
+  suppressing the fixed Sentinel launcher at viewport widths up to and
+  including 768px while preserving responsive-navigation access.
 - Keep the completed
-  `v0.64.0-backend-production-profile-persistence-guard-foundation` milestone
-  as the latest stable milestone until v0.65 is merged and tagged.
+  `v0.65.0-security-ci-dependency-review-policy-alignment-foundation` milestone
+  as the latest stable milestone until v0.66 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
