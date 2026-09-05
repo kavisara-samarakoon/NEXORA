@@ -25,7 +25,13 @@ class RuntimeHealthServiceTests {
 
         assertEquals("UP", health.status());
         assertEquals("NEXORA API", health.service());
-        assertEquals(RuntimeHealthService.MILESTONE, health.milestone());
+        assertEquals(
+                RuntimeHealthService.OBSERVABILITY_CONTRACT_MILESTONE,
+                health.milestone());
+        assertEquals(
+                RuntimeHealthService.OBSERVABILITY_CONTRACT_MILESTONE,
+                health.observabilityContractMilestone());
+        assertEquals(health.milestone(), health.observabilityContractMilestone());
         assertEquals("local-demo", health.runtimeMode());
         assertEquals(List.of("default"), health.activeProfiles());
         assertEquals("in-memory-demo", health.dataMode());

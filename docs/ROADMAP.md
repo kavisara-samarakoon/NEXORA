@@ -7,12 +7,12 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Complete the in-progress
-  `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` milestone by
-  bounding the recent alert-event response, local-demo per-account retention,
-  and database-backed recent lookup.
+  `v0.70.0-backend-health-version-semantics-foundation` milestone by clarifying
+  the v0.33 observability-contract baseline with an explicit additive field and
+  a backward-compatible legacy alias.
 - Keep the completed
-  `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone as the
-  latest stable milestone until v0.69 is merged and tagged.
+  `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` milestone as the
+  latest stable milestone until v0.70 is merged and tagged.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -94,8 +94,10 @@ project's academic, portfolio, and product goals evolve.
   verified; it is intentionally outside the local v0.40 foundation.
 - Build future deployment health probes and production monitoring only on an
   approved topology with alerting and response ownership. The v0.33 safe
-  runtime/configuration summary and v0.53 frontend panel are only lightweight
-  local foundations.
+  runtime/configuration summary, the v0.70 contract-semantics clarification,
+  and the v0.53 frontend panel are only lightweight local foundations. Current
+  release status remains documentation metadata, not a runtime field that must
+  be updated each milestone.
 - Keep production deployment, centralized observability, uptime monitoring,
   and real external-provider hardening as future work with explicit ownership
   and operational boundaries.

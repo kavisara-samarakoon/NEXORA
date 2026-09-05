@@ -22,7 +22,8 @@ import java.util.Set;
 @Service
 public class RuntimeHealthService {
 
-    static final String MILESTONE = "v0.33.0-runtime-observability-foundation";
+    static final String OBSERVABILITY_CONTRACT_MILESTONE =
+            "v0.33.0-runtime-observability-foundation";
 
     private static final String STATUS = "UP";
     private static final String SERVICE = "NEXORA API";
@@ -81,7 +82,8 @@ public class RuntimeHealthService {
         return new HealthResponse(
                 STATUS,
                 SERVICE,
-                MILESTONE,
+                OBSERVABILITY_CONTRACT_MILESTONE,
+                OBSERVABILITY_CONTRACT_MILESTONE,
                 runtimeMode,
                 safeActiveProfiles(),
                 dataMode,

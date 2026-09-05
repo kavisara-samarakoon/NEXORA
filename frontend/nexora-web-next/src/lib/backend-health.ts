@@ -4,6 +4,7 @@ export type BackendHealth = {
   status: string;
   service: string;
   milestone: string;
+  observabilityContractMilestone: string | null;
   version: string;
   runtimeMode: string;
   activeProfiles: readonly string[];
@@ -41,6 +42,13 @@ function normalizeString(value: unknown, fallback: string): string {
   return normalized ? normalized.slice(0, 160) : fallback;
 }
 
+function normalizeOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim();
+  return normalized ? normalized.slice(0, 160) : null;
+}
+
 function normalizeStringList(value: unknown): readonly string[] {
   if (!Array.isArray(value)) return [];
 
@@ -69,6 +77,9 @@ function normalizeBackendHealth(value: unknown): BackendHealth {
     status: normalizeString(health.status, "not reported"),
     service: normalizeString(health.service, "Not reported"),
     milestone: normalizeString(health.milestone, "not reported"),
+    observabilityContractMilestone: normalizeOptionalString(
+      health.observabilityContractMilestone,
+    ),
     version: normalizeString(health.version, "not reported"),
     runtimeMode: normalizeString(health.runtimeMode, "not reported"),
     activeProfiles: normalizeStringList(health.activeProfiles),

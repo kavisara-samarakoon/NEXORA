@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.68.0-backend-external-deals-resource-bounds-foundation` is the
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is the
 latest stable development milestone while
-`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is in progress.
+`v0.70.0-backend-health-version-semantics-foundation` is in progress.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured
@@ -288,15 +288,19 @@ limit bucket keying, and frontend behavior is unchanged.
 | Method | Path | Access | Purpose | Request | Success response | Common errors | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/api` | Public | Basic API welcome metadata | None | `200`; `message`, `frontend`, `status` | `internal_error` for unexpected failure | Local foundation message, not a readiness probe. |
-| GET | `/api/health` | Public | Safe runtime/configuration summary | None | `200`; `status`, `service`, `milestone`, runtime/data modes, sanitized profiles/providers, UTC times, uptime, and checks | `internal_error` for unexpected failure | Reports configuration mode and process uptime, not external dependency health. |
+| GET | `/api/health` | Public | Safe runtime/configuration summary | None | `200`; `status`, `service`, `milestone`, `observabilityContractMilestone`, runtime/data modes, sanitized profiles/providers, UTC times, uptime, and checks | `internal_error` for unexpected failure | Reports configuration mode and process uptime, not external dependency health or the current repository release. |
 | GET | `/api/dashboard/summary` | Public | Aggregate public deal/giveaway/demo-wishlist counts and display status | None | `200`; `DashboardSummary` | `internal_error` for unexpected failure | `databaseStatus` is environment-aware presentation text. |
 | GET | `/api/security/status` | Public | Static security-center demo data | None | `200`; score/counts and protection-item lists | `internal_error` for unexpected failure | This response is demo presentation data, not a live security assessment or compliance report. |
 | GET | `/api/sentinel/status` | Public | Safe Sentinel provider-foundation status | None | `200`; `aiStatus`, `backend`, `geminiApi`, `privacy` | `internal_error` for unexpected failure | Provider wording reflects configuration; messages are not persisted. |
 | GET | `/api/sentinel/demo` | Public | Static Sentinel preview content and capability/status cards | None | `200`; messages, suggestions, capabilities, system status | `internal_error` for unexpected failure | Demo content does not perform wishlist actions. |
 
-The health response currently uses milestone label
-`v0.33.0-runtime-observability-foundation`; later documentation and smoke-CI
-milestones, including v0.38, do not change that runtime field.
+The health response uses `observabilityContractMilestone` to identify the
+`v0.33.0-runtime-observability-foundation` health and runtime-observability
+contract baseline. The existing `milestone` field remains a backward-compatible
+legacy alias with the same value. Neither field is the current repository
+release tag; current release status belongs in project and release documentation
+rather than runtime contract metadata that would require milestone-by-milestone
+updates.
 
 The primary frontend may display selected safe `/api/health` fields for local
 reviewer visibility, including service, runtime/data modes, the auth-production-

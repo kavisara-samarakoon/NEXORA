@@ -8,6 +8,7 @@ public record HealthResponse(
         String status,
         String service,
         String milestone,
+        String observabilityContractMilestone,
         String runtimeMode,
         List<String> activeProfiles,
         String dataMode,
