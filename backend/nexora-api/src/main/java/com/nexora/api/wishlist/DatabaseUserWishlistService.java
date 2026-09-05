@@ -3,6 +3,7 @@ package com.nexora.api.wishlist;
 import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +40,10 @@ public class DatabaseUserWishlistService implements UserWishlistService {
     @Override
     @Transactional(readOnly = true)
     public List<WishlistAlertEventResponse> getWishlistAlertEvents(long userId) {
-        return wishlistAlertEventRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        return wishlistAlertEventRepository.findByUserIdOrderByCreatedAtDescIdDesc(
+                        userId,
+                        PageRequest.of(0, WishlistAlertHistoryPolicy.RESPONSE_LIMIT)
+                ).stream()
                 .map(WishlistAlertEventMapper::toResponse)
                 .toList();
     }

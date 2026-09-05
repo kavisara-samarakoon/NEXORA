@@ -4,15 +4,18 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
+`v0.68.0-backend-external-deals-resource-bounds-foundation`.
 
-The `v0.68.0-backend-external-deals-resource-bounds-foundation` milestone is in
-progress. It bounds the process-local external-deals response cache, removes
-expired entries on reads and insertions, and shares concurrent same-key provider
-loads. Existing provider failure and local fallback behavior remain intact. API
-paths and JSON response shapes, OpenAPI YAML, frontend behavior, dependencies,
-workflows, and scripts are unchanged. No distributed cache or rate limiter is
-added, and NEXORA remains not production-ready.
+The `v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` milestone is
+in progress. It returns the latest 50 authenticated Wishlist alert events,
+retains the latest 100 in-memory events per account in local-demo mode, and uses
+a bounded recent query in the database-backed `dev` profile. Newest-first,
+account-scoped behavior is preserved. API paths and JSON response shapes,
+OpenAPI YAML, frontend behavior, dependencies, workflows, scripts, and
+notification preference enforcement are unchanged. This is not archival or
+audit-log retention; no background database deletion job, production
+retention/backup policy, or distributed storage is added. NEXORA remains not
+production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -117,7 +120,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation`.
+`v0.68.0-backend-external-deals-resource-bounds-foundation`.
 
 ## Completed foundations
 
@@ -143,6 +146,9 @@ readiness of the project. The latest stable development milestone is
 - PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.
 - Public demo wishlist and isolated authenticated personal wishlists.
 - Wishlist alert configuration, evaluation, transition events, and history UI.
+- Bounded account-scoped Wishlist alert-event history: latest 50 returned,
+  latest 100 retained per account in local-demo memory, and bounded latest
+  lookup in the database-backed `dev` path.
 - CheapShark external deals, redirect links, bounded process-local caching,
   same-key load sharing, and local fallback.
 - Opt-in wishlist price refresh scheduler with stored and CheapShark providers.

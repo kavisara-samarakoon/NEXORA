@@ -8,7 +8,9 @@ import com.nexora.api.wishlist.persistence.WishlistAlertEventRepository;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -126,6 +129,32 @@ class DatabaseUserWishlistServiceTests {
         assertEquals(1, items.size());
         assertEquals(42L, items.get(0).id());
         verify(repository).findByUserIdAndActiveTrueOrderById(7L);
+    }
+
+    @Test
+    void listsOnlyTheLatestFiftyAlertEventsForTheRequestedUser() {
+        WishlistItemRepository repository = mock(WishlistItemRepository.class);
+        WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
+        WishlistAlertEvent newestEvent = databaseAlertEvent(52L, 7L, 42L);
+        when(eventRepository.findByUserIdOrderByCreatedAtDescIdDesc(
+                eq(7L), any(Pageable.class))).thenReturn(List.of(newestEvent));
+
+        List<WishlistAlertEventResponse> events = service(repository, eventRepository)
+                .getWishlistAlertEvents(7L);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(eventRepository).findByUserIdOrderByCreatedAtDescIdDesc(
+                eq(7L), pageableCaptor.capture());
+        Pageable pageable = pageableCaptor.getValue();
+        assertAll(
+                () -> assertEquals(0, pageable.getPageNumber()),
+                () -> assertEquals(50, pageable.getPageSize()),
+                () -> assertEquals(1, events.size()),
+                () -> assertEquals(52L, events.get(0).id()),
+                () -> assertEquals(42L, events.get(0).wishlistItemId()),
+                () -> assertEquals("New Game", events.get(0).itemTitle()),
+                () -> assertEquals("target-reached", events.get(0).evaluationState())
+        );
     }
 
     @Test
@@ -246,6 +275,23 @@ class DatabaseUserWishlistServiceTests {
                 "medium",
                 active,
                 userId
+        );
+    }
+
+    private static WishlistAlertEvent databaseAlertEvent(
+            long id, long userId, long wishlistItemId) {
+        return new WishlistAlertEvent(
+                id,
+                userId,
+                wishlistItemId,
+                "New Game",
+                "Steam",
+                "$30.00",
+                "$40.00",
+                "target-reached",
+                true,
+                "Target price reached.",
+                LocalDateTime.of(2026, 9, 5, 12, 0)
         );
     }
 

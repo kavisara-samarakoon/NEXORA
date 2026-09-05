@@ -4,8 +4,8 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation`, while
-`v0.68.0-backend-external-deals-resource-bounds-foundation` is in progress.
+`v0.68.0-backend-external-deals-resource-bounds-foundation`, while
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is in progress.
 
 ## Repository-defined automation
 
@@ -18,11 +18,13 @@ The latest stable milestone is
 | Dependency Review | Runs advisory review of dependency changes on pull requests to `main`; `fail-on-severity: high` records the intended threshold when repository support is available. |
 | Dependabot | Checks GitHub Actions, Maven, and primary Next.js npm dependencies weekly; routine minor/patch updates are grouped and major updates remain manual. |
 
-The v0.68 backend resilience milestone bounds the process-local external-deals
-response cache, cleans expired entries, and shares concurrent same-key provider
-loads. It preserves API and fallback behavior and adds no dependency,
-distributed cache, distributed rate limiter, deployment, or production
-capability. NEXORA remains not production-ready.
+The v0.69 backend lifecycle milestone bounds the recent account-scoped Wishlist
+alert-event response, local-demo in-memory retention, and the database-backed
+recent lookup. It preserves notification preference enforcement, API paths and
+JSON event shapes, and adds no dependency, background database deletion,
+archival/audit-log policy, production retention/backup policy, distributed
+storage, deployment, or production capability. NEXORA remains not
+production-ready.
 
 The CodeQL-ready workflow scopes analysis to `backend/nexora-api` and
 `frontend/nexora-web-next`; it does not build or analyze the retained Vite

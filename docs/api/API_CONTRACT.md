@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.67.0-ci-node24-action-runtime-compatibility-foundation` is the
+`v0.68.0-backend-external-deals-resource-bounds-foundation` is the
 latest stable development milestone while
-`v0.68.0-backend-external-deals-resource-bounds-foundation` is in progress.
+`v0.69.0-backend-wishlist-alert-history-lifecycle-foundation` is in progress.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured
@@ -380,7 +380,7 @@ derive the user ID from that token.
 | Method | Path | Access | Purpose | Request body/query | Success response | Common errors | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/api/me/wishlist` | Protected | List active items owned by the current account | None | `200`; array of `WishlistItem` | `authentication_required`, `internal_error` | Account-scoped; public demo items are not mixed into this response. |
-| GET | `/api/me/wishlist/alert-events` | Protected | List target-reached alert history newest first | None | `200`; array of `WishlistAlertEventResponse` | `authentication_required`, `internal_error` | History is account-scoped. |
+| GET | `/api/me/wishlist/alert-events` | Protected | List target-reached alert history newest first | None | `200`; array of `WishlistAlertEventResponse` | `authentication_required`, `internal_error` | Account-scoped; returns at most the latest 50 events. |
 | GET | `/api/me/wishlist/{id}/price-history` | Protected | Return recent price snapshots for an owned active item | Optional `limit`, default 30, range 1–90 | `200`; array of `WishlistPriceHistoryPoint` | `authentication_required`, `validation_failed`, `wishlist_item_not_found`, `internal_error` | Missing, deleted, or another account’s item is reported as not found. |
 | POST | `/api/me/wishlist` | Protected | Add a personal wishlist item | `AddWishlistItemRequest` | `201`; `WishlistItem` | `authentication_required`, `validation_failed`, `internal_error` | Re-saving the same active title/store for one user returns the existing item. |
 | PATCH | `/api/me/wishlist/{id}/alert` | Protected | Update one or more alert settings | `targetPrice`, `alertActive`, and/or `priority` | `200`; updated `WishlistItem` | `authentication_required`, `validation_failed`, `wishlist_item_not_found`, `internal_error` | At least one field is required; priority is `high`, `medium`, or `low`. |
@@ -395,6 +395,14 @@ Alert-event responses contain event/item IDs, item/store and price labels,
 evaluation state, target-reached flag, message, and creation time. Price-history
 responses contain snapshot/item IDs, item/store, price label and optional
 numeric amount/currency, source, and observation time.
+
+Local-demo mode retains at most the latest 100 in-memory alert events per
+account, evicting the oldest deterministically. The database-backed `dev` path
+uses a bounded, user-scoped latest-event query. This recent-history boundary is
+not archival or audit-log retention; there is no background database deletion
+job or production retention/backup policy. The endpoint path, response array,
+event fields, authentication requirement, and shared errors are unchanged, and
+the OpenAPI YAML is unchanged.
 
 ## Protected notification preference endpoints
 
