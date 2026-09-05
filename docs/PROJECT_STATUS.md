@@ -4,25 +4,22 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.64.0-backend-production-profile-persistence-guard-foundation`, which makes
-production-like profiles fail closed unless the existing database-backed
-profile is active.
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`, which
+truthfully retains Dependency Review as advisory under the repository's current
+GitHub security capability.
 
-The `v0.65.0-security-ci-dependency-review-policy-alignment-foundation`
-milestone is in progress. GitHub CI validation proved that enforceable
-Dependency Review is currently unsupported by this repository's GitHub security
-configuration, so the workflow remains advisory with intentional
-`continue-on-error: true`. Its `fail-on-severity: high` setting remains the
-intended threshold when dependency changes can be evaluated, but Dependency
-Review is not a rejecting or merge-blocking control. Enforceable use is deferred
-until the required GitHub Dependency Graph and repository security capability
-are available; no security product is claimed as enabled. Read-only permissions,
-pull-request-only execution, and job-summary reporting remain. The npm audit
-gate and Maven dependency-tree visibility remain separate CI controls. This
-changes CI policy only. Application runtime, frontend/backend source behavior,
-endpoint paths, API JSON response shapes, dependencies, migrations, OpenAPI
-YAML, and scripts are unchanged. No deployment, cloud, Docker, Redis, provider,
-or runtime feature is added, and NEXORA remains not production-ready.
+The `v0.66.0-frontend-sentinel-responsive-clearance-foundation` milestone is in
+progress. Post-v0.65 browser QA confirmed that the fixed Sentinel launcher
+overlapped dashboard status content at 768px and a Settings toggle at 390px.
+The launcher is now suppressed through CSS at viewport widths up to and
+including 768px, so it cannot obscure content or intercept touch input. Sentinel
+remains reachable through responsive navigation. Desktop behavior above 768px
+and the existing no-launcher behavior on `/sentinel` remain unchanged. Backend,
+API, auth/session/CSRF/CORS/request-ID, Wishlist, notification-preference,
+Sentinel gateway, and runtime-health behavior are unchanged. Endpoint paths,
+API JSON response shapes, dependencies, migrations, OpenAPI YAML, workflows,
+and scripts are unchanged. No deployment, cloud, Docker, Redis, provider, or
+runtime feature is added, and NEXORA remains not production-ready.
 
 The v0.42 API Smoke CI resilience foundation added bounded Maven dependency
 prefetch retries, batch/no-transfer-progress Maven output, fail-fast backend-
@@ -127,7 +124,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.64.0-backend-production-profile-persistence-guard-foundation`.
+`v0.65.0-security-ci-dependency-review-policy-alignment-foundation`.
 
 ## Completed foundations
 
