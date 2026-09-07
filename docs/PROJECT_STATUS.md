@@ -5,7 +5,19 @@ or production-ready service.
 
 The latest stable development milestone is
 `v0.72.0-backend-external-provider-request-budget-foundation`.
-No next milestone has started.
+Work in progress is `v0.73.0-release-commit-helper-foundation`.
+
+v0.73 adds only a local `commit-milestone.sh` helper for reviewed milestone
+work. It refuses `main` and a non-empty index, stages only explicitly approved
+repository files, verifies the staged set, and requires exact typed
+confirmation before committing. It does not push, open or merge PRs, tag,
+delete branches, or deploy. There are no backend/frontend source, workflow/CI,
+dependency, OpenAPI YAML, or production/deployment behavior changes. NEXORA
+remains not production-ready.
+
+The possible v0.74 candidate is
+`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
+is not active.
 
 The completed and tagged v0.72 milestone bounds outbound CheapShark/external-
 deals provider calls to four concurrent calls per backend process. Admission
@@ -19,17 +31,14 @@ JSON response shape remain unchanged, and OpenAPI YAML is unchanged. This adds
 no frontend, dependency, workflow, script, distributed limiter, deployment, or
 production capability. NEXORA remains not production-ready.
 
-`v0.73.0-release-commit-helper-foundation` is only a possible next candidate.
-It has not started and is not an active milestone.
-
 The completed v0.71 milestone added local release helper scripts only: guarded
 milestone branch creation, the common validation stack, PR creation/check
 watching, and an explicitly confirmed merge-and-annotated-tag flow with
 final-state output.
 It changes no backend/frontend application behavior, workflow/CI behavior,
 dependencies, OpenAPI YAML, or production/deployment behavior. Human diff and
-PR review, staging, and committing remain manual. NEXORA remains not
-production-ready.
+PR review remain required; v0.73 adds an optional explicitly approved,
+confirmed local staging-and-commit step. NEXORA remains not production-ready.
 
 The completed `v0.70.0-backend-health-version-semantics-foundation` milestone
 adds `observabilityContractMilestone` to `/api/health` and retains

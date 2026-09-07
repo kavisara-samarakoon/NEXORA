@@ -13,7 +13,7 @@ Sentinel assistant in one locally runnable project.
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
 > `v0.72.0-backend-external-provider-request-budget-foundation`.
-> No next milestone has started.
+> Work in progress is `v0.73.0-release-commit-helper-foundation`.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -601,8 +601,15 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.72.0-backend-external-provider-request-budget-foundation`. No next
-milestone has started.
+`v0.72.0-backend-external-provider-request-budget-foundation`.
+Work in progress is `v0.73.0-release-commit-helper-foundation`.
+
+v0.73 adds only the local `scripts/release/commit-milestone.sh` helper. It
+stages an explicit approved file list, verifies the staged set, and requires
+exact typed confirmation before committing on a non-`main` branch. It does not
+push, open or merge PRs, tag, or deploy. No backend/frontend source, GitHub
+workflow or CI behavior, dependency, OpenAPI YAML, or production/deployment
+capability changes are included. NEXORA remains not production-ready.
 
 The completed and tagged v0.72 milestone limits outbound external-deals
 provider calls to four concurrent process-local calls. Capacity checks do not
@@ -617,9 +624,9 @@ response shape are unchanged. There is no frontend, dependency, workflow,
 script, OpenAPI YAML, distributed-rate-limiter, deployment, or production
 capability change. NEXORA remains not production-ready.
 
-The possible next candidate is
-`v0.73.0-release-commit-helper-foundation`. It has not started and is not an
-active milestone.
+The possible v0.74 candidate is
+`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
+is not an active milestone.
 
 The completed v0.71 tooling milestone added safe local release helpers. It
 changes no backend or frontend application
