@@ -4,16 +4,16 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.72.0-backend-external-provider-request-budget-foundation`.
-Work in progress is `v0.73.0-release-commit-helper-foundation`. A possible
-v0.74 candidate is `v0.74.0-backend-default-deny-route-policy-foundation`; it
-has not started and is not an active milestone.
+`v0.73.0-release-commit-helper-foundation`. No next milestone has started. A
+possible v0.74 candidate is
+`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
+is not an active milestone.
 Older headings retain the wording used when each milestone was recorded.
 
-## In-progress tooling milestone — v0.73.0 Release Commit Helper foundation
+## Completed tooling milestone — v0.73.0 Release Commit Helper foundation
 
-`v0.73.0-release-commit-helper-foundation` adds a local milestone commit helper
-only.
+`v0.73.0-release-commit-helper-foundation` is the completed, tagged, latest
+stable development milestone. It added a local milestone commit helper only.
 
 - Shows the current branch, working-tree status, diff summary, and whitespace
   check before staging. It stages only explicitly approved repository files,
@@ -23,14 +23,15 @@ only.
   an empty change set, whitespace errors, and an empty post-stage diff. It does
   not automatically reset staged files when confirmation is cancelled.
 - Does not push, open or merge a PR, create a tag, delete a branch, or deploy.
-  Backend/frontend source, GitHub workflows and CI behavior, dependencies, and
-  OpenAPI YAML are unchanged. No production/deployment capability is added,
-  and NEXORA remains not production-ready.
+  It also does not reset, stash, or amend. Backend/frontend source, GitHub
+  workflows and CI behavior, dependencies, and OpenAPI YAML are unchanged. No
+  production/deployment capability is added, and NEXORA remains not
+  production-ready.
 
 ## Completed backend milestone — v0.72.0 Backend External Provider Request Budget foundation
 
-`v0.72.0-backend-external-provider-request-budget-foundation` is the completed,
-tagged, latest stable development milestone.
+`v0.72.0-backend-external-provider-request-budget-foundation` is a completed,
+tagged development milestone.
 
 - Bounds CheapShark/external-deals provider admission to four concurrent calls
   per backend process with immediate, non-blocking capacity checks. Permits are

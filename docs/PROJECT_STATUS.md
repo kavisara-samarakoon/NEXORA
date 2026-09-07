@@ -4,16 +4,16 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.72.0-backend-external-provider-request-budget-foundation`.
-Work in progress is `v0.73.0-release-commit-helper-foundation`.
+`v0.73.0-release-commit-helper-foundation`. No next milestone has started.
 
-v0.73 adds only a local `commit-milestone.sh` helper for reviewed milestone
-work. It refuses `main` and a non-empty index, stages only explicitly approved
-repository files, verifies the staged set, and requires exact typed
-confirmation before committing. It does not push, open or merge PRs, tag,
-delete branches, or deploy. There are no backend/frontend source, workflow/CI,
-dependency, OpenAPI YAML, or production/deployment behavior changes. NEXORA
-remains not production-ready.
+The completed and tagged v0.73 milestone added only the local
+`scripts/release/commit-milestone.sh` helper for reviewed milestone work. It
+refuses `main` and a non-empty index, stages only explicitly approved repository
+files, verifies the staged set, and requires exact typed confirmation before
+committing. It does not push, open or merge PRs, tag, deploy, reset, stash, or
+amend. There are no backend/frontend source, workflow/CI, dependency, OpenAPI
+YAML, or production/deployment behavior changes. NEXORA remains not
+production-ready.
 
 The possible v0.74 candidate is
 `v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
@@ -157,7 +157,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.72.0-backend-external-provider-request-budget-foundation`.
+`v0.73.0-release-commit-helper-foundation`.
 
 ## Completed foundations
 
