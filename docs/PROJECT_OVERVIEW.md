@@ -10,16 +10,16 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.72.0-backend-external-provider-request-budget-foundation`.
-Work in progress is `v0.73.0-release-commit-helper-foundation`.
+`v0.73.0-release-commit-helper-foundation`. No next milestone has started.
 
-v0.73 adds only a local commit helper that stages an explicit approved file
-list, verifies the staged diff, and requires exact typed confirmation. It
-refuses direct `main` commits and pre-existing staged changes, and it does not
-push, open or merge PRs, tag, or deploy. Backend/frontend source, workflows and
-CI behavior, dependencies, and OpenAPI YAML are unchanged. No
-production/deployment capability is added, and NEXORA remains not
-production-ready.
+The completed and tagged v0.73 milestone added only the local
+`scripts/release/commit-milestone.sh` helper. It stages an explicit approved
+file list, verifies the staged diff, refuses direct `main` commits and
+pre-existing staged changes, and requires exact typed confirmation. It does not
+push, open or merge PRs, tag, deploy, reset, stash, or amend. Backend/frontend
+source, workflows and CI behavior, dependencies, and OpenAPI YAML are
+unchanged. No production/deployment capability is added, and NEXORA remains
+not production-ready.
 
 The possible v0.74 candidate is
 `v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and

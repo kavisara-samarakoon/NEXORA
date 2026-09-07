@@ -4,10 +4,9 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.72.0-backend-external-provider-request-budget-foundation`.
-Work in progress is `v0.73.0-release-commit-helper-foundation`. The possible
-`v0.74.0-backend-default-deny-route-policy-foundation` candidate has not
-started and is not active.
+`v0.73.0-release-commit-helper-foundation`. No next milestone has started. The
+possible `v0.74.0-backend-default-deny-route-policy-foundation` candidate has
+not started and is not active.
 
 ## Repository-defined automation
 
@@ -32,11 +31,12 @@ operations; verifies PR checks and tag absence; and requires typed confirmation
 before merge, branch deletion, and tagging. Local `gh` output remains the
 source of truth for private-repository operations.
 
-The in-progress v0.73 tooling adds only a local commit helper. It starts with an
-empty index, stages literal paths from an explicit approved list, verifies the
-staged set, refuses `main`, and requires the exact displayed confirmation before
-committing. It does not push, open or merge PRs, tag, delete branches, or
-deploy. v0.71 and v0.73 change no workflow/CI behavior, dependency,
+The completed and tagged v0.73 tooling added only the local
+`scripts/release/commit-milestone.sh` helper. It starts with an empty index,
+stages literal paths from an explicit approved list, verifies the staged set,
+refuses `main`, and requires the exact displayed confirmation before committing.
+It does not push, open or merge PRs, tag, delete branches, deploy, reset, stash,
+or amend. v0.71 and v0.73 change no workflow/CI behavior, dependency,
 backend/frontend application behavior, OpenAPI YAML, or production/deployment
 capability.
 

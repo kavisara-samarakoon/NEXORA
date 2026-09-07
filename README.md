@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.72.0-backend-external-provider-request-budget-foundation`.
-> Work in progress is `v0.73.0-release-commit-helper-foundation`.
+> `v0.73.0-release-commit-helper-foundation`.
+> No next milestone has started.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -601,15 +601,15 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.72.0-backend-external-provider-request-budget-foundation`.
-Work in progress is `v0.73.0-release-commit-helper-foundation`.
+`v0.73.0-release-commit-helper-foundation`. No next milestone has started.
 
-v0.73 adds only the local `scripts/release/commit-milestone.sh` helper. It
-stages an explicit approved file list, verifies the staged set, and requires
-exact typed confirmation before committing on a non-`main` branch. It does not
-push, open or merge PRs, tag, or deploy. No backend/frontend source, GitHub
-workflow or CI behavior, dependency, OpenAPI YAML, or production/deployment
-capability changes are included. NEXORA remains not production-ready.
+The completed and tagged v0.73 milestone added only the local
+`scripts/release/commit-milestone.sh` helper. It stages an explicit approved
+file list, verifies the staged set, blocks commits on `main`, and requires exact
+typed confirmation before committing. It does not push, open or merge PRs,
+tag, deploy, reset, stash, or amend. No backend/frontend source, GitHub workflow
+or CI behavior, dependency, OpenAPI YAML, or production/deployment capability
+changes are included. NEXORA remains not production-ready.
 
 The completed and tagged v0.72 milestone limits outbound external-deals
 provider calls to four concurrent process-local calls. Capacity checks do not
