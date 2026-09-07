@@ -4,7 +4,20 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.73.0-release-commit-helper-foundation`. No next milestone has started.
+`v0.73.0-release-commit-helper-foundation`.
+Work in progress is `v0.74.0-backend-default-deny-route-policy-foundation`.
+
+v0.74 adds an explicit method-aware allowlist for intended public backend
+routes, preserves authentication for `/api/auth/me` and every `/api/me/**`
+route, and changes the terminal authorization fallback to default deny.
+Unexpected future routes, unknown API routes, unlisted subpaths, and unlisted
+methods therefore fail closed instead of becoming public automatically.
+
+Existing intended public and protected endpoint behavior remains intact. There
+are no endpoint path, query parameter, JSON response shape, CSRF/session,
+credentialed CORS, request-ID, frontend, dependency, workflow/script, or
+OpenAPI YAML changes. No production/deployment capability is added, and NEXORA
+remains not production-ready.
 
 The completed and tagged v0.73 milestone added only the local
 `scripts/release/commit-milestone.sh` helper for reviewed milestone work. It
@@ -14,10 +27,6 @@ committing. It does not push, open or merge PRs, tag, deploy, reset, stash, or
 amend. There are no backend/frontend source, workflow/CI, dependency, OpenAPI
 YAML, or production/deployment behavior changes. NEXORA remains not
 production-ready.
-
-The possible v0.74 candidate is
-`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
-is not active.
 
 The completed and tagged v0.72 milestone bounds outbound CheapShark/external-
 deals provider calls to four concurrent calls per backend process. Admission

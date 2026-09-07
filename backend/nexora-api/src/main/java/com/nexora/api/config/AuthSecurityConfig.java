@@ -64,19 +64,21 @@ public class AuthSecurityConfig {
                                 "/api",
                                 "/api/health",
                                 "/api/auth/csrf",
-                                "/api/deals/**",
-                                "/api/giveaways/**",
-                                "/api/wishlist/**",
-                                "/api/dashboard/**",
+                                "/api/deals",
+                                "/api/deals/external",
+                                "/api/giveaways",
+                                "/api/wishlist",
+                                "/api/dashboard/summary",
                                 "/api/security/status",
-                                "/api/sentinel/**").permitAll()
+                                "/api/sentinel/status",
+                                "/api/sentinel/demo").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/logout").permitAll()
                         .requestMatchers("/api/auth/me", "/api/me/**").authenticated()
-                        .anyRequest().permitAll())
+                        .anyRequest().denyAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

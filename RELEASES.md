@@ -4,11 +4,26 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.73.0-release-commit-helper-foundation`. No next milestone has started. A
-possible v0.74 candidate is
-`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
-is not an active milestone.
+`v0.73.0-release-commit-helper-foundation`.
+Work in progress is `v0.74.0-backend-default-deny-route-policy-foundation`.
 Older headings retain the wording used when each milestone was recorded.
+
+## In-progress backend milestone — v0.74.0 Backend Default-Deny Route Policy foundation
+
+`v0.74.0-backend-default-deny-route-policy-foundation` hardens the backend
+authorization default without changing the API contract.
+
+- Replaces broad public subtree matching with an explicit method-aware
+  allowlist for the existing intended public routes, retains authentication for
+  `/api/auth/me` and all `/api/me/**` routes, and denies every unmatched request
+  by default.
+- Ensures unexpected future routes, unknown API routes, unlisted subpaths, and
+  unlisted methods do not become public automatically. Existing public and
+  protected endpoint behavior remains intact.
+- Changes no endpoint path, query parameter, JSON response shape, CSRF/session,
+  credentialed CORS, request-ID, frontend, dependency, workflow/script, or
+  OpenAPI YAML behavior. It adds no production/deployment capability, and
+  NEXORA remains not production-ready.
 
 ## Completed tooling milestone — v0.73.0 Release Commit Helper foundation
 

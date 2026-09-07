@@ -8,13 +8,15 @@ project's academic, portfolio, and product goals evolve.
 
 - Treat the completed and tagged
   `v0.73.0-release-commit-helper-foundation` milestone as the latest stable
-  development milestone. No next milestone has started. Its local helper stages
-  only approved files, blocks `main`, and requires exact typed confirmation; it
-  does not push, open or merge PRs, tag, deploy, reset, stash, or amend.
-- Consider `v0.74.0-backend-default-deny-route-policy-foundation` only as a
-  possible next candidate. It has not started and is not an active milestone.
-- Preserve the v0.73 boundary: no backend/frontend source, workflow/CI,
-  dependency, OpenAPI YAML, or production/deployment capability change.
+  development milestone.
+- Complete the in-progress
+  `v0.74.0-backend-default-deny-route-policy-foundation` with a method-aware
+  public route allowlist, retained protection for `/api/auth/me` and
+  `/api/me/**`, and a terminal default-deny rule for unexpected routes.
+- Preserve existing public/protected route behavior, endpoint paths, query
+  parameters, JSON response shapes, CSRF/session controls, credentialed CORS,
+  request-ID behavior, frontend behavior, dependencies, workflows/scripts, and
+  OpenAPI YAML. Add no production/deployment capability.
 - Preserve the completed v0.72 process-local four-call provider budget,
   immediate stale/local saturation fallback, and unchanged API shape. It adds
   no frontend, dependency, workflow/script, OpenAPI YAML, distributed limiter,

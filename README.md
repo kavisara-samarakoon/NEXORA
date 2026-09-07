@@ -13,7 +13,8 @@ Sentinel assistant in one locally runnable project.
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
 > `v0.73.0-release-commit-helper-foundation`.
-> No next milestone has started.
+> Work in progress is
+> `v0.74.0-backend-default-deny-route-policy-foundation`.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -601,7 +602,17 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.73.0-release-commit-helper-foundation`. No next milestone has started.
+`v0.73.0-release-commit-helper-foundation`.
+Work in progress is `v0.74.0-backend-default-deny-route-policy-foundation`.
+
+v0.74 introduces an explicit method-aware backend public route allowlist and a
+default-deny fallback. Existing intended public routes remain public, while
+`/api/auth/me` and every `/api/me/**` route remain protected. Unexpected future
+or unmatched backend routes fail closed. Endpoint paths, query parameters, JSON
+response shapes, CSRF/session behavior, credentialed CORS, request-ID behavior,
+the frontend, dependencies, workflows/scripts, and OpenAPI YAML are unchanged.
+No production/deployment capability is added, and NEXORA remains not
+production-ready.
 
 The completed and tagged v0.73 milestone added only the local
 `scripts/release/commit-milestone.sh` helper. It stages an explicit approved
@@ -623,10 +634,6 @@ intact. `GET /api/deals/external`, its query parameters, HTTP behavior, and JSON
 response shape are unchanged. There is no frontend, dependency, workflow,
 script, OpenAPI YAML, distributed-rate-limiter, deployment, or production
 capability change. NEXORA remains not production-ready.
-
-The possible v0.74 candidate is
-`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
-is not an active milestone.
 
 The completed v0.71 tooling milestone added safe local release helpers. It
 changes no backend or frontend application
