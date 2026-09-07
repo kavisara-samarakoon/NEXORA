@@ -5,10 +5,27 @@ public deployment, published package, or production release.
 
 The latest stable development tag is
 `v0.72.0-backend-external-provider-request-budget-foundation`.
-No next milestone has started. A possible next candidate is
-`v0.73.0-release-commit-helper-foundation`; it has not started and is not an
-active milestone.
+Work in progress is `v0.73.0-release-commit-helper-foundation`. A possible
+v0.74 candidate is `v0.74.0-backend-default-deny-route-policy-foundation`; it
+has not started and is not an active milestone.
 Older headings retain the wording used when each milestone was recorded.
+
+## In-progress tooling milestone — v0.73.0 Release Commit Helper foundation
+
+`v0.73.0-release-commit-helper-foundation` adds a local milestone commit helper
+only.
+
+- Shows the current branch, working-tree status, diff summary, and whitespace
+  check before staging. It stages only explicitly approved repository files,
+  verifies the complete staged set, and requires exact typed confirmation
+  before creating a commit.
+- Refuses `main`, pre-existing staged changes, missing or escaping file paths,
+  an empty change set, whitespace errors, and an empty post-stage diff. It does
+  not automatically reset staged files when confirmation is cancelled.
+- Does not push, open or merge a PR, create a tag, delete a branch, or deploy.
+  Backend/frontend source, GitHub workflows and CI behavior, dependencies, and
+  OpenAPI YAML are unchanged. No production/deployment capability is added,
+  and NEXORA remains not production-ready.
 
 ## Completed backend milestone — v0.72.0 Backend External Provider Request Budget foundation
 

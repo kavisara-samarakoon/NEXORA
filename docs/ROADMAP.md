@@ -8,9 +8,14 @@ project's academic, portfolio, and product goals evolve.
 
 - Treat the completed
   `v0.72.0-backend-external-provider-request-budget-foundation` milestone as the
-  tagged latest stable milestone. No next milestone has started.
-- Consider `v0.73.0-release-commit-helper-foundation` only as a possible next
-  candidate. It has not started and is not an active milestone.
+  tagged latest stable milestone.
+- Complete the in-progress `v0.73.0-release-commit-helper-foundation` as local
+  tooling only: stage explicit approved files, verify the staged set, and
+  require typed confirmation before a non-`main` commit. Keep human review and
+  add no backend/frontend source, workflow/CI, dependency, OpenAPI YAML, or
+  production/deployment behavior change.
+- Consider `v0.74.0-backend-default-deny-route-policy-foundation` only as a
+  possible next candidate. It has not started and is not an active milestone.
 - Preserve the completed v0.72 process-local four-call provider budget,
   immediate stale/local saturation fallback, and unchanged API shape. It adds
   no frontend, dependency, workflow/script, OpenAPI YAML, distributed limiter,

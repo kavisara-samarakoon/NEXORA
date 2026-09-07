@@ -2,11 +2,11 @@
 
 ## Why these scripts exist
 
-Milestone branches repeat the same local Git, validation, pull-request, merge,
-and tag commands. The helpers in `scripts/release/` make those commands
+Milestone branches repeat the same local Git, validation, commit, pull-request,
+merge, and tag commands. The helpers in `scripts/release/` make those commands
 consistent and visible while retaining human review and explicit confirmation
-for merge, branch deletion, and tagging. They are local project tooling only;
-they do not change application, CI, deployment, or production behavior.
+for commits, merge, branch deletion, and tagging. They are local project tooling
+only; they do not change application, CI, deployment, or production behavior.
 
 The scripts use tools already required by the repository workflow: Bash, Git,
 Maven, Python 3, npm, and the GitHub CLI (`gh`). They do not install
@@ -42,6 +42,29 @@ when frontend validation is deliberately outside the current local pass; it
 skips lint, build, and audit together. These flags do not redefine the checks a
 reviewer or pull request may require.
 
+### Commit a milestone
+
+```bash
+scripts/release/commit-milestone.sh \
+  --message "Add bounded milestone behavior" \
+  --files path/to/approved-file another/approved-file
+```
+
+`commit-milestone.sh` refuses to commit on `main`, requires an initially empty
+staging area, shows the working-tree status and diff summary, and runs
+`git diff --check`. It stages only the file paths explicitly listed after the
+`--files` option by using `git add --` with literal path handling; it never uses
+`git add .` or stages other modified files automatically. After staging, it
+shows the staged names and summary, leaves other working-tree changes unstaged,
+and verifies that every staged file was approved.
+
+The commit is created only after the operator types the exact displayed
+confirmation, including the commit message. If confirmation fails, no commit is
+created and the approved files remain staged for inspection with
+`git diff --cached`; unstage them manually if needed after review. The helper
+does not reset the index automatically. It also does not push, open or merge a
+PR, create a tag, delete a branch, or deploy.
+
 ### Open a pull request
 
 ```bash
@@ -74,12 +97,13 @@ branch list, and recent log.
 
 ## Safety rules and human responsibilities
 
-- Read the diff and validation output before committing; the helpers never
-  stage or commit files.
+- Read the diff and validation output before committing. Only
+  `commit-milestone.sh` stages or commits, and it does so only for explicit file
+  paths after staged-diff review and exact typed confirmation.
 - Review the PR content, conversation, approvals, and repository check details.
   A successful command exit is not a substitute for code review.
-- The scripts do not force-push, amend, reset, install dependencies, hide
-  command output, or merge/tag/delete branches without typed confirmation.
+- The scripts do not force-push, amend, reset, stash, install dependencies,
+  hide command output, or merge/tag/delete branches without typed confirmation.
 - Check the proposed tag name and annotation carefully. Release tags mark
   development milestones and are not a production-readiness claim.
 - Keep credentials and tokens out of command arguments, PR text, commits, and
@@ -93,7 +117,9 @@ branch list, and recent log.
 1. Run `start-milestone.sh` with the reviewed branch name.
 2. Make the scoped changes and run `validate-milestone.sh` (starting the local
    backend first, or explicitly using `--skip-smoke`).
-3. Review `git diff`, stage intentionally, and commit manually.
+3. Review `git diff`, then run `commit-milestone.sh` with the exact approved
+   file list and commit message. Review its staged output and type its complete
+   confirmation phrase.
 4. Run `open-pr.sh`, then perform human review and resolve any check failures.
 5. Run `merge-and-tag.sh` only when the PR and exact tag are approved. Read the
    prompt and type its complete confirmation text.
@@ -104,7 +130,8 @@ branch list, and recent log.
 
 When a milestone tag is followed by a separate documentation-only closure, use
 a new docs branch from updated `main`. Update only the approved release-state
-documentation, validate and review the diff, commit manually, and use
+documentation, validate and review the diff, and either commit manually or run
+`commit-milestone.sh` with only the approved documentation paths. Then use
 `open-pr.sh` for the closure PR. After human review, merge that closure PR with
 an explicitly confirmed manual `gh pr merge --merge --delete-branch`, update
 local `main`, fetch with pruning, and verify the final state.
@@ -115,9 +142,11 @@ tagged, and the closure does not create or move another release tag.
 ## Current milestone state
 
 The latest stable development tag is
-`v0.70.0-backend-health-version-semantics-foundation`.
+`v0.72.0-backend-external-provider-request-budget-foundation`.
 Work in progress is
-`v0.71.0-project-release-workflow-tooling-foundation`, which adds only these
-local release helpers and documentation. The v0.72 candidate is the backend
-external provider request budget foundation. NEXORA remains a local/development
-MVP and is not production-ready.
+`v0.73.0-release-commit-helper-foundation`, which adds only the local
+`commit-milestone.sh` helper and documentation. It changes no backend/frontend
+source, workflow/CI behavior, dependencies, OpenAPI YAML, or
+production/deployment capability. The v0.74 candidate is
+`v0.74.0-backend-default-deny-route-policy-foundation`. NEXORA remains a
+local/development MVP and is not production-ready.

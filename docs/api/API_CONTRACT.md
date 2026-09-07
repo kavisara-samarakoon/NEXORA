@@ -11,11 +11,14 @@ The human-readable contract was established by the completed
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
 `v0.72.0-backend-external-provider-request-budget-foundation` is the completed,
-tagged, latest stable development milestone. No next milestone has started.
-The possible `v0.73.0-release-commit-helper-foundation` candidate has not
-started and is not active. The completed v0.72 work bounds process-local
-external-deals provider concurrency without changing endpoint paths, query
-parameters, response shapes, or OpenAPI YAML.
+tagged, latest stable development milestone. Work in progress is
+`v0.73.0-release-commit-helper-foundation`, a local commit-helper and
+release-documentation change only. The possible v0.74 candidate is
+`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
+is not active. The completed v0.72 work bounds process-local external-deals
+provider concurrency without changing endpoint paths, query parameters,
+response shapes, or OpenAPI YAML. v0.73 also changes no API behavior or OpenAPI
+YAML.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured
