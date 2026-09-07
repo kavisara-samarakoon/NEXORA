@@ -10,8 +10,16 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
-started.
+`v0.70.0-backend-health-version-semantics-foundation`.
+Work is in progress on
+`v0.71.0-project-release-workflow-tooling-foundation`.
+
+v0.71 adds local release helper scripts and their operating guide. It preserves
+human review and typed confirmation for risky operations and changes no backend
+or frontend application behavior, workflow/CI behavior, dependencies, OpenAPI
+YAML, or production/deployment behavior. The v0.72 candidate is the backend
+external provider request budget foundation. NEXORA remains not
+production-ready.
 
 v0.70 adds `observabilityContractMilestone` to `/api/health` and preserves the
 existing `milestone` key as a legacy alias. Both identify the v0.33 health and

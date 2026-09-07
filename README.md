@@ -13,7 +13,8 @@ Sentinel assistant in one locally runnable project.
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
 > `v0.70.0-backend-health-version-semantics-foundation`.
-> No next milestone has started.
+> Work is in progress on
+> `v0.71.0-project-release-workflow-tooling-foundation`.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -23,6 +24,7 @@ Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [reviewer API testing](docs/api/REVIEWER_API_TESTING.md) ·
 [reviewer local preflight](scripts/reviewer-local-preflight.sh) ·
 [API smoke test](scripts/api-smoke-test.sh) · [scripts guide](scripts/README.md) ·
+[local release workflow](docs/release-workflow.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
@@ -600,8 +602,19 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
-started. The completed v0.70 milestone adds the explicit
+`v0.70.0-backend-health-version-semantics-foundation`.
+Work is in progress on
+`v0.71.0-project-release-workflow-tooling-foundation`, which adds safe,
+transparent local helpers for starting a milestone, running the common
+validation stack, opening and watching a pull request, and explicitly confirmed
+merge-and-tag execution. The scripts do not stage or commit changes, and human
+review remains required.
+
+This v0.71 tooling milestone changes no backend or frontend application
+behavior, GitHub workflow or CI behavior, dependencies, OpenAPI YAML, or
+production/deployment behavior. It makes no production-readiness claim.
+
+The completed v0.70 milestone adds the explicit
 `observabilityContractMilestone` health field while retaining `milestone` as a
 legacy alias with the same v0.33 contract-baseline value. The endpoint path,
 status behavior, and existing JSON fields are unchanged. The primary frontend
@@ -611,8 +624,8 @@ deals, Wishlist, Sentinel, notifications, production-profile guards,
 dependencies, workflows, scripts, and runtime health behavior are unchanged,
 and NEXORA remains not production-ready.
 
-The recommended next candidate is
-`v0.71.0-backend-external-provider-request-budget-foundation`; it has not
+The v0.72 candidate is
+`v0.72.0-backend-external-provider-request-budget-foundation`; it has not
 started and is not an active milestone.
 
 The completed v0.67 milestone updated official GitHub action majors for Node 24

@@ -4,9 +4,23 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
-started.
+`v0.70.0-backend-health-version-semantics-foundation`.
+Work is in progress on
+`v0.71.0-project-release-workflow-tooling-foundation`.
 Older headings retain the wording used when each milestone was recorded.
+
+## In-progress tooling milestone — v0.71.0 Project Release Workflow Tooling foundation
+
+- Adds transparent local helpers for milestone branch creation, the common
+  validation stack, PR creation/check watching, and explicitly confirmed merge,
+  branch deletion, annotated tagging, and final-state verification.
+- Keeps staging, committing, diff review, PR review, and the typed merge/tag
+  decision under human control. The helpers use existing local tools and add no
+  dependencies or GitHub Actions workflows.
+- Changes no backend/frontend application behavior, CI/workflow behavior,
+  OpenAPI YAML, deployment, or production behavior. The v0.72 candidate is the
+  backend external provider request budget foundation, and NEXORA remains not
+  production-ready.
 
 ## Completed backend milestone — v0.70.0 Backend Health Version Semantics foundation
 

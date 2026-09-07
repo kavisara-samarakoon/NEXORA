@@ -4,8 +4,18 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
-started.
+`v0.70.0-backend-health-version-semantics-foundation`.
+Work is in progress on
+`v0.71.0-project-release-workflow-tooling-foundation`.
+
+The v0.71 milestone adds local release helper scripts only: guarded milestone
+branch creation, the common validation stack, PR creation/check watching, and
+an explicitly confirmed merge-and-annotated-tag flow with final-state output.
+It changes no backend/frontend application behavior, workflow/CI behavior,
+dependencies, OpenAPI YAML, or production/deployment behavior. Human diff and
+PR review, staging, and committing remain manual. The v0.72 candidate is the
+backend external provider request budget foundation. NEXORA remains not
+production-ready.
 
 The completed `v0.70.0-backend-health-version-semantics-foundation` milestone
 adds `observabilityContractMilestone` to `/api/health` and retains

@@ -4,8 +4,9 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.70.0-backend-health-version-semantics-foundation`. No next milestone has
-started.
+`v0.70.0-backend-health-version-semantics-foundation`.
+Work is in progress on
+`v0.71.0-project-release-workflow-tooling-foundation`.
 
 ## Repository-defined automation
 
@@ -23,6 +24,14 @@ observability-contract baseline while preserving the old response key as a
 legacy alias. It does not expose configuration values or add monitoring,
 dependencies, workflows, deployment, or production capability. NEXORA remains
 not production-ready.
+
+The v0.71 release tooling adds local command helpers, not a new security or CI
+control. It keeps review, staging, and commits manual; refuses dirty trees for
+branch/PR/merge operations; verifies PR checks and tag absence; and requires
+typed confirmation before merge, branch deletion, and tagging. It changes no
+workflow, dependency, application, OpenAPI YAML, deployment, or production
+behavior. Local `gh` output remains the source of truth for private-repository
+operations.
 
 The CodeQL-ready workflow scopes analysis to `backend/nexora-api` and
 `frontend/nexora-web-next`; it does not build or analyze the retained Vite

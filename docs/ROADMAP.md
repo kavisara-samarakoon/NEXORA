@@ -8,9 +8,15 @@ project's academic, portfolio, and product goals evolve.
 
 - Treat the completed
   `v0.70.0-backend-health-version-semantics-foundation` milestone as the latest
-  stable milestone. No next milestone has started.
+  stable milestone.
+- Complete the in-progress
+  `v0.71.0-project-release-workflow-tooling-foundation` as local helper scripts
+  and documentation only. Keep human review, staging, committing, and typed
+  confirmation for merge, branch deletion, and tagging; do not change
+  application, workflow/CI, dependency, OpenAPI YAML, deployment, or production
+  behavior.
 - Consider
-  `v0.71.0-backend-external-provider-request-budget-foundation` as the
+  `v0.72.0-backend-external-provider-request-budget-foundation` as the
   recommended next candidate. It has not started and is not an active
   milestone.
 - Keep Settings connected to no account data until a separately scoped product

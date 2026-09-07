@@ -11,7 +11,10 @@ The human-readable contract was established by the completed
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
 `v0.70.0-backend-health-version-semantics-foundation` is the latest stable
-development milestone. No next milestone has started.
+development milestone. Work is in progress on
+`v0.71.0-project-release-workflow-tooling-foundation`, a local release-script
+and documentation milestone that changes no API behavior or OpenAPI YAML. The
+v0.72 candidate is the backend external provider request budget foundation.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured
