@@ -12,9 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.71.0-project-release-workflow-tooling-foundation`.
-> Work is in progress on
 > `v0.72.0-backend-external-provider-request-budget-foundation`.
+> No next milestone has started.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -602,13 +601,14 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.71.0-project-release-workflow-tooling-foundation`.
-Work is in progress on
-`v0.72.0-backend-external-provider-request-budget-foundation`. v0.72 limits
-outbound external-deals provider calls to four concurrent process-local calls.
-Capacity checks do not delay local cache reads or wait for a permit. When the
-budget is saturated, the same-key stale cache is preferred when available;
-otherwise the existing local catalog fallback is returned.
+`v0.72.0-backend-external-provider-request-budget-foundation`. No next
+milestone has started.
+
+The completed and tagged v0.72 milestone limits outbound external-deals
+provider calls to four concurrent process-local calls. Capacity checks do not
+delay local cache reads or wait for a permit. When the budget is saturated, the
+same-key stale cache is preferred when available; otherwise the existing local
+catalog fallback is returned.
 
 The v0.68 maximum cache size, expired-entry cleanup, LRU eviction, same-key
 single-flight behavior, CheapShark integration, and failure fallbacks remain
@@ -616,6 +616,10 @@ intact. `GET /api/deals/external`, its query parameters, HTTP behavior, and JSON
 response shape are unchanged. There is no frontend, dependency, workflow,
 script, OpenAPI YAML, distributed-rate-limiter, deployment, or production
 capability change. NEXORA remains not production-ready.
+
+The possible next candidate is
+`v0.73.0-release-commit-helper-foundation`. It has not started and is not an
+active milestone.
 
 The completed v0.71 tooling milestone added safe local release helpers. It
 changes no backend or frontend application

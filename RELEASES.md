@@ -4,12 +4,16 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.71.0-project-release-workflow-tooling-foundation`.
-Work is in progress on
 `v0.72.0-backend-external-provider-request-budget-foundation`.
+No next milestone has started. A possible next candidate is
+`v0.73.0-release-commit-helper-foundation`; it has not started and is not an
+active milestone.
 Older headings retain the wording used when each milestone was recorded.
 
-## In-progress backend milestone — v0.72.0 Backend External Provider Request Budget foundation
+## Completed backend milestone — v0.72.0 Backend External Provider Request Budget foundation
+
+`v0.72.0-backend-external-provider-request-budget-foundation` is the completed,
+tagged, latest stable development milestone.
 
 - Bounds CheapShark/external-deals provider admission to four concurrent calls
   per backend process with immediate, non-blocking capacity checks. Permits are
@@ -24,8 +28,8 @@ Older headings retain the wording used when each milestone was recorded.
 
 ## Completed tooling milestone — v0.71.0 Project Release Workflow Tooling foundation
 
-`v0.71.0-project-release-workflow-tooling-foundation` is the latest stable
-development milestone.
+`v0.71.0-project-release-workflow-tooling-foundation` is a completed development
+milestone.
 
 - Adds transparent local helpers for milestone branch creation, the common
   validation stack, PR creation/check watching, and explicitly confirmed merge,
@@ -34,8 +38,7 @@ development milestone.
   decision under human control. The helpers use existing local tools and add no
   dependencies or GitHub Actions workflows.
 - Changes no backend/frontend application behavior, CI/workflow behavior,
-  OpenAPI YAML, deployment, or production behavior. The v0.72 candidate is the
-  backend external provider request budget foundation, and NEXORA remains not
+  OpenAPI YAML, deployment, or production behavior. NEXORA remains not
   production-ready.
 
 ## Completed backend milestone — v0.70.0 Backend Health Version Semantics foundation
