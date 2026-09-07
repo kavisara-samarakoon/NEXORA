@@ -7,18 +7,13 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Treat the completed
-  `v0.70.0-backend-health-version-semantics-foundation` milestone as the latest
+  `v0.71.0-project-release-workflow-tooling-foundation` milestone as the latest
   stable milestone.
 - Complete the in-progress
-  `v0.71.0-project-release-workflow-tooling-foundation` as local helper scripts
-  and documentation only. Keep human review, staging, committing, and typed
-  confirmation for merge, branch deletion, and tagging; do not change
-  application, workflow/CI, dependency, OpenAPI YAML, deployment, or production
-  behavior.
-- Consider
-  `v0.72.0-backend-external-provider-request-budget-foundation` as the
-  recommended next candidate. It has not started and is not an active
-  milestone.
+  `v0.72.0-backend-external-provider-request-budget-foundation` with a
+  process-local four-call provider budget, immediate saturation fallback, and
+  no API-shape, frontend, dependency, workflow/script, OpenAPI YAML, distributed
+  limiter, deployment, or production-capability change.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather
@@ -108,8 +103,8 @@ project's academic, portfolio, and product goals evolve.
   and real external-provider hardening as future work with explicit ownership
   and operational boundaries.
 - Consider distributed external-deals caching or rate limiting only with a
-  future approved topology; v0.68 intentionally provides process-local bounds
-  and same-key load sharing only.
+  future approved topology; the v0.68 cache/load controls and v0.72 provider
+  request budget remain process-local foundations.
 - Treat real production privacy controls, identity-protection features, and
   deployment hardening as future reviewed work; static screenshot guidance is
   not a runtime privacy control.

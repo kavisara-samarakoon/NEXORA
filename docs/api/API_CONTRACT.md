@@ -10,11 +10,11 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.70.0-backend-health-version-semantics-foundation` is the latest stable
+`v0.71.0-project-release-workflow-tooling-foundation` is the latest stable
 development milestone. Work is in progress on
-`v0.71.0-project-release-workflow-tooling-foundation`, a local release-script
-and documentation milestone that changes no API behavior or OpenAPI YAML. The
-v0.72 candidate is the backend external provider request budget foundation.
+`v0.72.0-backend-external-provider-request-budget-foundation`, which bounds
+process-local external-deals provider concurrency without changing endpoint
+paths, query parameters, response shapes, or OpenAPI YAML.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured
@@ -333,7 +333,7 @@ contract or `openapi.yaml`.
 | Method | Path | Access | Purpose | Request | Success response | Common errors | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/api/deals` | Public | Return active curated deals | None | `200`; array of `Deal` records | `internal_error` for unexpected failure | Default profile uses local demo data; `dev` uses active PostgreSQL records. |
-| GET | `/api/deals/external` | Public | Fetch/map external CheapShark deals | Optional query: `title` max 80 chars, `pageSize` minimum 1, `upperPrice` greater than 0 | `200`; array of `Deal` records | Safe fallback normally returns `200`; otherwise `internal_error` | Page size is clamped to configured maximum. Provider/cache failure falls back to curated deals. |
+| GET | `/api/deals/external` | Public | Fetch/map external CheapShark deals | Optional query: `title` max 80 chars, `pageSize` minimum 1, `upperPrice` greater than 0 | `200`; array of `Deal` records | Safe fallback normally returns `200`; otherwise `internal_error` | Page size is clamped to configured maximum. Provider/cache failure or saturated process-local provider admission prefers stale same-key data and otherwise falls back to curated deals. |
 | GET | `/api/giveaways` | Public | Return active giveaways | None | `200`; array of `Giveaway` records | `internal_error` for unexpected failure | Default profile uses local demo data; `dev` uses active PostgreSQL records. |
 | GET | `/api/wishlist` | Public | Return the public demo/global wishlist catalog | None | `200`; array of `WishlistItem` records | `internal_error` for unexpected failure | Separate from account-owned `/api/me/wishlist`. It must not be treated as a personal account response. |
 
@@ -446,8 +446,8 @@ With no active Spring profile:
 - accounts, refresh sessions, personal wishlists, alert events, price history,
   notification preferences, and auth security events are in memory;
 - restarting the backend clears that in-memory account/personal state;
-- external CheapShark deals remain available on demand with cache and curated
-  fallback;
+- external CheapShark deals remain available on demand with bounded
+  process-local cache/provider admission and stale/curated fallback;
 - price refresh scheduling and notification delivery are disabled by default;
 - the stored price provider, log notification adapter, and local Sentinel
   provider are the safe defaults; and

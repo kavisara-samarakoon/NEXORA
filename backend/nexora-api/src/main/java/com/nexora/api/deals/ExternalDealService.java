@@ -23,6 +23,7 @@ public class ExternalDealService {
     private final DealCatalogService localDeals;
     private final ExternalDealsProperties properties;
     private final ExternalDealsCache cache;
+    private final ExternalProviderRequestBudget providerRequestBudget;
     private final ConcurrentHashMap<ExternalDealsCacheKey, CompletableFuture<List<CheapSharkDealResponse>>>
             dealLoads = new ConcurrentHashMap<>();
     private final AtomicReference<CompletableFuture<Map<String, String>>> storeLookupLoad =
@@ -34,13 +35,15 @@ public class ExternalDealService {
             CheapSharkStoreDirectory cheapSharkStoreDirectory,
             DealCatalogService localDeals,
             ExternalDealsProperties properties,
-            ExternalDealsCache cache) {
+            ExternalDealsCache cache,
+            ExternalProviderRequestBudget providerRequestBudget) {
         this.cheapSharkDealClient = cheapSharkDealClient;
         this.cheapSharkDealMapper = cheapSharkDealMapper;
         this.cheapSharkStoreDirectory = cheapSharkStoreDirectory;
         this.localDeals = localDeals;
         this.properties = properties;
         this.cache = cache;
+        this.providerRequestBudget = providerRequestBudget;
     }
 
     public List<Deal> getDeals(String title, Integer pageSize, BigDecimal upperPrice) {
@@ -82,10 +85,12 @@ public class ExternalDealService {
             String effectiveTitle,
             BigDecimal upperPrice) {
         try {
-            List<CheapSharkDealResponse> responses = cheapSharkDealClient.getDeals(
-                    effectivePageSize,
-                    effectiveTitle,
-                    upperPrice
+            List<CheapSharkDealResponse> responses = providerRequestBudget.execute(
+                    () -> cheapSharkDealClient.getDeals(
+                            effectivePageSize,
+                            effectiveTitle,
+                            upperPrice
+                    )
             );
             Map<String, String> storeLookup = getStoreLookupWithoutCache();
             return cheapSharkDealMapper.toDeals(responses, storeLookup);
@@ -171,13 +176,21 @@ public class ExternalDealService {
                 initialCached != null ? initialCached : latestCached;
 
         try {
-            List<CheapSharkDealResponse> responses = cheapSharkDealClient.getDeals(
-                    effectivePageSize,
-                    effectiveTitle,
-                    upperPrice
+            List<CheapSharkDealResponse> responses = providerRequestBudget.execute(
+                    () -> cheapSharkDealClient.getDeals(
+                            effectivePageSize,
+                            effectiveTitle,
+                            upperPrice
+                    )
             );
             cache.putDeals(cacheKey, responses);
             return responses;
+        } catch (ExternalProviderRequestBudget.CapacityUnavailableException exception) {
+            if (stale != null) {
+                LOGGER.warn("CheapShark deals request budget saturated; serving stale cached deals");
+                return stale.value();
+            }
+            throw exception;
         } catch (RuntimeException exception) {
             if (stale != null) {
                 LOGGER.warn("CheapShark deals refresh failed; serving stale cached deals");
@@ -198,7 +211,7 @@ public class ExternalDealService {
 
         try {
             Map<String, String> lookup = cheapSharkStoreDirectory.toLookup(
-                    cheapSharkDealClient.getStores()
+                    providerRequestBudget.execute(cheapSharkDealClient::getStores)
             );
             cache.putStoreLookup(lookup);
             return lookup;
@@ -229,7 +242,9 @@ public class ExternalDealService {
 
     private Map<String, String> getStoreLookupWithoutCache() {
         try {
-            return cheapSharkStoreDirectory.toLookup(cheapSharkDealClient.getStores());
+            return cheapSharkStoreDirectory.toLookup(
+                    providerRequestBudget.execute(cheapSharkDealClient::getStores)
+            );
         } catch (RuntimeException exception) {
             LOGGER.warn("CheapShark stores unavailable; using fallback store labels");
             return Map.of();

@@ -4,17 +4,29 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.70.0-backend-health-version-semantics-foundation`.
-Work is in progress on
 `v0.71.0-project-release-workflow-tooling-foundation`.
+Work is in progress on
+`v0.72.0-backend-external-provider-request-budget-foundation`.
 
-The v0.71 milestone adds local release helper scripts only: guarded milestone
-branch creation, the common validation stack, PR creation/check watching, and
-an explicitly confirmed merge-and-annotated-tag flow with final-state output.
+The v0.72 milestone bounds outbound CheapShark/external-deals provider calls to
+four concurrent calls per backend process. Admission uses an immediate permit
+check, so saturated unique-key requests do not wait for capacity: stale
+same-key data is preferred, followed by the existing local catalog fallback.
+The v0.68 cache maximum, expired-entry cleanup, LRU eviction, same-key
+single-flight, and provider-failure fallback behavior remain intact.
+
+The public `GET /api/deals/external` path, query parameters, HTTP behavior, and
+JSON response shape remain unchanged, and OpenAPI YAML is unchanged. This adds
+no frontend, dependency, workflow, script, distributed limiter, deployment, or
+production capability. NEXORA remains not production-ready.
+
+The completed v0.71 milestone added local release helper scripts only: guarded
+milestone branch creation, the common validation stack, PR creation/check
+watching, and an explicitly confirmed merge-and-annotated-tag flow with
+final-state output.
 It changes no backend/frontend application behavior, workflow/CI behavior,
 dependencies, OpenAPI YAML, or production/deployment behavior. Human diff and
-PR review, staging, and committing remain manual. The v0.72 candidate is the
-backend external provider request budget foundation. NEXORA remains not
+PR review, staging, and committing remain manual. NEXORA remains not
 production-ready.
 
 The completed `v0.70.0-backend-health-version-semantics-foundation` milestone
@@ -134,7 +146,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.70.0-backend-health-version-semantics-foundation`.
+`v0.71.0-project-release-workflow-tooling-foundation`.
 
 ## Completed foundations
 
@@ -164,7 +176,8 @@ readiness of the project. The latest stable development milestone is
   latest 100 retained per account in local-demo memory, and bounded latest
   lookup in the database-backed `dev` path.
 - CheapShark external deals, redirect links, bounded process-local caching,
-  same-key load sharing, and local fallback.
+  same-key load sharing, four-call process-local provider admission, and
+  stale/local fallback.
 - Opt-in wishlist price refresh scheduler with stored and CheapShark providers.
 - Wishlist price-history foundation with PostgreSQL and in-memory snapshots, an
   owner-scoped Bearer API, and a compact on-demand frontend history view.
@@ -297,8 +310,8 @@ readiness of the project. The latest stable development milestone is
 - Shared error metadata improves local diagnosis but is not centralized error
   reporting, tracing, production monitoring, or incident response.
 - CheapShark is a third-party dependency with incomplete game/store coverage.
-- External-deals cache and in-flight load controls are process-local, not a
-  distributed cache or distributed rate limiter.
+- External-deals cache, in-flight loads, and provider request budget are
+  process-local, not a distributed cache or distributed rate limiter.
 - Scheduled price refresh is `dev`-profile, single-process, and disabled by
   default.
 - Email delivery requires explicit SMTP configuration plus enabled account

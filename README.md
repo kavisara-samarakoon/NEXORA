@@ -12,9 +12,9 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.70.0-backend-health-version-semantics-foundation`.
-> Work is in progress on
 > `v0.71.0-project-release-workflow-tooling-foundation`.
+> Work is in progress on
+> `v0.72.0-backend-external-provider-request-budget-foundation`.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -81,7 +81,7 @@ security controls, and testable optional integrations.
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 | Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
 | Production-profile persistence guard | `prod`/`production` fail closed unless the existing `dev` database-backed profile is also active | Backend safety foundation |
-| External-deals resource bounds | Bounded in-process response cache, expired-entry cleanup, and same-key provider-load sharing | Backend resilience foundation |
+| External-deals resource bounds | Bounded in-process response cache, expired-entry cleanup, same-key provider-load sharing, and a four-call process-local provider budget | Backend resilience foundation |
 
 “Foundation” means the capability is implemented and testable for local
 development; it does not imply production-scale operations.
@@ -602,15 +602,23 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.70.0-backend-health-version-semantics-foundation`.
+`v0.71.0-project-release-workflow-tooling-foundation`.
 Work is in progress on
-`v0.71.0-project-release-workflow-tooling-foundation`, which adds safe,
-transparent local helpers for starting a milestone, running the common
-validation stack, opening and watching a pull request, and explicitly confirmed
-merge-and-tag execution. The scripts do not stage or commit changes, and human
-review remains required.
+`v0.72.0-backend-external-provider-request-budget-foundation`. v0.72 limits
+outbound external-deals provider calls to four concurrent process-local calls.
+Capacity checks do not delay local cache reads or wait for a permit. When the
+budget is saturated, the same-key stale cache is preferred when available;
+otherwise the existing local catalog fallback is returned.
 
-This v0.71 tooling milestone changes no backend or frontend application
+The v0.68 maximum cache size, expired-entry cleanup, LRU eviction, same-key
+single-flight behavior, CheapShark integration, and failure fallbacks remain
+intact. `GET /api/deals/external`, its query parameters, HTTP behavior, and JSON
+response shape are unchanged. There is no frontend, dependency, workflow,
+script, OpenAPI YAML, distributed-rate-limiter, deployment, or production
+capability change. NEXORA remains not production-ready.
+
+The completed v0.71 tooling milestone added safe local release helpers. It
+changes no backend or frontend application
 behavior, GitHub workflow or CI behavior, dependencies, OpenAPI YAML, or
 production/deployment behavior. It makes no production-readiness claim.
 
@@ -623,10 +631,6 @@ older backends. OpenAPI YAML changes only for the additive health field. Auth,
 deals, Wishlist, Sentinel, notifications, production-profile guards,
 dependencies, workflows, scripts, and runtime health behavior are unchanged,
 and NEXORA remains not production-ready.
-
-The v0.72 candidate is
-`v0.72.0-backend-external-provider-request-budget-foundation`; it has not
-started and is not an active milestone.
 
 The completed v0.67 milestone updated official GitHub action majors for Node 24
 action-runtime compatibility without changing application toolchains or runtime
@@ -667,8 +671,9 @@ availability, scale, security-assurance, or compliance claim.
   scheduling guarantees.
 - CheapShark coverage and conservative title/store matching cannot resolve every
   game or store.
-- External-deals caching and same-key load sharing remain process-local; there is
-  no distributed cache or distributed rate limiter.
+- External-deals caching, same-key load sharing, and the four-call outbound
+  provider budget remain process-local; there is no distributed cache or
+  distributed rate limiter.
 - Notification preferences are account-scoped, but notifications have no
   persistent delivery status, retries, outbox, or asynchronous after-commit
   delivery.
