@@ -11,13 +11,13 @@ The human-readable contract was established by the completed
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
 `v0.73.0-release-commit-helper-foundation` is the completed, tagged, latest
-stable development milestone. No next milestone has started. It added only a
-local commit helper and release documentation; API behavior and OpenAPI YAML
-are unchanged. The possible v0.74 candidate is
-`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
-is not active. The completed v0.72 work bounds process-local external-deals
-provider concurrency without changing endpoint paths, query parameters,
-response shapes, or OpenAPI YAML.
+stable development milestone. Work in progress is
+`v0.74.0-backend-default-deny-route-policy-foundation`, which introduces an
+explicit public route allowlist followed by default deny. Existing endpoint
+paths, methods, query parameters, response shapes, and OpenAPI YAML are
+unchanged. The completed v0.72 work bounds process-local external-deals provider
+concurrency without changing endpoint paths, query parameters, response shapes,
+or OpenAPI YAML.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured
@@ -66,6 +66,9 @@ The implemented route groups are defined by `AuthSecurityConfig`:
   CSRF/origin guard when that guard is enabled.
 - `/api/auth/me` and every `/api/me/**` route require a valid Bearer access
   token.
+- Routes and method/path combinations not explicitly listed as public or
+  protected are denied by default; they do not fall through to anonymous
+  access.
 - CORS allows configured trusted origins with credentials. Local defaults are
   `http://localhost:3000` and `http://localhost:5173`. Browser JavaScript on
   those allowed origins may read `X-NEXORA-Request-ID` through

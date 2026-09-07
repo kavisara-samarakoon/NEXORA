@@ -10,7 +10,17 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.73.0-release-commit-helper-foundation`. No next milestone has started.
+`v0.73.0-release-commit-helper-foundation`.
+Work in progress is `v0.74.0-backend-default-deny-route-policy-foundation`.
+
+v0.74 introduces an explicit method-aware allowlist for intended public backend
+routes and a default-deny fallback. Existing public routes remain public;
+`/api/auth/me` and all `/api/me/**` routes remain protected. Unexpected future
+or unmatched backend routes fail closed. Endpoint paths, query parameters, JSON
+response shapes, CSRF/session behavior, credentialed CORS, request-ID behavior,
+the frontend, dependencies, workflows/scripts, and OpenAPI YAML are unchanged.
+No production/deployment capability is added, and NEXORA remains not
+production-ready.
 
 The completed and tagged v0.73 milestone added only the local
 `scripts/release/commit-milestone.sh` helper. It stages an explicit approved
@@ -20,10 +30,6 @@ push, open or merge PRs, tag, deploy, reset, stash, or amend. Backend/frontend
 source, workflows and CI behavior, dependencies, and OpenAPI YAML are
 unchanged. No production/deployment capability is added, and NEXORA remains
 not production-ready.
-
-The possible v0.74 candidate is
-`v0.74.0-backend-default-deny-route-policy-foundation`; it has not started and
-is not active.
 
 The completed and tagged v0.72 milestone adds a four-call process-local budget
 around outbound external-deals provider calls. Saturated unique requests
