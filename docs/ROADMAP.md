@@ -7,13 +7,14 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Treat the completed
-  `v0.71.0-project-release-workflow-tooling-foundation` milestone as the latest
-  stable milestone.
-- Complete the in-progress
-  `v0.72.0-backend-external-provider-request-budget-foundation` with a
-  process-local four-call provider budget, immediate saturation fallback, and
-  no API-shape, frontend, dependency, workflow/script, OpenAPI YAML, distributed
-  limiter, deployment, or production-capability change.
+  `v0.72.0-backend-external-provider-request-budget-foundation` milestone as the
+  tagged latest stable milestone. No next milestone has started.
+- Consider `v0.73.0-release-commit-helper-foundation` only as a possible next
+  candidate. It has not started and is not an active milestone.
+- Preserve the completed v0.72 process-local four-call provider budget,
+  immediate stale/local saturation fallback, and unchanged API shape. It adds
+  no frontend, dependency, workflow/script, OpenAPI YAML, distributed limiter,
+  deployment, or production capability.
 - Keep Settings connected to no account data until a separately scoped product
   and API design exists; its current controls and profile remain static preview
   content. Keep Security scores and events labelled as local samples rather

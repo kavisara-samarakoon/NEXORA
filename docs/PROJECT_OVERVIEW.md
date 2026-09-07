@@ -10,18 +10,20 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.71.0-project-release-workflow-tooling-foundation`.
-Work is in progress on
 `v0.72.0-backend-external-provider-request-budget-foundation`.
+No next milestone has started.
 
-v0.72 adds a four-call process-local budget around outbound external-deals
-provider calls. Saturated unique requests immediately prefer stale same-key
-data and otherwise use the local catalog fallback. The v0.68 cache bound,
-expired cleanup, LRU eviction, and same-key single-flight remain intact. The
-public API path, query parameters, and JSON shape are unchanged, as are the
-frontend, dependencies, workflows/scripts, and OpenAPI YAML. No distributed
-limiter or deployment capability is added, and NEXORA remains not
-production-ready.
+The completed and tagged v0.72 milestone adds a four-call process-local budget
+around outbound external-deals provider calls. Saturated unique requests
+immediately prefer stale same-key data and otherwise use the local catalog
+fallback. The v0.68 cache bound, expired cleanup, LRU eviction, and same-key
+single-flight remain intact. The public API path, query parameters, and JSON
+shape are unchanged, as are the frontend, dependencies, workflows/scripts, and
+OpenAPI YAML. No distributed limiter or deployment capability is added, and
+NEXORA remains not production-ready.
+
+`v0.73.0-release-commit-helper-foundation` is a possible next candidate only;
+it has not started and is not an active milestone.
 
 The completed v0.71 milestone added local release helper scripts and their
 operating guide. It preserves human review and typed confirmation for risky

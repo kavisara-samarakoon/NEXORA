@@ -4,9 +4,10 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.71.0-project-release-workflow-tooling-foundation`.
-Work is in progress on
 `v0.72.0-backend-external-provider-request-budget-foundation`.
+No next milestone has started. The possible
+`v0.73.0-release-commit-helper-foundation` candidate has not started and is not
+active.
 
 ## Repository-defined automation
 
@@ -33,12 +34,12 @@ workflow, dependency, application, OpenAPI YAML, deployment, or production
 behavior. Local `gh` output remains the source of truth for private-repository
 operations.
 
-The v0.72 backend change limits outbound external-deals provider concurrency to
-four calls per process and falls back immediately to stale same-key or local
-catalog data when admission is saturated. This is a local resource bound, not a
-distributed rate limiter or production availability/security control. It
-changes no API shape, frontend, dependency, workflow/script, OpenAPI YAML,
-deployment, or production capability.
+The completed and tagged v0.72 backend change limits outbound external-deals
+provider concurrency to four calls per process and falls back immediately to
+stale same-key or local catalog data when admission is saturated. This is a
+local resource bound, not a distributed rate limiter or production
+availability/security control. It changes no API shape, frontend, dependency,
+workflow/script, OpenAPI YAML, deployment, or production capability.
 
 The CodeQL-ready workflow scopes analysis to `backend/nexora-api` and
 `frontend/nexora-web-next`; it does not build or analyze the retained Vite

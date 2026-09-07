@@ -4,21 +4,23 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.71.0-project-release-workflow-tooling-foundation`.
-Work is in progress on
 `v0.72.0-backend-external-provider-request-budget-foundation`.
+No next milestone has started.
 
-The v0.72 milestone bounds outbound CheapShark/external-deals provider calls to
-four concurrent calls per backend process. Admission uses an immediate permit
-check, so saturated unique-key requests do not wait for capacity: stale
-same-key data is preferred, followed by the existing local catalog fallback.
-The v0.68 cache maximum, expired-entry cleanup, LRU eviction, same-key
-single-flight, and provider-failure fallback behavior remain intact.
+The completed and tagged v0.72 milestone bounds outbound CheapShark/external-
+deals provider calls to four concurrent calls per backend process. Admission
+uses an immediate permit check, so saturated unique-key requests do not wait
+for capacity: stale same-key data is preferred, followed by the existing local
+catalog fallback. The v0.68 cache maximum, expired-entry cleanup, LRU eviction,
+same-key single-flight, and provider-failure fallback behavior remain intact.
 
 The public `GET /api/deals/external` path, query parameters, HTTP behavior, and
 JSON response shape remain unchanged, and OpenAPI YAML is unchanged. This adds
 no frontend, dependency, workflow, script, distributed limiter, deployment, or
 production capability. NEXORA remains not production-ready.
+
+`v0.73.0-release-commit-helper-foundation` is only a possible next candidate.
+It has not started and is not an active milestone.
 
 The completed v0.71 milestone added local release helper scripts only: guarded
 milestone branch creation, the common validation stack, PR creation/check
@@ -146,7 +148,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.71.0-project-release-workflow-tooling-foundation`.
+`v0.72.0-backend-external-provider-request-budget-foundation`.
 
 ## Completed foundations
 
