@@ -4,12 +4,28 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.70.0-backend-health-version-semantics-foundation`.
-Work is in progress on
 `v0.71.0-project-release-workflow-tooling-foundation`.
+Work is in progress on
+`v0.72.0-backend-external-provider-request-budget-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In-progress tooling milestone — v0.71.0 Project Release Workflow Tooling foundation
+## In-progress backend milestone — v0.72.0 Backend External Provider Request Budget foundation
+
+- Bounds CheapShark/external-deals provider admission to four concurrent calls
+  per backend process with immediate, non-blocking capacity checks. Permits are
+  released after provider success, failure, exception, or interruption.
+- Preserves the v0.68 bounded cache, expired-entry cleanup, LRU eviction, and
+  same-key single-flight behavior. Saturated unique-key requests prefer stale
+  same-key data and otherwise return the existing local catalog fallback.
+- Keeps `GET /api/deals/external`, its query parameters, public access, HTTP
+  behavior, and JSON response shape unchanged. No frontend, dependency,
+  workflow, script, OpenAPI YAML, distributed limiter, deployment, or production
+  capability is added. NEXORA remains not production-ready.
+
+## Completed tooling milestone — v0.71.0 Project Release Workflow Tooling foundation
+
+`v0.71.0-project-release-workflow-tooling-foundation` is the latest stable
+development milestone.
 
 - Adds transparent local helpers for milestone branch creation, the common
   validation stack, PR creation/check watching, and explicitly confirmed merge,

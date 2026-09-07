@@ -10,16 +10,24 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.70.0-backend-health-version-semantics-foundation`.
-Work is in progress on
 `v0.71.0-project-release-workflow-tooling-foundation`.
+Work is in progress on
+`v0.72.0-backend-external-provider-request-budget-foundation`.
 
-v0.71 adds local release helper scripts and their operating guide. It preserves
-human review and typed confirmation for risky operations and changes no backend
-or frontend application behavior, workflow/CI behavior, dependencies, OpenAPI
-YAML, or production/deployment behavior. The v0.72 candidate is the backend
-external provider request budget foundation. NEXORA remains not
+v0.72 adds a four-call process-local budget around outbound external-deals
+provider calls. Saturated unique requests immediately prefer stale same-key
+data and otherwise use the local catalog fallback. The v0.68 cache bound,
+expired cleanup, LRU eviction, and same-key single-flight remain intact. The
+public API path, query parameters, and JSON shape are unchanged, as are the
+frontend, dependencies, workflows/scripts, and OpenAPI YAML. No distributed
+limiter or deployment capability is added, and NEXORA remains not
 production-ready.
+
+The completed v0.71 milestone added local release helper scripts and their
+operating guide. It preserves human review and typed confirmation for risky
+operations and changes no backend or frontend application behavior, workflow/CI
+behavior, dependencies, OpenAPI YAML, or production/deployment behavior.
+NEXORA remains not production-ready.
 
 v0.70 adds `observabilityContractMilestone` to `/api/health` and preserves the
 existing `milestone` key as a legacy alias. Both identify the v0.33 health and
@@ -54,7 +62,7 @@ deployment.
 
 | Capability | Current scope |
 | --- | --- |
-| Deal and giveaway discovery | Curated data with typed fallbacks, filtering, and optional live CheapShark access with bounded process-local caching |
+| Deal and giveaway discovery | Curated data with typed fallbacks, filtering, and optional live CheapShark access with bounded process-local caching and provider concurrency |
 | Accounts and sessions | Registration, login, refresh rotation, logout, and current-account lookup |
 | Personal wishlist | Account-owned add, update, alert configuration, and removal flows |
 | Price intelligence | Price targets, evaluation transitions, history snapshots, and compact history views |
@@ -212,8 +220,8 @@ cost controls, or production AI observability.
 - Notification delivery has no durable outbox, retry policy, verified-recipient
   flow, or production observability.
 - External deal matching has provider coverage and title/store matching limits;
-  its bounded cache and same-key load sharing remain process-local rather than
-  distributed infrastructure.
+  its bounded cache, same-key load sharing, and four-call provider budget remain
+  process-local rather than distributed infrastructure.
 - Settings is a static preview; its controls are not saved or enforced and are
   not connected to the signed-in account.
 - Security scores, sessions, events, and capability states on the current page

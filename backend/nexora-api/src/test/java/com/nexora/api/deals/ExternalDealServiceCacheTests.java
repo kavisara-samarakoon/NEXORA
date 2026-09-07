@@ -15,12 +15,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.startsWith;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -201,6 +205,259 @@ class ExternalDealServiceCacheTests {
     }
 
     @Test
+    void concurrentUniqueKeyMissesCannotExceedProviderBudget() throws Exception {
+        int providerLimit = ExternalProviderRequestBudget.MAX_CONCURRENT_PROVIDER_CALLS;
+        int callerCount = providerLimit + 4;
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(60, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        ExternalDealService service = service(
+                client,
+                localDeals,
+                properties,
+                clock,
+                providerLimit
+        );
+        List<Deal> fallback = List.of(localDeal());
+        CountDownLatch callersReady = new CountDownLatch(callerCount);
+        CountDownLatch startCallers = new CountDownLatch(1);
+        CountDownLatch providerCallsStarted = new CountDownLatch(providerLimit);
+        CountDownLatch fallbackCallsCompleted = new CountDownLatch(callerCount - providerLimit);
+        CountDownLatch releaseProvider = new CountDownLatch(1);
+        AtomicInteger activeProviderCalls = new AtomicInteger();
+        AtomicInteger maximumActiveProviderCalls = new AtomicInteger();
+        AtomicInteger providerCallCount = new AtomicInteger();
+
+        when(client.getDeals(eq(12), startsWith("unique-"), isNull())).thenAnswer(invocation -> {
+            int active = activeProviderCalls.incrementAndGet();
+            maximumActiveProviderCalls.accumulateAndGet(active, Math::max);
+            providerCallCount.incrementAndGet();
+            providerCallsStarted.countDown();
+            try {
+                assertTrue(releaseProvider.await(5, TimeUnit.SECONDS));
+                String requestedTitle = invocation.getArgument(1);
+                return List.of(response("Provider " + requestedTitle, "1"));
+            } finally {
+                activeProviderCalls.decrementAndGet();
+            }
+        });
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+        when(localDeals.getDeals()).thenAnswer(invocation -> {
+            fallbackCallsCompleted.countDown();
+            return fallback;
+        });
+
+        ExecutorService executor = Executors.newFixedThreadPool(callerCount);
+        try {
+            List<Future<List<Deal>>> results = new ArrayList<>();
+            for (int caller = 0; caller < callerCount; caller++) {
+                int requestNumber = caller;
+                results.add(executor.submit(() -> {
+                    callersReady.countDown();
+                    assertTrue(startCallers.await(5, TimeUnit.SECONDS));
+                    return service.getDeals("unique-" + requestNumber, null, null);
+                }));
+            }
+
+            assertTrue(callersReady.await(5, TimeUnit.SECONDS));
+            startCallers.countDown();
+            assertTrue(providerCallsStarted.await(5, TimeUnit.SECONDS));
+            assertTrue(fallbackCallsCompleted.await(5, TimeUnit.SECONDS));
+            releaseProvider.countDown();
+
+            for (Future<List<Deal>> result : results) {
+                assertEquals(1, result.get(5, TimeUnit.SECONDS).size());
+            }
+        } finally {
+            releaseProvider.countDown();
+            executor.shutdownNow();
+        }
+
+        assertAll(
+                () -> assertEquals(providerLimit, providerCallCount.get()),
+                () -> assertEquals(providerLimit, maximumActiveProviderCalls.get())
+        );
+        verify(client, times(providerLimit)).getDeals(eq(12), startsWith("unique-"), isNull());
+        verify(localDeals, times(callerCount - providerLimit)).getDeals();
+    }
+
+    @Test
+    void completedProviderCallReleasesPermitForNextUniqueKey() {
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(60, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        ExternalDealService service = service(client, localDeals, properties, clock, 1);
+
+        when(client.getDeals(12, "first", null))
+                .thenReturn(List.of(response("First provider result", "1")));
+        when(client.getDeals(12, "second", null))
+                .thenReturn(List.of(response("Second provider result", "1")));
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+
+        assertEquals("First provider result", service.getDeals("first", null, null).get(0).title());
+        assertEquals("Second provider result", service.getDeals("second", null, null).get(0).title());
+
+        verify(client).getDeals(12, "first", null);
+        verify(client).getDeals(12, "second", null);
+        verify(localDeals, never()).getDeals();
+    }
+
+    @Test
+    void failedProviderCallReleasesPermitForNextUniqueKey() {
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(60, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        List<Deal> fallback = List.of(localDeal());
+        ExternalDealService service = service(client, localDeals, properties, clock, 1);
+
+        when(client.getDeals(12, "failed", null))
+                .thenThrow(new CheapSharkClientException("provider unavailable"));
+        when(client.getDeals(12, "recovered", null))
+                .thenReturn(List.of(response("Recovered provider result", "1")));
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+        when(localDeals.getDeals()).thenReturn(fallback);
+
+        assertEquals(fallback, service.getDeals("failed", null, null));
+        assertEquals(
+                "Recovered provider result",
+                service.getDeals("recovered", null, null).get(0).title()
+        );
+
+        verify(client).getDeals(12, "failed", null);
+        verify(client).getDeals(12, "recovered", null);
+        verify(localDeals).getDeals();
+    }
+
+    @Test
+    void interruptedProviderCallReleasesPermitForNextUniqueKey() {
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(60, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        List<Deal> fallback = List.of(localDeal());
+        ExternalDealService service = service(client, localDeals, properties, clock, 1);
+
+        when(client.getDeals(12, "interrupted", null)).thenAnswer(invocation -> {
+            Thread.currentThread().interrupt();
+            throw new CheapSharkClientException("provider request was interrupted");
+        });
+        when(client.getDeals(12, "after-interruption", null))
+                .thenReturn(List.of(response("Post-interruption provider result", "1")));
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+        when(localDeals.getDeals()).thenReturn(fallback);
+
+        try {
+            assertEquals(fallback, service.getDeals("interrupted", null, null));
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
+        }
+        assertEquals(
+                "Post-interruption provider result",
+                service.getDeals("after-interruption", null, null).get(0).title()
+        );
+
+        verify(client).getDeals(12, "interrupted", null);
+        verify(client).getDeals(12, "after-interruption", null);
+        verify(localDeals).getDeals();
+    }
+
+    @Test
+    void saturatedBudgetPrefersStaleDealsForTheSameKey() throws Exception {
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(5, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        ExternalDealService service = service(client, localDeals, properties, clock, 1);
+        CountDownLatch blockingProviderStarted = new CountDownLatch(1);
+        CountDownLatch releaseBlockingProvider = new CountDownLatch(1);
+
+        when(client.getDeals(12, "stale", null))
+                .thenReturn(List.of(response("Stale provider result", "1")));
+        when(client.getDeals(12, "blocking", null)).thenAnswer(invocation -> {
+            blockingProviderStarted.countDown();
+            assertTrue(releaseBlockingProvider.await(5, TimeUnit.SECONDS));
+            return List.of(response("Blocking provider result", "1"));
+        });
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+
+        assertEquals(
+                "Stale provider result",
+                service.getDeals("stale", null, null).get(0).title()
+        );
+        clock.advance(Duration.ofSeconds(6));
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<List<Deal>> blockingResult = executor.submit(
+                    () -> service.getDeals("blocking", null, null)
+            );
+            assertTrue(blockingProviderStarted.await(5, TimeUnit.SECONDS));
+
+            List<Deal> saturatedResult = service.getDeals("stale", null, null);
+            assertEquals("Stale provider result", saturatedResult.get(0).title());
+
+            releaseBlockingProvider.countDown();
+            assertEquals(
+                    "Blocking provider result",
+                    blockingResult.get(5, TimeUnit.SECONDS).get(0).title()
+            );
+        } finally {
+            releaseBlockingProvider.countDown();
+            executor.shutdownNow();
+        }
+
+        verify(client, times(1)).getDeals(12, "stale", null);
+        verify(client, times(1)).getDeals(12, "blocking", null);
+        verify(localDeals, never()).getDeals();
+    }
+
+    @Test
+    void saturatedBudgetUsesLocalFallbackWithoutStaleDeals() throws Exception {
+        MutableClock clock = new MutableClock();
+        ExternalDealsProperties properties = properties(60, 60);
+        CheapSharkDealClient client = mock(CheapSharkDealClient.class);
+        DealCatalogService localDeals = mock(DealCatalogService.class);
+        List<Deal> fallback = List.of(localDeal());
+        ExternalDealService service = service(client, localDeals, properties, clock, 1);
+        CountDownLatch blockingProviderStarted = new CountDownLatch(1);
+        CountDownLatch releaseBlockingProvider = new CountDownLatch(1);
+
+        when(client.getDeals(12, "blocking", null)).thenAnswer(invocation -> {
+            blockingProviderStarted.countDown();
+            assertTrue(releaseBlockingProvider.await(5, TimeUnit.SECONDS));
+            return List.of(response("Blocking provider result", "1"));
+        });
+        when(client.getStores()).thenReturn(List.of(store("1", "Steam")));
+        when(localDeals.getDeals()).thenReturn(fallback);
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<List<Deal>> blockingResult = executor.submit(
+                    () -> service.getDeals("blocking", null, null)
+            );
+            assertTrue(blockingProviderStarted.await(5, TimeUnit.SECONDS));
+
+            assertEquals(fallback, service.getDeals("overflow", null, null));
+
+            releaseBlockingProvider.countDown();
+            assertEquals(
+                    "Blocking provider result",
+                    blockingResult.get(5, TimeUnit.SECONDS).get(0).title()
+            );
+        } finally {
+            releaseBlockingProvider.countDown();
+            executor.shutdownNow();
+        }
+
+        verify(client, never()).getDeals(12, "overflow", null);
+        verify(localDeals).getDeals();
+    }
+
+    @Test
     void failedSingleFlightIsRemovedSoLaterRequestCanRetry() {
         MutableClock clock = new MutableClock();
         ExternalDealsProperties properties = properties(60, 60);
@@ -228,6 +485,21 @@ class ExternalDealServiceCacheTests {
             DealCatalogService localDeals,
             ExternalDealsProperties properties,
             Clock clock) {
+        return service(
+                client,
+                localDeals,
+                properties,
+                clock,
+                ExternalProviderRequestBudget.MAX_CONCURRENT_PROVIDER_CALLS
+        );
+    }
+
+    private static ExternalDealService service(
+            CheapSharkDealClient client,
+            DealCatalogService localDeals,
+            ExternalDealsProperties properties,
+            Clock clock,
+            int maxConcurrentProviderCalls) {
         CheapSharkStoreDirectory storeDirectory = new CheapSharkStoreDirectory();
         return new ExternalDealService(
                 client,
@@ -235,7 +507,8 @@ class ExternalDealServiceCacheTests {
                 storeDirectory,
                 localDeals,
                 properties,
-                new ExternalDealsCache(properties, clock)
+                new ExternalDealsCache(properties, clock),
+                new ExternalProviderRequestBudget(maxConcurrentProviderCalls)
         );
     }
 
