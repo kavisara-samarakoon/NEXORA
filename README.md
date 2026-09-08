@@ -12,9 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.74.0-backend-default-deny-route-policy-foundation`.
-> Work in progress is
-> `v0.75.0-production-demo-deployment-planning-foundation`.
+> `v0.75.0-production-demo-deployment-planning-foundation`. No next milestone
+> has started.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -607,23 +606,23 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.74.0-backend-default-deny-route-policy-foundation`.
-Work in progress is
-`v0.75.0-production-demo-deployment-planning-foundation`.
+`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
+started.
 
-v0.75 adds deployment planning documentation only for a future fully functional
-hosted portfolio/demo MVP. It defines frontend, backend, PostgreSQL,
+The completed and tagged v0.75 milestone created deployment planning
+documentation only for a future fully functional hosted portfolio/demo MVP. It
+defines frontend, backend, PostgreSQL,
 environment/secrets, cookie/CORS/session, live smoke, browser QA, readiness, and
 rollback requirements without selecting a platform or deploying anything. It
-changes no backend/frontend source, scripts/workflows, dependencies, API paths,
-query parameters, JSON response shapes, or OpenAPI YAML, and adds no Docker,
-environment, cloud, or other deployment configuration. No live deployment or
-production/deployment capability is completed, and NEXORA remains not
+changed no backend/frontend source, scripts/workflows, dependencies, API paths,
+query parameters, JSON response shapes, or OpenAPI YAML, and added no Docker,
+environment, cloud, or other runtime deployment configuration. It did not
+deploy NEXORA or add production/deployment capability, and NEXORA remains not
 production-ready.
 
-The v0.76 candidate is
-`v0.76.0-backend-hosted-environment-configuration-foundation`; it has not
-started and is not an active milestone.
+The possible next candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. It has not
+started.
 
 The completed and tagged v0.74 milestone introduced an explicit method-aware
 backend public route allowlist and a default-deny fallback. Existing intended

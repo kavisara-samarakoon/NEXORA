@@ -7,15 +7,15 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Treat the completed and tagged
-  `v0.74.0-backend-default-deny-route-policy-foundation` milestone as the latest
-  stable development milestone.
-- Complete the in-progress
-  `v0.75.0-production-demo-deployment-planning-foundation` as documentation
-  only: define a fully functional hosted portfolio/demo MVP, environment and
-  secret categories, live smoke/browser QA, readiness gates, rollback, and
-  truthful public wording without selecting a platform or deploying.
+  `v0.75.0-production-demo-deployment-planning-foundation` milestone as the
+  latest stable development milestone. No next milestone has started.
+- Preserve the completed v0.75 documentation-only definition of a fully
+  functional hosted portfolio/demo MVP, environment and secret categories,
+  live smoke/browser QA, readiness gates, rollback, and truthful public wording.
+  It selected no platform, added no runtime deployment configuration, and did
+  not deploy NEXORA.
 - Consider `v0.76.0-backend-hosted-environment-configuration-foundation` only as
-  a possible next candidate. It has not started and is not an active milestone.
+  a possible next candidate. It has not started.
 - Preserve the completed v0.74 method-aware public allowlist, authentication for
   `/api/auth/me` and `/api/me/**`, and default-deny behavior for unknown,
   unmatched, or future backend routes. Preserve endpoint paths, query

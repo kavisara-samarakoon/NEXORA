@@ -2,10 +2,12 @@
 
 ## Status and purpose
 
-This document is a planning foundation for
-`v0.75.0-production-demo-deployment-planning-foundation`. It does not select a
-hosting vendor, create deployment configuration, change runtime behavior, or
-claim that NEXORA is deployed or production-ready.
+This document is the completed planning foundation from the tagged, latest
+stable milestone
+`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
+started. The plan does not select a hosting vendor, create deployment
+configuration, change runtime behavior, or claim that NEXORA is deployed or
+production-ready.
 
 The deployment goal is a public, fully functional hosted portfolio/demo MVP
 that a reviewer can use through HTTPS without installing the project locally.

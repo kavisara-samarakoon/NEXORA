@@ -10,26 +10,26 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.74.0-backend-default-deny-route-policy-foundation`.
-Work in progress is
-`v0.75.0-production-demo-deployment-planning-foundation`.
+`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
+started.
 
-v0.75 adds documentation-only planning for a future fully functional hosted
-portfolio/demo MVP: the primary frontend, backend, authentication, persistent
-PostgreSQL, personal Wishlist, public deals/fallback, and Sentinel
-demo/authenticated insight flows should work online. This is not a production
-SaaS definition or a deployment-complete claim.
+The completed and tagged v0.75 milestone created documentation-only planning
+for a future fully functional hosted portfolio/demo MVP: the primary frontend,
+backend, authentication, persistent PostgreSQL, personal Wishlist, public
+deals/fallback, and Sentinel demo/authenticated insight flows should work online.
+This is not a production SaaS definition or a deployment-complete claim.
 
 The planning set covers hosting boundaries, environment/secrets, secure browser
 topology, live smoke tests, browser QA, readiness gates, rollback, public
-wording, and non-production limitations. No platform is selected. No
+wording, and non-production limitations. No platform was selected. No
 backend/frontend source, script/workflow, dependency, API path/query/JSON shape,
-OpenAPI YAML, Docker/environment/cloud configuration, live deployment, or
-production/deployment capability is added. NEXORA remains not production-ready.
+OpenAPI YAML, Docker/environment/cloud/runtime deployment configuration, live
+deployment, or production/deployment capability was added. NEXORA remains not
+production-ready.
 
-The v0.76 candidate is
-`v0.76.0-backend-hosted-environment-configuration-foundation`; it has not
-started and is not active.
+The possible next candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. It has not
+started.
 
 The completed and tagged v0.74 milestone introduced an explicit method-aware
 allowlist for intended public backend routes and a default-deny fallback.

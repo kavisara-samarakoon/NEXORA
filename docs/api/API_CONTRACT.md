@@ -10,15 +10,15 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.74.0-backend-default-deny-route-policy-foundation` is the completed, tagged,
-latest stable development milestone. Work in progress is
-`v0.75.0-production-demo-deployment-planning-foundation`, a documentation-only
-hosted-demo planning milestone. It changes no endpoint path, method, query
-parameter, response shape, authentication rule, or OpenAPI YAML. The v0.76
-candidate is `v0.76.0-backend-hosted-environment-configuration-foundation`; it
-has not started and is not active. The completed v0.72 work bounds process-local
-external-deals provider concurrency without changing endpoint paths, query
-parameters, response shapes, or OpenAPI YAML.
+`v0.75.0-production-demo-deployment-planning-foundation` is the completed,
+tagged, latest stable development milestone. No next milestone has started. It
+created hosted-demo planning documentation only and changed no endpoint path,
+method, query parameter, response shape, authentication rule, or OpenAPI YAML.
+The possible next candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. It has not
+started. The completed v0.72 work bounds process-local external-deals provider
+concurrency without changing endpoint paths, query parameters, response shapes,
+or OpenAPI YAML.
 GitHub CI proved that enforceable Dependency Review is unsupported by
 the repository's current GitHub security configuration, so it remains advisory
 with intentional `continue-on-error: true`. The configured
