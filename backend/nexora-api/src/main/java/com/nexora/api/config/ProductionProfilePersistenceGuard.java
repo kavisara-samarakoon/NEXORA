@@ -8,7 +8,7 @@ final class ProductionProfilePersistenceGuard {
     private static final String FAILURE_MESSAGE =
             "Production-like profiles require persistent storage and must not run with "
                     + "in-memory demo persistence. Activate the existing dev database-backed "
-                    + "profile together with prod or production.";
+                    + "profile together with prod, production, or hosted-demo.";
 
     private ProductionProfilePersistenceGuard() {
     }
@@ -18,7 +18,8 @@ final class ProductionProfilePersistenceGuard {
             return;
         }
 
-        boolean productionLike = environment.acceptsProfiles(Profiles.of("prod", "production"));
+        boolean productionLike = environment.acceptsProfiles(
+                Profiles.of("prod", "production", "hosted-demo"));
         boolean persistent = environment.acceptsProfiles(Profiles.of("dev"));
         if (productionLike && !persistent) {
             throw new IllegalStateException(FAILURE_MESSAGE);

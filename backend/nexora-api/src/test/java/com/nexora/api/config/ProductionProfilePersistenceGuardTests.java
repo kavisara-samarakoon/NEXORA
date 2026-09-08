@@ -38,6 +38,13 @@ class ProductionProfilePersistenceGuardTests {
     }
 
     @Test
+    void hostedDemoProfileWithoutPersistentProfileFailsClosed() {
+        IllegalStateException exception = assertFailsClosed("hosted-demo");
+
+        assertSafePersistenceMessage(exception.getMessage());
+    }
+
+    @Test
     void prodAndDevProfilesAreAllowed() {
         MockEnvironment environment = environmentWithProfiles("prod", "dev");
 
@@ -47,6 +54,13 @@ class ProductionProfilePersistenceGuardTests {
     @Test
     void productionAndDevProfilesAreAllowed() {
         MockEnvironment environment = environmentWithProfiles("production", "dev");
+
+        assertDoesNotThrow(() -> ProductionProfilePersistenceGuard.validate(environment));
+    }
+
+    @Test
+    void hostedDemoAndDevProfilesAreAllowed() {
+        MockEnvironment environment = environmentWithProfiles("hosted-demo", "dev");
 
         assertDoesNotThrow(() -> ProductionProfilePersistenceGuard.validate(environment));
     }

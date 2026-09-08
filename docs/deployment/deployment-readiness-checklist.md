@@ -2,11 +2,12 @@
 
 ## How to use this checklist
 
-This is a planning gate for a future fully functional hosted demo. v0.75 adds no
-deployment configuration and completes no live deployment. Every checked item
-must link to current evidence, an owner, and an observation date. “Not
-applicable” requires a written reason; it must not conceal a failed security,
-persistence, or browser requirement.
+This is a planning gate for a future fully functional hosted demo. v0.75 added
+planning only; v0.76 adds backend environment configuration only. Neither
+milestone completes a live deployment. Every checked item must link to current
+evidence, an owner, and an observation date. “Not applicable” requires a written
+reason; it must not conceal a failed security, persistence, or browser
+requirement.
 
 ## Repository state
 
@@ -32,10 +33,14 @@ persistence, or browser requirement.
 
 ## Backend readiness
 
-- [ ] Hosted Java version, start command, port binding, HTTPS/proxy boundary,
-  graceful shutdown, and restart behavior are documented and tested.
-- [ ] The reviewed database-backed profile starts; production guards pass
-  without local defaults or placeholder values.
+- [ ] Hosted Java version, start command, HTTPS/proxy boundary, graceful
+  shutdown, and restart behavior are documented and tested.
+- [ ] `SPRING_PROFILES_ACTIVE=hosted-demo` and the provider-supplied `PORT` are
+  configured; the active profiles include `hosted-demo`, `dev`, and
+  `production`.
+- [ ] The hosted-demo profile starts only with external database/auth/origin
+  settings; all production-like guards pass without local defaults,
+  placeholder values, embedded JDBC credentials, or wildcard origins.
 - [ ] `GET /api/health` works as the current safe application-health summary and
   is not misrepresented as a complete dependency/availability probe.
 - [ ] Public method/path allowlisting and terminal default deny are retained.
@@ -62,6 +67,9 @@ persistence, or browser requirement.
 
 - [ ] Persistent PostgreSQL service, region/network boundary, compatible version,
   capacity, connection limits, and owner are approved.
+- [ ] The v0.77 hosted PostgreSQL validation milestone, or equivalent reviewed
+  evidence, proves connectivity, migrations, restart persistence, and failure
+  handling against the selected service before public launch.
 - [ ] Backend access uses a least-privilege identity and encrypted transport
   verified using the selected service's actual settings.
 - [ ] Flyway migration ownership is single and explicit; migrations and JPA

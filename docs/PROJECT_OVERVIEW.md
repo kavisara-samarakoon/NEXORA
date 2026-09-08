@@ -10,8 +10,26 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
-started.
+`v0.75.0-production-demo-deployment-planning-foundation`.
+Work in progress is
+`v0.76.0-backend-hosted-environment-configuration-foundation`.
+
+v0.76 introduces a backend-only `hosted-demo` configuration path for the future
+hosted portfolio/demo MVP. It combines the existing `dev` PostgreSQL profile
+with `production` safety validation, requires the hosting environment to supply
+the port, database settings, separate auth secrets, and exact HTTPS frontend
+origins, and establishes secure-cookie and `SameSite=Lax` hosted defaults.
+Unsafe or incomplete hosted settings fail closed.
+
+Local/default and `dev` behavior remain unchanged. CORS stays credentialed and
+exact-origin, and session, request-ID, endpoint, query, and JSON behavior remain
+unchanged. No frontend, OpenAPI YAML, dependency, script/workflow,
+Docker/cloud/`.env`, provider deployment configuration, or live deployment is
+included. NEXORA remains not production-ready.
+
+The v0.77 candidate is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`; it has not
+started and is not active.
 
 The completed and tagged v0.75 milestone created documentation-only planning
 for a future fully functional hosted portfolio/demo MVP: the primary frontend,
@@ -26,10 +44,6 @@ backend/frontend source, script/workflow, dependency, API path/query/JSON shape,
 OpenAPI YAML, Docker/environment/cloud/runtime deployment configuration, live
 deployment, or production/deployment capability was added. NEXORA remains not
 production-ready.
-
-The possible next candidate is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. It has not
-started.
 
 The completed and tagged v0.74 milestone introduced an explicit method-aware
 allowlist for intended public backend routes and a default-deny fallback.

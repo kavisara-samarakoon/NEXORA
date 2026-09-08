@@ -3,9 +3,11 @@
 ## Status and rules
 
 This is a variable-category and ownership plan, not an environment file or
-deployable configuration. It records existing configuration names where they
-already exist and leaves unresolved platform bindings for v0.76. All displayed
-values are non-secret placeholders.
+deployable provider configuration. The in-progress
+`v0.76.0-backend-hosted-environment-configuration-foundation` adds the
+backend-only `hosted-demo` Spring profile described below. All displayed secret
+values remain non-secret placeholders; no hosted environment or live deployment
+exists yet.
 
 Placeholder vocabulary:
 
@@ -23,13 +25,13 @@ pull requests, screenshots, shell history, or logs.
 
 | Existing setting | Hosted-demo plan | Sensitivity |
 | --- | --- | --- |
-| `SPRING_PROFILES_ACTIVE` | Select the reviewed database-backed hosted profile combination. The current production-like guard requires the `dev` persistence bridge; v0.76 must confirm the exact value. | Public-safe configuration |
-| Platform process/port binding | Map the selected host's required port and start command to existing Spring Boot behavior only after platform review. Do not invent a repository variable in v0.75. | Public-safe configuration |
+| `SPRING_PROFILES_ACTIVE` | Set to `hosted-demo`; the profile group activates the existing `dev` persistence path and `production` safety checks. | Public-safe configuration |
+| `PORT` | `<set-in-hosting-provider>`; required and bound to `server.port` with no hosted fallback. | Public-safe provider setting |
 | Java runtime | Select a supported Java 17-or-newer runtime and pin it through future deployment configuration. | Public-safe configuration |
 
 The selected host must distinguish build-time settings from runtime settings,
-support graceful restart, and expose the backend only through HTTPS. v0.75 does
-not choose a start command or create a hosting manifest.
+support graceful restart, and expose the backend only through HTTPS. v0.76 does
+not choose a provider/start command or create a hosting manifest.
 
 ## Database connection category
 
@@ -38,6 +40,11 @@ not choose a start command or create a hosting manifest.
 | `NEXORA_DB_URL` | `<database-url>` | PostgreSQL JDBC endpoint with reviewed TLS/network policy |
 | `NEXORA_DB_USERNAME` | `<database-username>` | Least-privilege application database identity |
 | `NEXORA_DB_PASSWORD` | `<set-in-hosting-provider>` | Database credential stored only in the backend secret scope |
+
+The `hosted-demo` profile has no fallback for these three variables.
+Production-like validation rejects blank settings, the local JDBC default,
+local database addresses, credentials embedded in the JDBC URL, the local or
+PostgreSQL default username, and local, short, or obvious placeholder passwords.
 
 Confirm connection limits, timeout behavior, encrypted transport, migration
 ownership, backup/restore ownership, database name, and region/network placement
@@ -58,7 +65,10 @@ credentials into repository documentation.
 | `NEXORA_REFRESH_TOKEN_COOKIE_SAME_SITE` | `<reviewed-setting>` | Select after same-site/cross-site topology review |
 
 The two secret values must be independently generated and managed. They must
-not reuse database, provider, SMTP, or other environment credentials.
+not reuse database, provider, SMTP, or other environment credentials. The
+`hosted-demo` profile has no fallback for either secret, and the existing
+production safety guard continues to require at least 48 bytes and reject local,
+placeholder, equal, or missing values.
 
 ## CSRF and frontend-origin category
 
@@ -74,7 +84,11 @@ not reuse database, provider, SMTP, or other environment credentials.
 | `NEXORA_AUTH_TRUSTED_ORIGINS` | `<frontend-origin>` | Exact HTTPS origin allowlist; never wildcard or localhost |
 
 Preview deployments must not be added as a broad wildcard. Each additional
-origin requires an explicit need, lifecycle owner, and removal plan.
+origin requires an explicit need, lifecycle owner, and removal plan. The
+`hosted-demo` profile has no trusted-origin fallback and forces CSRF plus both
+cookie Secure flags. It defaults both SameSite settings to `Lax`; use `None`
+only for an intentional cross-site topology while retaining Secure cookies and
+exact HTTPS origins.
 
 ## Frontend public configuration category
 
@@ -166,10 +180,16 @@ configuration without adding undocumented environment names.
   and record only a redacted incident reference.
 - Use placeholders such as `<set-in-hosting-provider>` in all review artifacts.
 
-## v0.76 handoff
+## v0.76 implementation state
 
-The proposed
-`v0.76.0-backend-hosted-environment-configuration-foundation` milestone should
-resolve only approved backend hosted-environment gaps discovered by this plan.
-It is a candidate, not active work, and must not be inferred to include a live
-deployment or production-readiness claim.
+The in-progress
+`v0.76.0-backend-hosted-environment-configuration-foundation` resolves the
+backend profile, provider port binding, external database/auth/origin binding,
+secure-cookie baseline, and fail-closed validation gaps identified by v0.75.
+It does not provide frontend/provider/cloud configuration, verify a live
+PostgreSQL service, or deploy NEXORA.
+
+The v0.77 candidate is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`; it has not
+started and is not active. NEXORA remains a hosted portfolio/demo target, not a
+production SaaS service, and remains not production-ready.

@@ -4,10 +4,12 @@
 
 This document is the completed planning foundation from the tagged, latest
 stable milestone
-`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
-started. The plan does not select a hosting vendor, create deployment
-configuration, change runtime behavior, or claim that NEXORA is deployed or
-production-ready.
+`v0.75.0-production-demo-deployment-planning-foundation`.
+Work in progress is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. The plan does not
+select a hosting vendor or claim that NEXORA is deployed or production-ready.
+v0.76 implements backend environment configuration only; it creates no
+frontend, provider/cloud, or live deployment configuration.
 
 The deployment goal is a public, fully functional hosted portfolio/demo MVP
 that a reviewer can use through HTTPS without installing the project locally.
@@ -43,7 +45,7 @@ that a reviewer can use through HTTPS without installing the project locally.
 - New product features, endpoint or response changes, schema changes, provider
   replacement, or frontend redesign.
 - Dockerfiles, cloud manifests, infrastructure-as-code, CI/CD workflows, DNS or
-  account creation, and live deployment during v0.75.
+  account creation, and live deployment during v0.75 or v0.76.
 - Distributed caches, rate limiters, schedulers, session coordination, queues,
   monitoring platforms, incident automation, or multi-region operation.
 - Enabling email or paid/credentialed providers unless separately approved with
@@ -83,11 +85,12 @@ guarantees must not be inferred from this plan.
 ## Backend hosting requirements
 
 - Run the current Spring Boot application on a supported Java 17-or-newer
-  runtime with an explicit, reviewed profile combination and persistent
-  database selection.
-- Resolve platform port binding, proxy forwarding, TLS termination, request
-  size/time limits, graceful shutdown, idle/restart behavior, outbound network
-  access, and health-check semantics before adding deployment configuration.
+  runtime with `SPRING_PROFILES_ACTIVE=hosted-demo`. That profile composes the
+  existing database-backed `dev` path with `production` safety validation.
+- Supply the provider-assigned `PORT`. Proxy forwarding, TLS termination,
+  request size/time limits, graceful shutdown, idle/restart behavior, outbound
+  network access, and health-check semantics remain provider decisions before
+  live deployment.
 - Preserve the explicit public route allowlist, default-deny fallback,
   authenticated `/api/auth/me` and `/api/me/**` routes, safe error bodies,
   security headers, and `X-NEXORA-Request-ID` behavior.
@@ -103,9 +106,10 @@ guarantees must not be inferred from this plan.
 
 ## PostgreSQL hosting requirements
 
-- Use a persistent PostgreSQL service compatible with the current migrations
-  and database-backed `dev` profile bridge; v0.76 must document the exact
-  hosted profile decision before deployment.
+- Use a persistent PostgreSQL service compatible with the current migrations.
+  The v0.76 `hosted-demo` profile activates the database-backed `dev` profile
+  bridge plus production-like configuration validation; live persistence still
+  requires v0.77 validation against a selected hosted PostgreSQL service.
 - Restrict database network access to approved backend paths and use a
   least-privilege application identity.
 - Require the selected service's supported encrypted connection mode and verify
@@ -213,8 +217,9 @@ link.
 
 - Current abuse limits, provider budgets, caches, and Sentinel rate limits are
   process-local and reset on restart.
-- Production-like persistence still bridges through the `dev` profile; the
-  hosted environment configuration is planned for v0.76 and does not exist yet.
+- Production-like persistence still bridges through the `dev` profile. v0.76
+  adds a strict hosted configuration path, but selected-provider PostgreSQL
+  connectivity, migrations, persistence, backup, and restore remain unvalidated.
 - Complete session administration, account verification/recovery, distributed
   coordination, monitoring/alerting, incident response, formal privacy and
   retention controls, tested disaster recovery, and operational support remain

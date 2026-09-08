@@ -34,12 +34,21 @@ public final class ProductionProfileSafetyGuard
     private static final String CSRF_COOKIE_SECURE_PROPERTY =
             "nexora.auth.csrf.cookie-secure";
     private static final String TRUSTED_ORIGINS_PROPERTY = "nexora.auth.trusted-origins";
+    private static final String DATA_SOURCE_URL_PROPERTY = "spring.datasource.url";
+    private static final String DATA_SOURCE_USERNAME_PROPERTY = "spring.datasource.username";
+    private static final String DATA_SOURCE_PASSWORD_PROPERTY = "spring.datasource.password";
+    private static final String SERVER_PORT_PROPERTY = "server.port";
 
     private static final String LOCAL_JWT_SECRET =
             "nexora-local-development-only-secret-change-before-deployment";
     private static final String LOCAL_REFRESH_HASH_SECRET =
             "nexora-local-refresh-token-hash-secret-change-before-deployment";
+    private static final String LOCAL_DATA_SOURCE_URL =
+            "jdbc:postgresql://localhost:5432/nexora_db";
+    private static final String LOCAL_DATA_SOURCE_USERNAME = "nexora_user";
+    private static final String LOCAL_DATA_SOURCE_PASSWORD = "nexora_password";
     private static final int MINIMUM_PRODUCTION_SECRET_BYTES = 48;
+    private static final int MINIMUM_DATABASE_PASSWORD_BYTES = 16;
     private static final String AUTH_COOKIE_PATH = "/api/auth";
     private static final Set<Integer> LOCAL_DEVELOPMENT_PORTS = Set.of(3000, 5173, 8080);
     private static final Pattern PLACEHOLDER_WORD = Pattern.compile(
@@ -75,8 +84,7 @@ public final class ProductionProfileSafetyGuard
     static void validate(Environment environment) {
         ProductionProfilePersistenceGuard.validate(environment);
 
-        if (environment == null
-                || !environment.acceptsProfiles(Profiles.of("prod", "production"))) {
+        if (environment == null || !isProductionLike(environment)) {
             return;
         }
 
@@ -105,12 +113,20 @@ public final class ProductionProfileSafetyGuard
         requireTrue(environment, CSRF_ENABLED_PROPERTY, failures);
         requireTrue(environment, CSRF_COOKIE_SECURE_PROPERTY, failures);
         validateTrustedOrigins(environment.getProperty(TRUSTED_ORIGINS_PROPERTY), failures);
+        validateDatabaseConfiguration(environment, failures);
+        if (environment.acceptsProfiles(Profiles.of("hosted-demo"))) {
+            validateHostedServerPort(environment.getProperty(SERVER_PORT_PROPERTY), failures);
+        }
 
         if (!failures.isEmpty()) {
             throw new IllegalStateException(
                     "Production profile safety checks failed:\n - "
                             + String.join("\n - ", failures));
         }
+    }
+
+    private static boolean isProductionLike(Environment environment) {
+        return environment.acceptsProfiles(Profiles.of("prod", "production", "hosted-demo"));
     }
 
     private static void validateSecret(
@@ -139,6 +155,103 @@ public final class ProductionProfileSafetyGuard
         String normalized = value.trim().toLowerCase(Locale.ROOT);
         return PLACEHOLDER_WORD.matcher(normalized).find()
                 || COMPACT_PLACEHOLDER_MARKERS.stream().anyMatch(normalized::contains);
+    }
+
+    private static void validateDatabaseConfiguration(
+            Environment environment,
+            Set<String> failures) {
+        validateDatabaseUrl(environment.getProperty(DATA_SOURCE_URL_PROPERTY), failures);
+        validateDatabaseUsername(
+                environment.getProperty(DATA_SOURCE_USERNAME_PROPERTY),
+                failures);
+        validateDatabasePassword(
+                environment.getProperty(DATA_SOURCE_PASSWORD_PROPERTY),
+                failures);
+    }
+
+    private static void validateDatabaseUrl(String value, Set<String> failures) {
+        if (value == null || value.isBlank()) {
+            failures.add(DATA_SOURCE_URL_PROPERTY
+                    + " must be configured for production-like persistence");
+            return;
+        }
+        if (LOCAL_DATA_SOURCE_URL.equals(value.trim())) {
+            failures.add(DATA_SOURCE_URL_PROPERTY + " must not use the local development default");
+            return;
+        }
+        if (!value.startsWith("jdbc:postgresql://")) {
+            failures.add(DATA_SOURCE_URL_PROPERTY + " must use a PostgreSQL JDBC URL");
+            return;
+        }
+
+        URI uri;
+        try {
+            uri = URI.create(value.substring("jdbc:".length()));
+        } catch (IllegalArgumentException exception) {
+            failures.add(DATA_SOURCE_URL_PROPERTY + " must contain a valid PostgreSQL JDBC URL");
+            return;
+        }
+
+        if (uri.getHost() == null || uri.getUserInfo() != null) {
+            failures.add(DATA_SOURCE_URL_PROPERTY
+                    + " must contain a host and must not embed credentials");
+            return;
+        }
+        if (isLocalHost(uri.getHost().toLowerCase(Locale.ROOT))) {
+            failures.add(DATA_SOURCE_URL_PROPERTY + " must not use a local address");
+        }
+    }
+
+    private static void validateDatabaseUsername(String value, Set<String> failures) {
+        if (value == null || value.isBlank()) {
+            failures.add(DATA_SOURCE_USERNAME_PROPERTY
+                    + " must be configured for production-like persistence");
+            return;
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if (LOCAL_DATA_SOURCE_USERNAME.equals(normalized) || "postgres".equals(normalized)) {
+            failures.add(DATA_SOURCE_USERNAME_PROPERTY
+                    + " must use a non-default least-privilege account");
+        }
+    }
+
+    private static void validateDatabasePassword(String value, Set<String> failures) {
+        if (value == null || value.isBlank()) {
+            failures.add(DATA_SOURCE_PASSWORD_PROPERTY
+                    + " must be configured for production-like persistence");
+            return;
+        }
+        if (LOCAL_DATA_SOURCE_PASSWORD.equals(value)) {
+            failures.add(DATA_SOURCE_PASSWORD_PROPERTY
+                    + " must not use the local development default");
+            return;
+        }
+        if (value.getBytes(StandardCharsets.UTF_8).length < MINIMUM_DATABASE_PASSWORD_BYTES) {
+            failures.add(DATA_SOURCE_PASSWORD_PROPERTY
+                    + " must contain at least 16 bytes in production-like profiles");
+            return;
+        }
+        if (looksLikePlaceholder(value)) {
+            failures.add(DATA_SOURCE_PASSWORD_PROPERTY
+                    + " must not use an obvious local, test, or placeholder value");
+        }
+    }
+
+    private static void validateHostedServerPort(String value, Set<String> failures) {
+        if (value == null || value.isBlank()) {
+            failures.add(SERVER_PORT_PROPERTY
+                    + " must be supplied by the hosting environment for hosted-demo");
+            return;
+        }
+        try {
+            int port = Integer.parseInt(value.trim());
+            if (port < 1 || port > 65535) {
+                failures.add(SERVER_PORT_PROPERTY
+                        + " must be between 1 and 65535 for hosted-demo");
+            }
+        } catch (NumberFormatException exception) {
+            failures.add(SERVER_PORT_PROPERTY + " must be a valid port for hosted-demo");
+        }
     }
 
     private static void requireTrue(
