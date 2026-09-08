@@ -5,12 +5,17 @@
 Run this checklist only after a candidate hosted frontend, API, and PostgreSQL
 environment exists. v0.75 did not create that environment, and the completed,
 tagged v0.76 milestone added only backend hosted-environment configuration;
-neither milestone deployed or ran it. No next milestone has started.
+the in-progress v0.77 milestone adds manual validation against a disposable
+hosted-demo PostgreSQL database. None of these milestones deploys NEXORA.
 The checklist supplements existing automated validation; it is not a
 penetration test, production certification, uptime probe, or monitoring system.
 
 Before testing:
 
+- Run `scripts/deployment/validate-hosted-postgres.sh` against the disposable
+  hosted-demo database and retain only redacted pass/fail evidence. The manual
+  test must remain opt-in and issues only read-only validation queries after
+  existing Flyway migrations initialize the disposable database.
 - Record the candidate source commit, frontend origin, API origin, environment,
   deployment identifier, tester, and UTC start time.
 - Confirm the backend reports the reviewed hosted mode after starting with

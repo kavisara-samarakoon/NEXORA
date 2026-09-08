@@ -6,7 +6,8 @@ This is a variable-category and ownership plan, not an environment file or
 deployable provider configuration. The completed and tagged
 `v0.76.0-backend-hosted-environment-configuration-foundation` added the
 backend-only `hosted-demo` Spring profile described below and is the latest
-stable development milestone. No next milestone has started. All displayed
+stable development milestone. Work in progress is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`. All displayed
 secret values remain non-secret placeholders; no hosted environment or live
 deployment exists yet.
 
@@ -181,6 +182,24 @@ configuration without adding undocumented environment names.
   and record only a redacted incident reference.
 - Use placeholders such as `<set-in-hosting-provider>` in all review artifacts.
 
+## Manual hosted PostgreSQL validation
+
+Run `scripts/deployment/validate-hosted-postgres.sh` only against a disposable
+hosted-demo database. The wrapper requires
+`NEXORA_RUN_HOSTED_POSTGRES_VALIDATION=true`,
+`SPRING_PROFILES_ACTIVE=hosted-demo`, `PORT`, `NEXORA_DB_URL`,
+`NEXORA_DB_USERNAME`, `NEXORA_DB_PASSWORD`, `NEXORA_JWT_SECRET`,
+`NEXORA_REFRESH_TOKEN_HASH_SECRET`, and `NEXORA_AUTH_TRUSTED_ORIGINS` from the
+operator environment. It does not source or create an `.env` file.
+
+The wrapper prints only each variable name and a redacted set status, then runs
+the environment-gated integration test. The test verifies the composed hosted
+profiles, an external PostgreSQL connection, Flyway history, and a read-only
+SQL query after startup. The test itself adds no application records, but
+existing Flyway migrations may initialize schema and seed data; therefore the
+database must be disposable. The test is skipped during ordinary backend tests
+unless the opt-in flag is true.
+
 ## v0.76 implementation state
 
 The completed and tagged
@@ -190,7 +209,7 @@ secure-cookie baseline, and fail-closed validation gaps identified by v0.75.
 It does not provide frontend/provider/cloud configuration, verify a live
 PostgreSQL service, or deploy NEXORA.
 
-The possible next candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
-started. NEXORA remains a hosted portfolio/demo target, not a production SaaS
-service, and remains not production-ready.
+The in-progress v0.77 milestone validates this path manually without selecting
+a provider or performing a live deployment. NEXORA remains a hosted
+portfolio/demo target, not a production SaaS service, and remains not
+production-ready.
