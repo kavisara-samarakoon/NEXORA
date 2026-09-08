@@ -4,20 +4,25 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.73.0-release-commit-helper-foundation`.
-Work in progress is `v0.74.0-backend-default-deny-route-policy-foundation`.
+`v0.74.0-backend-default-deny-route-policy-foundation`. No next milestone has
+started.
 
-v0.74 adds an explicit method-aware allowlist for intended public backend
-routes, preserves authentication for `/api/auth/me` and every `/api/me/**`
-route, and changes the terminal authorization fallback to default deny.
-Unexpected future routes, unknown API routes, unlisted subpaths, and unlisted
-methods therefore fail closed instead of becoming public automatically.
+The completed and tagged v0.74 milestone added an explicit method-aware
+allowlist for intended public backend routes, preserved authentication for
+`/api/auth/me` and every `/api/me/**` route, and changed the terminal
+authorization fallback to default deny. Unexpected future routes, unknown API
+routes, unlisted subpaths, and unlisted methods therefore fail closed instead
+of becoming public automatically.
 
 Existing intended public and protected endpoint behavior remains intact. There
 are no endpoint path, query parameter, JSON response shape, CSRF/session,
 credentialed CORS, request-ID, frontend, dependency, workflow/script, or
 OpenAPI YAML changes. No production/deployment capability is added, and NEXORA
 remains not production-ready.
+
+The possible v0.75 candidate is
+`v0.75.0-production-demo-deployment-planning-foundation`; it has not started and
+is not active.
 
 The completed and tagged v0.73 milestone added only the local
 `scripts/release/commit-milestone.sh` helper for reviewed milestone work. It
@@ -166,7 +171,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.73.0-release-commit-helper-foundation`.
+`v0.74.0-backend-default-deny-route-policy-foundation`.
 
 ## Completed foundations
 
