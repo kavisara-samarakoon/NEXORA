@@ -4,19 +4,17 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.75.0-production-demo-deployment-planning-foundation`.
-Work in progress is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. The v0.77
-candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`; it has not
-started and is not an active milestone.
+`v0.76.0-backend-hosted-environment-configuration-foundation`. No next
+milestone has started. The possible next candidate is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
+started.
 Older headings retain the wording used when each milestone was recorded.
 
-## In-progress backend milestone — v0.76.0 Backend Hosted Environment Configuration foundation
+## Completed backend milestone — v0.76.0 Backend Hosted Environment Configuration foundation
 
-`v0.76.0-backend-hosted-environment-configuration-foundation` adds a strict
-backend-only hosted-demo configuration path for a future hosted portfolio/demo
-MVP.
+`v0.76.0-backend-hosted-environment-configuration-foundation` is the completed,
+tagged, latest stable development milestone. It added a strict backend-only
+hosted-demo configuration path for a future hosted portfolio/demo MVP.
 
 - Adds a `hosted-demo` profile group that composes the existing database-backed
   `dev` persistence path with `production` safety checks, plus a profile file
@@ -28,15 +26,16 @@ MVP.
 - Forces refresh and CSRF cookies secure for HTTPS, retains `/api/auth` cookie
   paths and CSRF, and uses a `SameSite=Lax` baseline with explicit secure
   cross-site override support. CORS remains credentialed and exact-origin.
-- Changes no local/default or `dev` profile behavior, frontend, API path/query/
-  JSON shape, OpenAPI YAML, dependency, script/workflow, Docker/cloud/`.env`
-  configuration, or live deployment. NEXORA remains not production-ready.
+- Changes no local/default or `dev` profile behavior, domain logic, frontend,
+  API path/query/JSON shape, OpenAPI YAML, dependency, script/workflow,
+  Docker/cloud/`.env` configuration, or live deployment. NEXORA remains not
+  production-ready.
 
 ## Completed documentation milestone — v0.75.0 Production Demo Deployment Planning foundation
 
 `v0.75.0-production-demo-deployment-planning-foundation` is the completed,
-tagged, latest stable development milestone. It defines the planning boundary
-for a future fully functional hosted portfolio/demo MVP.
+tagged documentation milestone. It defines the planning boundary for a future
+fully functional hosted portfolio/demo MVP.
 
 - Documents the hosted-demo goal and scope, frontend/backend/PostgreSQL
   requirements, existing environment-variable categories, secret handling,

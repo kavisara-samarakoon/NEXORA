@@ -4,12 +4,10 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.75.0-production-demo-deployment-planning-foundation`.
-Work in progress is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. The v0.77
-candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`; it has not
-started and is not active.
+`v0.76.0-backend-hosted-environment-configuration-foundation`. No next
+milestone has started. The possible next candidate is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
+started.
 
 ## Repository-defined automation
 
@@ -62,21 +60,21 @@ configuration, application change, or live deployment was included. Existing
 source, API/OpenAPI behavior, dependencies, and workflows/scripts remain
 unchanged, and NEXORA remains not production-ready.
 
-The in-progress v0.76 backend configuration foundation adds a `hosted-demo`
-profile group that activates the existing database-backed `dev` path and
-`production` safety checks. Its profile properties require an external server
-port, PostgreSQL URL/user/password, separate JWT and refresh-token HMAC secrets,
-and exact trusted frontend origins with no hosted secret fallbacks. Production-
-like validation rejects missing/local/embedded/default-superuser/short or
-placeholder database settings. Refresh and CSRF cookies are forced secure,
-cookie paths and CSRF remain intact, and the `SameSite=Lax` baseline can become
-`None` only through an explicit secure cross-site decision. CORS remains
+The completed and tagged v0.76 backend configuration foundation added a
+`hosted-demo` profile group that activates the existing database-backed `dev`
+path and `production` safety checks. Its profile properties require an external
+server port, PostgreSQL URL/user/password, separate JWT and refresh-token HMAC
+secrets, and exact trusted frontend origins with no hosted secret fallbacks.
+Production-like validation rejects missing, local, embedded, default-superuser,
+short, or placeholder database settings. Refresh and CSRF cookies are forced
+secure, cookie paths and CSRF remain intact, and the `SameSite=Lax` baseline can
+become `None` only through an explicit secure cross-site decision. CORS remains
 credentialed and exact-origin; request-ID behavior is unchanged.
 
-This is backend configuration only. It creates no live deployment,
-frontend/provider/cloud/Docker/`.env` configuration, dependency, script,
-workflow, endpoint, JSON shape, or OpenAPI YAML change. NEXORA remains not
-production-ready.
+This is backend configuration only. It changes no domain logic and creates no
+live deployment, frontend/provider/cloud/Docker/`.env` configuration,
+dependency, script, workflow, endpoint, JSON shape, or OpenAPI YAML change.
+NEXORA remains not production-ready.
 
 The completed and tagged v0.72 backend change limits outbound external-deals
 provider concurrency to four calls per process and falls back immediately to
