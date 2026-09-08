@@ -142,11 +142,10 @@ tagged, and the closure does not create or move another release tag.
 ## Current milestone state
 
 The latest stable development tag is
-`v0.72.0-backend-external-provider-request-budget-foundation`.
-Work in progress is
-`v0.73.0-release-commit-helper-foundation`, which adds only the local
-`commit-milestone.sh` helper and documentation. It changes no backend/frontend
-source, workflow/CI behavior, dependencies, OpenAPI YAML, or
-production/deployment capability. The v0.74 candidate is
-`v0.74.0-backend-default-deny-route-policy-foundation`. NEXORA remains a
-local/development MVP and is not production-ready.
+`v0.74.0-backend-default-deny-route-policy-foundation`. No next milestone has
+started. The possible v0.75 candidate is
+`v0.75.0-production-demo-deployment-planning-foundation`; it has not started and
+is not active. The completed v0.74 milestone added explicit backend public
+route allowlisting plus a default-deny fallback without changing frontend,
+API-shape, OpenAPI YAML, dependency, workflow/script, or production/deployment
+behavior. NEXORA remains a local/development MVP and is not production-ready.

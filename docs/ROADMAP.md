@@ -7,13 +7,13 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Treat the completed and tagged
-  `v0.73.0-release-commit-helper-foundation` milestone as the latest stable
-  development milestone.
-- Complete the in-progress
-  `v0.74.0-backend-default-deny-route-policy-foundation` with a method-aware
-  public route allowlist, retained protection for `/api/auth/me` and
-  `/api/me/**`, and a terminal default-deny rule for unexpected routes.
-- Preserve existing public/protected route behavior, endpoint paths, query
+  `v0.74.0-backend-default-deny-route-policy-foundation` milestone as the latest
+  stable development milestone. No next milestone has started.
+- Consider `v0.75.0-production-demo-deployment-planning-foundation` only as a
+  possible next candidate. It has not started and is not an active milestone.
+- Preserve the completed v0.74 method-aware public allowlist, authentication for
+  `/api/auth/me` and `/api/me/**`, and default-deny behavior for unknown,
+  unmatched, or future backend routes. Preserve endpoint paths, query
   parameters, JSON response shapes, CSRF/session controls, credentialed CORS,
   request-ID behavior, frontend behavior, dependencies, workflows/scripts, and
   OpenAPI YAML. Add no production/deployment capability.
