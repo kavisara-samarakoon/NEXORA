@@ -101,6 +101,55 @@ class ProductionProfileSafetyGuardTests {
     }
 
     @Test
+    void productionProfileRejectsMissingHostedDatabaseConfiguration() {
+        MockEnvironment environment = safeProductionEnvironment();
+        environment.setProperty("spring.datasource.url", " ");
+        environment.setProperty("spring.datasource.username", "");
+        environment.setProperty("spring.datasource.password", " ");
+
+        IllegalStateException exception = assertUnsafe(environment);
+
+        assertTrue(exception.getMessage().contains(
+                "spring.datasource.url must be configured"));
+        assertTrue(exception.getMessage().contains(
+                "spring.datasource.username must be configured"));
+        assertTrue(exception.getMessage().contains(
+                "spring.datasource.password must be configured"));
+    }
+
+    @Test
+    void productionProfileRejectsLocalOrUnsafeDatabaseConfiguration() {
+        MockEnvironment environment = safeProductionEnvironment();
+        environment.setProperty(
+                "spring.datasource.url",
+                "jdbc:postgresql://localhost:5432/nexora_db");
+        environment.setProperty("spring.datasource.username", "postgres");
+        environment.setProperty("spring.datasource.password", "nexora_password");
+
+        IllegalStateException exception = assertUnsafe(environment);
+
+        assertTrue(exception.getMessage().contains(
+                "spring.datasource.url must not use the local development default"));
+        assertTrue(exception.getMessage().contains(
+                "spring.datasource.username must use a non-default least-privilege account"));
+        assertTrue(exception.getMessage().contains(
+                "spring.datasource.password must not use the local development default"));
+    }
+
+    @Test
+    void productionProfileRejectsDatabaseCredentialsEmbeddedInUrl() {
+        MockEnvironment environment = safeProductionEnvironment();
+        environment.setProperty(
+                "spring.datasource.url",
+                "jdbc:postgresql://database-user:database-password@db.nexora.internal:5432/nexora");
+
+        IllegalStateException exception = assertUnsafe(environment);
+
+        assertTrue(exception.getMessage().contains("must not embed credentials"));
+        assertFalse(exception.getMessage().contains("database-password"));
+    }
+
+    @Test
     void productionProfileRequiresIndependentAuthSecrets() {
         MockEnvironment environment = safeProductionEnvironment();
         environment.setProperty("nexora.auth.refresh-token-hash-secret", STRONG_VALUE_ONE);
@@ -200,6 +249,33 @@ class ProductionProfileSafetyGuardTests {
     }
 
     @Test
+    void hostedDemoProfileRequiresProviderPortBinding() {
+        MockEnvironment environment = safeHostedDemoEnvironment();
+        environment.setProperty("server.port", " ");
+
+        IllegalStateException exception = assertUnsafe(environment);
+
+        assertTrue(exception.getMessage().contains(
+                "server.port must be supplied by the hosting environment"));
+    }
+
+    @Test
+    void hostedDemoProfileRejectsInvalidProviderPortBinding() {
+        MockEnvironment environment = safeHostedDemoEnvironment();
+        environment.setProperty("server.port", "70000");
+
+        IllegalStateException exception = assertUnsafe(environment);
+
+        assertTrue(exception.getMessage().contains("must be between 1 and 65535"));
+    }
+
+    @Test
+    void hostedDemoProfileAcceptsSafeBoundConfiguration() {
+        assertDoesNotThrow(() -> ProductionProfileSafetyGuard.validate(
+                safeHostedDemoEnvironment()));
+    }
+
+    @Test
     void failureCollectsProblemsWithoutExposingConfiguredSecrets() {
         String configuredJwt = "R4w8M2n6P9q3S7t1V5x8Z2b6D9f3H7j1L5p8T2w6Y9c3F7k1";
         String configuredRefresh = "K7m3Q9r5U1v8X4z2B6d9F3h7J1n5P8s2W6y9A3c7E1g5L8q4";
@@ -231,6 +307,20 @@ class ProductionProfileSafetyGuardTests {
         environment.setProperty("nexora.auth.csrf.enabled", "true");
         environment.setProperty("nexora.auth.csrf.cookie-secure", "true");
         environment.setProperty("nexora.auth.trusted-origins", "https://app.nexora.com");
+        environment.setProperty(
+                "spring.datasource.url",
+                "jdbc:postgresql://db.nexora.internal:5432/nexora");
+        environment.setProperty("spring.datasource.username", "nexora_app");
+        environment.setProperty(
+                "spring.datasource.password",
+                "G8m2Q7r4V9x5Z1p6N3c8L2k7");
+        return environment;
+    }
+
+    private static MockEnvironment safeHostedDemoEnvironment() {
+        MockEnvironment environment = safeProductionEnvironment("hosted-demo");
+        environment.setActiveProfiles("hosted-demo", "dev", "production");
+        environment.setProperty("server.port", "8080");
         return environment;
     }
 

@@ -4,8 +4,29 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
-started.
+`v0.75.0-production-demo-deployment-planning-foundation`.
+Work in progress is
+`v0.76.0-backend-hosted-environment-configuration-foundation`.
+
+v0.76 adds a backend-only `hosted-demo` Spring profile group and strict profile
+properties for a future hosted portfolio/demo MVP. The profile activates the
+existing `dev` PostgreSQL persistence path and `production` safety checks,
+requires provider-supplied `PORT`, database URL/user/password, independent JWT
+and refresh-token HMAC secrets, and exact trusted frontend origins, and forces
+secure refresh and CSRF cookies. Missing or unsafe hosted configuration fails
+closed before a usable application starts.
+
+The existing local/default and `dev` behaviors remain unchanged. Credentialed
+CORS remains exact-origin, the `SameSite=Lax` hosted baseline may be changed to
+`None` only with secure cookies for an intentional cross-site topology, and
+request-ID and session behavior are unchanged. There are no frontend, API,
+OpenAPI YAML, dependency, script/workflow, Docker/cloud/`.env`, provider
+deployment configuration, or live deployment changes. NEXORA remains not
+production-ready.
+
+The v0.77 candidate is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`; it has not
+started and is not active.
 
 The completed and tagged v0.75 milestone created deployment planning
 documentation only. It defines a future fully functional hosted portfolio/demo
@@ -25,10 +46,6 @@ query parameter, JSON response shape, or OpenAPI YAML changes. No Docker,
 cloud, environment, or other runtime deployment configuration was added. NEXORA
 was not deployed, no production/deployment capability was added, and it remains
 not production-ready.
-
-The possible next candidate is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. It has not
-started.
 
 The completed and tagged v0.74 milestone added an explicit method-aware
 allowlist for intended public backend routes, preserved authentication for

@@ -8,14 +8,19 @@ project's academic, portfolio, and product goals evolve.
 
 - Treat the completed and tagged
   `v0.75.0-production-demo-deployment-planning-foundation` milestone as the
-  latest stable development milestone. No next milestone has started.
+  latest stable development milestone.
+- Complete the in-progress
+  `v0.76.0-backend-hosted-environment-configuration-foundation`: add a strict
+  backend-only `hosted-demo` profile path for provider port binding, persistent
+  PostgreSQL configuration, external auth secrets, exact HTTPS origins, and
+  secure cookies without deploying or changing the frontend/API contract.
 - Preserve the completed v0.75 documentation-only definition of a fully
   functional hosted portfolio/demo MVP, environment and secret categories,
   live smoke/browser QA, readiness gates, rollback, and truthful public wording.
   It selected no platform, added no runtime deployment configuration, and did
   not deploy NEXORA.
-- Consider `v0.76.0-backend-hosted-environment-configuration-foundation` only as
-  a possible next candidate. It has not started.
+- Consider `v0.77.0-hosted-postgresql-persistence-validation-foundation` only as
+  a possible next candidate. It has not started and is not an active milestone.
 - Preserve the completed v0.74 method-aware public allowlist, authentication for
   `/api/auth/me` and `/api/me/**`, and default-deny behavior for unknown,
   unmatched, or future backend routes. Preserve endpoint paths, query

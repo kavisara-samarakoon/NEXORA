@@ -3,14 +3,18 @@
 ## Purpose and safety
 
 Run this checklist only after a candidate hosted frontend, API, and PostgreSQL
-environment exists. v0.75 does not create or run that environment. The checklist
-supplements existing automated validation; it is not a penetration test,
-production certification, uptime probe, or monitoring system.
+environment exists. v0.75 did not create that environment, and v0.76 adds only
+backend hosted-environment configuration; neither milestone deploys or runs it.
+The checklist supplements existing automated validation; it is not a
+penetration test, production certification, uptime probe, or monitoring system.
 
 Before testing:
 
 - Record the candidate source commit, frontend origin, API origin, environment,
   deployment identifier, tester, and UTC start time.
+- Confirm the backend reports the reviewed hosted mode after starting with
+  `SPRING_PROFILES_ACTIVE=hosted-demo` and a provider-supplied `PORT`; never
+  record database or auth secret values in the evidence.
 - Confirm the URLs are approved HTTPS demo endpoints and not an unrelated or
   real-user environment.
 - Use a unique generated test account and synthetic Wishlist content. Never put
