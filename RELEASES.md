@@ -4,11 +4,30 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.74.0-backend-default-deny-route-policy-foundation`. No next milestone has
-started. A possible v0.75 candidate is
-`v0.75.0-production-demo-deployment-planning-foundation`; it has not started and
-is not an active milestone.
+`v0.74.0-backend-default-deny-route-policy-foundation`.
+Work in progress is
+`v0.75.0-production-demo-deployment-planning-foundation`. The v0.76 candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`; it has not
+started and is not an active milestone.
 Older headings retain the wording used when each milestone was recorded.
+
+## In-progress documentation milestone — v0.75.0 Production Demo Deployment Planning foundation
+
+`v0.75.0-production-demo-deployment-planning-foundation` defines the planning
+boundary for a future fully functional hosted portfolio/demo MVP.
+
+- Documents the hosted-demo goal and scope, frontend/backend/PostgreSQL
+  requirements, existing environment-variable categories, secret handling,
+  HTTPS cookie/CORS/session decisions, live API smoke testing, browser QA,
+  readiness gates, rollback, public wording, and non-production limitations.
+- Defines “fully functional” as the primary frontend, backend, auth, persistent
+  database, personal Wishlist, public deals/fallback, and Sentinel demo and
+  authenticated insight flows working online. It does not define production
+  SaaS readiness or select a hosting platform.
+- Changes no backend/frontend source, script/workflow, dependency, endpoint,
+  query parameter, JSON response shape, or OpenAPI YAML. It adds no Docker,
+  environment, cloud, or runtime deployment configuration and completes no live
+  deployment. NEXORA remains not production-ready.
 
 ## Completed backend milestone — v0.74.0 Backend Default-Deny Route Policy foundation
 

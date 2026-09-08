@@ -8,9 +8,14 @@ project's academic, portfolio, and product goals evolve.
 
 - Treat the completed and tagged
   `v0.74.0-backend-default-deny-route-policy-foundation` milestone as the latest
-  stable development milestone. No next milestone has started.
-- Consider `v0.75.0-production-demo-deployment-planning-foundation` only as a
-  possible next candidate. It has not started and is not an active milestone.
+  stable development milestone.
+- Complete the in-progress
+  `v0.75.0-production-demo-deployment-planning-foundation` as documentation
+  only: define a fully functional hosted portfolio/demo MVP, environment and
+  secret categories, live smoke/browser QA, readiness gates, rollback, and
+  truthful public wording without selecting a platform or deploying.
+- Consider `v0.76.0-backend-hosted-environment-configuration-foundation` only as
+  a possible next candidate. It has not started and is not an active milestone.
 - Preserve the completed v0.74 method-aware public allowlist, authentication for
   `/api/auth/me` and `/api/me/**`, and default-deny behavior for unknown,
   unmatched, or future backend routes. Preserve endpoint paths, query
@@ -129,9 +134,9 @@ project's academic, portfolio, and product goals evolve.
 - Add deployment automation only after those decisions are reviewed.
 - Add broader end-to-end/browser testing only after its scenarios, runtime
   cost, and ownership are defined; the API Smoke CI foundation is API-only.
-- Write production deployment and operational runbooks only after a target
-  topology, owners, monitoring, rollback, and incident-response processes are
-  approved.
+- Convert the v0.75 vendor-neutral plans into target-specific deployment and
+  operational runbooks only after a topology, owners, monitoring, rollback, and
+  incident-response processes are approved.
 
 ## Production security requirements
 

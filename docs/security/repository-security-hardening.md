@@ -4,9 +4,10 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.74.0-backend-default-deny-route-policy-foundation`. No next milestone has
-started. The possible
-`v0.75.0-production-demo-deployment-planning-foundation` candidate has not
+`v0.74.0-backend-default-deny-route-policy-foundation`.
+Work in progress is
+`v0.75.0-production-demo-deployment-planning-foundation`. The v0.76 candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`; it has not
 started and is not active.
 
 ## Repository-defined automation
@@ -49,6 +50,16 @@ therefore fail closed. Existing CSRF/session, credentialed CORS, and request-ID
 controls are unchanged, as are endpoint paths, query parameters, JSON shapes,
 the frontend, dependencies, workflows/scripts, and OpenAPI YAML. This adds no
 production/deployment capability, and NEXORA remains not production-ready.
+
+The in-progress v0.75 milestone adds planning documents only. They require exact
+HTTPS origins, externally managed and independently scoped secrets, secure
+cookie/CSRF/CORS review, least-privilege PostgreSQL access, controlled
+migrations/backups, redacted live smoke evidence, browser QA, rollback and
+takedown ownership, and truthful hosted-demo wording. No hosting provider,
+secret value, Docker/cloud/environment configuration, application change, or
+live deployment is included. Existing source, API/OpenAPI behavior,
+dependencies, and workflows/scripts remain unchanged, and NEXORA remains not
+production-ready.
 
 The completed and tagged v0.72 backend change limits outbound external-deals
 provider concurrency to four calls per process and falls back immediately to
