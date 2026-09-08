@@ -4,17 +4,17 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.74.0-backend-default-deny-route-policy-foundation`.
-Work in progress is
-`v0.75.0-production-demo-deployment-planning-foundation`. The v0.76 candidate is
-`v0.76.0-backend-hosted-environment-configuration-foundation`; it has not
-started and is not an active milestone.
+`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
+started. The possible next candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. It has not
+started.
 Older headings retain the wording used when each milestone was recorded.
 
-## In-progress documentation milestone — v0.75.0 Production Demo Deployment Planning foundation
+## Completed documentation milestone — v0.75.0 Production Demo Deployment Planning foundation
 
-`v0.75.0-production-demo-deployment-planning-foundation` defines the planning
-boundary for a future fully functional hosted portfolio/demo MVP.
+`v0.75.0-production-demo-deployment-planning-foundation` is the completed,
+tagged, latest stable development milestone. It defines the planning boundary
+for a future fully functional hosted portfolio/demo MVP.
 
 - Documents the hosted-demo goal and scope, frontend/backend/PostgreSQL
   requirements, existing environment-variable categories, secret handling,
@@ -32,8 +32,8 @@ boundary for a future fully functional hosted portfolio/demo MVP.
 ## Completed backend milestone — v0.74.0 Backend Default-Deny Route Policy foundation
 
 `v0.74.0-backend-default-deny-route-policy-foundation` is the completed, tagged,
-latest stable development milestone. It hardens the backend authorization
-default without changing the API contract.
+backend security milestone. It hardens the backend authorization default
+without changing the API contract.
 
 - Replaces broad public subtree matching with an explicit method-aware
   allowlist for the existing intended public routes, retains authentication for

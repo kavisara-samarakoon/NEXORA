@@ -142,10 +142,12 @@ tagged, and the closure does not create or move another release tag.
 ## Current milestone state
 
 The latest stable development tag is
-`v0.74.0-backend-default-deny-route-policy-foundation`. No next milestone has
-started. The possible v0.75 candidate is
-`v0.75.0-production-demo-deployment-planning-foundation`; it has not started and
-is not active. The completed v0.74 milestone added explicit backend public
-route allowlisting plus a default-deny fallback without changing frontend,
-API-shape, OpenAPI YAML, dependency, workflow/script, or production/deployment
-behavior. NEXORA remains a local/development MVP and is not production-ready.
+`v0.75.0-production-demo-deployment-planning-foundation`. No next milestone has
+started. The possible next candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. It has not
+started. The completed and tagged v0.75 milestone created deployment planning
+documentation only; it did not deploy NEXORA or add backend/frontend code,
+runtime deployment configuration, Docker/cloud/environment files, API/OpenAPI,
+dependency, script, or workflow changes. The target remains a fully functional
+hosted portfolio/demo MVP, not production SaaS. NEXORA remains not
+production-ready.
