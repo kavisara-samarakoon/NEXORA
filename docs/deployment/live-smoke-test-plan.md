@@ -3,8 +3,9 @@
 ## Purpose and safety
 
 Run this checklist only after a candidate hosted frontend, API, and PostgreSQL
-environment exists. v0.75 did not create that environment, and v0.76 adds only
-backend hosted-environment configuration; neither milestone deploys or runs it.
+environment exists. v0.75 did not create that environment, and the completed,
+tagged v0.76 milestone added only backend hosted-environment configuration;
+neither milestone deployed or ran it. No next milestone has started.
 The checklist supplements existing automated validation; it is not a
 penetration test, production certification, uptime probe, or monitoring system.
 

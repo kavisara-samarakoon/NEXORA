@@ -3,11 +3,12 @@
 ## Status and rules
 
 This is a variable-category and ownership plan, not an environment file or
-deployable provider configuration. The in-progress
-`v0.76.0-backend-hosted-environment-configuration-foundation` adds the
-backend-only `hosted-demo` Spring profile described below. All displayed secret
-values remain non-secret placeholders; no hosted environment or live deployment
-exists yet.
+deployable provider configuration. The completed and tagged
+`v0.76.0-backend-hosted-environment-configuration-foundation` added the
+backend-only `hosted-demo` Spring profile described below and is the latest
+stable development milestone. No next milestone has started. All displayed
+secret values remain non-secret placeholders; no hosted environment or live
+deployment exists yet.
 
 Placeholder vocabulary:
 
@@ -182,14 +183,14 @@ configuration without adding undocumented environment names.
 
 ## v0.76 implementation state
 
-The in-progress
-`v0.76.0-backend-hosted-environment-configuration-foundation` resolves the
+The completed and tagged
+`v0.76.0-backend-hosted-environment-configuration-foundation` resolved the
 backend profile, provider port binding, external database/auth/origin binding,
 secure-cookie baseline, and fail-closed validation gaps identified by v0.75.
 It does not provide frontend/provider/cloud configuration, verify a live
 PostgreSQL service, or deploy NEXORA.
 
-The v0.77 candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`; it has not
-started and is not active. NEXORA remains a hosted portfolio/demo target, not a
-production SaaS service, and remains not production-ready.
+The possible next candidate is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
+started. NEXORA remains a hosted portfolio/demo target, not a production SaaS
+service, and remains not production-ready.

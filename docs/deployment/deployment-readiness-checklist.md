@@ -3,8 +3,9 @@
 ## How to use this checklist
 
 This is a planning gate for a future fully functional hosted demo. v0.75 added
-planning only; v0.76 adds backend environment configuration only. Neither
-milestone completes a live deployment. Every checked item must link to current
+planning only; the completed and tagged v0.76 milestone added backend
+environment configuration only. Neither milestone completed a live deployment,
+and no next milestone has started. Every checked item must link to current
 evidence, an owner, and an observation date. “Not applicable” requires a written
 reason; it must not conceal a failed security, persistence, or browser
 requirement.

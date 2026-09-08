@@ -2,14 +2,16 @@
 
 ## Status and purpose
 
-This document is the completed planning foundation from the tagged, latest
-stable milestone
+This document is the completed planning foundation from the tagged v0.75
+milestone
 `v0.75.0-production-demo-deployment-planning-foundation`.
-Work in progress is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. The plan does not
-select a hosting vendor or claim that NEXORA is deployed or production-ready.
-v0.76 implements backend environment configuration only; it creates no
-frontend, provider/cloud, or live deployment configuration.
+The latest stable development milestone is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. No next
+milestone has started. The possible next candidate is
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
+started. The plan does not select a hosting vendor or claim that NEXORA is
+deployed or production-ready. v0.76 added backend environment configuration
+only; it created no frontend, provider/cloud, or live deployment configuration.
 
 The deployment goal is a public, fully functional hosted portfolio/demo MVP
 that a reviewer can use through HTTPS without installing the project locally.
