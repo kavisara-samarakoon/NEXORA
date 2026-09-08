@@ -4,11 +4,11 @@
 
 This is a planning gate for a future fully functional hosted demo. v0.75 added
 planning only; the completed and tagged v0.76 milestone added backend
-environment configuration only. Neither milestone completed a live deployment,
-and no next milestone has started. Every checked item must link to current
-evidence, an owner, and an observation date. “Not applicable” requires a written
-reason; it must not conceal a failed security, persistence, or browser
-requirement.
+environment configuration only. The in-progress v0.77 milestone adds manual
+validation against a disposable hosted-demo PostgreSQL database; it does not
+complete a live deployment. Every checked item must link to current evidence,
+an owner, and an observation date. “Not applicable” requires a written reason;
+it must not conceal a failed security, persistence, or browser requirement.
 
 ## Repository state
 
@@ -68,9 +68,11 @@ requirement.
 
 - [ ] Persistent PostgreSQL service, region/network boundary, compatible version,
   capacity, connection limits, and owner are approved.
-- [ ] The v0.77 hosted PostgreSQL validation milestone, or equivalent reviewed
-  evidence, proves connectivity, migrations, restart persistence, and failure
-  handling against the selected service before public launch.
+- [ ] `scripts/deployment/validate-hosted-postgres.sh` passes against a
+  disposable hosted-demo database and the redacted evidence confirms the
+  hosted profile, PostgreSQL connectivity, Flyway history, and basic SQL.
+- [ ] Restart persistence and provider failure handling are validated separately
+  against the selected service before public launch.
 - [ ] Backend access uses a least-privilege identity and encrypted transport
   verified using the selected service's actual settings.
 - [ ] Flyway migration ownership is single and explicit; migrations and JPA
