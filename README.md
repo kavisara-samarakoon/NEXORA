@@ -13,7 +13,8 @@ Sentinel assistant in one locally runnable project.
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
 > `v0.74.0-backend-default-deny-route-policy-foundation`.
-> No next milestone has started.
+> Work in progress is
+> `v0.75.0-production-demo-deployment-planning-foundation`.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -27,6 +28,11 @@ Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
+
+Deployment planning: [hosted-demo plan](docs/deployment/production-demo-deployment-plan.md) ·
+[environment variables](docs/deployment/environment-variable-plan.md) ·
+[live smoke plan](docs/deployment/live-smoke-test-plan.md) ·
+[readiness checklist](docs/deployment/deployment-readiness-checklist.md)
 
 ## Why NEXORA exists
 
@@ -601,8 +607,23 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.74.0-backend-default-deny-route-policy-foundation`. No next milestone has
-started.
+`v0.74.0-backend-default-deny-route-policy-foundation`.
+Work in progress is
+`v0.75.0-production-demo-deployment-planning-foundation`.
+
+v0.75 adds deployment planning documentation only for a future fully functional
+hosted portfolio/demo MVP. It defines frontend, backend, PostgreSQL,
+environment/secrets, cookie/CORS/session, live smoke, browser QA, readiness, and
+rollback requirements without selecting a platform or deploying anything. It
+changes no backend/frontend source, scripts/workflows, dependencies, API paths,
+query parameters, JSON response shapes, or OpenAPI YAML, and adds no Docker,
+environment, cloud, or other deployment configuration. No live deployment or
+production/deployment capability is completed, and NEXORA remains not
+production-ready.
+
+The v0.76 candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`; it has not
+started and is not an active milestone.
 
 The completed and tagged v0.74 milestone introduced an explicit method-aware
 backend public route allowlist and a default-deny fallback. Existing intended
@@ -612,10 +633,6 @@ Endpoint paths, query parameters, JSON response shapes, CSRF/session behavior,
 credentialed CORS, request-ID behavior, the frontend, dependencies,
 workflows/scripts, and OpenAPI YAML are unchanged. No production/deployment
 capability is added, and NEXORA remains not production-ready.
-
-The possible v0.75 candidate is
-`v0.75.0-production-demo-deployment-planning-foundation`; it has not started and
-is not an active milestone.
 
 The completed and tagged v0.73 milestone added only the local
 `scripts/release/commit-milestone.sh` helper. It stages an explicit approved
@@ -670,7 +687,8 @@ NEXORA is designed for local demonstration, academic evaluation, and portfolio
 review. It is not a hosted production service and has no production
 availability, scale, security-assurance, or compliance claim.
 
-- No production deployment or continuous-delivery pipeline is documented yet.
+- No live hosted-demo deployment or continuous-delivery pipeline exists. v0.75
+  documents planning and readiness requirements only.
 - Docker Compose covers local PostgreSQL only. The optional devcontainer
   provides a local toolchain, not backend/frontend release images or a
   production container workflow.

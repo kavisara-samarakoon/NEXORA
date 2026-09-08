@@ -4,8 +4,30 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.74.0-backend-default-deny-route-policy-foundation`. No next milestone has
-started.
+`v0.74.0-backend-default-deny-route-policy-foundation`.
+Work in progress is
+`v0.75.0-production-demo-deployment-planning-foundation`.
+
+v0.75 adds deployment planning documentation only. It defines a future fully
+functional hosted portfolio/demo MVP as the primary frontend, backend,
+authentication, persistent PostgreSQL, personal Wishlist, public deals and
+fallback behavior, and Sentinel demo/authenticated insight flows working
+online. This definition does not imply production SaaS readiness.
+
+The plan covers frontend/backend/database hosting requirements, existing
+environment-variable categories and secret boundaries, HTTPS cookie/CORS/session
+decisions, live smoke testing, browser QA, readiness evidence, rollback, public
+wording, and known limitations. It selects no hosting platform and adds no
+deployment configuration or live deployment.
+
+There are no backend/frontend source, script/workflow, dependency, API path,
+query parameter, JSON response shape, or OpenAPI YAML changes. No
+production/deployment capability is added, and NEXORA remains not
+production-ready.
+
+The v0.76 candidate is
+`v0.76.0-backend-hosted-environment-configuration-foundation`; it has not
+started and is not active.
 
 The completed and tagged v0.74 milestone added an explicit method-aware
 allowlist for intended public backend routes, preserved authentication for
@@ -19,10 +41,6 @@ are no endpoint path, query parameter, JSON response shape, CSRF/session,
 credentialed CORS, request-ID, frontend, dependency, workflow/script, or
 OpenAPI YAML changes. No production/deployment capability is added, and NEXORA
 remains not production-ready.
-
-The possible v0.75 candidate is
-`v0.75.0-production-demo-deployment-planning-foundation`; it has not started and
-is not active.
 
 The completed and tagged v0.73 milestone added only the local
 `scripts/release/commit-milestone.sh` helper for reviewed milestone work. It
