@@ -4,14 +4,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.LinkedHashMap;
 
 @Component
 public class InMemoryAuthAbuseCounterStore {
 
+    static final int MAX_WINDOWS = 10_000;
+
     private final Clock clock;
-    private final ConcurrentHashMap<AuthAbuseKey, AttemptWindow> windows = new ConcurrentHashMap<>();
+    private final int maxWindows;
+    private final LinkedHashMap<AuthAbuseKey, AttemptWindow> windows = new LinkedHashMap<>();
 
     @Autowired
     public InMemoryAuthAbuseCounterStore() {
@@ -19,10 +21,18 @@ public class InMemoryAuthAbuseCounterStore {
     }
 
     InMemoryAuthAbuseCounterStore(Clock clock) {
-        this.clock = clock;
+        this(clock, MAX_WINDOWS);
     }
 
-    public AuthAbuseDecision check(
+    InMemoryAuthAbuseCounterStore(Clock clock, int maxWindows) {
+        if (maxWindows < 1) {
+            throw new IllegalArgumentException("maxWindows must be positive");
+        }
+        this.clock = clock;
+        this.maxWindows = maxWindows;
+    }
+
+    public synchronized AuthAbuseDecision check(
             AuthAbuseLimit limit,
             String subject,
             int maxAttempts,
@@ -32,26 +42,28 @@ public class InMemoryAuthAbuseCounterStore {
         AuthAbuseKey key = AuthAbuseKey.scoped(limit, subject);
         windows.entrySet().removeIf(entry -> isExpired(entry.getValue(), nowMillis, windowMillis));
 
-        AtomicReference<AuthAbuseDecision> decision = new AtomicReference<>();
-        windows.compute(key, (ignored, existing) -> {
-            if (existing == null || isExpired(existing, nowMillis, windowMillis)) {
-                decision.set(AuthAbuseDecision.permitted());
-                return new AttemptWindow(nowMillis, 1);
+        AttemptWindow existing = windows.get(key);
+        if (existing == null) {
+            // Expired entries are already gone; insertion order breaks age ties deterministically.
+            if (windows.size() >= maxWindows) {
+                var oldest = windows.keySet().iterator();
+                oldest.next();
+                oldest.remove();
             }
-            if (existing.attemptCount() < maxAttempts) {
-                decision.set(AuthAbuseDecision.permitted());
-                return new AttemptWindow(existing.startedAtMillis(), existing.attemptCount() + 1);
-            }
+            windows.put(key, new AttemptWindow(nowMillis, 1));
+            return AuthAbuseDecision.permitted();
+        }
+        if (existing.attemptCount() < maxAttempts) {
+            windows.put(key, new AttemptWindow(existing.startedAtMillis(), existing.attemptCount() + 1));
+            return AuthAbuseDecision.permitted();
+        }
 
-            long remainingMillis = windowMillis - (nowMillis - existing.startedAtMillis());
-            long retryAfterSeconds = Math.max(1, (remainingMillis + 999L) / 1_000L);
-            decision.set(AuthAbuseDecision.rejected(retryAfterSeconds));
-            return existing;
-        });
-        return decision.get();
+        long remainingMillis = windowMillis - (nowMillis - existing.startedAtMillis());
+        long retryAfterSeconds = Math.max(1, (remainingMillis + 999L) / 1_000L);
+        return AuthAbuseDecision.rejected(retryAfterSeconds);
     }
 
-    int activeWindowCount() {
+    synchronized int activeWindowCount() {
         return windows.size();
     }
 
