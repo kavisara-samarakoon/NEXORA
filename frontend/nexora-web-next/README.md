@@ -152,7 +152,7 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 
 | Route | Experience | Current data source |
 | --- | --- | --- |
-| `/` | NEXORA dashboard | Local dashboard presentation data |
+| `/` | NEXORA landing page with a featured deal and small deal/giveaway collections | API-backed entries/counts only; empty and unavailable states |
 | `/deals` | Curated and live deal discovery | `/api/deals`, optional `/api/deals/external`, and typed fallback data |
 | `/giveaways` | Giveaway discovery | `/api/giveaways` with typed fallback data |
 | `/wishlist` | Personal wishlist and alert intelligence | Authenticated `/api/me/wishlist`, alert history, and public/fallback preview |
@@ -163,6 +163,26 @@ npx tsc --noEmit  # Run TypeScript checks without emitting files
 | `/register` | Account registration | `POST /api/auth/register` |
 
 ## Data and fallback behavior
+
+The homepage uses scoped CSS and the existing account-status component; inner
+pages retain their dashboard layout. Search links to the existing Deals page,
+and News is marked coming soon because there is no News route.
+
+The first returned deal is featured, with at most three deals and three
+giveaways below. Counts come from the summary API or successfully loaded feeds;
+unavailable counts display a dash with an unavailable label. The homepage
+discards bundled fallback entries returned by shared helpers: no sample titles,
+prices, countdowns, or stores are rendered. Failed feeds show an unavailable
+state with a retry button that refreshes the homepage feeds while preserving
+the account component and scroll position.
+Valid empty responses show an empty state and real zero counts. A homepage-only Suspense fallback keeps
+navigation and hero links available while the feeds load.
+
+Current deal/giveaway contracts have **no cover, thumbnail, or image URL fields**.
+The homepage therefore uses decorative NEXORA gradient artwork, not unofficial
+game covers. No image provider, download, or remote-image configuration is added.
+Existing validated CheapShark deal URLs open in a new tab; other deal actions
+lead to `/deals`. Giveaway actions lead to `/giveaways`.
 
 Deals, Giveaways, public Wishlist, Security, and Sentinel responses are
 validated before rendering. If the backend is unavailable or a public response
