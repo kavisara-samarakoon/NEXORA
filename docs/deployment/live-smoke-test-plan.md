@@ -5,8 +5,10 @@
 Run this checklist only after a candidate hosted frontend, API, and PostgreSQL
 environment exists. v0.75 did not create that environment, and the completed,
 tagged v0.76 milestone added only backend hosted-environment configuration;
-the in-progress v0.77 milestone adds manual validation against a disposable
-hosted-demo PostgreSQL database. None of these milestones deploys NEXORA.
+the completed and tagged v0.77 milestone added manual validation against a
+disposable hosted-demo PostgreSQL database. None of these milestones deployed
+NEXORA, and this live checklist remains pending for the planned Neon, Render,
+and Vercel hosted-demo path.
 The checklist supplements existing automated validation; it is not a
 penetration test, production certification, uptime probe, or monitoring system.
 

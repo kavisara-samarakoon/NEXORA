@@ -4,10 +4,10 @@ NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
 The latest stable milestone is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. No next
-milestone has started. The possible next candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
-started.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It is completed
+and tagged; the previous milestone is
+`v0.76.0-backend-hosted-environment-configuration-foundation`. No public
+deployment or production readiness is claimed.
 
 ## Repository-defined automation
 

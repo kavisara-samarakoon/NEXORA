@@ -5,11 +5,10 @@
 This is a variable-category and ownership plan, not an environment file or
 deployable provider configuration. The completed and tagged
 `v0.76.0-backend-hosted-environment-configuration-foundation` added the
-backend-only `hosted-demo` Spring profile described below and is the latest
-stable development milestone. Work in progress is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`. All displayed
-secret values remain non-secret placeholders; no hosted environment or live
-deployment exists yet.
+backend-only `hosted-demo` Spring profile described below. The completed and
+tagged `v0.77.0-hosted-postgresql-persistence-validation-foundation` is the
+latest stable development milestone. All displayed secret values remain
+non-secret placeholders; no hosted environment or live deployment exists yet.
 
 Placeholder vocabulary:
 
@@ -209,7 +208,9 @@ secure-cookie baseline, and fail-closed validation gaps identified by v0.75.
 It does not provide frontend/provider/cloud configuration, verify a live
 PostgreSQL service, or deploy NEXORA.
 
-The in-progress v0.77 milestone validates this path manually without selecting
-a provider or performing a live deployment. NEXORA remains a hosted
+The completed and tagged v0.77 milestone added the provider-neutral manual
+validation path. Neon is the planned hosted-demo PostgreSQL provider, but
+running the validation against a disposable Neon database and performing a live
+deployment remain separate future readiness steps. NEXORA remains a hosted
 portfolio/demo target, not a production SaaS service, and remains not
 production-ready.

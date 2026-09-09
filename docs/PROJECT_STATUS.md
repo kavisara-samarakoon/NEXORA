@@ -4,26 +4,25 @@
 or production-ready service.
 
 The latest stable development milestone is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. Work in progress
-is `v0.77.0-hosted-postgresql-persistence-validation-foundation`.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
 
-v0.77 adds a manual, provider-neutral validation path for a disposable
-hosted-demo PostgreSQL database. Its opt-in integration test starts the existing
-`hosted-demo` profile with externally supplied settings, verifies PostgreSQL
-connectivity and Flyway history, and runs read-only validation SQL after
-startup. Existing Flyway migrations may initialize schema and seed data, which
-is why the target must be disposable. The wrapper script requires every
-hosted-demo variable and reports only redacted set/missing status; normal tests
-skip the validation unless explicitly enabled.
+The completed and tagged v0.77 milestone added a manual, provider-neutral
+validation path for a disposable hosted-demo PostgreSQL database. Its opt-in
+integration test starts the existing `hosted-demo` profile with externally
+supplied settings, verifies PostgreSQL connectivity and Flyway history, and runs
+read-only validation SQL after startup. Existing Flyway migrations may
+initialize schema and seed data, which is why the target must be disposable.
+The wrapper script requires every hosted-demo variable and reports only redacted
+set/missing status; normal tests skip the validation unless explicitly enabled.
 
-This milestone does not deploy NEXORA or change local/default/`dev` behavior,
+This milestone did not deploy NEXORA or change local/default/`dev` behavior,
 frontend code, API paths or shapes, OpenAPI YAML, dependencies, workflows,
 database migrations, Docker/cloud/`.env` configuration, or domain logic. It
 contains no real secrets. NEXORA remains not production-ready.
 
-The completed and tagged v0.76 milestone added a backend-only `hosted-demo`
-Spring profile group and strict profile properties for a future hosted
-portfolio/demo MVP. The profile activates the existing `dev` PostgreSQL
+The previous completed and tagged v0.76 milestone added a backend-only
+`hosted-demo` Spring profile group and strict profile properties for a future
+hosted portfolio/demo MVP. The profile activates the existing `dev` PostgreSQL
 persistence path and `production` safety checks, requires provider-supplied
 `PORT`, database URL/user/password, independent JWT and refresh-token HMAC
 secrets, and exact trusted frontend origins, and forces secure refresh and CSRF
@@ -217,7 +216,7 @@ The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
 readiness of the project. The latest stable development milestone is
-`v0.76.0-backend-hosted-environment-configuration-foundation`.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
 
 ## Completed foundations
 

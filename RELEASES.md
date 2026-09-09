@@ -4,32 +4,32 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. Work in progress
-is `v0.77.0-hosted-postgresql-persistence-validation-foundation`.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
-## In-progress validation milestone — v0.77.0 Hosted PostgreSQL Persistence Validation foundation
+## Completed validation milestone — v0.77.0 Hosted PostgreSQL Persistence Validation foundation
 
-`v0.77.0-hosted-postgresql-persistence-validation-foundation` adds a manual,
-provider-neutral validation path for a disposable hosted-demo PostgreSQL
-database before deployment.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation` is the completed,
+tagged, latest stable development milestone. It added a manual, provider-neutral
+validation path for a disposable hosted-demo PostgreSQL database before
+deployment.
 
-- Adds an environment-gated Spring Boot integration test that starts the
+- Added an environment-gated Spring Boot integration test that starts the
   existing `hosted-demo` profile, verifies an external PostgreSQL connection,
   checks Flyway history, and runs only read-only validation SQL after startup.
   Existing Flyway migrations may initialize schema and seed data, so the target
   database must be disposable.
-- Adds `scripts/deployment/validate-hosted-postgres.sh` to require and redact
+- Added `scripts/deployment/validate-hosted-postgres.sh` to require and redact
   the hosted-demo environment variables before running only that opt-in test.
-- Changes no local/default/`dev` behavior, frontend, API/OpenAPI shape,
+- Changed no local/default/`dev` behavior, frontend, API/OpenAPI shape,
   dependency, workflow, migration, Docker/cloud/`.env` configuration, or live
   deployment. No real secrets are included. NEXORA remains not
   production-ready.
 
 ## Completed backend milestone — v0.76.0 Backend Hosted Environment Configuration foundation
 
-`v0.76.0-backend-hosted-environment-configuration-foundation` is the completed,
-tagged, latest stable development milestone. It added a strict backend-only
+`v0.76.0-backend-hosted-environment-configuration-foundation` is the previous
+completed and tagged development milestone. It added a strict backend-only
 hosted-demo configuration path for a future hosted portfolio/demo MVP.
 
 - Adds a `hosted-demo` profile group that composes the existing database-backed

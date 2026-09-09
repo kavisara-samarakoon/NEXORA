@@ -10,13 +10,13 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.76.0-backend-hosted-environment-configuration-foundation` is the completed,
-tagged, latest stable development milestone. No next milestone has started. It
-added a backend hosted-demo profile and fail-closed configuration validation
-without changing any endpoint path, method, query parameter, response shape,
-authentication rule, or OpenAPI YAML. The possible next candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
-started. The completed v0.72 work bounds process-local
+`v0.77.0-hosted-postgresql-persistence-validation-foundation` is the completed,
+tagged, latest stable development milestone. The previous completed
+hosted-environment configuration milestone is v0.76. v0.77 added manual hosted
+PostgreSQL validation tooling without changing any endpoint path, method, query
+parameter, response shape, authentication rule, or OpenAPI YAML. It did not
+deploy NEXORA or establish production readiness. The completed v0.72 work
+bounds process-local
 external-deals provider concurrency without changing endpoint paths, query
 parameters, response shapes, or OpenAPI YAML.
 GitHub CI proved that enforceable Dependency Review is unsupported by

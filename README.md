@@ -12,8 +12,8 @@ Sentinel assistant in one locally runnable project.
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
 > The latest stable development milestone is
-> `v0.76.0-backend-hosted-environment-configuration-foundation`. No next
-> milestone has started.
+> `v0.77.0-hosted-postgresql-persistence-validation-foundation`. A live public
+> deployment has not happened.
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -606,11 +606,17 @@ Smoke CI runs that same script against a locally started backend.
 ## Release milestones
 
 The latest stable development milestone is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. No next
-milestone has started.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
 
-The completed and tagged v0.76 milestone added a backend-only `hosted-demo`
-Spring profile. Activating it composes
+The completed and tagged v0.77 milestone added a manual, provider-neutral,
+opt-in validation path for a disposable hosted-demo PostgreSQL database. It
+checks hosted-profile startup, PostgreSQL connectivity, Flyway history, and
+basic SQL while keeping secrets redacted. It did not deploy NEXORA or validate
+a public production service; Neon PostgreSQL with a Render backend and Vercel
+frontend remains the planned hosted-demo path.
+
+The previous completed and tagged v0.76 milestone added a backend-only
+`hosted-demo` Spring profile. Activating it composes
 the existing database-backed `dev` persistence path with `production` safety
 checks, binds the server port from `PORT`, and requires external PostgreSQL,
 JWT, refresh-token HMAC, and exact trusted-origin settings. HTTPS refresh and
@@ -624,10 +630,6 @@ unchanged. No frontend or live deployment configuration, provider/cloud file,
 Docker or `.env` file, dependency, script/workflow, endpoint, query parameter,
 JSON response shape, or OpenAPI YAML change is included. NEXORA remains not
 production-ready.
-
-The possible next candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
-started.
 
 The completed and tagged v0.75 milestone created deployment planning
 documentation only for a future fully functional hosted portfolio/demo MVP. It
