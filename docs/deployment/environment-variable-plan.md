@@ -91,16 +91,25 @@ cookie Secure flags. It defaults both SameSite settings to `Lax`; use `None`
 only for an intentional cross-site topology while retaining Secure cookies and
 exact HTTPS origins.
 
-## Frontend public configuration category
+## Frontend routing and public configuration
 
 | Existing variable | Planned placeholder | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | `<backend-api-url>` | Browser-visible HTTPS API origin |
+| `NEXT_PUBLIC_API_BASE_URL` | `/` | Same-origin browser `/api/...` requests through the Next.js rewrite |
+| `NEXORA_API_BASE_URL` | `<backend-api-url>` | Server-side HTTPS Render origin, without `/api`; rewrite target and server-rendered API base |
 | `NEXT_PUBLIC_SITE_URL` | `<frontend-origin>` | Browser-visible canonical site/metadata origin |
 
-Every `NEXT_PUBLIC_*` value is visible in the built client. Only public origins
-belong in this category; secrets, private database addresses, internal service
+Set these on Vercel before building, and rebuild/redeploy after changes. Keep
+`NEXORA_API_BASE_URL` available at runtime too. It must target Render, never the
+frontend or an alias that routes back to it. See the
+[frontend routing guide](../../frontend/nexora-web-next/README.md#vercel-to-render-api-routing)
+for local proxy validation and configuration checks.
+
+Every `NEXT_PUBLIC_*` value is visible in the built client. Only the `/` routing
+selector and public origins belong in this category; secrets, private database addresses, internal service
 names, provider credentials, and administrative URLs do not.
+
+The server-side rewrite target must also contain no credentials or secrets.
 
 ## Local safety-control category
 

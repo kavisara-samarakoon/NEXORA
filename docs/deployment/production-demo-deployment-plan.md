@@ -72,9 +72,13 @@ inferred from this plan.
 - Build and serve `frontend/nexora-web-next` using its current supported Node.js
   toolchain and build command; do not treat the retained Vite prototype as the
   deployed application.
-- Supply `NEXT_PUBLIC_API_BASE_URL` with the selected HTTPS API origin and
-  `NEXT_PUBLIC_SITE_URL` with the canonical HTTPS frontend origin at the stage
-  required by the chosen host.
+- Set `NEXT_PUBLIC_API_BASE_URL=/` on Vercel so browsers call same-origin
+  `/api/...` paths. Set server-side `NEXORA_API_BASE_URL` to the HTTPS Render
+  backend origin without `/api`; Next.js rewrites API requests to that origin
+  and uses it directly for server-rendered API reads. Never target the frontend.
+  Set `NEXT_PUBLIC_SITE_URL` to the canonical HTTPS frontend origin. Configure
+  these before building and rebuild/redeploy after changes; retain the
+  server-side backend variable at runtime too.
 - Keep all `NEXT_PUBLIC_*` values public-safe. No credential, private hostname,
   or secret may be exposed through the frontend bundle.
 - Support direct navigation and refresh for `/`, `/deals`, `/giveaways`,

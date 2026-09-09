@@ -5,6 +5,17 @@ export function getApiBaseUrl(): string {
   const configuredBaseUrl = (
     process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
   ).trim();
+
+  // Browsers use the rewrite; server-rendered pages need an absolute fetch URL.
+  if (configuredBaseUrl === "/") {
+    if (typeof window !== "undefined") return "";
+    const backendOrigin = process.env.NEXORA_API_BASE_URL?.trim();
+    if (!backendOrigin) {
+      throw new Error("NEXORA_API_BASE_URL is required for same-origin API routing.");
+    }
+    return new URL(backendOrigin).origin;
+  }
+
   const normalizedBaseUrl = (configuredBaseUrl || DEFAULT_API_BASE_URL).replace(
     /\/+$/,
     "",

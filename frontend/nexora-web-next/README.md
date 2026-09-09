@@ -59,18 +59,59 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 | Variable | Purpose | Local fallback |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | Base URL for Spring Boot API requests | `http://localhost:8080` |
+| `NEXT_PUBLIC_API_BASE_URL` | API origin for direct requests, or `/` for same-origin browser requests | `http://localhost:8080` |
+| `NEXORA_API_BASE_URL` | Server-side backend origin for the optional API rewrite and server-rendered fetches | Unset; required when the public API base is `/` |
 | `NEXT_PUBLIC_SITE_URL` | Origin used for canonical URLs, Open Graph metadata, `robots.txt`, and `sitemap.xml` | `http://localhost:3000` |
 
-These values are public by design because Next.js exposes variables prefixed
-with `NEXT_PUBLIC_` to the browser. Do not place secrets in them.
+Variables prefixed with `NEXT_PUBLIC_` are exposed to the browser.
+`NEXORA_API_BASE_URL` is read on the server, but its rewrite destination is
+configuration, not a secret store. Use only an origin; never embed credentials.
+
+### Vercel to Render API routing
+
+Set these on the Vercel project rooted at `frontend/nexora-web-next` before building:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=/
+NEXORA_API_BASE_URL=https://your-backend.onrender.com
+NEXT_PUBLIC_SITE_URL=https://your-frontend.example.com
+```
+
+Browser requests such as `/api/auth/csrf` stay on the frontend origin.
+Next.js rewrites `/api/:path*` to `NEXORA_API_BASE_URL/api/:path*`, preserving
+endpoint paths and query strings. Server-rendered API reads use the backend
+origin directly because server-side `fetch` requires an absolute URL.
+
+Use the Render **origin without `/api`**, paths, query strings, fragments, or
+credentials. Remote targets must use HTTPS. Never point it at the frontend or
+an alias that routes back to the frontend: known site/Vercel origins and local
+frontend origins are rejected to prevent rewrite loops. Rebuild/redeploy after
+changing routing variables; keep the server-side variable available at runtime.
+
+Local development stays unchanged with the defaults above. To test proxy mode
+locally, set `NEXT_PUBLIC_API_BASE_URL=/` and
+`NEXORA_API_BASE_URL=http://localhost:8080`, then restart Next.js. An unset backend
+target disables the rewrite; selecting `/` without a target fails configuration.
+An explicit public backend origin continues to make direct requests.
+
+The rewrite adds no auth logic or cookie/header transformations. Keep the
+backend's trusted origins configured for the exact frontend HTTPS origin and
+retain its existing secure cookie and CSRF requirements.
+
+Validation: with the backend and Next.js running in local proxy mode, request
+`http://localhost:3000/api/health` and compare its status/body with
+`http://localhost:8080/api/health`. In browser Network tools, confirm auth calls
+use the frontend `/api/auth/...` paths. Before deployment sign-off, verify
+login, refresh, logout, and cookie handling through the hosted frontend.
+
+See [Next.js external rewrites](https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites#rewriting-to-an-external-url).
 
 ### Shared API client safety
 
 The shared `src/lib/api-client.ts` helper centralizes browser-visible
 `NEXT_PUBLIC_API_BASE_URL` resolution, trims configuration whitespace, removes
 trailing slashes, and retains `http://localhost:8080` as the safe local
-fallback. Frontend API modules use the same URL builder so endpoint paths and
+fallback unless `/` explicitly selects proxy mode. Frontend API modules use the same URL builder so endpoint paths and
 query strings keep their existing behavior.
 
 The helper can also read a trimmed `X-NEXORA-Request-ID` from backend response
