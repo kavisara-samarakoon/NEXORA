@@ -141,8 +141,8 @@ the boundary between current controls and future production requirements.
 
 | Path | Purpose |
 | --- | --- |
-| `frontend/nexora-web-next` | Primary Next.js frontend |
-| `frontend/nexora-web` | Earlier Vite prototype retained for reference |
+| `frontend/nexora-web-next` | Canonical active Next.js frontend; sole frontend deployment target |
+| `frontend/nexora-web` | Archived and frozen legacy Vite prototype/reference only |
 | `backend/nexora-api` | Spring Boot API, tests, JPA entities, and Flyway migrations |
 | `.github` | Backend, frontend, and security workflows plus Dependabot configuration |
 | `docs` | Requirements, architecture, design, security, research, and project-status notes |
@@ -151,6 +151,10 @@ the boundary between current controls and future production requirements.
 | `devops` | Local PostgreSQL Compose setup plus reserved deployment workspace |
 | `.devcontainer` | Optional local Java 17, Maven, Node.js 20, npm, Git, and Docker CLI development environment |
 | `research` | Final-year project and research material |
+
+Use `frontend/nexora-web-next` for all new frontend work and as the Vercel
+project root. Do not deploy `frontend/nexora-web` or use it for new feature work.
+See the [frontend directory guide](frontend/README.md) for details.
 
 Repository workflow and settings guidance is in
 [docs/security/repository-security-hardening.md](docs/security/repository-security-hardening.md).
