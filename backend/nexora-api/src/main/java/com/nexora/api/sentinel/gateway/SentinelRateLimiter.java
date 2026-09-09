@@ -4,19 +4,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.LinkedHashMap;
 
 @Component
 public class SentinelRateLimiter {
 
-    private static final long CLEANUP_INTERVAL = 64;
+    static final int MAX_WINDOWS = 10_000;
 
     private final SentinelAiProperties properties;
     private final Clock clock;
-    private final ConcurrentHashMap<Long, RequestWindow> windows = new ConcurrentHashMap<>();
-    private final AtomicLong requestCounter = new AtomicLong();
+    private final int maxWindows;
+    private final LinkedHashMap<Long, RequestWindow> windows = new LinkedHashMap<>();
 
     @Autowired
     public SentinelRateLimiter(SentinelAiProperties properties) {
@@ -24,11 +22,19 @@ public class SentinelRateLimiter {
     }
 
     SentinelRateLimiter(SentinelAiProperties properties, Clock clock) {
-        this.properties = properties;
-        this.clock = clock;
+        this(properties, clock, MAX_WINDOWS);
     }
 
-    public SentinelRateLimitResult check(long userId) {
+    SentinelRateLimiter(SentinelAiProperties properties, Clock clock, int maxWindows) {
+        if (maxWindows < 1) {
+            throw new IllegalArgumentException("maxWindows must be positive");
+        }
+        this.properties = properties;
+        this.clock = clock;
+        this.maxWindows = maxWindows;
+    }
+
+    public synchronized SentinelRateLimitResult check(long userId) {
         SentinelAiProperties.Safety safety = properties.getSafety();
         if (!safety.isRateLimitEnabled()) {
             return SentinelRateLimitResult.permitted();
@@ -39,29 +45,32 @@ public class SentinelRateLimiter {
         int maxRequests = safety.boundedRateLimitMaxRequests();
         cleanupExpiredWindows(nowMillis, windowMillis);
 
-        AtomicReference<SentinelRateLimitResult> result = new AtomicReference<>();
-        windows.compute(userId, (ignored, existing) -> {
-            if (existing == null || nowMillis - existing.startedAtMillis() >= windowMillis) {
-                result.set(SentinelRateLimitResult.permitted());
-                return new RequestWindow(nowMillis, 1);
+        RequestWindow existing = windows.get(userId);
+        if (existing == null) {
+            // Expired entries are already gone; insertion order breaks age ties deterministically.
+            if (windows.size() >= maxWindows) {
+                var oldest = windows.keySet().iterator();
+                oldest.next();
+                oldest.remove();
             }
-            if (existing.requestCount() < maxRequests) {
-                result.set(SentinelRateLimitResult.permitted());
-                return new RequestWindow(existing.startedAtMillis(), existing.requestCount() + 1);
-            }
+            windows.put(userId, new RequestWindow(nowMillis, 1));
+            return SentinelRateLimitResult.permitted();
+        }
+        if (existing.requestCount() < maxRequests) {
+            windows.put(userId, new RequestWindow(existing.startedAtMillis(), existing.requestCount() + 1));
+            return SentinelRateLimitResult.permitted();
+        }
 
-            long remainingMillis = windowMillis - (nowMillis - existing.startedAtMillis());
-            long retryAfterSeconds = Math.max(1, (remainingMillis + 999L) / 1_000L);
-            result.set(SentinelRateLimitResult.rejected(retryAfterSeconds));
-            return existing;
-        });
-        return result.get();
+        long remainingMillis = windowMillis - (nowMillis - existing.startedAtMillis());
+        long retryAfterSeconds = Math.max(1, (remainingMillis + 999L) / 1_000L);
+        return SentinelRateLimitResult.rejected(retryAfterSeconds);
+    }
+
+    synchronized int activeWindowCount() {
+        return windows.size();
     }
 
     private void cleanupExpiredWindows(long nowMillis, long windowMillis) {
-        if (requestCounter.incrementAndGet() % CLEANUP_INTERVAL != 0) {
-            return;
-        }
         windows.entrySet().removeIf(entry ->
                 nowMillis - entry.getValue().startedAtMillis() >= windowMillis);
     }

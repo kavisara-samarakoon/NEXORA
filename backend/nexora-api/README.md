@@ -450,12 +450,22 @@ tracks those requirements.
 ### Auth abuse-control foundation
 
 Register, login, refresh, logout, and repeated CSRF/origin rejection attempts
-use thread-safe, fixed-window counters before expensive auth work. The counters
-are keyed only by a small typed route/purpose enum; they never contain submitted
-email/username values, passwords, JWTs, refresh tokens or hashes, CSRF tokens,
-cookies, IP addresses, user agents, raw `Origin`/`Referer` values, API/provider
-keys, SMTP credentials, or database credentials. Expired windows are removed,
-and the enum key space bounds the map to five entries.
+use thread-safe, fixed-window counters before expensive auth work. Login and
+registration keys combine the typed operation with a SHA-256 digest of the
+normalized candidate identifier; other operations use a shared subject.
+The keys retain no raw submitted identifiers, passwords, tokens, cookies, IP
+addresses, or credentials.
+
+Auth counters and Sentinel's per-user rate windows each retain at most 10,000
+entries per process. Each enabled check removes expired windows first; admitting
+a new key at capacity evicts the oldest inserted window, with insertion order
+breaking time ties. Updating or rejecting an existing key does not extend its
+window or refresh its eviction order. Both retain their existing configured
+window duration (60 seconds by default, bounded to 1–3,600 seconds), attempt
+limits, and `Retry-After` calculations. Cleanup and admission are synchronized;
+there are no cleanup threads or new environment variables. An evicted key
+starts a fresh window on its next request, so these memory safeguards do not
+provide reliable abuse protection under deliberate key churn.
 
 After a purpose reaches its configured attempts per window, the API returns
 `429 Too Many Requests`, sets `Retry-After`, and returns:
@@ -474,12 +484,19 @@ After a purpose reaches its configured attempts per window, the API returns
 Each limited request records a best-effort `AUTH_RATE_LIMITED` event with only a
 typed route reason code and a null user ID. Event-store failure remains
 suppressed and does not replace the safe 429 behavior or break normal auth
-flows. These controls are local-development safeguards only: they are global
-within one backend process, reset on restart, and are neither distributed nor
-production-grade. Production still requires a distributed rate limiter,
+flows. These controls are process-local safeguards: they reset on restart and
+are neither distributed nor production-grade. Production still requires a distributed rate limiter,
 bot/credential-stuffing strategy, monitoring, alerting, privacy/retention
 policy, and incident-response workflow. No public abuse-control API or frontend
 behavior was added.
+
+The external-deals cache already caps query entries at 128 with TTL cleanup;
+provider calls have a four-call process-local concurrency budget. The `!dev`
+account, refresh-session, wishlist, price-history, and notification-preference
+stores remain demo persistence, without a global retention cap. Evicting those
+records would discard user state. The `hosted-demo` profile includes `dev` and
+uses PostgreSQL for those stores. These safeguards do not add a distributed
+production cache or session layer.
 
 ## Personal wishlist
 
