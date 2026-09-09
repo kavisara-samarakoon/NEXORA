@@ -58,7 +58,7 @@ export default function Sidebar() {
       <button
         className={`sidebar-scrim${isOpen ? " sidebar-scrim--visible" : ""}`}
         type="button"
-        aria-hidden="true"
+        aria-label="Close navigation"
         tabIndex={-1}
         onClick={() => setIsOpen(false)}
       />
