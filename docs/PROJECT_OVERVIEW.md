@@ -10,10 +10,15 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest stable development milestone is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. No next
-milestone has started.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
 
-The completed and tagged v0.76 milestone introduced a backend-only
+The completed and tagged v0.77 milestone added an opt-in, provider-neutral
+hosted PostgreSQL validation test and redacting wrapper script for disposable
+hosted-demo databases. This completed the validation foundation, not a live
+deployment or production-readiness review. Neon, Render, and Vercel remain the
+planned database, backend, and frontend hosted-demo path.
+
+The previous completed and tagged v0.76 milestone introduced a backend-only
 `hosted-demo` configuration path for the future hosted portfolio/demo MVP. It
 combines the existing `dev` PostgreSQL profile with `production` safety
 validation, requires the hosting environment to supply the port, database
@@ -27,10 +32,6 @@ query, and JSON behavior remain unchanged. No frontend, OpenAPI YAML,
 dependency, script/workflow, Docker/cloud/`.env`, provider deployment
 configuration, or live deployment is included. NEXORA remains not
 production-ready.
-
-The possible next candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
-started.
 
 The completed and tagged v0.75 milestone created documentation-only planning
 for a future fully functional hosted portfolio/demo MVP: the primary frontend,

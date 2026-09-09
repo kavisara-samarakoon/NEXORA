@@ -6,12 +6,11 @@ This document is the completed planning foundation from the tagged v0.75
 milestone
 `v0.75.0-production-demo-deployment-planning-foundation`.
 The latest stable development milestone is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. No next
-milestone has started. The possible next candidate is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`. It has not
-started. The plan does not select a hosting vendor or claim that NEXORA is
-deployed or production-ready. v0.76 added backend environment configuration
-only; it created no frontend, provider/cloud, or live deployment configuration.
+`v0.77.0-hosted-postgresql-persistence-validation-foundation`; the previous
+milestone is `v0.76.0-backend-hosted-environment-configuration-foundation`.
+The plan does not claim that NEXORA is deployed or production-ready. Neon
+PostgreSQL, a Render backend, and a Vercel frontend are the planned hosted-demo
+path, but no live public deployment is claimed.
 
 The deployment goal is a public, fully functional hosted portfolio/demo MVP
 that a reviewer can use through HTTPS without installing the project locally.
@@ -61,11 +60,12 @@ owner, database owner, secret owner, and rollback operator. Prefer the smallest
 topology that supports the browser cookie model and can be understood and
 maintained by the project owner.
 
-No provider is selected here. Candidate platforms must be evaluated using
-their current documentation for runtime compatibility, region availability,
-persistent storage, managed secrets, log redaction, TLS, backups, idle/restart
-behavior, resource limits, and deletion/export procedures. Pricing and service
-guarantees must not be inferred from this plan.
+The planned provider path is Vercel for the frontend, Render for the backend,
+and Neon for PostgreSQL. Their current documentation must still be reviewed for
+runtime compatibility, region availability, persistent storage, managed
+secrets, log redaction, TLS, backups, idle/restart behavior, resource limits,
+and deletion/export procedures. Pricing and service guarantees must not be
+inferred from this plan.
 
 ## Frontend hosting requirements
 
@@ -110,8 +110,9 @@ guarantees must not be inferred from this plan.
 
 - Use a persistent PostgreSQL service compatible with the current migrations.
   The v0.76 `hosted-demo` profile activates the database-backed `dev` profile
-  bridge plus production-like configuration validation; live persistence still
-  requires v0.77 validation against a selected hosted PostgreSQL service.
+  bridge plus production-like configuration validation. The completed v0.77
+  foundation supplies the manual validation path; running it against a
+  disposable Neon hosted-demo database remains a pre-deployment readiness step.
 - Restrict database network access to approved backend paths and use a
   least-privilege application identity.
 - Require the selected service's supported encrypted connection mode and verify

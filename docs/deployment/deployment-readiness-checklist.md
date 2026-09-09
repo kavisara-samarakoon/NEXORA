@@ -4,8 +4,8 @@
 
 This is a planning gate for a future fully functional hosted demo. v0.75 added
 planning only; the completed and tagged v0.76 milestone added backend
-environment configuration only. The in-progress v0.77 milestone adds manual
-validation against a disposable hosted-demo PostgreSQL database; it does not
+environment configuration only. The completed and tagged v0.77 milestone added
+manual validation for a disposable hosted-demo PostgreSQL database; it did not
 complete a live deployment. Every checked item must link to current evidence,
 an owner, and an observation date. “Not applicable” requires a written reason;
 it must not conceal a failed security, persistence, or browser requirement.
@@ -156,7 +156,8 @@ it must not conceal a failed security, persistence, or browser requirement.
 - [ ] Record that auth abuse limits, external-deals cache/budget, Sentinel limits,
   and relevant schedulers are process-local and reset or duplicate by instance.
 - [ ] Record that production-like persistence currently reuses the `dev` profile
-  bridge pending a separate hosted-environment configuration milestone.
+  bridge; the completed v0.76 configuration and v0.77 validation foundations do
+  not provide production operations, backup, restore, or durability guarantees.
 - [ ] Record incomplete account verification/recovery and complete session
   administration/revocation boundaries.
 - [ ] Record missing distributed coordination, formal monitoring/alerting,

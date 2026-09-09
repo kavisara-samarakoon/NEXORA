@@ -7,9 +7,13 @@ project's academic, portfolio, and product goals evolve.
 ## Near-term polish
 
 - Treat the completed and tagged
-  `v0.76.0-backend-hosted-environment-configuration-foundation` milestone as
-  the latest stable development milestone. No next milestone has started.
-- Preserve its strict backend-only `hosted-demo` profile path for provider port
+  `v0.77.0-hosted-postgresql-persistence-validation-foundation` milestone as
+  the latest stable development milestone.
+- Preserve its manual, provider-neutral, opt-in validation path for disposable
+  hosted-demo PostgreSQL databases. Completion of that foundation is not a live
+  deployment or production-readiness claim.
+- Preserve the previous completed v0.76 strict backend-only `hosted-demo`
+  profile path for provider port
   binding, persistent PostgreSQL configuration, external auth secrets, exact
   HTTPS origins, and secure cookies without treating it as a deployment or a
   frontend/API contract change.
@@ -18,8 +22,6 @@ project's academic, portfolio, and product goals evolve.
   live smoke/browser QA, readiness gates, rollback, and truthful public wording.
   It selected no platform, added no runtime deployment configuration, and did
   not deploy NEXORA.
-- Consider `v0.77.0-hosted-postgresql-persistence-validation-foundation` only as
-  a possible next candidate. It has not started.
 - Preserve the completed v0.74 method-aware public allowlist, authentication for
   `/api/auth/me` and `/api/me/**`, and default-deny behavior for unknown,
   unmatched, or future backend routes. Preserve endpoint paths, query
@@ -129,8 +131,9 @@ project's academic, portfolio, and product goals evolve.
   Grafana, OpenTelemetry, and external integrations remain deliberately
   unselected; the local v0.48/v0.49 logging foundations and v0.50 reviewer
   runbook are not substitutes for them.
-- Select a target topology, hosting model, networking boundary, and operational
-  ownership model.
+- Use Neon PostgreSQL, a Render backend, and a Vercel frontend as the planned
+  hosted-demo path while keeping provider configuration, credentials, live
+  validation, deployment, and operational ownership subject to explicit review.
 - Define backend and frontend application image requirements separately from
   the existing local PostgreSQL Compose and devcontainer tooling.
 - Establish environment-specific configuration, managed secret storage,
