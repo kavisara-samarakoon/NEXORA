@@ -314,7 +314,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Scope | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | Frontend | Backend origin; local default is `http://localhost:8080` |
+| `NEXT_PUBLIC_API_BASE_URL` | Frontend public | Backend origin; local default is `http://localhost:8080`; set `/` for same-origin proxy routing on Vercel |
+| `NEXORA_API_BASE_URL` | Frontend server / API smoke script | Backend origin; required for frontend proxy mode, using the HTTPS Render origin without `/api` |
 | `NEXT_PUBLIC_SITE_URL` | Frontend | Frontend origin used for metadata; local default is `http://localhost:3000` |
 | `NEXORA_DB_URL` | Backend `dev` | PostgreSQL JDBC URL |
 | `NEXORA_DB_USERNAME` | Backend `dev` | PostgreSQL username |
