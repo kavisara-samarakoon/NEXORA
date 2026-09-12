@@ -18,6 +18,7 @@ const PRIMARY_LINKS = [
   { href: "/wishlist", label: "Wishlist" },
   { href: "/sentinel", label: "Sentinel" },
   { href: "/security", label: "Security" },
+  { href: "/settings", label: "Settings" },
 ] as const;
 
 export default function CinematicTopNav({ className }: { className?: string }) {
