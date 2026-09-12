@@ -1045,3 +1045,41 @@
     grid-column: 1;
   }
 }
+
+/* v0.87 polish: lock Wishlist as the reference NEXORA cyan-orange title language */
+.scene :global(.wl-hero h1),
+.scene :global(.wl-hero h1 span) {
+  background: linear-gradient(100deg, #00d4ff 0%, #20d8ff 26%, #f7f3ec 44%, #ff7a00 70%, #ff9b2f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 34px rgba(0, 212, 255, 0.12), 0 0 42px rgba(255, 122, 0, 0.14);
+}
+
+/* v0.87 polish: animated Wishlist title gradient */
+.scene :global(.wl-hero h1),
+.scene :global(.wl-hero h1 span) {
+  background-size: 260% 100%;
+  animation: nexoraHeroGradientFlow 7.5s ease-in-out infinite alternate;
+}
+
+@keyframes nexoraHeroGradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 70% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene :global(.wl-hero h1),
+  .scene :global(.wl-hero h1 span) {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
