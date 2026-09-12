@@ -1,0 +1,9 @@
+# Allow only the Maven descriptor and application source into the build context.
+**
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+**/.env*
+**/*.pem
+**/*.key

@@ -3,9 +3,9 @@
 
 # Environment files
 .env
-.env.local
-.env.development
-.env.production
+.env.*
+!.env.example
+!.env.*.example
 
 # Node / Frontend
 node_modules/
@@ -36,6 +36,9 @@ yarn-error.log*
 # Database
 *.db
 *.sqlite
+
+# Python verification scripts
+__pycache__/
 
 # Temporary files
 tmp/

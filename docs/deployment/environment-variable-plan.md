@@ -1,5 +1,8 @@
 # NEXORA hosted-demo environment variable plan
 
+For executable provider setup, use the [Vercel / Render / Neon guide](production-demo-deployment-plan.md)
+and the backend [env checklist](../../backend/nexora-api/.env.hosted-demo.example).
+
 ## Status and rules
 
 This is a variable-category and ownership plan, not an environment file or
@@ -28,7 +31,7 @@ pull requests, screenshots, shell history, or logs.
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | Set to `hosted-demo`; the profile group activates the existing `dev` persistence path and `production` safety checks. | Public-safe configuration |
 | `PORT` | `<set-in-hosting-provider>`; required and bound to `server.port` with no hosted fallback. | Public-safe provider setting |
-| Java runtime | Select a supported Java 17-or-newer runtime and pin it through future deployment configuration. | Public-safe configuration |
+| Java runtime | The backend Dockerfile builds and runs on Eclipse Temurin Java 17. | Public-safe configuration |
 
 The selected host must distinguish build-time settings from runtime settings,
 support graceful restart, and expose the backend only through HTTPS. v0.76 does
@@ -52,6 +55,14 @@ ownership, backup/restore ownership, database name, and region/network placement
 with the chosen service. Do not copy a provider dashboard URL containing
 credentials into repository documentation.
 
+For Neon, use its **direct** hostname (without `-pooler`) because the same
+connection is used for startup migrations. Use
+`jdbc:postgresql://<direct-host>:5432/<database>?sslmode=require&channelBinding=require`
+with username/password in separate variables. JDBC uses `channelBinding`, not
+the libpq `channel_binding` spelling. Certificate verification modes require
+matching trust configuration. See [Neon Java](https://neon.com/docs/guides/java)
+and [migration connection guidance](https://neon.com/docs/connect/connection-pooling).
+
 ## Authentication, session, and JWT category
 
 | Existing variable | Planned placeholder or decision | Purpose |
@@ -63,7 +74,7 @@ credentials into repository documentation.
 | `NEXORA_REFRESH_TOKEN_COOKIE_NAME` | `<reviewed-setting>` | Cookie name; preserve the current name unless migration is planned |
 | `NEXORA_REFRESH_TOKEN_COOKIE_PATH` | `/api/auth` | Current narrow path required by the production safety guard |
 | `NEXORA_REFRESH_TOKEN_COOKIE_SECURE` | `true` | HTTPS-only refresh cookie requirement |
-| `NEXORA_REFRESH_TOKEN_COOKIE_SAME_SITE` | `<reviewed-setting>` | Select after same-site/cross-site topology review |
+| `NEXORA_REFRESH_TOKEN_COOKIE_SAME_SITE` | `Lax` | Retain for the Vercel same-origin `/api` proxy |
 
 The two secret values must be independently generated and managed. They must
 not reuse database, provider, SMTP, or other environment credentials. The
@@ -80,16 +91,15 @@ placeholder, equal, or missing values.
 | `NEXORA_AUTH_CSRF_HEADER_NAME` | `X-NEXORA-CSRF` | Preserve the current frontend/backend header contract |
 | `NEXORA_AUTH_CSRF_COOKIE_PATH` | `/api/auth` | Keep the CSRF cookie narrowly scoped |
 | `NEXORA_AUTH_CSRF_COOKIE_SECURE` | `true` | HTTPS-only CSRF cookie requirement |
-| `NEXORA_AUTH_CSRF_COOKIE_SAME_SITE` | `<reviewed-setting>` | Align with the selected browser topology |
+| `NEXORA_AUTH_CSRF_COOKIE_SAME_SITE` | `Lax` | Retain for the Vercel same-origin `/api` proxy |
 | `NEXORA_AUTH_CSRF_EXPIRATION_MINUTES` | `<reviewed-setting>` | CSRF token/cookie lifetime |
 | `NEXORA_AUTH_TRUSTED_ORIGINS` | `<frontend-origin>` | Exact HTTPS origin allowlist; never wildcard or localhost |
 
 Preview deployments must not be added as a broad wildcard. Each additional
 origin requires an explicit need, lifecycle owner, and removal plan. The
 `hosted-demo` profile has no trusted-origin fallback and forces CSRF plus both
-cookie Secure flags. It defaults both SameSite settings to `Lax`; use `None`
-only for an intentional cross-site topology while retaining Secure cookies and
-exact HTTPS origins.
+cookie Secure flags. Keep both SameSite settings at `Lax` for the selected
+Vercel proxy topology; browser API calls stay on the frontend origin.
 
 ## Frontend routing and public configuration
 

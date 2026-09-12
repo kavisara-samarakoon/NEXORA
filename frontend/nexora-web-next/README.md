@@ -12,7 +12,7 @@ required to run this application.
 
 ## Requirements
 
-- Node.js 20.9 or newer
+- Node.js 20.9 or newer (Next.js minimum); select Node.js 24.x for the hosted demo
 - npm
 - The Spring Boot backend for authentication, personal wishlist operations, and
   live API data
@@ -103,6 +103,19 @@ Validation: with the backend and Next.js running in local proxy mode, request
 `http://localhost:8080/api/health`. In browser Network tools, confirm auth calls
 use the frontend `/api/auth/...` paths. Before deployment sign-off, verify
 login, refresh, logout, and cookie handling through the hosted frontend.
+
+Vercel setup: framework **Next.js**, root `frontend/nexora-web-next`, install
+`npm ci`, build `npm run build`, and the default framework output setting.
+Select Node.js 24.x in project settings; this is a currently supported Vercel
+runtime. [Vercel Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
+
+From the repository root, with the intended three frontend variables exported,
+run `python3 scripts/deployment/check-hosted-demo.py env frontend` before
+copying them into Vercel. This offline check does not load `.env` files or
+prove backend connectivity. Follow the
+[hosted setup and smoke commands](../../docs/deployment/production-demo-deployment-plan.md)
+for Render/Neon settings and browser session verification. A successful frontend
+build alone does not prove the API is reachable.
 
 See [Next.js external rewrites](https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites#rewriting-to-an-external-url).
 

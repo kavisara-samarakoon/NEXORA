@@ -40,15 +40,18 @@ contact application services.
 the documented NEXORA API flow. It is intended for local reviewers, lecturers,
 students, and developers. It does not start the backend automatically.
 
-This script is local validation only. It is not a load test, security scanner,
-deployment check, production monitor, or production-readiness claim.
+The default target is local. An explicit non-local override can exercise an
+owned, disposable hosted demo; see the [hosted smoke commands](../docs/deployment/production-demo-deployment-plan.md#verify-before-sharing).
+It is not a load test, security scanner, production monitor, or production-readiness claim.
 
 ## What it checks
 
 - Public welcome, health, catalog, dashboard, security-demo, and Sentinel-demo
   endpoints.
-- CSRF cookie/header acquisition, reviewer account registration, login, and
-  authenticated account lookup.
+- CSRF cookie/header acquisition, reviewer account registration, login, refresh
+  cookie rotation, and account lookup using the refreshed access token.
+- Logout followed by a denied refresh using the updated cookie jar. Browser
+  SameSite/Secure behavior still requires browser QA.
 - Protected personal wishlist, alert-event, notification-preference, and local
   Sentinel insight endpoints.
 - An unauthenticated 401 response and a Sentinel validation response using the
@@ -166,7 +169,8 @@ remain on localhost.
 ## Safety notes
 
 - The script generates a unique fake `reviewer+<timestamp>@example.com`
-  identity and never asks for real account credentials.
+  identity with a randomly generated, unlogged password; it never asks for real
+  account credentials.
 - Access tokens are kept in memory and displayed only as a short masked prefix.
 - Cookies are kept in a temporary cookie jar whose contents are never printed.
 - Temporary response-body, response-header, and cookie files are deleted
@@ -178,6 +182,31 @@ remain on localhost.
   reviewer account.
 - Do not use the script against a production service or with real personal
   information.
+
+## Hosted deployment checks
+
+From the repository root (Python 3 standard library; no dependencies added):
+
+```bash
+# Separate terminal environments matching the intended provider variables:
+python3 scripts/deployment/check-hosted-demo.py env frontend
+python3 scripts/deployment/check-hosted-demo.py env backend
+python3 -m unittest discover -s scripts/deployment/tests -v
+```
+
+The env check reads exported variables only, never prints values, and sends no
+requests. It checks the documented HTTPS same-origin topology, required settings,
+secret lengths, and direct Neon JDBC/TLS shape. It deliberately accepts only
+`sslmode`/`channelBinding` JDBC parameters for this setup; backend startup guards
+remain authoritative. Do not run it with placeholder values from the examples.
+
+`check-hosted-demo.py public --frontend-url ... --backend-url ...` makes only
+GET requests, follows no redirects, and accepts empty catalog arrays. It checks
+production/persistence health labels and protected wishlist denial on both
+origins. It cannot prove live SQL connectivity, catalog freshness, or browser
+cookies. Use the existing opt-in `validate-hosted-postgres.sh` and the
+[hosted setup guide](../docs/deployment/production-demo-deployment-plan.md) for those
+remaining checks. No script loads `.env` files automatically.
 
 ## Troubleshooting
 

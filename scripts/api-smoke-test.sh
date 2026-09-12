@@ -330,7 +330,12 @@ PY
 readonly REVIEWER_EMAIL="reviewer+${SMOKE_TIMESTAMP}@example.com"
 readonly REVIEWER_USERNAME="reviewer_${SMOKE_TIMESTAMP}"
 readonly REVIEWER_DISPLAY_NAME="Reviewer Smoke Test"
-readonly REVIEWER_PASSWORD="ChangeMeLocalOnly123!"
+readonly REVIEWER_PASSWORD="$(python3 - <<'PY_PASSWORD'
+import secrets
+
+print(secrets.token_urlsafe(24))
+PY_PASSWORD
+)"
 
 printf 'NEXORA API smoke test\n'
 printf 'Base URL: %s\n' "${BASE_URL}"
@@ -422,6 +427,20 @@ fi
 ACCESS_TOKEN="${LOGIN_ACCESS_TOKEN}"
 info "Login access token: $(masked_token "${ACCESS_TOKEN}")"
 
+request POST "/api/auth/refresh" \
+    --cookie "${COOKIE_JAR}" \
+    --cookie-jar "${COOKIE_JAR}" \
+    --header "Origin: ${SMOKE_ORIGIN}" \
+    --header "X-NEXORA-CSRF: ${CSRF_TOKEN}"
+assert_status 200 "Refresh session through cookie jar"
+assert_json_document "${RESPONSE_BODY}" "Refresh session"
+assert_generated_request_id_header "Refresh session"
+if ! ACCESS_TOKEN="$(extract_json_field "${RESPONSE_BODY}" "token")" \
+    || [[ -z "${ACCESS_TOKEN}" ]]; then
+    fail "Refresh response did not contain a usable access token."
+fi
+check_protected_get "/api/auth/me" "Account with refreshed access token" "${ACCESS_TOKEN}"
+
 printf '\n'
 info "Checking protected endpoints"
 check_protected_get "/api/me/wishlist" "Personal wishlist" "${ACCESS_TOKEN}"
@@ -476,5 +495,23 @@ VALIDATION_PATH="$(extract_json_field "${RESPONSE_BODY}" "path")" \
     || fail "Validation error body did not report status 400."
 [[ "${VALIDATION_PATH}" == "/api/me/sentinel/insight" ]] \
     || fail "Validation error path did not match the request path."
+
+printf '\n'
+info "Checking logout and post-logout refresh denial"
+request POST "/api/auth/logout" \
+    --cookie "${COOKIE_JAR}" \
+    --cookie-jar "${COOKIE_JAR}" \
+    --header "Origin: ${SMOKE_ORIGIN}" \
+    --header "X-NEXORA-CSRF: ${CSRF_TOKEN}"
+assert_status 204 "Logout reviewer session"
+assert_generated_request_id_header "Logout reviewer session"
+request POST "/api/auth/refresh" \
+    --cookie "${COOKIE_JAR}" \
+    --cookie-jar "${COOKIE_JAR}" \
+    --header "Origin: ${SMOKE_ORIGIN}" \
+    --header "X-NEXORA-CSRF: ${CSRF_TOKEN}"
+assert_status 401 "Refresh denied after logout"
+assert_error_contract "Refresh denied after logout"
+assert_generated_request_id_header "Refresh denied after logout"
 
 printf '\nNEXORA API smoke test completed successfully.\n'

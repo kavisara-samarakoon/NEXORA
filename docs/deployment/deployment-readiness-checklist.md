@@ -10,6 +10,9 @@ complete a live deployment. Every checked item must link to current evidence,
 an owner, and an observation date. “Not applicable” requires a written reason;
 it must not conceal a failed security, persistence, or browser requirement.
 
+Use the [provider setup and verification commands](production-demo-deployment-plan.md)
+for the concrete Vercel / Render / Neon path; record evidence here after running them.
+
 ## Repository state
 
 - [ ] Candidate source commit and intended milestone/tag are recorded.
@@ -38,7 +41,9 @@ it must not conceal a failed security, persistence, or browser requirement.
   shutdown, and restart behavior are documented and tested.
 - [ ] `SPRING_PROFILES_ACTIVE=hosted-demo` and the provider-supplied `PORT` are
   configured; the active profiles include `hosted-demo`, `dev`, and
-  `production`.
+  `production`. Public health sanitizes `hosted-demo` to `custom`; verify the
+  production runtime, PostgreSQL data mode, and active auth guard labels.
+- [ ] Both offline env checks and the GET-only hosted checker pass.
 - [ ] The hosted-demo profile starts only with external database/auth/origin
   settings; all production-like guards pass without local defaults,
   placeholder values, embedded JDBC credentials, or wildcard origins.
