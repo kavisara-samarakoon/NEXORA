@@ -10,26 +10,12 @@ import {
   type GiveawayTag,
 } from "@/data/giveaways";
 import type { GiveawaysResult } from "@/lib/api";
+import styles from "@/components/GiveawaysProduct.module.css";
 
-const giveawayNetworkIcons = {
-  sync: "🔄",
-  globe: "🌐",
-  link: "🔗",
-  bell: "🔔",
-} as const;
-
-function tagDetails(
-  tag: GiveawayTag,
-): { label: string; icon: "clock" | "spark" | "flame" } {
-  if (tag === "ending-soon") return { label: "Ending soon", icon: "clock" };
-  if (tag === "new") return { label: "New", icon: "spark" };
-  return { label: "Popular", icon: "flame" };
-}
-
-function TagIcon({ icon }: { icon: "clock" | "spark" | "flame" }) {
-  if (icon === "clock") return <span aria-hidden="true">⏰</span>;
-  if (icon === "spark") return <span aria-hidden="true">✨</span>;
-  return <span aria-hidden="true">🔥</span>;
+function tagLabel(tag: GiveawayTag): string {
+  if (tag === "ending-soon") return "Ending soon";
+  if (tag === "new") return "New";
+  return "Popular";
 }
 
 function GiveawayCard({
@@ -47,82 +33,95 @@ function GiveawayCard({
   onToggleGuide: (giveawayId: number) => void;
   onToggleReminder: (giveawayId: number) => void;
 }) {
-  const tag = tagDetails(giveaway.tag);
   const isEndingSoon = giveaway.daysRemaining < 2;
-  const progressTone = giveaway.claimed >= 80 ? "hot" : giveaway.claimed >= 50 ? "warm" : "cool";
+  const progressValue = Math.max(0, Math.min(100, giveaway.claimed));
+  const progressTone =
+    progressValue >= 80
+      ? styles.progressHot
+      : progressValue >= 50
+        ? styles.progressWarm
+        : styles.progressCool;
   const titleId = `giveaway-title-${giveaway.id}`;
   const guideId = `giveaway-guide-${giveaway.id}`;
 
   return (
-    <article className={`ga-card ga-card--${giveaway.platform}`} aria-labelledby={titleId}>
-      <div className={`ga-card__accent ga-card__accent--${giveaway.platform}`} />
-      <div className="ga-card__header">
-        <span className={`ga-card__platform ga-card__platform--${giveaway.platform}`}>
-          {giveaway.platformLabel}
+    <article className={styles.card} aria-labelledby={titleId}>
+      <div className={styles.cardAccent} aria-hidden="true" />
+
+      <div className={styles.cardHeader}>
+        <span className={styles.platform}>{giveaway.platformLabel}</span>
+        <span className={styles.tag}>{tagLabel(giveaway.tag)}</span>
+      </div>
+
+      <h2 className={styles.cardTitle} id={titleId}>
+        {giveaway.title}
+      </h2>
+      <p className={styles.genre}>{giveaway.genre}</p>
+
+      <div className={styles.priceRow}>
+        <span className={styles.priceFree}>Free</span>
+        <del className={styles.priceOriginal}>{giveaway.originalPrice}</del>
+      </div>
+
+      <div className={isEndingSoon ? `${styles.timerRow} ${styles.timerUrgent}` : styles.timerRow}>
+        <span className={styles.timerLabel}>
+          <span className={styles.timerDot} aria-hidden="true" />
+          {giveaway.timer} remaining
         </span>
-        <span className={`ga-card__tag ga-card__tag--${giveaway.tag}`}>
-          <TagIcon icon={tag.icon} />
-          {tag.label}
+        <span className={isPreview ? `${styles.statusBadge} ${styles.statusPreview}` : styles.statusBadge}>
+          {isPreview ? "Preview" : "API feed"}
         </span>
       </div>
 
-      <h2 id={titleId}>{giveaway.title}</h2>
-      <p className="ga-card__genre">{giveaway.genre}</p>
-      <div className="ga-card__price">
-        <strong>Free</strong>
-        <del>{giveaway.originalPrice}</del>
-      </div>
-
-      <div className={`ga-card__timer${isEndingSoon ? " ga-card__timer--urgent" : ""}`}>
-        <span aria-hidden="true">⏱️</span>
-        <span>{giveaway.timer} remaining</span>
-        <span className={`ga-card__status${isPreview ? " ga-card__status--preview" : ""}`}><span aria-hidden="true" /> {isPreview ? "Preview" : "API feed"}</span>
-      </div>
-
-      <div className="ga-card__progress">
-        <div><span>Claimed</span><strong>{giveaway.claimed}%</strong></div>
+      <div className={styles.progress}>
+        <div className={styles.progressLabel}>
+          <span>Claimed</span>
+          <strong>{giveaway.claimed}%</strong>
+        </div>
         <div
-          className="ga-card__progress-track"
+          className={styles.progressTrack}
           role="progressbar"
           aria-label={`${giveaway.title} claim progress`}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={giveaway.claimed}
+          aria-valuenow={progressValue}
           aria-valuetext={`${giveaway.claimed}% claimed`}
         >
-          <span className={`ga-card__progress-fill ga-card__progress-fill--${progressTone}`} style={{ width: `${giveaway.claimed}%` }} />
+          <span className={`${styles.progressFill} ${progressTone}`} style={{ width: `${progressValue}%` }} />
         </div>
       </div>
 
-      {guideIsOpen && (
-        <div className="ga-card__guide" id={guideId} role="status">
+      {guideIsOpen ? (
+        <div className={styles.guidePanel} id={guideId} role="status">
           {isPreview
             ? `Confirm this preview entry with ${giveaway.platformLabel} before attempting to claim it.`
             : `Open ${giveaway.platformLabel}, sign in, and claim this title before the window closes.`}
         </div>
-      )}
+      ) : null}
 
-      <div className="ga-card__actions">
+      <div className={styles.actions}>
         <button
-          className={`ga-card__claim ga-card__claim--${giveaway.platform}`}
+          className={guideIsOpen ? `${styles.claimButton} ${styles.claimButtonOpen}` : styles.claimButton}
           type="button"
           aria-controls={guideIsOpen ? guideId : undefined}
           aria-expanded={guideIsOpen}
           aria-label={`${guideIsOpen ? "Hide" : "Show"} claim guide for ${giveaway.title}`}
           onClick={() => onToggleGuide(giveaway.id)}
         >
-          <span aria-hidden="true">📋</span>
-          Claim Guide
+          Claim guide
         </button>
         <button
-          className={reminderIsSet ? "ga-card__reminder ga-card__reminder--active" : "ga-card__reminder"}
+          className={
+            reminderIsSet
+              ? `${styles.reminderButton} ${styles.reminderButtonActive}`
+              : styles.reminderButton
+          }
           type="button"
           aria-pressed={reminderIsSet}
           aria-label={`${reminderIsSet ? "Remove" : "Add"} local reminder for ${giveaway.title}`}
           onClick={() => onToggleReminder(giveaway.id)}
         >
-          <span aria-hidden="true">🔔</span>
-          {reminderIsSet ? "Reminder Set" : "Add Reminder"}
+          {reminderIsSet ? "Reminder set" : "Add reminder"}
         </button>
       </div>
     </article>
@@ -130,48 +129,92 @@ function GiveawayCard({
 }
 
 function GiveawayNetworkStatus({ source, giveaways }: GiveawaysResult) {
-  const platformAvailability = Array.from(new Set(giveaways.map((item) => item.platform))).map((platform) => {
-    const entries = giveaways.filter((item) => item.platform === platform);
-    return { platform, name: entries[0].platformLabel, value: Math.round(entries.length / giveaways.length * 100) };
-  });
   const isApiSource = source === "api";
+  const platformAvailability = useMemo(() => {
+    const totalEntries = Math.max(giveaways.length, 1);
+    return Array.from(new Set(giveaways.map((item) => item.platform))).map((platform) => {
+      const entries = giveaways.filter((item) => item.platform === platform);
+      return {
+        platform,
+        name: entries[0]?.platformLabel ?? platform,
+        value: Math.round((entries.length / totalEntries) * 100),
+      };
+    });
+  }, [giveaways]);
+
   const items = [
-    { label: "Giveaway Sync", value: isApiSource ? "Backend API feed" : "Static fallback preview", badge: isApiSource ? "API" : "Fallback", tone: "orange", icon: "sync" },
-    { label: "Data Source", value: isApiSource ? "Spring Boot" : "Static dataset", badge: isApiSource ? "API" : "Static", tone: "blue", icon: "globe" },
-    { label: "Claim Links", value: "Safe redirects planned", badge: "Planned", tone: "green", icon: "link" },
-    { label: "Alerts", value: "Local reminders active", badge: "Local", tone: "purple", icon: "bell" },
+    {
+      label: "Giveaway sync",
+      value: isApiSource ? "Backend API feed" : "Static fallback preview",
+      badge: isApiSource ? "API" : "Fallback",
+    },
+    {
+      label: "Data source",
+      value: isApiSource ? "Spring Boot" : "Static dataset",
+      badge: isApiSource ? "API" : "Static",
+    },
+    {
+      label: "Claim links",
+      value: "Safe redirects planned",
+      badge: "Planned",
+    },
+    {
+      label: "Alerts",
+      value: "Local reminders active",
+      badge: "Local",
+    },
   ] as const;
 
   return (
-    <aside className="ga-network" aria-labelledby="giveaway-network-title">
-      <div className="ga-network__header">
-        <span className="ga-network__header-icon" aria-hidden="true">📡</span>
-        <div><span>Drop telemetry</span><h2 id="giveaway-network-title">Giveaway Network Status</h2></div>
-        <span className={`ga-network__live ga-network__live--${isApiSource ? "api" : "demo"}`}>
-          <span aria-hidden="true" /> {isApiSource ? "API" : "Static"}
+    <aside className={styles.network} aria-labelledby="giveaway-network-title">
+      <div className={styles.networkHeader}>
+        <span className={styles.networkHeaderIcon} aria-hidden="true" />
+        <div className={styles.networkHeaderCopy}>
+          <span>Drop telemetry</span>
+          <h2 className={styles.networkTitle} id="giveaway-network-title">
+            Giveaway network status
+          </h2>
+        </div>
+        <span
+          className={
+            isApiSource
+              ? `${styles.networkLive} ${styles.networkLiveApi}`
+              : `${styles.networkLive} ${styles.networkLiveDemo}`
+          }
+        >
+          <span aria-hidden="true" />
+          {isApiSource ? "API" : "Static"}
         </span>
       </div>
 
-      <div className="ga-network__items">
+      <div className={styles.networkItems}>
         {items.map((item) => (
-          <div className="ga-network__item" key={item.label}>
-            <span className={`ga-network__item-icon ga-network__item-icon--${item.tone}`} aria-hidden="true">
-              {giveawayNetworkIcons[item.icon]}
+          <div className={styles.networkItem} key={item.label}>
+            <span className={styles.networkItemIcon} aria-hidden="true" />
+            <span className={styles.networkItemCopy}>
+              <strong>{item.label}</strong>
+              <small>{item.value}</small>
             </span>
-            <span className="ga-network__item-copy"><strong>{item.label}</strong><small>{item.value}</small></span>
-            <span className={`ga-network__badge ga-network__badge--${item.tone}`}>{item.badge}</span>
+            <span className={styles.networkBadge}>{item.badge}</span>
           </div>
         ))}
       </div>
 
-      <div className="ga-network__platforms">
-        <div className="ga-network__platforms-label"><span>Platform distribution</span><strong>{isApiSource ? "API feed" : "Preview data"}</strong></div>
-        <div className="ga-network__platform-rows">
-          {giveaways.length === 0 ? <p>No platform entries in this feed.</p> : null}
+      <div className={styles.networkPlatforms}>
+        <div className={styles.networkPlatformsLabel}>
+          <span>Platform distribution</span>
+          <strong>{isApiSource ? "API feed" : "Preview data"}</strong>
+        </div>
+        <div className={styles.networkPlatformRows}>
+          {giveaways.length === 0 ? (
+            <p className={styles.networkEmptyNote}>No platform entries in this feed.</p>
+          ) : null}
           {platformAvailability.map((platform) => (
-            <div className="ga-network__platform-row" key={platform.name}>
+            <div className={styles.networkPlatformRow} key={platform.platform}>
               <span>{platform.name}</span>
-              <div><span className={`ga-network__platform-fill ga-network__platform-fill--${platform.platform}`} style={{ width: `${platform.value}%` }} /></div>
+              <div>
+                <span className={styles.networkPlatformFill} style={{ width: `${platform.value}%` }} />
+              </div>
               <strong>{platform.value}%</strong>
             </div>
           ))}
@@ -208,9 +251,12 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
   }, [activeFilter, giveaways, searchQuery]);
 
   function toggleReminder(giveawayId: number) {
-    setReminderMessage(reminders.has(giveawayId)
-      ? "Preview reminder removed."
-      : "Reminder marked for this page only. It is not saved and will not send a notification.");
+    const reminderAlreadySet = reminders.has(giveawayId);
+    setReminderMessage(
+      reminderAlreadySet
+        ? "Preview reminder removed."
+        : "Reminder marked for this page only. It is not saved and will not send a notification.",
+    );
     setReminders((current) => {
       const next = new Set(current);
       if (next.has(giveawayId)) next.delete(giveawayId);
@@ -226,48 +272,65 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
 
   const endingSoonCount = giveaways.filter((giveaway) => giveaway.daysRemaining < 2).length;
   const platformCount = new Set(giveaways.map((giveaway) => giveaway.platform)).size;
+  const sourceLabel = source === "api" ? "Backend giveaway feed" : "Static fallback preview";
 
   return (
     <>
-      <section className="ga-hero" aria-labelledby="giveaways-title">
-        <div className="ga-hero__orb ga-hero__orb--blue" />
-        <div className="ga-hero__orb ga-hero__orb--orange" />
-        <div className="ga-hero__scanlines" />
-        <div className="ga-hero__content">
-          <div className="ga-hero__copy">
-            <div className="ga-hero__tag"><span aria-hidden="true" /> {source === "api" ? "Backend giveaway feed" : "Static giveaway preview"}</div>
-            <h1 id="giveaways-title">
-              <span className="page-title-emoji" aria-hidden="true">🎁</span>
-              <span>Giveaway Intelligence</span>
-            </h1>
-            <p>
-              Review free-game entries, claim windows, and platform guidance.
-              Confirm availability with the listed store before claiming.
-            </p>
+      <div className={styles.topGrid}>
+        <section className={styles.routeHero} aria-labelledby="giveaways-title">
+          <p className={styles.eyebrow}>
+            <span className={styles.eyebrowLine} aria-hidden="true" />
+            {source === "api" ? "Backend giveaway feed" : "Static giveaway preview"}
+          </p>
+          <h1 id="giveaways-title" className={styles.title}>
+            Giveaway Intelligence
+          </h1>
+          <p className={styles.lede}>
+            Review free-game entries, claim windows, and platform guidance. Confirm availability with
+            the listed store before claiming.
+          </p>
+          <div className={styles.statsRow} aria-label="Giveaway statistics">
+            <div className={styles.stat}>
+              <strong className={styles.statValue}>{giveaways.length}</strong>
+              <span className={styles.statLabel}>Feed entries</span>
+            </div>
+            <div className={styles.stat}>
+              <strong className={styles.statValue}>{endingSoonCount}</strong>
+              <span className={styles.statLabel}>Ending soon</span>
+            </div>
+            <div className={styles.stat}>
+              <strong className={styles.statValue}>{platformCount}</strong>
+              <span className={styles.statLabel}>Platforms</span>
+            </div>
           </div>
-          <div className="ga-hero__stats" aria-label="Giveaway statistics">
-            <div><strong>{giveaways.length}</strong><span>Feed entries</span></div>
-            <div><strong>{endingSoonCount}</strong><span>Ending soon</span></div>
-            <div><strong>{platformCount}</strong><span>Platforms</span></div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {source !== "api" && (
+        <GiveawayNetworkStatus giveaways={giveaways} source={source} />
+      </div>
+
+      {source !== "api" ? (
         <UxStatePanel
-          className="ux-state--compact ga-source-fallback"
+          className="ux-state--compact giveaways-source-fallback"
           description="The backend giveaway feed could not be reached, so this page is showing bundled local demo entries. These preview dates and availability may not be current; confirm any promotion with the listed store."
           title="Static fallback feed"
           tone="fallback"
         />
-      )}
+      ) : null}
 
-      <p className="ux-inline-status" role="status">{reminderMessage}</p>
+      {reminderMessage ? (
+        <p className={styles.inlineStatus} role="status">
+          {reminderMessage}
+        </p>
+      ) : null}
 
-      <section className="ga-filter-panel" aria-label="Search and filter giveaways">
-        <div className="ga-search">
-          <span className="page-search-icon" aria-hidden="true">🔍</span>
-          <label className="sr-only" htmlFor="giveaway-search">Search giveaways</label>
+      <section className={styles.filterPanel} aria-label="Search and filter giveaways">
+        <div className={styles.searchField}>
+          <span className={styles.searchIcon} aria-hidden="true">
+            🔍
+          </span>
+          <label className="sr-only" htmlFor="giveaway-search">
+            Search giveaways
+          </label>
           <input
             id="giveaway-search"
             type="search"
@@ -275,16 +338,22 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
-          {searchQuery && (
-            <button type="button" aria-label="Clear giveaway search" onClick={() => setSearchQuery("")}>
+          {searchQuery ? (
+            <button
+              className={styles.searchClear}
+              type="button"
+              aria-label="Clear giveaway search"
+              onClick={() => setSearchQuery("")}
+            >
               <span aria-hidden="true">×</span>
             </button>
-          )}
+          ) : null}
         </div>
-        <div className="ga-chips" aria-label="Giveaway filters">
+
+        <div className={styles.chips} aria-label="Giveaway filters">
           {giveawayFilters.map((filter) => (
             <button
-              className={activeFilter === filter ? "ga-chip ga-chip--active" : "ga-chip"}
+              className={activeFilter === filter ? `${styles.chip} ${styles.chipActive}` : styles.chip}
               type="button"
               aria-pressed={activeFilter === filter}
               key={filter}
@@ -296,43 +365,63 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
         </div>
       </section>
 
-      <div className="ga-layout">
-        <section aria-label="Available game giveaways">
-          <div className="ga-results-bar">
-            <span><strong>{filteredGiveaways.length}</strong> giveaway entries</span>
-            <span>{source === "api" ? "Backend giveaway feed" : "Static fallback preview"}</span>
-          </div>
-          <div className="ga-grid">
-            {filteredGiveaways.map((giveaway) => (
-              <GiveawayCard
-                giveaway={giveaway}
-                reminderIsSet={reminders.has(giveaway.id)}
-                guideIsOpen={openGuide === giveaway.id}
-                isPreview={source !== "api"}
-                key={giveaway.id}
-                onToggleGuide={(giveawayId) => setOpenGuide((current) => current === giveawayId ? null : giveawayId)}
-                onToggleReminder={toggleReminder}
-              />
-            ))}
-            {filteredGiveaways.length === 0 && (
+      <section className={styles.resultsSection} aria-label="Available game giveaways">
+        <div className={styles.resultsBar}>
+          <span>
+            <strong>{filteredGiveaways.length}</strong> giveaway entries
+          </span>
+          <span>{sourceLabel}</span>
+        </div>
+
+        <div className={styles.grid}>
+          {filteredGiveaways.map((giveaway) => (
+            <GiveawayCard
+              giveaway={giveaway}
+              reminderIsSet={reminders.has(giveaway.id)}
+              guideIsOpen={openGuide === giveaway.id}
+              isPreview={source !== "api"}
+              key={giveaway.id}
+              onToggleGuide={(giveawayId) =>
+                setOpenGuide((current) => (current === giveawayId ? null : giveawayId))
+              }
+              onToggleReminder={toggleReminder}
+            />
+          ))}
+
+          {filteredGiveaways.length === 0 ? (
+            <div className={styles.stateSlot}>
               <UxStatePanel
-                className="ux-state--grid ga-empty"
-                description={giveaways.length === 0
-                  ? source === "api"
-                    ? "The backend feed returned no displayed giveaway entries. This does not prove that no real-world promotions exist; confirm current availability with each store."
-                    : "No bundled local demo entries are available. This does not prove that stores have no active real-world promotions."
-                  : <>No entries in this displayed feed match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter. This filtered view does not describe every real-world promotion.</>}
+                className="ux-state--grid giveaways-empty"
+                description={
+                  giveaways.length === 0
+                    ? source === "api"
+                      ? "The backend feed returned no displayed giveaway entries. This does not prove that no real-world promotions exist; confirm current availability with each store."
+                      : "No bundled local demo entries are available. This does not prove that stores have no active real-world promotions."
+                    : (
+                        <>
+                          No entries in this displayed feed match{" "}
+                          {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}
+                          the <strong>{activeFilter}</strong> filter. This filtered view does not describe
+                          every real-world promotion.
+                        </>
+                      )
+                }
                 role="status"
                 title={giveaways.length === 0 ? "No giveaway entries available" : "No matching giveaways"}
                 tone="empty"
               >
-                {giveaways.length > 0 ? <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button> : <ProductFeedRetry label="giveaways" />}
+                {giveaways.length > 0 ? (
+                  <button className="ux-state__action" type="button" onClick={resetFilters}>
+                    Reset search and filters
+                  </button>
+                ) : (
+                  <ProductFeedRetry label="giveaways" />
+                )}
               </UxStatePanel>
-            )}
-          </div>
-        </section>
-        <GiveawayNetworkStatus source={source} giveaways={giveaways} />
-      </div>
+            </div>
+          ) : null}
+        </div>
+      </section>
     </>
   );
 }
