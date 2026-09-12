@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import CinematicTopNav from "@/components/CinematicTopNav";
 import DealsExplorer from "@/components/DealsExplorer";
 import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SentinelButton from "@/components/SentinelButton";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import { getDeals } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
+import styles from "@/components/DealsProduct.module.css";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Game Deals Intelligence",
@@ -18,18 +18,19 @@ export default async function DealsPage() {
   const { deals, source } = await getDeals();
 
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="main-shell">
-        <Topbar />
-        <main className="dashboard deals-page nx-page-reveal" id="main-content" tabIndex={-1}>
-          <ProductFeedNotice
-            label="Deals"
-            source={source}
-          />
-          <DealsExplorer deals={deals} source={source} />
-        </main>
-      </div>
+    <div className={styles.scene}>
+      <div className={styles.atmosphere} aria-hidden="true" />
+      <div className={styles.vignette} aria-hidden="true" />
+
+      <CinematicTopNav className={styles.productHeader} />
+
+      <main className={styles.stage} id="main-content" tabIndex={-1}>
+        <div className={styles.noticeArea}>
+          <ProductFeedNotice label="Deals" source={source} />
+        </div>
+        <DealsExplorer deals={deals} source={source} />
+      </main>
+
       <SentinelButton />
     </div>
   );

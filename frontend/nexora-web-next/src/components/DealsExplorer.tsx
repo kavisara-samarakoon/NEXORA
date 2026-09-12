@@ -27,6 +27,7 @@ import {
   withWishlistAuthRetry,
   type AddWishlistItemPayload,
 } from "@/lib/user-wishlist";
+import styles from "@/components/DealsProduct.module.css";
 
 type DealsMode = "curated" | "external";
 type ExternalDealsStatus = "idle" | "loading" | "ready" | "fallback";
@@ -48,22 +49,6 @@ function protectedWishlistError(error: unknown) {
   return authError.code === "unknown_error" ? wishlistError : authError;
 }
 
-const networkActivity = [35, 58, 42, 75, 52, 90, 68, 45, 82, 60, 38, 72];
-const dealNetworkIcons = {
-  sync: "🔄",
-  globe: "🌐",
-  database: "💾",
-  shield: "🛡️",
-} as const;
-
-function storeClass(store: GameDeal["store"]) {
-  if (store === "Steam") return "steam";
-  if (store === "Epic Games") return "epic";
-  if (store === "GOG") return "gog";
-  if (store === "Humble") return "humble";
-  if (store === "Ubisoft") return "ubisoft";
-  return "external";
-}
 
 function statusClass(status: DealStatus) {
   if (status === "Historical Low" || status === "Lowest Ever") return "hot";
@@ -136,6 +121,19 @@ function wishlistPayloadFor(deal: GameDeal): AddWishlistItemPayload {
   };
 }
 
+const STATUS_TONE_CLASS = {
+  hot: styles.statusHot,
+  good: styles.statusGood,
+  free: styles.statusFree,
+  neutral: styles.statusNeutral,
+} as const;
+
+const SAVE_TONE_CLASS = {
+  success: styles.saveSuccess,
+  auth: styles.saveAuth,
+  error: styles.saveError,
+} as const;
+
 function DealCard({
   deal,
   alertIsSet,
@@ -153,41 +151,38 @@ function DealCard({
   onSave: (deal: GameDeal) => void;
   onToggleAlert: (dealId: number) => void;
 }) {
-  const color = storeClass(deal.store);
   const dealUrl = safeCheapSharkDealUrl(deal.dealUrl);
   const titleId = `deal-title-${dealStateKey("curated", deal).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 
   return (
-    <article className={`deals-card deals-card--${color}`} aria-labelledby={titleId}>
-      <div className={`deals-card__accent deals-card__accent--${color}`} />
-      <div className="deals-card__header">
-        <span className={`deals-card__store deals-card__store--${color}`}>
-          {deal.store}
-        </span>
-        <span className="deals-card__discount">{deal.discount}</span>
+    <article className={styles.card} aria-labelledby={titleId}>
+      <div className={styles.cardAccent} aria-hidden="true" />
+      <div className={styles.cardHeader}>
+        <span className={styles.store}>{deal.store}</span>
+        <span className={styles.discount}>{deal.discount}</span>
       </div>
 
-      <h2 className="deals-card__title" id={titleId}>{deal.title}</h2>
-      <p className="deals-card__category">{deal.category}</p>
+      <h2 className={styles.cardTitle} id={titleId}>{deal.title}</h2>
+      <p className={styles.category}>{deal.category}</p>
 
-      <div className="deals-card__rating" aria-label={`${deal.rating} out of 5 stars`}>
-        <span className="deals-card__stars" aria-hidden="true">{deal.stars}</span>
-        <span className="deals-card__rating-number">{deal.rating}</span>
-        <span className={`deals-card__status deals-card__status--${statusClass(deal.status)}`}>
+      <div className={styles.rating} aria-label={`${deal.rating} out of 5 stars`}>
+        <span aria-hidden="true">{deal.stars}</span>
+        <span>{deal.rating}</span>
+        <span className={`${styles.status} ${STATUS_TONE_CLASS[statusClass(deal.status)]}`}>
           {deal.status}
         </span>
       </div>
 
-      <div className="deals-card__prices">
+      <div className={styles.prices}>
         <del>{deal.priceOld}</del>
-        <strong className={deal.priceNew === "FREE" ? "deals-card__price--free" : undefined}>
+        <strong className={deal.priceNew === "FREE" ? styles.priceFree : undefined}>
           {deal.priceNew}
         </strong>
       </div>
 
-      <div className="deals-card__actions">
+      <div className={styles.actions}>
         <button
-          className={isSaved ? "deals-card__save deals-card__save--saved" : "deals-card__save"}
+          className={isSaved ? `${styles.saveButton} ${styles.saveButtonSaved}` : styles.saveButton}
           type="button"
           disabled={isSaving || isSaved}
           aria-busy={isSaving}
@@ -198,7 +193,7 @@ function DealCard({
           {isSaved ? "Saved" : isSaving ? "Saving…" : "Save to Wishlist"}
         </button>
         <button
-          className={alertIsSet ? "deals-card__alert deals-card__alert--active" : "deals-card__alert"}
+          className={alertIsSet ? `${styles.alertButton} ${styles.alertButtonActive}` : styles.alertButton}
           type="button"
           aria-pressed={alertIsSet}
           aria-label={`${alertIsSet ? "Remove" : "Set"} local alert for ${deal.title}`}
@@ -209,7 +204,7 @@ function DealCard({
         </button>
         {dealUrl ? (
           <a
-            className={`deals-card__view deals-card__view--${color} deals-card__view--active`}
+            className={`${styles.viewButton} ${styles.viewButtonActive}`}
             href={dealUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -220,7 +215,7 @@ function DealCard({
           </a>
         ) : (
           <button
-            className={`deals-card__view deals-card__view--${color}`}
+            className={styles.viewButton}
             type="button"
             disabled
             aria-label={`View deal for ${deal.title} unavailable for this curated preview`}
@@ -233,13 +228,13 @@ function DealCard({
       </div>
       {saveMessage && (
         <div
-          className={`deals-card__save-message deals-card__save-message--${saveMessage.tone}`}
+          className={`${styles.saveMessage} ${SAVE_TONE_CLASS[saveMessage.tone]}`}
           role={saveMessage.tone === "error" ? "alert" : "status"}
         >
-          <span className="deals-card__save-message-icon" aria-hidden="true">
+          <span aria-hidden="true">
             {saveMessage.tone === "success" ? "✓" : saveMessage.tone === "auth" ? "🔐" : "!"}
           </span>
-          <span className="deals-card__save-message-copy">
+          <span className={styles.saveMessageCopy}>
             <strong>
               {saveMessage.tone === "success" ? "Wishlist updated" : saveMessage.tone === "auth" ? "Sign in required" : "Deal not saved"}
             </strong>
@@ -249,7 +244,7 @@ function DealCard({
             ) : null}
           </span>
           {saveMessage.tone === "auth" && (
-            <span className="deals-card__auth-links">
+            <span className={styles.authLinks}>
               <Link href="/login?returnTo=%2Fdeals">Login</Link>
               <Link href="/register?returnTo=%2Fdeals">Register</Link>
             </span>
@@ -259,6 +254,13 @@ function DealCard({
     </article>
   );
 }
+
+const NETWORK_LIVE_TONE_CLASS = {
+  active: styles.networkLiveActive,
+  loading: styles.networkLiveLoading,
+  fallback: styles.networkLiveFallback,
+  curated: styles.networkLiveCurated,
+} as const;
 
 function DealNetworkStatus({
   curatedSource,
@@ -273,6 +275,7 @@ function DealNetworkStatus({
   const isExternalLoading = mode === "external" && externalStatus === "loading";
   const isExternalFallback = mode === "external" && externalStatus === "fallback";
   const isCuratedApi = curatedSource === "api";
+  const stateKey = isExternalLive ? "active" : isExternalLoading ? "loading" : isExternalFallback ? "fallback" : "curated";
   const stateLabel = isExternalLive
     ? "Live"
     : isExternalLoading
@@ -280,84 +283,56 @@ function DealNetworkStatus({
       : isExternalFallback
         ? "Fallback"
         : "Curated";
+
   const items = [
     {
       label: "Price Sync",
       value: isExternalLive ? "CheapShark via backend" : isExternalLoading ? "Requesting live deals" : isExternalFallback ? "Curated fallback active" : "Curated NEXORA feed",
       badge: stateLabel,
-      tone: "orange",
-      icon: "sync",
     },
     {
       label: "Data Source",
       value: isExternalLive ? "External deal API" : isCuratedApi ? "Spring Boot curated data" : "Static curated dataset",
       badge: isExternalLive ? "External" : isCuratedApi ? "API" : "Static",
-      tone: "blue",
-      icon: "globe",
     },
     {
       label: "Persistence",
       value: isExternalLive ? "Live results are not stored" : "Curated fallback ready",
       badge: isExternalLive ? "Session" : "Ready",
-      tone: "green",
-      icon: "database",
     },
     {
       label: "Access",
       value: "Public deals endpoint",
       badge: "Public",
-      tone: "purple",
-      icon: "shield",
     },
   ] as const;
 
   return (
-    <aside className="deals-network" aria-labelledby="deal-network-title">
-      <div className="deals-network__header">
-        <span className="deals-network__header-icon" aria-hidden="true">📡</span>
+    <aside className={styles.network} aria-labelledby="deal-network-title">
+      <div className={styles.networkHeader}>
+        <span className={styles.networkHeaderIcon} aria-hidden="true" />
         <div>
           <span>Feed source</span>
-          <h2 id="deal-network-title">Deal Feed Status</h2>
+          <h2 id="deal-network-title" className={styles.networkTitle}>Deal Feed Status</h2>
         </div>
-        <span className={`deals-network__live deals-network__live--${isExternalLive ? "active" : isExternalLoading ? "loading" : isExternalFallback ? "fallback" : "curated"}`}>
+        <span className={`${styles.networkLive} ${NETWORK_LIVE_TONE_CLASS[stateKey]}`}>
           <span aria-hidden="true" /> {stateLabel}
         </span>
       </div>
 
-      <div className="deals-network__items">
+      <div className={styles.networkItems}>
         {items.map((item) => (
-          <div className="deals-network__item" key={item.label}>
-            <span className={`deals-network__item-icon deals-network__item-icon--${item.tone}`} aria-hidden="true">
-              {dealNetworkIcons[item.icon]}
-            </span>
-            <span className="deals-network__item-copy">
+          <div className={styles.networkItem} key={item.label}>
+            <span className={styles.networkItemIcon} aria-hidden="true" />
+            <span className={styles.networkItemCopy}>
               <strong>{item.label}</strong>
               <small>{item.value}</small>
             </span>
-            <span className={`deals-network__badge deals-network__badge--${item.tone}`}>
-              {item.badge}
-            </span>
+            <span className={styles.networkBadge}>{item.badge}</span>
           </div>
         ))}
       </div>
 
-      <div
-        className="deals-network__graph"
-        aria-label="Static illustration — not live network data"
-      >
-        <div className="deals-network__graph-label">
-          <span>Feed indicator</span>
-          <strong>Static illustration</strong>
-        </div>
-        <div className="deals-network__bars" aria-hidden="true">
-          {networkActivity.map((height, index) => (
-            <span
-              key={`${height}-${index}`}
-              style={{ height: `${height}%`, animationDelay: `${index * 60}ms` }}
-            />
-          ))}
-        </div>
-      </div>
     </aside>
   );
 }
@@ -677,100 +652,113 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
   return (
     <>
-      <section className="deals-hero" aria-labelledby="deals-title">
-        <div className="deals-hero__orb deals-hero__orb--orange" />
-        <div className="deals-hero__orb deals-hero__orb--blue" />
-        <div className="deals-hero__scanlines" />
-        <div className="deals-hero__content">
-          <div className="deals-hero__copy">
-            <div className="deals-hero__tag"><span aria-hidden="true" /> {isExternalReady ? "Live external deals" : "Curated intelligence"}</div>
-            <h1 id="deals-title">
-              <span className="page-title-emoji" aria-hidden="true">🔥</span>
-              <span>Game Deals Intelligence</span>
-            </h1>
-            <p>
-              Compare NEXORA&apos;s curated deal set or request current external
-              offers on demand. Curated deals remain ready whenever live data is unavailable.
-            </p>
-          </div>
-          <div className="deals-hero__stats" aria-label="Deal statistics">
-            <div><strong>{visibleDeals.length}</strong><span>Feed entries</span></div>
-            <div><strong>{deepDiscountCount}</strong><span>50%+ off</span></div>
-            <div><strong>{freeCount}</strong><span>Free now</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section className={`deals-mode-panel deals-mode-panel--${isExternalFallback ? "warning" : mode}`} aria-label="Deal source selection">
-        <div className="deals-mode-panel__topline">
-          <div className="deals-mode-switch" role="group" aria-label="Choose deal source">
-            <button
-              className={mode === "curated" ? "deals-mode-switch__button deals-mode-switch__button--active" : "deals-mode-switch__button"}
-              type="button"
-              aria-pressed={mode === "curated"}
-              onClick={() => selectMode("curated")}
-            >
-              Curated Deals
-            </button>
-            <button
-              className={mode === "external" ? "deals-mode-switch__button deals-mode-switch__button--active" : "deals-mode-switch__button"}
-              type="button"
-              aria-pressed={mode === "external"}
-              disabled={isExternalLoading}
-              onClick={() => selectMode("external")}
-            >
-              {isExternalLoading ? "Loading Live Deals…" : "Live External Deals"}
-            </button>
-          </div>
-          <div className="deals-mode-panel__status" role="status">
-            <span aria-hidden="true" />
-            <strong>{sourceLabel}</strong>
-          </div>
-        </div>
-
-        {mode === "external" && (
-          <form className="deals-live-search" onSubmit={submitExternalSearch}>
-            <label htmlFor="external-deal-title">Search the live external feed</label>
-            <div>
-              <input
-                id="external-deal-title"
-                type="search"
-                value={externalTitle}
-                maxLength={80}
-                placeholder="Game title, e.g. elden"
-                disabled={isExternalLoading}
-                onChange={(event) => setExternalTitle(event.target.value)}
-              />
-              <button type="submit" disabled={isExternalLoading}>
-                {isExternalLoading ? "Searching…" : "Search live deals"}
-              </button>
-              {activeExternalTitle && (
-                <button className="deals-live-search__clear" type="button" disabled={isExternalLoading} onClick={clearExternalSearch}>
-                  Clear live search
-                </button>
-              )}
+      <div className={styles.overview}>
+        <section className={styles.routeHero} aria-labelledby="deals-title">
+          <p className={styles.eyebrow}>
+            <span className={styles.eyebrowLine} aria-hidden="true" />
+            {isExternalReady ? "Live external deals" : "Curated intelligence"}
+          </p>
+          <h1 id="deals-title" className={styles.title}>Game Deals Intelligence</h1>
+          <p className={styles.lede}>
+            Compare NEXORA&apos;s curated deal set or request current external
+            offers on demand. Curated deals remain ready whenever live data is unavailable.
+          </p>
+          <div className={styles.statsRow} aria-label="Deal statistics">
+            <div className={styles.stat}>
+              <strong className={styles.statValue}>{visibleDeals.length}</strong>
+              <span className={styles.statLabel}>Feed entries</span>
             </div>
-          </form>
-        )}
+            <div className={styles.stat}>
+              <strong className={styles.statValue}>{deepDiscountCount}</strong>
+              <span className={styles.statLabel}>50%+ off</span>
+            </div>
+            <div className={styles.stat}>
+              <strong className={styles.statValue}>{freeCount}</strong>
+              <span className={styles.statLabel}>Free now</span>
+            </div>
+          </div>
+        </section>
 
-        {isExternalFallback && (
-          <UxStatePanel
-            className="ux-state--inline deals-mode-panel__warning"
-            description="The external provider route could not be reached. NEXORA is still showing its bundled curated deal set; retry remains a manual check of the live feed."
-            role="status"
-            title="Curated fallback active"
-            tone="fallback"
-          >
-            <button className="ux-state__action" type="button" onClick={() => void loadExternalDeals(externalTitle)}>
-              Retry live feed
-            </button>
-          </UxStatePanel>
-        )}
-      </section>
+        <section
+          className={isExternalFallback ? `${styles.sourcePanel} ${styles.sourcePanelWarning}` : styles.sourcePanel}
+          aria-label="Deal source selection"
+        >
+          <div className={styles.sourceTop}>
+            <div className={styles.modeSwitch} role="group" aria-label="Choose deal source">
+              <button
+                className={mode === "curated" ? `${styles.modeButton} ${styles.modeButtonActive}` : styles.modeButton}
+                type="button"
+                aria-pressed={mode === "curated"}
+                onClick={() => selectMode("curated")}
+              >
+                Curated Deals
+              </button>
+              <button
+                className={mode === "external" ? `${styles.modeButton} ${styles.modeButtonActive}` : styles.modeButton}
+                type="button"
+                aria-pressed={mode === "external"}
+                disabled={isExternalLoading}
+                onClick={() => selectMode("external")}
+              >
+                {isExternalLoading ? "Loading Live Deals…" : "Live External Deals"}
+              </button>
+            </div>
+            <div className={styles.sourceStatus} role="status">
+              <span className={styles.sourceStatusDot} aria-hidden="true" />
+              <strong>{sourceLabel}</strong>
+            </div>
+          </div>
 
-      <section className="deals-filter-panel" aria-label="Search and filter displayed deals">
-        <div className="deals-search">
-          <span className="page-search-icon" aria-hidden="true">🔍</span>
+          {mode === "external" && (
+            <form className={styles.liveSearch} onSubmit={submitExternalSearch}>
+              <label htmlFor="external-deal-title">Search the live external feed</label>
+              <div className={styles.liveSearchRow}>
+                <input
+                  id="external-deal-title"
+                  type="search"
+                  value={externalTitle}
+                  maxLength={80}
+                  placeholder="Game title, e.g. elden"
+                  disabled={isExternalLoading}
+                  onChange={(event) => setExternalTitle(event.target.value)}
+                />
+                <button className={styles.primaryButton} type="submit" disabled={isExternalLoading}>
+                  {isExternalLoading ? "Searching…" : "Search live deals"}
+                </button>
+                {activeExternalTitle && (
+                  <button className={styles.ghostButton} type="button" disabled={isExternalLoading} onClick={clearExternalSearch}>
+                    Clear live search
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
+
+          {isExternalFallback && (
+            <UxStatePanel
+              className="ux-state--inline deals-mode-panel__warning"
+              description="The external provider route could not be reached. NEXORA is still showing its bundled curated deal set; retry remains a manual check of the live feed."
+              role="status"
+              title="Curated fallback active"
+              tone="fallback"
+            >
+              <button className="ux-state__action" type="button" onClick={() => void loadExternalDeals(externalTitle)}>
+                Retry live feed
+              </button>
+            </UxStatePanel>
+          )}
+        </section>
+        <DealNetworkStatus curatedSource={source} externalStatus={externalStatus} mode={mode} />
+      </div>
+
+      <section className={styles.filterPanel} aria-label="Search and filter displayed deals">
+        <div className={styles.searchField}>
+          <span className={styles.searchIcon} aria-hidden="true">
+            <svg viewBox="0 0 20 20" width="16" height="16" focusable="false">
+              <circle cx="9" cy="9" r="5.4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M13.2 13.2 17 17" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </span>
           <label className="sr-only" htmlFor="deal-search">Filter displayed deals</label>
           <input
             id="deal-search"
@@ -780,15 +768,15 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
             onChange={(event) => setSearchQuery(event.target.value)}
           />
           {searchQuery && (
-            <button type="button" aria-label="Clear displayed deal filter" onClick={() => setSearchQuery("")}>
+            <button className={styles.searchClear} type="button" aria-label="Clear displayed deal filter" onClick={() => setSearchQuery("")}>
               <span aria-hidden="true">×</span>
             </button>
           )}
         </div>
-        <div className="deals-chips" aria-label="Deal filters">
+        <div className={styles.chips} aria-label="Deal filters">
           {dealFilters.map((filter) => (
             <button
-              className={activeFilter === filter ? "deals-chip deals-chip--active" : "deals-chip"}
+              className={activeFilter === filter ? `${styles.chip} ${styles.chipActive}` : styles.chip}
               type="button"
               aria-pressed={activeFilter === filter}
               key={filter}
@@ -800,99 +788,96 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         </div>
       </section>
 
-      <div className="deals-layout">
-        <section aria-label={isExternalReady ? "Live external game deals" : "Curated game deals"}>
-          {authChecked && !authToken && (
+      <section className={styles.resultsMain} aria-label={isExternalReady ? "Live external game deals" : "Curated game deals"}>
+        {authChecked && !authToken && (
+          <UxStatePanel
+            className="ux-state--compact deals-auth-notice"
+            description="Browsing and local alert toggles remain available without an account. Sign in only when you want to save a displayed deal to your personal wishlist."
+            title="Sign in to save deals"
+            tone="auth"
+          >
+            <Link className="ux-state__action" href="/login?returnTo=%2Fdeals">Sign in</Link>
+            <Link className="ux-state__action ux-state__action--quiet" href="/register?returnTo=%2Fdeals">Register</Link>
+          </UxStatePanel>
+        )}
+        {wishlistSyncWarning && (
+          <UxStatePanel
+            className="ux-state--compact deals-wishlist-sync-warning"
+            description={(
+              <>
+                {wishlistSyncWarning.text} Deal browsing still works; saved markers describe only the last successful account sync and may be incomplete until a later sync succeeds.
+                <RequestIdSupportText requestId={wishlistSyncWarning.requestId} />
+              </>
+            )}
+            role="status"
+            title="Saved-deal sync unavailable"
+            tone="unavailable"
+          />
+        )}
+        <div className={styles.resultsBar}>
+          <span><strong>{filteredDeals.length}</strong> displayed deals</span>
+          <span>{sourceLabel}</span>
+        </div>
+        <div className={styles.grid} aria-busy={isExternalLoading}>
+          {isExternalLoading && (
             <UxStatePanel
-              className="ux-state--compact deals-auth-notice"
-              description="Browsing and local alert toggles remain available without an account. Sign in only when you want to save a displayed deal to your personal wishlist."
-              title="Sign in to save deals"
-              tone="auth"
-            >
-              <Link className="ux-state__action" href="/login?returnTo=%2Fdeals">Sign in</Link>
-              <Link className="ux-state__action ux-state__action--quiet" href="/register?returnTo=%2Fdeals">Register</Link>
-            </UxStatePanel>
-          )}
-          {wishlistSyncWarning && (
-            <UxStatePanel
-              className="ux-state--compact deals-wishlist-sync-warning"
-              description={(
-                <>
-                  {wishlistSyncWarning.text} Deal browsing still works; saved markers describe only the last successful account sync and may be incomplete until a later sync succeeds.
-                  <RequestIdSupportText requestId={wishlistSyncWarning.requestId} />
-                </>
-              )}
+              className="ux-state--grid"
+              description={<>Waiting for the external provider response. Bundled curated deals remain visible below while this manual request finishes.<UxSkeleton lines={2} /></>}
               role="status"
-              title="Saved-deal sync unavailable"
-              tone="unavailable"
+              title="Loading live external deals"
+              tone="loading"
             />
           )}
-          <div className="deals-results-bar">
-            <span><strong>{filteredDeals.length}</strong> displayed deals</span>
-            <span>{sourceLabel}</span>
-          </div>
-          <div className="deals-grid" aria-busy={isExternalLoading}>
-            {isExternalLoading && (
-              <UxStatePanel
-                className="ux-state--grid"
-                description={<>Waiting for the external provider response. Bundled curated deals remain visible below while this manual request finishes.<UxSkeleton lines={2} /></>}
-                role="status"
-                title="Loading live external deals"
-                tone="loading"
-              />
-            )}
-            {filteredDeals.map((deal) => (
-              <DealCard
-                deal={deal}
-                alertIsSet={alerts.has(`${displayedDealScope}:${deal.id}`)}
-                isSaved={
-                  savedDeals.has(dealStateKey(displayedDealScope, deal)) ||
-                  syncedSavedDealKeys.has(dealStateKey(displayedDealScope, deal))
-                }
-                isSaving={savingDeals.has(dealStateKey(displayedDealScope, deal))}
-                key={dealStateKey(displayedDealScope, deal)}
-                saveMessage={saveMessages[dealStateKey(displayedDealScope, deal)]}
-                onSave={saveDeal}
-                onToggleAlert={toggleAlert}
-              />
-            ))}
-            {isExternalReady && externalDeals.length === 0 && (
-              <UxStatePanel
-                className="ux-state--grid deals-empty"
-                description={activeExternalTitle
-                  ? <>The external feed returned no displayed offers for “{activeExternalTitle}”. This result does not establish that every store has no matching deal; try another title or load the full feed.</>
-                  : "The external feed returned no displayed offers for this request. This does not establish global store availability; switch to Curated Deals to keep browsing NEXORA’s bundled set."}
-                role="status"
-                title="No live external deals found"
-                tone="empty"
-              >
-                {activeExternalTitle ? <button className="ux-state__action" type="button" onClick={clearExternalSearch}>Load all live deals</button> : null}
-                <button className="ux-state__action ux-state__action--quiet" type="button" onClick={() => selectMode("curated")}>View curated deals</button>
-              </UxStatePanel>
-            )}
-            {!isExternalReady && visibleDeals.length === 0 && !isExternalLoading && (
-              <UxStatePanel className="ux-state--grid deals-empty" tone="empty" role="status"
-                title="No curated deals available"
-                description="This feed has no deals to display right now. Check again or browse the live external feed.">
-                <ProductFeedRetry label="deals" />
-                <button className="ux-state__action" type="button" onClick={() => selectMode("external")}>Browse live deals</button>
-              </UxStatePanel>
-            )}
-            {visibleDeals.length > 0 && filteredDeals.length === 0 && (
-              <UxStatePanel
-                className="ux-state--grid deals-empty"
-                description={<>No deals in the currently displayed set match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter. This filtered view does not describe every store listing; reset it to show the full loaded set.</>}
-                role="status"
-                title="No matching deal signals"
-                tone="empty"
-              >
-                <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button>
-              </UxStatePanel>
-            )}
-          </div>
-        </section>
-        <DealNetworkStatus curatedSource={source} externalStatus={externalStatus} mode={mode} />
-      </div>
+          {filteredDeals.map((deal) => (
+            <DealCard
+              deal={deal}
+              alertIsSet={alerts.has(`${displayedDealScope}:${deal.id}`)}
+              isSaved={
+                savedDeals.has(dealStateKey(displayedDealScope, deal)) ||
+                syncedSavedDealKeys.has(dealStateKey(displayedDealScope, deal))
+              }
+              isSaving={savingDeals.has(dealStateKey(displayedDealScope, deal))}
+              key={dealStateKey(displayedDealScope, deal)}
+              saveMessage={saveMessages[dealStateKey(displayedDealScope, deal)]}
+              onSave={saveDeal}
+              onToggleAlert={toggleAlert}
+            />
+          ))}
+          {isExternalReady && externalDeals.length === 0 && (
+            <UxStatePanel
+              className="ux-state--grid deals-empty"
+              description={activeExternalTitle
+                ? <>The external feed returned no displayed offers for “{activeExternalTitle}”. This result does not establish that every store has no matching deal; try another title or load the full feed.</>
+                : "The external feed returned no displayed offers for this request. This does not establish global store availability; switch to Curated Deals to keep browsing NEXORA’s bundled set."}
+              role="status"
+              title="No live external deals found"
+              tone="empty"
+            >
+              {activeExternalTitle ? <button className="ux-state__action" type="button" onClick={clearExternalSearch}>Load all live deals</button> : null}
+              <button className="ux-state__action ux-state__action--quiet" type="button" onClick={() => selectMode("curated")}>View curated deals</button>
+            </UxStatePanel>
+          )}
+          {!isExternalReady && visibleDeals.length === 0 && !isExternalLoading && (
+            <UxStatePanel className="ux-state--grid deals-empty" tone="empty" role="status"
+              title="No curated deals available"
+              description="This feed has no deals to display right now. Check again or browse the live external feed.">
+              <ProductFeedRetry label="deals" />
+              <button className="ux-state__action" type="button" onClick={() => selectMode("external")}>Browse live deals</button>
+            </UxStatePanel>
+          )}
+          {visibleDeals.length > 0 && filteredDeals.length === 0 && (
+            <UxStatePanel
+              className="ux-state--grid deals-empty"
+              description={<>No deals in the currently displayed set match {searchQuery.trim() ? <>“{searchQuery.trim()}” and </> : null}the <strong>{activeFilter}</strong> filter. This filtered view does not describe every store listing; reset it to show the full loaded set.</>}
+              role="status"
+              title="No matching deal signals"
+              tone="empty"
+            >
+              <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button>
+            </UxStatePanel>
+          )}
+        </div>
+      </section>
     </>
   );
 }
