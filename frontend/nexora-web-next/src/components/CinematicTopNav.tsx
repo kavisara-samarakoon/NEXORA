@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import styles from "./cinematic.module.css";
@@ -22,8 +23,14 @@ const PRIMARY_LINKS = [
 ] as const;
 
 export default function CinematicTopNav({ className }: { className?: string }) {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+
+  const isActiveRoute = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -48,18 +55,30 @@ export default function CinematicTopNav({ className }: { className?: string }) {
   return (
     <header className={className}>
       <nav ref={navRef} className={styles.nav} aria-label="Primary">
-        <Link href="/" className={styles.brand}>
+        <Link
+          href="/"
+          className={isActiveRoute("/") ? `${styles.brand} ${styles.brandActive}` : styles.brand}
+          aria-current={isActiveRoute("/") ? "page" : undefined}
+        >
           Nexora<span className={styles.brandDot}>.</span>
         </Link>
 
         <ul className={styles.navLinks}>
-          {PRIMARY_LINKS.map((link) => (
-            <li key={link.href}>
-              <Link href={link.href} className={styles.navLink}>
-                {link.label}
-              </Link>
-            </li>
-          ))}
+          {PRIMARY_LINKS.map((link) => {
+            const isActive = isActiveRoute(link.href);
+
+            return (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className={isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         <div className={styles.navActions}>
@@ -83,11 +102,19 @@ export default function CinematicTopNav({ className }: { className?: string }) {
             </svg>
           </Link>
 
-          <Link href="/login" className={styles.signIn}>
+          <Link
+            href="/login"
+            className={isActiveRoute("/login") ? `${styles.signIn} ${styles.signInActive}` : styles.signIn}
+            aria-current={isActiveRoute("/login") ? "page" : undefined}
+          >
             Sign in
           </Link>
 
-          <Link href="/register" className={styles.register}>
+          <Link
+            href="/register"
+            className={isActiveRoute("/register") ? `${styles.register} ${styles.registerActive}` : styles.register}
+            aria-current={isActiveRoute("/register") ? "page" : undefined}
+          >
             Create account
           </Link>
 
@@ -113,24 +140,39 @@ export default function CinematicTopNav({ className }: { className?: string }) {
 
         {menuOpen ? (
           <ul id="nexora-compact-menu" className={styles.menuPanel}>
-            {PRIMARY_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className={styles.menuLink}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+            {PRIMARY_LINKS.map((link) => {
+              const isActive = isActiveRoute(link.href);
+
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className={isActive ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
             <li>
-              <Link href="/login" className={styles.menuLink} onClick={() => setMenuOpen(false)}>
+              <Link
+                href="/login"
+                className={isActiveRoute("/login") ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
+                aria-current={isActiveRoute("/login") ? "page" : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
                 Sign in
               </Link>
             </li>
             <li>
-              <Link href="/register" className={styles.menuLink} onClick={() => setMenuOpen(false)}>
+              <Link
+                href="/register"
+                className={isActiveRoute("/register") ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
+                aria-current={isActiveRoute("/register") ? "page" : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
                 Create account
               </Link>
             </li>

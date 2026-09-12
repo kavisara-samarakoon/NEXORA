@@ -959,3 +959,46 @@
     transition: none;
   }
 }
+
+/* v0.88 polish: persistent active route indication for cinematic navigation */
+.brandActive {
+  color: var(--nx-warm-white);
+}
+
+.brandActive .brandDot {
+  text-shadow: 0 0 18px rgba(255, 106, 0, 0.72);
+}
+
+.navLinkActive {
+  color: var(--nx-warm-white);
+}
+
+.navLinkActive::after {
+  transform: scaleX(1);
+  opacity: 1;
+  background: linear-gradient(90deg, var(--nx-orange), var(--nx-electric-blue));
+  box-shadow:
+    0 0 14px rgba(255, 106, 0, 0.45),
+    0 0 18px rgba(0, 212, 255, 0.22);
+}
+
+.signInActive {
+  color: var(--nx-warm-white);
+  border-color: rgba(0, 212, 255, 0.34);
+  background: rgba(0, 212, 255, 0.08);
+  box-shadow: 0 0 18px rgba(0, 212, 255, 0.12);
+}
+
+.registerActive {
+  box-shadow:
+    0 0 26px rgba(255, 106, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.menuLinkActive {
+  color: var(--nx-warm-white);
+  border-color: rgba(255, 230, 210, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 106, 0, 0.16), rgba(0, 212, 255, 0.08)),
+    rgba(255, 255, 255, 0.045);
+}
