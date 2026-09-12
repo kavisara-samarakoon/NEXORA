@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import CinematicTopNav from "@/components/CinematicTopNav";
 import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SecurityCenter from "@/components/SecurityCenter";
 import SentinelButton from "@/components/SentinelButton";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import { getSecurityStatus } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
+import styles from "@/components/SecurityProduct.module.css";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Cyber Security Command Center",
@@ -18,18 +18,23 @@ export default async function SecurityPage() {
   const { securityStatus, source } = await getSecurityStatus();
 
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="main-shell">
-        <Topbar />
-        <main className="dashboard security-page nx-page-reveal" id="main-content" tabIndex={-1}>
+    <div className={styles.scene}>
+      <div className={styles.atmosphere} aria-hidden="true" />
+      <div className={styles.vignette} aria-hidden="true" />
+
+      <CinematicTopNav className={styles.productHeader} />
+
+      <main className={styles.stage} id="main-content" tabIndex={-1}>
+        <div className={styles.noticeArea}>
           <ProductFeedNotice
             label="Security"
             source={source}
           />
-          <SecurityCenter securityStatus={securityStatus} source={source} />
-        </main>
-      </div>
+        </div>
+
+        <SecurityCenter securityStatus={securityStatus} source={source} />
+      </main>
+
       <SentinelButton />
     </div>
   );

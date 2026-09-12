@@ -17,6 +17,7 @@ const PRIMARY_LINKS = [
   { href: "/giveaways", label: "Giveaways" },
   { href: "/wishlist", label: "Wishlist" },
   { href: "/sentinel", label: "Sentinel" },
+  { href: "/security", label: "Security" },
 ] as const;
 
 export default function CinematicTopNav({ className }: { className?: string }) {
@@ -58,12 +59,6 @@ export default function CinematicTopNav({ className }: { className?: string }) {
               </Link>
             </li>
           ))}
-          <li>
-            <span className={styles.soon}>
-              News
-              <span className={styles.soonTag}>Soon</span>
-            </span>
-          </li>
         </ul>
 
         <div className={styles.navActions}>
