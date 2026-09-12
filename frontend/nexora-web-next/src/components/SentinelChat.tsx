@@ -121,6 +121,7 @@ export default function SentinelChat({
   const [showSignInHint, setShowSignInHint] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [sessionRetryKey, setSessionRetryKey] = useState(0);
   const [authState, setAuthState] = useState<GatewayAuthState>("checking");
   const composerInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,6 +135,7 @@ export default function SentinelChat({
     let active = true;
 
     async function refreshAuthentication() {
+      setAuthState("checking");
       const memoryToken = readAuthToken();
       if (memoryToken) {
         if (active) {
@@ -165,18 +167,17 @@ export default function SentinelChat({
       active = false;
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
-  }, []);
+  }, [sessionRetryKey]);
 
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const message = draft.trim();
-    if (!message || isSubmitting) return;
+    if (!message || isSubmitting || authState === "checking") return;
 
     setSubmittedMessage(message);
     setGatewayResponse(null);
     setGatewayError(null);
     setShowSignInHint(false);
-    setDraft("");
 
     if (!authToken) {
       setShowSignInHint(true);
@@ -192,6 +193,7 @@ export default function SentinelChat({
       setAuthToken(result.token);
       setAuthState("authenticated");
       setGatewayResponse(result.value);
+      setDraft("");
     } catch (error) {
       const details = normalizeSentinelInsightError(error);
       if (details.status === 401) {
@@ -244,6 +246,12 @@ export default function SentinelChat({
         <strong>No conversation saved</strong>
       </p>
 
+      {authState === "unavailable" ? (
+        <button className="ux-state__action" type="button" onClick={() => setSessionRetryKey((value) => value + 1)}>
+          Retry session check
+        </button>
+      ) : null}
+
       <div
         className="sn-chat__messages"
         role="log"
@@ -251,6 +259,9 @@ export default function SentinelChat({
         aria-live="polite"
         aria-relevant="additions text"
       >
+        {messages.length === 0 && !submittedMessage ? (
+          <p className="sn-chat__context-note">No sample conversation is available. Enter a message below to get started.</p>
+        ) : null}
         {messages.map((message) => (
           <div className={`sn-message sn-message--${message.role}`} key={message.id}>
             {message.role === "ai" && <SentinelAvatar />}
@@ -290,7 +301,7 @@ export default function SentinelChat({
             <p>{authState === "unavailable"
               ? "The local authentication route could not be reached. Static samples remain available; the authenticated gateway needs a reachable local backend and session."
               : "This composer needs a local backend session for the authenticated gateway. Static sample messages remain available, and NEXORA will not save this conversation."}</p>
-            <Link href="/login">{authState === "unavailable" ? "Open sign in" : "Sign in"}</Link>
+            <Link href="/login?returnTo=%2Fsentinel">{authState === "unavailable" ? "Open sign in" : "Sign in"}</Link>
           </div>
         )}
 
@@ -298,7 +309,7 @@ export default function SentinelChat({
           <div className="sn-gateway-state sn-gateway-state--unavailable">
             <strong>Session check unavailable</strong>
             <p>The local authentication route could not be reached. Static samples remain available; the authenticated gateway needs a reachable local backend and session.</p>
-            <Link href="/login">Open sign in</Link>
+            <Link href="/login?returnTo=%2Fsentinel">Open sign in</Link>
           </div>
         )}
 
@@ -356,7 +367,7 @@ export default function SentinelChat({
         <button
           type="submit"
           aria-label="Send message to Sentinel gateway preview"
-          disabled={!draft.trim() || isSubmitting}
+          disabled={!draft.trim() || isSubmitting || authState === "checking"}
         >
           <span aria-hidden="true">↗</span>
         </button>

@@ -9,6 +9,7 @@ import {
   type GameDeal,
 } from "@/data/deals";
 import type { WishlistItem } from "@/data/wishlist";
+import { ProductFeedRetry } from "@/components/ProductFeedNotice";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
@@ -249,8 +250,8 @@ function DealCard({
           </span>
           {saveMessage.tone === "auth" && (
             <span className="deals-card__auth-links">
-              <Link href="/login">Login</Link>
-              <Link href="/register">Register</Link>
+              <Link href="/login?returnTo=%2Fdeals">Login</Link>
+              <Link href="/register?returnTo=%2Fdeals">Register</Link>
             </span>
           )}
         </div>
@@ -693,7 +694,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
             </p>
           </div>
           <div className="deals-hero__stats" aria-label="Deal statistics">
-            <div><strong>{visibleDeals.length}</strong><span>Active deals</span></div>
+            <div><strong>{visibleDeals.length}</strong><span>Feed entries</span></div>
             <div><strong>{deepDiscountCount}</strong><span>50%+ off</span></div>
             <div><strong>{freeCount}</strong><span>Free now</span></div>
           </div>
@@ -808,8 +809,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               title="Sign in to save deals"
               tone="auth"
             >
-              <Link className="ux-state__action" href="/login">Sign in</Link>
-              <Link className="ux-state__action ux-state__action--quiet" href="/register">Register</Link>
+              <Link className="ux-state__action" href="/login?returnTo=%2Fdeals">Sign in</Link>
+              <Link className="ux-state__action ux-state__action--quiet" href="/register?returnTo=%2Fdeals">Register</Link>
             </UxStatePanel>
           )}
           {wishlistSyncWarning && (
@@ -867,6 +868,14 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               >
                 {activeExternalTitle ? <button className="ux-state__action" type="button" onClick={clearExternalSearch}>Load all live deals</button> : null}
                 <button className="ux-state__action ux-state__action--quiet" type="button" onClick={() => selectMode("curated")}>View curated deals</button>
+              </UxStatePanel>
+            )}
+            {!isExternalReady && visibleDeals.length === 0 && !isExternalLoading && (
+              <UxStatePanel className="ux-state--grid deals-empty" tone="empty" role="status"
+                title="No curated deals available"
+                description="This feed has no deals to display right now. Check again or browse the live external feed.">
+                <ProductFeedRetry label="deals" />
+                <button className="ux-state__action" type="button" onClick={() => selectMode("external")}>Browse live deals</button>
               </UxStatePanel>
             )}
             {visibleDeals.length > 0 && filteredDeals.length === 0 && (

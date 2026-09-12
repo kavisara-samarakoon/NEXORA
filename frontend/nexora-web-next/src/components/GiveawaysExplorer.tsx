@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ProductFeedRetry } from "@/components/ProductFeedNotice";
 import UxStatePanel from "@/components/UxStatePanel";
 import {
   giveawayFilters,
@@ -10,12 +11,6 @@ import {
 } from "@/data/giveaways";
 import type { GiveawaysResult } from "@/lib/api";
 
-const platformAvailability = [
-  { name: "Steam", value: 85, platform: "steam" },
-  { name: "Epic Games", value: 72, platform: "epic" },
-  { name: "GOG", value: 45, platform: "gog" },
-  { name: "Prime", value: 60, platform: "prime" },
-] as const;
 const giveawayNetworkIcons = {
   sync: "🔄",
   globe: "🌐",
@@ -134,7 +129,11 @@ function GiveawayCard({
   );
 }
 
-function GiveawayNetworkStatus({ source }: { source: GiveawaysResult["source"] }) {
+function GiveawayNetworkStatus({ source, giveaways }: GiveawaysResult) {
+  const platformAvailability = Array.from(new Set(giveaways.map((item) => item.platform))).map((platform) => {
+    const entries = giveaways.filter((item) => item.platform === platform);
+    return { platform, name: entries[0].platformLabel, value: Math.round(entries.length / giveaways.length * 100) };
+  });
   const isApiSource = source === "api";
   const items = [
     { label: "Giveaway Sync", value: isApiSource ? "Backend API feed" : "Static fallback preview", badge: isApiSource ? "API" : "Fallback", tone: "orange", icon: "sync" },
@@ -168,6 +167,7 @@ function GiveawayNetworkStatus({ source }: { source: GiveawaysResult["source"] }
       <div className="ga-network__platforms">
         <div className="ga-network__platforms-label"><span>Platform distribution</span><strong>{isApiSource ? "API feed" : "Preview data"}</strong></div>
         <div className="ga-network__platform-rows">
+          {giveaways.length === 0 ? <p>No platform entries in this feed.</p> : null}
           {platformAvailability.map((platform) => (
             <div className="ga-network__platform-row" key={platform.name}>
               <span>{platform.name}</span>
@@ -185,6 +185,7 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
   const [activeFilter, setActiveFilter] = useState<GiveawayFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [reminders, setReminders] = useState<Set<number>>(() => new Set());
+  const [reminderMessage, setReminderMessage] = useState("");
   const [openGuide, setOpenGuide] = useState<number | null>(null);
 
   const filteredGiveaways = useMemo(() => {
@@ -207,6 +208,9 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
   }, [activeFilter, giveaways, searchQuery]);
 
   function toggleReminder(giveawayId: number) {
+    setReminderMessage(reminders.has(giveawayId)
+      ? "Preview reminder removed."
+      : "Reminder marked for this page only. It is not saved and will not send a notification.");
     setReminders((current) => {
       const next = new Set(current);
       if (next.has(giveawayId)) next.delete(giveawayId);
@@ -257,6 +261,8 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
           tone="fallback"
         />
       )}
+
+      <p className="ux-inline-status" role="status">{reminderMessage}</p>
 
       <section className="ga-filter-panel" aria-label="Search and filter giveaways">
         <div className="ga-search">
@@ -320,12 +326,12 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
                 title={giveaways.length === 0 ? "No giveaway entries available" : "No matching giveaways"}
                 tone="empty"
               >
-                {giveaways.length > 0 ? <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button> : null}
+                {giveaways.length > 0 ? <button className="ux-state__action" type="button" onClick={resetFilters}>Reset search and filters</button> : <ProductFeedRetry label="giveaways" />}
               </UxStatePanel>
             )}
           </div>
         </section>
-        <GiveawayNetworkStatus source={source} />
+        <GiveawayNetworkStatus source={source} giveaways={giveaways} />
       </div>
     </>
   );

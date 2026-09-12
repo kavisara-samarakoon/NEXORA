@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import PageSourceNotice from "@/components/PageSourceNotice";
+import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SentinelExperience from "@/components/SentinelExperience";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -22,9 +22,8 @@ export default async function SentinelPage() {
       <div className="main-shell">
         <Topbar />
         <main className="dashboard sentinel-page nx-page-reveal" id="main-content" tabIndex={-1}>
-          <PageSourceNotice
-            label="Sentinel preview data"
-            endpoint="/api/sentinel/status + /api/sentinel/demo"
+          <ProductFeedNotice
+            label="Sentinel"
             source={sentinel.source}
           />
           <SentinelExperience {...sentinel} />

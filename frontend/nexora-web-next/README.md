@@ -40,7 +40,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Start the backend in a separate terminal:
+Start the backend in a separate terminal **from the repository root**:
 
 ```bash
 cd backend/nexora-api
@@ -142,6 +142,7 @@ caching and echoing, and the bounded single CSRF retry are unchanged.
 
 ```bash
 npm run dev       # Start the development server
+node --test tests/product-readiness.test.mjs # Route/auth UI regression checks
 npm run lint      # Run ESLint
 npm run build     # Create an optimized production build
 npm run start     # Run a completed production build locally
@@ -340,8 +341,8 @@ dependency graph; it never applies automatic audit fixes.
 
 - No production frontend deployment or continuous-delivery workflow is
   documented. CI performs validation only.
-- Settings is local demo state and does not manage backend notification
-  preferences; the authenticated Wishlist panel is the current preference UI.
+- Settings links to the saved notification preferences in Wishlist. Its sample
+  profile and preview toggles remain unsaved demo state.
 - Automatic refresh scheduling and notification providers are backend-only
   configuration.
 - Real email delivery requires backend SMTP configuration.

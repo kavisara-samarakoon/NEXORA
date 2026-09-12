@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import PageSourceNotice from "@/components/PageSourceNotice";
+import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SecurityCenter from "@/components/SecurityCenter";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
@@ -23,9 +23,8 @@ export default async function SecurityPage() {
       <div className="main-shell">
         <Topbar />
         <main className="dashboard security-page nx-page-reveal" id="main-content" tabIndex={-1}>
-          <PageSourceNotice
-            label="Security status data"
-            endpoint="/api/security/status"
+          <ProductFeedNotice
+            label="Security"
             source={source}
           />
           <SecurityCenter securityStatus={securityStatus} source={source} />

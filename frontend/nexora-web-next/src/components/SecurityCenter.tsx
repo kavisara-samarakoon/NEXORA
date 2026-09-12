@@ -4,6 +4,7 @@ import {
   type ProtectionItem,
   type TimelineEvent,
 } from "@/data/security";
+import UxStatePanel from "@/components/UxStatePanel";
 import type { SecurityStatusResult } from "@/lib/api";
 
 function ProtectionIconGraphic({ icon }: { icon: ProtectionIcon }) {
@@ -48,6 +49,8 @@ function ProtectionSection({
         <span className={planned ? "sc-section__badge sc-section__badge--planned" : "sc-section__badge"}>{badge}</span>
       </div>
       <div className="sc-protection-grid">
+        {items.length === 0 ? <UxStatePanel title="No capabilities listed" tone="empty"
+          description="This feed has no capability entries for this section. It does not indicate your account’s protection status." /> : null}
         {items.map((item) => (
           <article className={planned ? "sc-protection-card sc-protection-card--planned" : "sc-protection-card"} key={item.id}>
             <span className={planned ? "sc-protection-card__icon sc-protection-card__icon--planned" : "sc-protection-card__icon"} aria-hidden="true">
