@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { login, normalizeAuthError, type LoginPayload } from "@/lib/auth";
 import { startAuthSession } from "@/lib/auth-client";
+import AuthPasswordField from "@/components/AuthPasswordField";
+import { authFieldError } from "@/lib/auth-form";
+import styles from "./ProductFeedback.module.css";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 
-export default function LoginForm() {
+export default function LoginForm({ returnTo }: { returnTo: string }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorDetails, setErrorDetails] = useState<{
@@ -18,9 +21,14 @@ export default function LoginForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorDetails(null);
-    setIsSubmitting(true);
 
+    if (isSubmitting) return;
     const form = event.currentTarget;
+    for (const input of Array.from(form.querySelectorAll("input"))) {
+      input.setCustomValidity(authFieldError(input.name, input.value, "login"));
+    }
+    if (!form.reportValidity()) return;
+    setIsSubmitting(true);
     const formData = new FormData(form);
     const payload: LoginPayload = {
       emailOrUsername: String(formData.get("emailOrUsername") || "").trim(),
@@ -32,7 +40,7 @@ export default function LoginForm() {
       startAuthSession(response);
 
       form.reset();
-      router.replace("/");
+      router.replace(returnTo);
     } catch (error) {
       const details = normalizeAuthError(error);
       setErrorDetails({
@@ -46,11 +54,14 @@ export default function LoginForm() {
 
   return (
     <form
-      className="auth-form"
+      className={`auth-form ${styles.form}`}
       aria-busy={isSubmitting}
       aria-describedby={errorDetails ? "login-form-error" : undefined}
       onSubmit={handleSubmit}
-      onChange={() => setErrorDetails(null)}
+      onChange={(event) => {
+        setErrorDetails(null);
+        if (event.target instanceof HTMLInputElement) event.target.setCustomValidity("");
+      }}
     >
       <div className="auth-form__field">
         <label htmlFor="login-identifier">Email or username</label>
@@ -64,21 +75,10 @@ export default function LoginForm() {
           maxLength={320}
           required
         />
-        <small className="ux-helper" id="login-identifier-hint">Use the identifier linked to your local NEXORA account. Sign-in needs the configured local backend.</small>
+        <small className="ux-helper" id="login-identifier-hint">Use the email address or username you registered with NEXORA.</small>
       </div>
 
-      <div className="auth-form__field">
-        <label htmlFor="login-password">Password</label>
-        <input
-          id="login-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="Enter your password"
-          maxLength={72}
-          required
-        />
-      </div>
+      <AuthPasswordField mode="login" />
 
       <div className="auth-form__message">
         {errorDetails ? (
@@ -95,11 +95,11 @@ export default function LoginForm() {
 
       <button className="auth-form__submit" type="submit" disabled={isSubmitting}>
         {isSubmitting ? <span className="auth-form__spinner" aria-hidden="true" /> : null}
-        {isSubmitting ? "Checking local account…" : "Sign in"}
+        {isSubmitting ? "Signing in…" : "Sign in"}
       </button>
 
       <p className="auth-form__switch">
-        New to NEXORA? <Link href="/register">Create an account</Link>
+        New to NEXORA? <Link href={`/register?returnTo=${encodeURIComponent(returnTo)}`}>Create an account</Link>
       </p>
     </form>
   );

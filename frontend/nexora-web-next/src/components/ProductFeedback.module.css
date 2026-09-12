@@ -1,0 +1,64 @@
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 177, 94, 0.24);
+  border-radius: 16px;
+  background: rgba(20, 23, 32, 0.85);
+  color: #edf0f7;
+  overflow-wrap: anywhere;
+}
+
+.notice > div { min-width: 0; }
+.notice strong { font-size: 14px; }
+.notice p, .retry > span { color: #b7c0d0; font-size: 13px; line-height: 1.6; }
+.notice p { margin: 6px 0 0; max-width: 72ch; }
+.retry { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.retry button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 177, 94, 0.55);
+  border-radius: 10px;
+  background: rgba(255, 122, 0, 0.12);
+  color: #fff0df;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.retry button:hover:not(:disabled) { background: rgba(255, 122, 0, 0.23); }
+.retry button:disabled { opacity: 0.7; cursor: wait; }
+.retry > span:empty { display: none; }
+.state { max-width: 900px; padding: 28px; margin: 48px auto; }
+.state h1 { margin-bottom: 20px; font-size: clamp(24px, 5vw, 36px); }
+.state :global(.ux-state__action) { min-height: 44px; }
+.state > a { display: inline-flex; align-items: center; margin-top: 16px; color: #c7d9f5; text-decoration: underline; }
+
+.form :global(.ux-helper) { font-size: 12px; }
+.password { position: relative; }
+.password input { padding-right: 74px; width: 100%; }
+.password button {
+  position: absolute;
+  top: 0;
+  right: 6px;
+  min-height: 44px;
+  min-width: 60px;
+  height: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #c7d9f5;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .notice { padding: 16px; }
+  .state { margin: 24px 0; padding: 20px; }
+  .form input { font-size: 16px; }
+}

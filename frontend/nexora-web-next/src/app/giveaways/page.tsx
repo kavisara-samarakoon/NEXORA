@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import GiveawaysExplorer from "@/components/GiveawaysExplorer";
-import PageSourceNotice from "@/components/PageSourceNotice";
+import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -23,9 +23,8 @@ export default async function GiveawaysPage() {
       <div className="main-shell">
         <Topbar />
         <main className="dashboard giveaways-page nx-page-reveal" id="main-content" tabIndex={-1}>
-          <PageSourceNotice
-            label="Giveaways data"
-            endpoint="/api/giveaways"
+          <ProductFeedNotice
+            label="Giveaways"
             source={source}
           />
           <GiveawaysExplorer giveaways={giveaways} source={source} />

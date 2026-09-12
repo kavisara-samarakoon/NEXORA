@@ -1,3 +1,4 @@
+import UxStatePanel from "@/components/UxStatePanel";
 import SentinelChat from "@/components/SentinelChat";
 import type { SentinelCapability, SentinelStatus } from "@/data/sentinel";
 import type { SentinelResult } from "@/lib/api";
@@ -95,6 +96,8 @@ export default function SentinelExperience({
           <section className="sn-capability-section" aria-labelledby="sentinel-capabilities-title">
             <div className="sn-section-heading"><span aria-hidden="true">⚡</span><div><small>Knowledge modules</small><h2 id="sentinel-capabilities-title">Sentinel Capabilities</h2></div></div>
             <div className="sn-capabilities">
+              {capabilities.length === 0 ? <UxStatePanel title="No capabilities listed" tone="empty"
+                description="The preview feed has no capability entries. You can still use the composer when signed in." /> : null}
               {capabilities.map((capability) => (
                 <article className={`sn-capability sn-capability--${capability.tone}`} key={capability.id}>
                   <div className={`sn-capability__accent sn-capability__accent--${capability.tone}`} />

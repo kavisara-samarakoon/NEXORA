@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddWishlistItemForm from "@/components/AddWishlistItemForm";
+import { ProductFeedRetry } from "@/components/ProductFeedNotice";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import {
@@ -713,7 +714,7 @@ function WishlistAlertPanel({
             title="Sign in to view alert history"
             tone="auth"
           >
-            <Link className="ux-state__action" href="/login">Sign in</Link>
+            <Link className="ux-state__action" href="/login?returnTo=%2Fwishlist">Sign in</Link>
           </UxStatePanel>
         )}
         {view === "offline" && (
@@ -886,7 +887,7 @@ function NotificationPreferencesPanel({
   }
 
   return (
-    <section className="wl-notification-preferences" aria-labelledby="wishlist-notification-preferences-title">
+    <section className="wl-notification-preferences" id="notification-preferences" aria-labelledby="wishlist-notification-preferences-title">
       <div className="wl-notification-preferences__header">
         <div>
           <span>Account controls</span>
@@ -1003,6 +1004,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     let requestVersion = 0;
 
     async function refreshWishlist() {
+      setView("checking");
       const currentVersion = ++requestVersion;
       let token: string | null;
 
@@ -1037,6 +1039,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         return;
       }
 
+      if (!active || currentVersion !== requestVersion) return;
       setAuthToken(token);
       setServiceMessage(null);
       setAlertEvents([]);
@@ -1353,8 +1356,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         </div>
         {view === "public" && (
           <nav className="wl-access-banner__actions" aria-label="Wishlist account actions">
-            <Link href="/login">Sign in</Link>
-            <Link href="/register">Register</Link>
+            <Link href="/login?returnTo=%2Fwishlist">Sign in</Link>
+            <Link href="/register?returnTo=%2Fwishlist">Register</Link>
           </nav>
         )}
         {view === "offline" && (
@@ -1443,6 +1446,17 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
                 onUpdateAlert={handleAlertUpdate}
               />
             ))}
+            {view === "checking" && (
+              <UxStatePanel className="ux-state--grid wl-empty" title="Loading your wishlist" tone="loading" role="status"
+                description="Checking your session and saved games…" />
+            )}
+            {!isPersonal && view !== "checking" && displayedItems.length === 0 && (
+              <UxStatePanel className="ux-state--grid wl-empty" title="No preview wishlist entries" tone="empty" role="status"
+                description="The public preview has no games to display. Sign in to create your own wishlist.">
+                <Link className="ux-state__action" href="/login?returnTo=%2Fwishlist">Sign in</Link>
+                <ProductFeedRetry label="wishlist preview" />
+              </UxStatePanel>
+            )}
             {isPersonal && displayedItems.length === 0 && (
               <UxStatePanel
                 className="ux-state--grid wl-empty"

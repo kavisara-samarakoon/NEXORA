@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import DealsExplorer from "@/components/DealsExplorer";
-import PageSourceNotice from "@/components/PageSourceNotice";
+import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SentinelButton from "@/components/SentinelButton";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -23,9 +23,8 @@ export default async function DealsPage() {
       <div className="main-shell">
         <Topbar />
         <main className="dashboard deals-page nx-page-reveal" id="main-content" tabIndex={-1}>
-          <PageSourceNotice
-            label="Deals data"
-            endpoint="/api/deals"
+          <ProductFeedNotice
+            label="Deals"
             source={source}
           />
           <DealsExplorer deals={deals} source={source} />

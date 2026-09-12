@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import UxStatePanel from "@/components/UxStatePanel";
 import { useState } from "react";
 import {
   accountOverview,
@@ -99,6 +101,11 @@ export default function SettingsCenter() {
           <p>Explore sample profile, preference, and platform layouts without changing the signed-in account.</p>
         </div>
       </section>
+
+      <UxStatePanel title="Manage saved notification preferences" tone="auth"
+        description="Your account’s saved notification choices are available in Wishlist. Sign in there to view or update them.">
+        <Link className="ux-state__action" href="/wishlist#notification-preferences">Open wishlist preferences</Link>
+      </UxStatePanel>
 
       <div className="st-disclaimer">
         <span aria-hidden="true">ℹ️</span>
