@@ -18,12 +18,27 @@ the `dev` profile · Not documented as production-ready
 | --- | --- |
 | Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, alert history, price history, and notification preferences are held in memory. CheapShark external deals remain available on demand. |
 | `dev` | Enables PostgreSQL, Flyway V1–V10, Spring Data JPA, persisted catalog/account/refresh-session/auth-security-event/wishlist/alert/price-history/notification-preference data, and the optional wishlist refresh scheduler. |
-| `prod` / `production` | Activates early production auth-configuration safety checks. It does not provide a production datasource, deployment configuration, or operational hardening. |
+| `prod` / `production` | Activates auth safety checks and requires `dev` persistence; starting this profile alone is rejected. |
+| `hosted-demo` | Composes `dev` + `production`; requires external PostgreSQL, secrets, exact HTTPS origins and `PORT`, with secure cookies and CSRF enforced. |
 
 The default profile is useful for UI development and tests. Restarting it
 clears accounts and personal wishlist changes. The `dev` profile validates JPA
 mappings against the migrated schema with `ddl-auto=validate`; Hibernate does
 not create or modify tables.
+
+### Hosted demo on Render / Neon
+
+Use [`.env.hosted-demo.example`](.env.hosted-demo.example) as a provider-variable
+checklist; Spring Boot does not load this file automatically. Enter real values
+in Render's environment settings. The [hosted setup guide](../../docs/deployment/production-demo-deployment-plan.md)
+covers Neon's direct JDBC endpoint, TLS, Flyway validation, and Vercel origins.
+
+Render settings: **Docker** service, root `backend/nexora-api`, Dockerfile
+`./Dockerfile`, context `.`, health path `/api/health`. Leave Docker Command
+unset to use the image's Java 17 startup command. The [Dockerfile](Dockerfile)
+builds with Maven, runs the jar as a non-root user, and defaults to `hosted-demo`;
+missing hosted configuration fails startup. Its build context excludes env
+files and generated artifacts. Existing CI/tests remain separate from packaging.
 
 ### Backend security headers
 
@@ -80,10 +95,11 @@ secret values. It requires:
 - one or more exact HTTPS trusted origins with no wildcard, localhost,
   loopback/any-address host, or common local development port.
 
-Example configuration shape only:
+Partial guard configuration only; PostgreSQL settings are also required. For
+the hosted demo use the complete template linked above:
 
 ```text
-SPRING_PROFILES_ACTIVE=production
+SPRING_PROFILES_ACTIVE=production,dev
 NEXORA_JWT_SECRET=<strong external secret of at least 48 bytes>
 NEXORA_REFRESH_TOKEN_HASH_SECRET=<separate strong external secret of at least 48 bytes>
 NEXORA_REFRESH_TOKEN_COOKIE_SECURE=true
@@ -855,15 +871,14 @@ mvn test -Dtest=PostgresDevProfileIntegrationTests
 
 ## Current limitations
 
-- This repository does not document a production deployment,
-  continuous-delivery pipeline, application-container build workflow, or
-  operational runbook.
+- No live production deployment, continuous-delivery pipeline, or hosted
+  operational runbook has been validated.
 - Backend CI does not build application containers. CodeQL remains manual-only
   until code scanning is enabled/available, while Security CI still does not
   include a full Maven vulnerability scanner.
-- Docker Compose provides local PostgreSQL only; there is no backend application
-  image or production container workflow. The optional devcontainer supplies a
-  local toolchain only.
+- Docker Compose provides local PostgreSQL only. The Render Dockerfile provides
+  backend packaging; no frontend image or CI container-publishing workflow is
+  provided. The optional devcontainer supplies a local toolchain only.
 - The production-profile guard fails closed for a bounded set of unsafe auth
   secrets, cookies, and origins. It does not provide persistent production
   stores or a complete browser-session design. The full CORS/cookie/origin/proxy

@@ -28,7 +28,7 @@ Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [development milestones](RELEASES.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
 
-Deployment planning: [hosted-demo plan](docs/deployment/production-demo-deployment-plan.md) ·
+Deployment setup: [Vercel / Render / Neon commands](docs/deployment/production-demo-deployment-plan.md) ·
 [environment variables](docs/deployment/environment-variable-plan.md) ·
 [live smoke plan](docs/deployment/live-smoke-test-plan.md) ·
 [readiness checklist](docs/deployment/deployment-readiness-checklist.md)
@@ -709,11 +709,12 @@ NEXORA is designed for local demonstration, academic evaluation, and portfolio
 review. It is not a hosted production service and has no production
 availability, scale, security-assurance, or compliance claim.
 
-- No live hosted-demo deployment or continuous-delivery pipeline exists. v0.75
-  documents planning and readiness requirements only.
-- Docker Compose covers local PostgreSQL only. The optional devcontainer
-  provides a local toolchain, not backend/frontend release images or a
-  production container workflow.
+- No live hosted-demo deployment or continuous-delivery pipeline exists. The
+  [hosted setup guide](docs/deployment/production-demo-deployment-plan.md) now
+  includes provider settings and runnable checks; live verification is pending.
+- The [backend Dockerfile](backend/nexora-api/Dockerfile) packages Java 17 for
+  Render. Docker Compose still covers local PostgreSQL only, and the optional
+  devcontainer supplies a local toolchain. No frontend release image is provided.
 - CI does not build application containers. CodeQL and pull-request Dependency
   Review workflows are included, while repository secret scanning/push
   protection remain owner-managed settings and Maven dependency output remains

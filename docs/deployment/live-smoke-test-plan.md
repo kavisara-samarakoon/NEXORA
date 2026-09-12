@@ -32,6 +32,20 @@ Before testing:
   redacted observation.
 - Define how test data will be removed or record the known retention limitation.
 
+## Runnable checks
+
+Follow [the setup guide's verification commands](production-demo-deployment-plan.md#verify-before-sharing)
+for offline env checks, opt-in hosted PostgreSQL validation, GET-only checks of
+both hosted origins, and the account smoke test through Vercel. The account
+smoke creates a generated reviewer account that persists in the demo database;
+it now covers refresh, logout, and post-logout refresh denial. Curl's cookie jar
+does not establish that browser SameSite/Secure handling works.
+
+Health must report `runtimeMode=production`, `dataMode=postgres-dev`, and an
+active auth production guard. `UP` alone also occurs in the memory-only demo.
+The public profile list sanitizes `hosted-demo` to `custom`; it is not a raw
+profile dump. Health does not execute a live database query.
+
 ## Public API checks
 
 - [ ] `GET /api` returns the current welcome response and HTTP 200.
