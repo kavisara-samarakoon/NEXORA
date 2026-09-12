@@ -704,3 +704,27 @@
     background-position: 50% 50%;
   }
 }
+
+/* v0.87 polish: soften Settings route surfaces into modern minimal glass */
+.scene :global(.st-card),
+.scene :global(.st-danger) {
+  border-color: rgba(255, 230, 210, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 46%, rgba(255, 106, 0, 0.035)),
+    rgba(12, 12, 16, 0.32);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.scene :global(.st-section-heading__icon) {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.scene :global(.st-danger__actions button) {
+  border-color: rgba(255, 230, 210, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+}

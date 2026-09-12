@@ -1083,3 +1083,60 @@
     background-position: 50% 50%;
   }
 }
+
+/* v0.87 polish: soften wishlist route surfaces into modern minimal glass */
+.scene :global(.wl-add-panel),
+.scene :global(.wl-filter-panel),
+.scene :global(.wl-network) {
+  border-color: rgba(255, 230, 210, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 46%, rgba(255, 106, 0, 0.035)),
+    rgba(12, 12, 16, 0.32);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.scene :global(.wl-card) {
+  border-color: rgba(255, 230, 210, 0.11);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.018) 50%, rgba(0, 212, 255, 0.026)),
+    rgba(14, 14, 18, 0.3);
+  box-shadow:
+    0 20px 54px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.scene :global(.wl-card:hover) {
+  transform: translateY(-2px);
+  border-color: rgba(255, 230, 210, 0.2);
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.36),
+    0 0 30px rgba(0, 212, 255, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.scene :global(.wl-card__accent) {
+  height: 2px;
+  opacity: 0.42;
+}
+
+.scene :global(.wl-card__prices div),
+.scene :global(.wl-card__evaluation),
+.scene :global(.wl-card__price-history),
+.scene :global(.wl-card__alert-settings),
+.scene :global(.wl-card__settings-message),
+.scene :global(.wl-network__item),
+.scene :global(.wl-network__summary-rows div),
+.scene :global(.wl-network__store-rows > div) {
+  border-color: rgba(255, 230, 210, 0.09);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+}
+
+.scene :global(.wl-network__header-icon),
+.scene :global(.wl-network__item-icon) {
+  background: rgba(255, 255, 255, 0.045);
+}

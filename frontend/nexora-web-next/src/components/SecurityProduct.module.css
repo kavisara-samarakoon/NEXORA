@@ -621,3 +621,35 @@
     background-position: 50% 50%;
   }
 }
+
+/* v0.87 polish: soften Security route surfaces into modern minimal glass */
+.scene :global(.sc-section) {
+  border-color: rgba(255, 230, 210, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 46%, rgba(255, 106, 0, 0.035)),
+    rgba(12, 12, 16, 0.32);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.scene :global(.sc-protection-card) {
+  border-color: rgba(255, 230, 210, 0.09);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.016) 52%, rgba(0, 212, 255, 0.022)),
+    rgba(255, 255, 255, 0.028);
+  box-shadow: none;
+}
+
+.scene :global(.sc-protection-card:hover) {
+  transform: translateY(-2px);
+  border-color: rgba(255, 230, 210, 0.18);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+}
+
+.scene :global(.sc-section__icon),
+.scene :global(.sc-protection-card__icon) {
+  background: rgba(255, 255, 255, 0.045);
+}
