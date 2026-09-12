@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import CinematicTopNav from "@/components/CinematicTopNav";
 import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SentinelButton from "@/components/SentinelButton";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import WishlistExplorer from "@/components/WishlistExplorer";
 import { getWishlist } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
+import styles from "@/components/WishlistProduct.module.css";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Smart Wishlist Control",
@@ -18,18 +18,23 @@ export default async function WishlistPage() {
   const { wishlistItems, source } = await getWishlist();
 
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="main-shell">
-        <Topbar />
-        <main className="dashboard wishlist-page nx-page-reveal" id="main-content" tabIndex={-1}>
+    <div className={styles.scene}>
+      <div className={styles.atmosphere} aria-hidden="true" />
+      <div className={styles.vignette} aria-hidden="true" />
+
+      <CinematicTopNav className={styles.productHeader} />
+
+      <main className={styles.stage} id="main-content" tabIndex={-1}>
+        <div className={styles.noticeArea}>
           <ProductFeedNotice
             label="Public wishlist preview"
             source={source}
           />
-          <WishlistExplorer wishlistItems={wishlistItems} source={source} />
-        </main>
-      </div>
+        </div>
+
+        <WishlistExplorer wishlistItems={wishlistItems} source={source} />
+      </main>
+
       <SentinelButton />
     </div>
   );
