@@ -432,3 +432,96 @@
   .modeSwitch { border-radius: 16px; }
   .modeButton { flex-basis: 100%; border-radius: 12px; }
 }
+
+/* v0.87 polish: unify route hero title with Wishlist-style NEXORA gradient */
+.routeHero {
+  max-width: 860px;
+}
+
+.title {
+  font-size: clamp(2.25rem, 5vw, 4.15rem);
+  font-weight: 880;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  background: linear-gradient(100deg, #00d4ff 0%, #20d8ff 26%, #f7f3ec 44%, #ff7a00 70%, #ff9b2f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 34px rgba(0, 212, 255, 0.12), 0 0 42px rgba(255, 122, 0, 0.14);
+}
+
+@media (max-width: 520px) {
+  .title {
+    font-size: clamp(2rem, 14vw, 3rem);
+  }
+}
+
+/* v0.87 polish: animated NEXORA route title gradient */
+.title {
+  background-size: 260% 100%;
+  animation: nexoraHeroGradientFlow 7.5s ease-in-out infinite alternate;
+}
+
+@keyframes nexoraHeroGradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 70% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
+
+/* v0.87 polish: soften deal route surfaces into modern minimal glass */
+.sourcePanel,
+.filterPanel,
+.network {
+  border-color: rgba(255, 230, 210, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 46%, rgba(255, 106, 0, 0.035)),
+    rgba(12, 12, 16, 0.32);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.card {
+  border-color: rgba(255, 230, 210, 0.11);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.018) 50%, rgba(0, 212, 255, 0.026)),
+    rgba(14, 14, 18, 0.3);
+  box-shadow:
+    0 20px 54px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 230, 210, 0.2);
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.36),
+    0 0 30px rgba(0, 212, 255, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.cardAccent {
+  height: 2px;
+  opacity: 0.42;
+}
+
+.networkHeaderIcon,
+.networkItemIcon {
+  background: rgba(255, 255, 255, 0.045);
+}

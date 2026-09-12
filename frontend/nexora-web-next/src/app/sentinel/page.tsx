@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import CinematicTopNav from "@/components/CinematicTopNav";
 import ProductFeedNotice from "@/components/ProductFeedNotice";
 import SentinelExperience from "@/components/SentinelExperience";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import { getSentinel } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
+import styles from "@/components/SentinelProduct.module.css";
 
 export const metadata: Metadata = createPageMetadata({
   title: "NEXORA Sentinel",
@@ -17,18 +17,22 @@ export default async function SentinelPage() {
   const sentinel = await getSentinel();
 
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="main-shell">
-        <Topbar />
-        <main className="dashboard sentinel-page nx-page-reveal" id="main-content" tabIndex={-1}>
+    <div className={styles.scene}>
+      <div className={styles.atmosphere} aria-hidden="true" />
+      <div className={styles.vignette} aria-hidden="true" />
+
+      <CinematicTopNav className={styles.productHeader} />
+
+      <main className={styles.stage} id="main-content" tabIndex={-1}>
+        <div className={styles.noticeArea}>
           <ProductFeedNotice
             label="Sentinel"
             source={sentinel.source}
           />
-          <SentinelExperience {...sentinel} />
-        </main>
-      </div>
+        </div>
+
+        <SentinelExperience {...sentinel} />
+      </main>
     </div>
   );
 }

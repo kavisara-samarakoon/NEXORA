@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import CinematicTopNav from "@/components/CinematicTopNav";
 import SentinelButton from "@/components/SentinelButton";
 import SettingsCenter from "@/components/SettingsCenter";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import { createPageMetadata } from "@/lib/metadata";
+import styles from "@/components/SettingsProduct.module.css";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Account Control Center",
@@ -14,14 +14,16 @@ export const metadata: Metadata = createPageMetadata({
 
 export default function SettingsPage() {
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="main-shell">
-        <Topbar />
-        <main className="dashboard settings-page nx-page-reveal" id="main-content" tabIndex={-1}>
-          <SettingsCenter />
-        </main>
-      </div>
+    <div className={styles.scene}>
+      <div className={styles.atmosphere} aria-hidden="true" />
+      <div className={styles.vignette} aria-hidden="true" />
+
+      <CinematicTopNav className={styles.productHeader} />
+
+      <main className={styles.stage} id="main-content" tabIndex={-1}>
+        <SettingsCenter />
+      </main>
+
       <SentinelButton />
     </div>
   );

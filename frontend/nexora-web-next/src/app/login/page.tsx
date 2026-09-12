@@ -4,6 +4,7 @@ import Link from "next/link";
 import LoginForm from "@/components/LoginForm";
 import { productReturnTo } from "@/lib/auth-form";
 import { createPageMetadata } from "@/lib/metadata";
+import styles from "@/components/AuthProduct.module.css";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Sign In",
@@ -16,33 +17,46 @@ export default async function LoginPage({ searchParams }: {
   searchParams: Promise<{ returnTo?: string | string[] }>;
 }) {
   const returnTo = productReturnTo((await searchParams).returnTo);
+
   return (
-    <main className="auth-page nx-page-reveal" id="main-content" tabIndex={-1}>
-      <div className="auth-page__orb auth-page__orb--orange" aria-hidden="true" />
-      <div className="auth-page__orb auth-page__orb--blue" aria-hidden="true" />
+    <main className={`${styles.scene} auth-page nx-page-reveal`} id="main-content" tabIndex={-1}>
+      <div className={styles.atmosphere} aria-hidden="true" />
+      <div className={styles.vignette} aria-hidden="true" />
 
       <section className="auth-panel" aria-labelledby="login-title">
         <div className="auth-panel__intro">
-          <Link className="auth-brand" href="/" aria-label="Return to NEXORA dashboard">
-            <Image src="/brand/nexora-logo.png" alt="" width={48} height={48} priority />
-            <span><strong>NEXORA</strong><small>Game Hub</small></span>
+          <Link className="auth-brand" href="/" aria-label="Return to NEXORA home">
+            <Image src="/brand/nexora-logo.png" alt="" width={52} height={52} priority />
+            <span><strong>NEXORA</strong><small>Secure Game Hub</small></span>
           </Link>
-          <div>
-            <span className="auth-panel__eyebrow"><i aria-hidden="true" /> Your NEXORA account</span>
-            <h1>Welcome back to your command center.</h1>
-            <p>Sign in with your email or username to reconnect your NEXORA account.</p>
+
+          <div className="auth-panel__copy">
+            <span className="auth-panel__eyebrow"><i aria-hidden="true" /> Account gateway</span>
+            <h1>Sign in to NEXORA.</h1>
+            <p>Reconnect your wishlist, saved alerts, Sentinel access, and account preferences.</p>
           </div>
-          <Link className="auth-panel__back" href="/">← Back to dashboard</Link>
+
+          <div className="auth-panel__trust" aria-label="Authentication preview notes">
+            <span>Session-aware access</span>
+            <span>Wishlist controls</span>
+            <span>Sentinel gateway</span>
+          </div>
+
+          <Link className="auth-panel__back" href="/">← Back to home</Link>
         </div>
 
         <div className="auth-panel__form-card">
           <header>
-            <span>Secure access</span>
-            <h2 id="login-title">Sign in</h2>
-            <p>Use the credentials registered with NEXORA.</p>
+            <span>Protected access</span>
+            <h2 id="login-title">Welcome back</h2>
+            <p>Use your registered email or username.</p>
           </header>
+
           <LoginForm returnTo={returnTo} />
-          <p className="auth-panel__note">Sign in to save games, manage your wishlist, and use Sentinel. You’ll return to your selected page after signing in.</p>
+
+          <p className="auth-panel__note">
+            You will return to your selected page after signing in. Account features require a reachable backend session.
+          </p>
         </div>
       </section>
     </main>
