@@ -147,20 +147,64 @@ class ExternalDealApiEndpointTests {
     }
 
     @Test
-    void externalDealsEndpointCapsPageSizeAtConfiguredMaximum() throws Exception {
-        when(cheapSharkDealClient.getDeals(24, null, null)).thenReturn(List.of(
-                response("Capped result", "7", "5.00", "10.00", "50", null, "8", "capped-id")
-        ));
-        when(cheapSharkDealClient.getStores()).thenReturn(List.of(
-                store("7", "GOG", "1")
-        ));
+    void externalDealsEndpointRejectsZeroPageSize() throws Exception {
+        mockMvc.perform(get("/api/deals/external").queryParam("pageSize", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message").value("pageSize: must be greater than or equal to 1"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/deals/external"))
+                .andExpect(jsonPath("$.timestampUtc").exists());
 
+        verifyNoInteractions(cheapSharkDealClient);
+    }
+
+    @Test
+    void externalDealsEndpointRejectsPageSizeAboveSupportedMaximum() throws Exception {
         mockMvc.perform(get("/api/deals/external").queryParam("pageSize", "100"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("Capped result"))
-                .andExpect(jsonPath("$[0].store").value("GOG"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message").value("pageSize: must be less than or equal to 24"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/deals/external"));
 
-        verify(cheapSharkDealClient).getDeals(24, null, null);
+        verifyNoInteractions(cheapSharkDealClient);
+    }
+
+    @Test
+    void externalDealsEndpointRejectsMalformedPageSize() throws Exception {
+        mockMvc.perform(get("/api/deals/external").queryParam("pageSize", "not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message").value("pageSize: must be a valid number"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/deals/external"));
+
+        verifyNoInteractions(cheapSharkDealClient);
+    }
+
+    @Test
+    void externalDealsEndpointRejectsNegativeUpperPrice() throws Exception {
+        mockMvc.perform(get("/api/deals/external").queryParam("upperPrice", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message").value("upperPrice: must be greater than or equal to 0"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/deals/external"));
+
+        verifyNoInteractions(cheapSharkDealClient);
+    }
+
+    @Test
+    void externalDealsEndpointRejectsMalformedUpperPrice() throws Exception {
+        mockMvc.perform(get("/api/deals/external").queryParam("upperPrice", "not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.message").value("upperPrice: must be a valid number"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/deals/external"));
+
+        verifyNoInteractions(cheapSharkDealClient);
     }
 
     private static CheapSharkDealResponse response(
