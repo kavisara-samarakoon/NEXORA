@@ -1,3 +1,5 @@
+import { buildApiUrl } from "@/lib/api-client";
+
 /**
  * NEXORA — homepage feed adapter.
  *
@@ -238,12 +240,13 @@ function mapSummary(payload: unknown): HomeSummary {
  * ───────────────────────────────────────────────────────────────────── */
 
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const response = await fetch(url, {
+  const requestUrl = buildApiUrl(url);
+  const response = await fetch(requestUrl, {
     signal,
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
-  if (!response.ok) throw new Error(`Request failed: ${url} (${response.status})`);
+  if (!response.ok) throw new Error(`Request failed: ${requestUrl} (${response.status})`);
   return (await response.json()) as unknown;
 }
 
