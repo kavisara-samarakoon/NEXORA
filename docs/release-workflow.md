@@ -141,11 +141,11 @@ tagged, and the closure does not create or move another release tag.
 
 ## Current milestone state
 
-The latest stable development tag is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`; the previous
-completed milestone is
-`v0.76.0-backend-hosted-environment-configuration-foundation`. v0.77 added a
-manual, provider-neutral hosted PostgreSQL validation path. It did not deploy
-NEXORA, and the planned Neon, Render, and Vercel hosted-demo path is not yet
-publicly live. The target remains a fully functional hosted portfolio/demo MVP,
-not production SaaS. NEXORA remains not production-ready.
+The latest tagged development milestone is
+`v0.89.0-browser-qa-evidence`. The current v0.90 full-stack demo-readiness
+candidate is untagged. The earlier v0.77 milestone added a manual,
+provider-neutral hosted PostgreSQL validation path; neither that validation nor
+the v0.90 local QA evidence deployed NEXORA. The planned Neon, Render, and
+Vercel hosted-demo path is not yet publicly live. The target remains a fully
+functional hosted portfolio/demo MVP, not production SaaS. NEXORA remains not
+production-ready.

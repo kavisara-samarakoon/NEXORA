@@ -58,8 +58,8 @@ class SentinelGeminiGatewayApiEndpointTests {
 
         mockMvc.perform(get("/api/sentinel/status"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.aiStatus").value("Gemini Provider Foundation"))
-                .andExpect(jsonPath("$.geminiApi").value("Gemini Enabled"));
+                .andExpect(jsonPath("$.aiStatus").value("External AI ready"))
+                .andExpect(jsonPath("$.geminiApi").value("Gemini enabled"));
     }
 
     private String register() throws Exception {

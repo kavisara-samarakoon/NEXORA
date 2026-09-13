@@ -24,7 +24,7 @@ export function ProductFeedRetry({ label }: { label: string }) {
         {pending ? "Checking…" : `Retry ${label}`}
       </button>
       <span role="status">
-        {pending ? "Checking for an updated feed…" : attempted ? "Check complete. The current feed status is shown above." : ""}
+        {pending ? "Checking for updated data…" : attempted ? "Check complete. The current status is shown above." : ""}
       </span>
     </div>
   );
@@ -37,15 +37,18 @@ export default function ProductFeedNotice({
   label: string;
   source: "api" | "fallback";
 }) {
+  if (source === "api") return null;
+
   return (
-    <aside className={styles.notice} aria-label={`${label} source`}>
+    <aside className={styles.notice} aria-label={`${label} data status`}>
       <div role="status">
-        <strong>{source === "api" ? `${label} feed loaded` : `${label} feed unavailable`}</strong>
-        <p>{source === "api"
-          ? "Loaded from NEXORA. Preview sections are labelled separately."
-          : "Showing the bundled preview because the feed could not be loaded. Preview prices, availability, and status may be out of date."}</p>
+        <strong>{label} sample preview</strong>
+        <p>
+          Live data is temporarily unavailable, so NEXORA is keeping this screen usable with sample content.
+          Prices, availability, and status may be outdated until the feed reconnects.
+        </p>
       </div>
-      {source === "fallback" ? <ProductFeedRetry label={label.toLowerCase()} /> : null}
+      <ProductFeedRetry label={label.toLowerCase()} />
     </aside>
   );
 }

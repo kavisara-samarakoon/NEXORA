@@ -23,11 +23,11 @@ class DatabaseGiveawayServiceTests {
                         "Steam",
                         "Cyber Shadow",
                         "Action · Platformer · Indie",
-                        "2d 14h 32m",
-                        2,
-                        78,
-                        "live",
-                        "popular",
+                        "End date unverified",
+                        0,
+                        0,
+                        "sample",
+                        "sample",
                         "$19.99",
                         true
                 );
@@ -43,11 +43,11 @@ class DatabaseGiveawayServiceTests {
                 () -> assertEquals("Steam", giveaway.platformLabel()),
                 () -> assertEquals("Cyber Shadow", giveaway.title()),
                 () -> assertEquals("Action · Platformer · Indie", giveaway.genre()),
-                () -> assertEquals("2d 14h 32m", giveaway.timer()),
-                () -> assertEquals(2, giveaway.daysRemaining()),
-                () -> assertEquals(78, giveaway.claimed()),
-                () -> assertEquals("live", giveaway.status()),
-                () -> assertEquals("popular", giveaway.tag()),
+                () -> assertEquals("End date unverified", giveaway.timer()),
+                () -> assertEquals(0, giveaway.daysRemaining()),
+                () -> assertEquals(0, giveaway.claimed()),
+                () -> assertEquals("sample", giveaway.status()),
+                () -> assertEquals("sample", giveaway.tag()),
                 () -> assertEquals("$19.99", giveaway.originalPrice())
         );
         verify(repository).findActiveGiveaways();

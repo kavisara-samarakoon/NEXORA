@@ -25,13 +25,14 @@ class DatabaseDealServiceTests {
                 databaseDeal(1L, store, "Five stars", "4.5"),
                 databaseDeal(2L, store, "Four stars", "4.0"),
                 databaseDeal(3L, store, "Three stars", "3.0"),
-                databaseDeal(4L, store, "Two stars", "2.9")
+                databaseDeal(4L, store, "Two stars", "2.9"),
+                databaseDeal(5L, store, "Unrated", "0")
         );
         when(repository.findActiveDeals()).thenReturn(databaseDeals);
 
         List<Deal> deals = new DatabaseDealService(repository).getDeals();
 
-        assertEquals(4, deals.size());
+        assertEquals(5, deals.size());
         Deal firstDeal = deals.get(0);
         assertAll(
                 () -> assertEquals(1L, firstDeal.id()),
@@ -45,11 +46,12 @@ class DatabaseDealServiceTests {
                 () -> assertEquals(new BigDecimal("4.5"), firstDeal.rating()),
                 () -> assertEquals("★★★★★", firstDeal.stars()),
                 () -> assertEquals("RPG", firstDeal.category()),
-                () -> assertEquals("Great Deal", firstDeal.status()),
+                () -> assertEquals("Current offer", firstDeal.status()),
                 () -> assertNull(firstDeal.dealUrl()),
                 () -> assertEquals("★★★★☆", deals.get(1).stars()),
                 () -> assertEquals("★★★☆☆", deals.get(2).stars()),
-                () -> assertEquals("★★☆☆☆", deals.get(3).stars())
+                () -> assertEquals("★★☆☆☆", deals.get(3).stars()),
+                () -> assertEquals("", deals.get(4).stars())
         );
         verify(repository).findActiveDeals();
     }
@@ -66,7 +68,7 @@ class DatabaseDealServiceTests {
                 "$20.00",
                 "$10.00",
                 new BigDecimal("10.00"),
-                "Great Deal",
+                "Current offer",
                 true
         );
     }

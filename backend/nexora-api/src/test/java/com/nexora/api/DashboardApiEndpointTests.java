@@ -28,6 +28,6 @@ class DashboardApiEndpointTests {
                 .andExpect(jsonPath("$.bestDiscountValue").value(100))
                 .andExpect(jsonPath("$.bestDiscountTitle").value("GTA V: Premium Edition"))
                 .andExpect(jsonPath("$.databaseStatus").value("Demo Mode"))
-                .andExpect(jsonPath("$.sentinelStatus").value("Gateway Foundation"));
+                .andExpect(jsonPath("$.sentinelStatus").value("Local NEXORA guidance"));
     }
 }

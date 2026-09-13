@@ -1,6 +1,7 @@
 package com.nexora.api.deals;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import org.springframework.validation.annotation.Validated;
@@ -26,8 +27,8 @@ public class ExternalDealController {
     @GetMapping
     public List<Deal> getExternalDeals(
             @RequestParam(required = false) @Size(max = 80) String title,
-            @RequestParam(required = false) @Min(1) Integer pageSize,
-            @RequestParam(required = false) @DecimalMin(value = "0", inclusive = false) BigDecimal upperPrice) {
+            @RequestParam(required = false) @Min(1) @Max(24) Integer pageSize,
+            @RequestParam(required = false) @DecimalMin("0") BigDecimal upperPrice) {
         return externalDealService.getDeals(title, pageSize, upperPrice);
     }
 }

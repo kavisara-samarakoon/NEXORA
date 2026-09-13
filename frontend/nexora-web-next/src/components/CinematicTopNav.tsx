@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import AuthStatus from "./AuthStatus";
+import CinematicSceneControls from "./CinematicSceneControls";
 import styles from "./cinematic.module.css";
 
 /**
@@ -14,6 +16,7 @@ import styles from "./cinematic.module.css";
  */
 
 const PRIMARY_LINKS = [
+  { href: "/", label: "Dashboard" },
   { href: "/deals", label: "Deals" },
   { href: "/giveaways", label: "Giveaways" },
   { href: "/wishlist", label: "Wishlist" },
@@ -30,6 +33,26 @@ export default function CinematicTopNav({ className }: { className?: string }) {
   const isActiveRoute = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
+  const showNavbarSceneControls = !isActiveRoute("/");
+
+  const focusDealsSearch = () => {
+    const input = document.getElementById("deal-search");
+    if (!(input instanceof HTMLInputElement)) return false;
+
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => input.focus({ preventScroll: true }), 250);
+    window.history.replaceState(null, "", "/deals#deal-search");
+    return true;
+  };
+
+  const handleSearchShortcut = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!isActiveRoute("/deals")) return;
+
+    event.preventDefault();
+    focusDealsSearch();
+    setMenuOpen(false);
   };
 
   useEffect(() => {
@@ -82,7 +105,7 @@ export default function CinematicTopNav({ className }: { className?: string }) {
         </ul>
 
         <div className={styles.navActions}>
-          <Link href="/deals" className={styles.iconButton} aria-label="Search deals">
+          <Link href="/deals#deal-search" className={styles.iconButton} aria-label="Focus deals search" onClick={handleSearchShortcut}>
             <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
               <circle
                 cx="9"
@@ -102,21 +125,17 @@ export default function CinematicTopNav({ className }: { className?: string }) {
             </svg>
           </Link>
 
-          <Link
-            href="/login"
-            className={isActiveRoute("/login") ? `${styles.signIn} ${styles.signInActive}` : styles.signIn}
-            aria-current={isActiveRoute("/login") ? "page" : undefined}
-          >
-            Sign in
-          </Link>
+          {showNavbarSceneControls ? (
+            <CinematicSceneControls
+              className={styles.navSceneControls}
+              showMotion={false}
+              soundIconOnly
+            />
+          ) : null}
 
-          <Link
-            href="/register"
-            className={isActiveRoute("/register") ? `${styles.register} ${styles.registerActive}` : styles.register}
-            aria-current={isActiveRoute("/register") ? "page" : undefined}
-          >
-            Create account
-          </Link>
+          <div className={styles.navAuthStatus}>
+            <AuthStatus />
+          </div>
 
           <button
             type="button"
@@ -156,25 +175,13 @@ export default function CinematicTopNav({ className }: { className?: string }) {
                 </li>
               );
             })}
-            <li>
-              <Link
-                href="/login"
-                className={isActiveRoute("/login") ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
-                aria-current={isActiveRoute("/login") ? "page" : undefined}
-                onClick={() => setMenuOpen(false)}
-              >
-                Sign in
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/register"
-                className={isActiveRoute("/register") ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
-                aria-current={isActiveRoute("/register") ? "page" : undefined}
-                onClick={() => setMenuOpen(false)}
-              >
-                Create account
-              </Link>
+            {showNavbarSceneControls ? (
+              <li className={styles.menuSceneControls}>
+                <CinematicSceneControls showMotion={false} />
+              </li>
+            ) : null}
+            <li className={styles.menuAuthStatus}>
+              <AuthStatus />
             </li>
           </ul>
         ) : null}

@@ -1,12 +1,14 @@
 "use client";
 
-import { formatCount } from "../lib/homeFeed";
+import { formatCount, getHomeSummaryAvailability } from "../lib/homeFeed";
+import CinematicSceneControls from "./CinematicSceneControls";
 import { useHomeScene } from "./HomeSceneProvider";
 import styles from "./cinematic.module.css";
 
 export default function CinematicHomeControls({ className }: { className?: string }) {
-  const { status, data, motionPaused, toggleMotion, soundOn, toggleSound } = useHomeScene();
+  const { status, data, errors } = useHomeScene();
   const { summary } = data;
+  const summaryAvailability = getHomeSummaryAvailability(status, errors.summary, summary);
 
   const metrics = [
     { label: "Deals", value: summary.deals },
@@ -27,35 +29,20 @@ export default function CinematicHomeControls({ className }: { className?: strin
             </div>
           ))}
         </dl>
-      ) : (
+      ) : null}
+
+      {summaryAvailability !== "available" ? (
         <p className={styles.syncPending} role="status">
           <span aria-hidden="true" />
-          {status === "loading" ? "Syncing discovery" : "Sync pending"}
+          {summaryAvailability === "loading"
+            ? "Syncing discovery"
+            : summaryAvailability === "incomplete"
+              ? "Summary incomplete"
+              : "Summary unavailable"}
         </p>
-      )}
+      ) : null}
 
-      <div className={styles.controlGroup}>
-        <button
-          type="button"
-          aria-pressed={soundOn}
-          className={soundOn ? `${styles.controlButton} ${styles.controlOn}` : styles.controlButton}
-          onClick={toggleSound}
-        >
-          <span className={styles.controlDot} aria-hidden="true" />
-          {soundOn ? "Sound on" : "Sound off"}
-        </button>
-
-        <button
-          type="button"
-          aria-pressed={motionPaused}
-          className={
-            motionPaused ? `${styles.controlButton} ${styles.controlOn}` : styles.controlButton
-          }
-          onClick={toggleMotion}
-        >
-          {motionPaused ? "Resume motion" : "Pause motion"}
-        </button>
-      </div>
+      <CinematicSceneControls />
     </div>
   );
 }

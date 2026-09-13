@@ -1,12 +1,11 @@
 export type KnownDealStore = "Steam" | "Epic Games" | "GOG" | "Humble" | "Ubisoft";
 export type DealStore = string;
 export type DealStatus =
-  | "Historical Low"
-  | "Lowest Ever"
-  | "Great Deal"
-  | "Good Price"
-  | "Free Weekend"
-  | "Average";
+  | "Deep discount"
+  | "Strong discount"
+  | "Current offer"
+  | "Observed offer"
+  | "Free offer";
 
 export type GameDeal = {
   id: number;
@@ -35,7 +34,7 @@ export const dealFilters = [
   "Ubisoft",
   "Under $10",
   "50%+ Off",
-  "Free Weekend",
+  "Free offers",
 ] as const;
 
 export type DealFilter = (typeof dealFilters)[number];
@@ -53,7 +52,7 @@ export const deals = [
     rating: 4.8,
     stars: "★★★★★",
     category: "Action RPG",
-    status: "Historical Low",
+    status: "Strong discount",
   },
   {
     id: 2,
@@ -67,7 +66,7 @@ export const deals = [
     rating: 4.6,
     stars: "★★★★☆",
     category: "RPG",
-    status: "Great Deal",
+    status: "Strong discount",
   },
   {
     id: 3,
@@ -81,7 +80,7 @@ export const deals = [
     rating: 4.9,
     stars: "★★★★★",
     category: "Roguelike",
-    status: "Lowest Ever",
+    status: "Deep discount",
   },
   {
     id: 4,
@@ -95,7 +94,7 @@ export const deals = [
     rating: 4.9,
     stars: "★★★★★",
     category: "RPG",
-    status: "Good Price",
+    status: "Current offer",
   },
   {
     id: 5,
@@ -109,7 +108,7 @@ export const deals = [
     rating: 3.8,
     stars: "★★★★☆",
     category: "Sci-Fi RPG",
-    status: "Average",
+    status: "Current offer",
   },
   {
     id: 6,
@@ -123,7 +122,7 @@ export const deals = [
     rating: 4.2,
     stars: "★★★★☆",
     category: "Action",
-    status: "Great Deal",
+    status: "Strong discount",
   },
   {
     id: 7,
@@ -137,7 +136,7 @@ export const deals = [
     rating: 4.5,
     stars: "★★★★★",
     category: "Open World",
-    status: "Free Weekend",
+    status: "Free offer",
   },
   {
     id: 8,
@@ -151,6 +150,6 @@ export const deals = [
     rating: 4.7,
     stars: "★★★★★",
     category: "Action Adventure",
-    status: "Good Price",
+    status: "Current offer",
   },
 ] satisfies readonly CuratedGameDeal[];

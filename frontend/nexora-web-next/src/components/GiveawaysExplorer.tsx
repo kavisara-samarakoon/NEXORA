@@ -7,40 +7,23 @@ import {
   giveawayFilters,
   type Giveaway,
   type GiveawayFilter,
-  type GiveawayTag,
 } from "@/data/giveaways";
 import type { GiveawaysResult } from "@/lib/api";
 import styles from "@/components/GiveawaysProduct.module.css";
-
-function tagLabel(tag: GiveawayTag): string {
-  if (tag === "ending-soon") return "Ending soon";
-  if (tag === "new") return "New";
-  return "Popular";
-}
 
 function GiveawayCard({
   giveaway,
   reminderIsSet,
   guideIsOpen,
-  isPreview,
   onToggleGuide,
   onToggleReminder,
 }: {
   giveaway: Giveaway;
   reminderIsSet: boolean;
   guideIsOpen: boolean;
-  isPreview: boolean;
   onToggleGuide: (giveawayId: number) => void;
   onToggleReminder: (giveawayId: number) => void;
 }) {
-  const isEndingSoon = giveaway.daysRemaining < 2;
-  const progressValue = Math.max(0, Math.min(100, giveaway.claimed));
-  const progressTone =
-    progressValue >= 80
-      ? styles.progressHot
-      : progressValue >= 50
-        ? styles.progressWarm
-        : styles.progressCool;
   const titleId = `giveaway-title-${giveaway.id}`;
   const guideId = `giveaway-guide-${giveaway.id}`;
 
@@ -50,7 +33,7 @@ function GiveawayCard({
 
       <div className={styles.cardHeader}>
         <span className={styles.platform}>{giveaway.platformLabel}</span>
-        <span className={styles.tag}>{tagLabel(giveaway.tag)}</span>
+        <span className={styles.tag}>Sample</span>
       </div>
 
       <h2 className={styles.cardTitle} id={titleId}>
@@ -59,43 +42,24 @@ function GiveawayCard({
       <p className={styles.genre}>{giveaway.genre}</p>
 
       <div className={styles.priceRow}>
-        <span className={styles.priceFree}>Free</span>
-        <del className={styles.priceOriginal}>{giveaway.originalPrice}</del>
+        <span className={styles.priceFree}>Sample entry</span>
+        <span className={styles.priceOriginal}>Sample list price {giveaway.originalPrice}</span>
       </div>
 
-      <div className={isEndingSoon ? `${styles.timerRow} ${styles.timerUrgent}` : styles.timerRow}>
+      <div className={styles.timerRow}>
         <span className={styles.timerLabel}>
           <span className={styles.timerDot} aria-hidden="true" />
-          {giveaway.timer} remaining
+          {giveaway.timer}
         </span>
-        <span className={isPreview ? `${styles.statusBadge} ${styles.statusPreview}` : styles.statusBadge}>
-          {isPreview ? "Preview" : "API feed"}
+        <span className={`${styles.statusBadge} ${styles.statusPreview}`}>
+          Unverified sample
         </span>
-      </div>
-
-      <div className={styles.progress}>
-        <div className={styles.progressLabel}>
-          <span>Claimed</span>
-          <strong>{giveaway.claimed}%</strong>
-        </div>
-        <div
-          className={styles.progressTrack}
-          role="progressbar"
-          aria-label={`${giveaway.title} claim progress`}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progressValue}
-          aria-valuetext={`${giveaway.claimed}% claimed`}
-        >
-          <span className={`${styles.progressFill} ${progressTone}`} style={{ width: `${progressValue}%` }} />
-        </div>
       </div>
 
       {guideIsOpen ? (
         <div className={styles.guidePanel} id={guideId} role="status">
-          {isPreview
-            ? `Confirm this preview entry with ${giveaway.platformLabel} before attempting to claim it.`
-            : `Open ${giveaway.platformLabel}, sign in, and claim this title before the window closes.`}
+          No verified claim destination, eligibility, region, entitlement type, or end date is
+          available for this sample. Verified claim links are future work.
         </div>
       ) : null}
 
@@ -105,10 +69,10 @@ function GiveawayCard({
           type="button"
           aria-controls={guideIsOpen ? guideId : undefined}
           aria-expanded={guideIsOpen}
-          aria-label={`${guideIsOpen ? "Hide" : "Show"} claim guide for ${giveaway.title}`}
+          aria-label={`${guideIsOpen ? "Hide" : "Show"} availability note for ${giveaway.title}`}
           onClick={() => onToggleGuide(giveaway.id)}
         >
-          Claim guide
+          Availability note
         </button>
         <button
           className={
@@ -118,10 +82,11 @@ function GiveawayCard({
           }
           type="button"
           aria-pressed={reminderIsSet}
-          aria-label={`${reminderIsSet ? "Remove" : "Add"} local reminder for ${giveaway.title}`}
+          aria-label={`${reminderIsSet ? "Remove" : "Mark"} page-only preview reminder for ${giveaway.title}`}
+          title="Page-only preview; no reminder is saved and no notification will be sent"
           onClick={() => onToggleReminder(giveaway.id)}
         >
-          {reminderIsSet ? "Reminder set" : "Add reminder"}
+          {reminderIsSet ? "Marked on page" : "Preview reminder"}
         </button>
       </div>
     </article>
@@ -144,24 +109,24 @@ function GiveawayNetworkStatus({ source, giveaways }: GiveawaysResult) {
 
   const items = [
     {
-      label: "Giveaway sync",
-      value: isApiSource ? "Backend API feed" : "Static fallback preview",
-      badge: isApiSource ? "API" : "Fallback",
+      label: "Sample source",
+      value: isApiSource ? "Seeded backend catalog" : "Bundled fallback catalog",
+      badge: "Sample",
     },
     {
-      label: "Data source",
-      value: isApiSource ? "Spring Boot" : "Static dataset",
-      badge: isApiSource ? "API" : "Static",
+      label: "Verification",
+      value: "No live offer verification",
+      badge: "Unverified",
     },
     {
       label: "Claim links",
-      value: "Safe redirects planned",
+      value: "No verified destinations",
       badge: "Planned",
     },
     {
-      label: "Alerts",
-      value: "Local reminders active",
-      badge: "Local",
+      label: "Reminders",
+      value: "Page-only preview control",
+      badge: "Preview",
     },
   ] as const;
 
@@ -170,9 +135,9 @@ function GiveawayNetworkStatus({ source, giveaways }: GiveawaysResult) {
       <div className={styles.networkHeader}>
         <span className={styles.networkHeaderIcon} aria-hidden="true" />
         <div className={styles.networkHeaderCopy}>
-          <span>Drop telemetry</span>
+          <span>Sample catalog</span>
           <h2 className={styles.networkTitle} id="giveaway-network-title">
-            Giveaway network status
+            Giveaway data status
           </h2>
         </div>
         <span
@@ -183,7 +148,7 @@ function GiveawayNetworkStatus({ source, giveaways }: GiveawaysResult) {
           }
         >
           <span aria-hidden="true" />
-          {isApiSource ? "API" : "Static"}
+          Sample
         </span>
       </div>
 
@@ -203,7 +168,7 @@ function GiveawayNetworkStatus({ source, giveaways }: GiveawaysResult) {
       <div className={styles.networkPlatforms}>
         <div className={styles.networkPlatformsLabel}>
           <span>Platform distribution</span>
-          <strong>{isApiSource ? "API feed" : "Preview data"}</strong>
+          <strong>Sample entries</strong>
         </div>
         <div className={styles.networkPlatformRows}>
           {giveaways.length === 0 ? (
@@ -243,9 +208,6 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
 
       if (!matchesSearch) return false;
       if (activeFilter === "All") return true;
-      if (activeFilter === "Ending Soon") return giveaway.daysRemaining < 2;
-      if (activeFilter === "New") return giveaway.tag === "new";
-      if (activeFilter === "Popular") return giveaway.tag === "popular";
       return giveaway.platformLabel === activeFilter;
     });
   }, [activeFilter, giveaways, searchQuery]);
@@ -270,9 +232,8 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
     setSearchQuery("");
   }
 
-  const endingSoonCount = giveaways.filter((giveaway) => giveaway.daysRemaining < 2).length;
   const platformCount = new Set(giveaways.map((giveaway) => giveaway.platform)).size;
-  const sourceLabel = source === "api" ? "Backend giveaway feed" : "Static fallback preview";
+  const sourceLabel = source === "api" ? "Backend sample data" : "Fallback sample data";
 
   return (
     <>
@@ -280,23 +241,24 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
         <section className={styles.routeHero} aria-labelledby="giveaways-title">
           <p className={styles.eyebrow}>
             <span className={styles.eyebrowLine} aria-hidden="true" />
-            {source === "api" ? "Backend giveaway feed" : "Static giveaway preview"}
+            {source === "api" ? "Backend sample catalog" : "Fallback sample catalog"}
           </p>
           <h1 id="giveaways-title" className={styles.title}>
             Giveaway Intelligence
           </h1>
           <p className={styles.lede}>
-            Review free-game entries, claim windows, and platform guidance. Confirm availability with
-            the listed store before claiming.
+            Explore seeded examples of a future giveaway catalog. These entries are not verified
+            offers and do not include claim destinations, eligibility, regions, entitlement types,
+            or end dates.
           </p>
           <div className={styles.statsRow} aria-label="Giveaway statistics">
             <div className={styles.stat}>
               <strong className={styles.statValue}>{giveaways.length}</strong>
-              <span className={styles.statLabel}>Feed entries</span>
+              <span className={styles.statLabel}>Sample entries</span>
             </div>
             <div className={styles.stat}>
-              <strong className={styles.statValue}>{endingSoonCount}</strong>
-              <span className={styles.statLabel}>Ending soon</span>
+              <strong className={styles.statValue}>0</strong>
+              <span className={styles.statLabel}>Verified links</span>
             </div>
             <div className={styles.stat}>
               <strong className={styles.statValue}>{platformCount}</strong>
@@ -308,14 +270,14 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
         <GiveawayNetworkStatus giveaways={giveaways} source={source} />
       </div>
 
-      {source !== "api" ? (
-        <UxStatePanel
-          className="ux-state--compact giveaways-source-fallback"
-          description="The backend giveaway feed could not be reached, so this page is showing bundled local demo entries. These preview dates and availability may not be current; confirm any promotion with the listed store."
-          title="Static fallback feed"
-          tone="fallback"
-        />
-      ) : null}
+      <UxStatePanel
+        className="ux-state--compact giveaways-source-fallback"
+        description={source === "api"
+          ? "The backend returned seeded demonstration entries. NEXORA does not verify their availability and provides no claim links or claim-window data in v0.90."
+          : "The backend could not be reached, so bundled sample entries are shown. They are not verified offers and include no claim links or claim-window data."}
+        title={source === "api" ? "Unverified sample catalog" : "Fallback sample catalog"}
+        tone="fallback"
+      />
 
       {reminderMessage ? (
         <p className={styles.inlineStatus} role="status">
@@ -365,7 +327,7 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
         </div>
       </section>
 
-      <section className={styles.resultsSection} aria-label="Available game giveaways">
+      <section className={styles.resultsSection} aria-label="Giveaway sample entries">
         <div className={styles.resultsBar}>
           <span>
             <strong>{filteredGiveaways.length}</strong> giveaway entries
@@ -379,7 +341,6 @@ export default function GiveawaysExplorer({ giveaways, source }: GiveawaysResult
               giveaway={giveaway}
               reminderIsSet={reminders.has(giveaway.id)}
               guideIsOpen={openGuide === giveaway.id}
-              isPreview={source !== "api"}
               key={giveaway.id}
               onToggleGuide={(giveawayId) =>
                 setOpenGuide((current) => (current === giveawayId ? null : giveawayId))

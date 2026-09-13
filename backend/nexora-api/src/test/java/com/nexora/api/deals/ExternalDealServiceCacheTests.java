@@ -549,7 +549,7 @@ class ExternalDealServiceCacheTests {
                 new BigDecimal("4.0"),
                 "★★★★☆",
                 "Local",
-                "Good Price",
+                "Current offer",
                 null
         );
     }

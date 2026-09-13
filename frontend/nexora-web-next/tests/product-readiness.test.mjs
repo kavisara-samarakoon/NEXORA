@@ -14,6 +14,31 @@ async function moduleUrl(path, replacements = {}) {
 }
 
 const { productReturnTo, authFieldError } = await import(await moduleUrl("../src/lib/auth-form.ts"));
+const { wishlistCardIdentity } = await import(
+  await moduleUrl("../src/lib/wishlist-card-identity.ts")
+);
+const { createSentinelRequestGuard } = await import(
+  await moduleUrl("../src/lib/sentinel-request-guard.ts")
+);
+const { hasAvailableDealRating, isValidDealRatingPayload } = await import(
+  await moduleUrl("../src/lib/deal-rating.ts")
+);
+const { giveaways: giveawaySamples } = await import(
+  await moduleUrl("../src/data/giveaways.ts")
+);
+const { notificationPreferences } = await import(
+  await moduleUrl("../src/data/settings.ts")
+);
+const homeFeedApiClientUrl = `data:text/javascript,${encodeURIComponent('export const buildApiUrl = path => "http://localhost:8080" + path;')}`;
+const {
+  HOME_FEED_REQUEST_TIMEOUT_MS,
+  getHomeSummaryAvailability,
+  mapDeal,
+  mapGiveaway,
+  mapSummary,
+} = await import(
+  await moduleUrl("../src/lib/homeFeed.ts", { "@/lib/api-client": homeFeedApiClientUrl })
+);
 
 test("auth return navigation accepts only known product routes", () => {
   for (const route of ["/", "/deals", "/giveaways", "/wishlist", "/sentinel", "/security", "/settings"]) {
@@ -37,6 +62,162 @@ test("registration validates the trimmed username and blank fields without trimm
   assert.match(authFieldError("password", "é".repeat(37), "register"), /too long/);
   assert.equal(authFieldError("password", "🎮".repeat(18), "login"), "");
   assert.match(authFieldError("password", "🎮".repeat(19), "login"), /too long/);
+});
+
+test("wishlist card identity separates preview drafts from personal account items", () => {
+  const item = { id: 1, store: "Steam", title: "Example Game" };
+  const previewIdentity = wishlistCardIdentity(
+    { accountRevision: 0, source: "api", view: "public" },
+    item,
+  );
+  const personalIdentity = wishlistCardIdentity(
+    { accountRevision: 1, source: "api", view: "personal" },
+    item,
+  );
+  const nextAccountIdentity = wishlistCardIdentity(
+    { accountRevision: 2, source: "api", view: "personal" },
+    item,
+  );
+
+  assert.notEqual(previewIdentity, personalIdentity);
+  assert.notEqual(personalIdentity, nextAccountIdentity);
+  assert.notEqual(
+    previewIdentity,
+    wishlistCardIdentity(
+      { accountRevision: 0, source: "fallback", view: "public" },
+      item,
+    ),
+  );
+  assert.notEqual(
+    personalIdentity,
+    wishlistCardIdentity(
+      { accountRevision: 1, source: "api", view: "personal" },
+      { ...item, title: "Another Game" },
+    ),
+  );
+  assert.equal(
+    personalIdentity,
+    wishlistCardIdentity(
+      { accountRevision: 1, source: "api", view: "personal" },
+      item,
+    ),
+  );
+});
+
+test("Sentinel rejects responses from requests invalidated by an auth change", () => {
+  const guard = createSentinelRequestGuard();
+  const signedInRequest = guard.begin();
+
+  assert.equal(guard.isCurrent(signedInRequest), true);
+  guard.invalidate();
+  assert.equal(guard.isCurrent(signedInRequest), false);
+
+  const nextSessionRequest = guard.begin();
+  assert.equal(guard.isCurrent(signedInRequest), false);
+  assert.equal(guard.isCurrent(nextSessionRequest), true);
+});
+
+test("deal ratings distinguish unavailable data from real ratings", () => {
+  assert.equal(hasAvailableDealRating(0, ""), false);
+  assert.equal(isValidDealRatingPayload(0, ""), true);
+  assert.equal(isValidDealRatingPayload(0, "★★☆☆☆"), false);
+  assert.equal(hasAvailableDealRating(4.6, "★★★★★"), true);
+  assert.equal(isValidDealRatingPayload(4.6, "★★★★★"), true);
+});
+
+test("giveaway seed data and settings identify unverified sample capabilities", () => {
+  assert.ok(giveawaySamples.every((item) =>
+    item.status === "sample" &&
+    item.tag === "sample" &&
+    item.timer === "End date unverified" &&
+    item.daysRemaining === 0 &&
+    item.claimed === 0
+  ));
+
+  const giveawayPreference = notificationPreferences.find(
+    (item) => item.id === "giveaway-reminders",
+  );
+  assert.equal(giveawayPreference?.enabled, false);
+  assert.equal(giveawayPreference?.statusLabel, "Planned");
+  assert.match(giveawayPreference?.description ?? "", /No persisted giveaway-reminder/);
+});
+
+test("page-local deal alerts and giveaway reminders disclose their preview-only behavior", async () => {
+  const [dealsSource, giveawaysSource] = await Promise.all([
+    readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/GiveawaysExplorer.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(dealsSource, /no alert is saved and no notification will be sent/);
+  assert.doesNotMatch(dealsSource, /\{alertIsSet \? "Alert Set" : "Set Alert"\}/);
+  assert.match(giveawaysSource, /no reminder is saved and no notification will be sent/);
+  assert.doesNotMatch(giveawaysSource, /\{reminderIsSet \? "Reminder set" : "Add reminder"\}/);
+  assert.match(giveawaysSource, /No verified claim destination/);
+});
+
+test("homepage feed maps the current backend deal, giveaway, and dashboard DTO fields", () => {
+  const deal = mapDeal({
+    id: 17,
+    store: "Steam",
+    discount: "-75%",
+    discountValue: 75,
+    title: "Example Deal",
+    priceOld: "$39.99",
+    priceNew: "$9.99",
+    priceValue: 9.99,
+    dealUrl: "https://store.example/deal",
+  });
+  assert.deepEqual(deal, {
+    id: "17",
+    title: "Example Deal",
+    store: "Steam",
+    salePrice: "$9.99",
+    normalPrice: "$39.99",
+    discountPercent: 75,
+    href: "https://store.example/deal",
+  });
+
+  const giveaway = mapGiveaway({
+    id: 4,
+    platform: "steam",
+    platformLabel: "Steam",
+    title: "Example Giveaway",
+    originalPrice: "$24.99",
+  });
+  assert.equal(giveaway?.platform, "Steam");
+  assert.equal(giveaway?.worth, "$24.99");
+
+  const summary = mapSummary({
+    activeDealsCount: 28,
+    activeGiveawaysCount: 6,
+    wishlistItemsCount: 3,
+    activePriceAlertsCount: 2,
+    bestDiscountValue: 75,
+    bestDiscountTitle: "Example Deal",
+    databaseStatus: "online",
+    sentinelStatus: "available",
+  });
+  assert.deepEqual(summary, {
+    deals: 28,
+    giveaways: 6,
+    stores: null,
+    wishlistItems: 3,
+    activePriceAlerts: 2,
+    bestDiscountPercent: 75,
+    bestDiscountTitle: "Example Deal",
+    databaseStatus: "online",
+    sentinelStatus: "available",
+  });
+  assert.equal(getHomeSummaryAvailability("ready", false, summary), "available");
+  assert.equal(HOME_FEED_REQUEST_TIMEOUT_MS, 5_000);
+});
+
+test("homepage summary distinguishes incomplete and unavailable responses", () => {
+  const incomplete = mapSummary({ activeDealsCount: 4 });
+  assert.equal(incomplete.deals, 4);
+  assert.equal(incomplete.giveaways, null);
+  assert.equal(getHomeSummaryAvailability("ready", false, incomplete), "incomplete");
+  assert.equal(getHomeSummaryAvailability("ready", true, incomplete), "unavailable");
 });
 
 test("anonymous bootstrap is coalesced, real auth failures remain visible, and refresh can still recover sessions", async () => {

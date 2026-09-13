@@ -51,6 +51,9 @@ public class DatabaseDealService implements DealCatalogService {
     }
 
     static String starsFor(BigDecimal rating) {
+        if (rating == null || rating.signum() <= 0) {
+            return "";
+        }
         if (rating.compareTo(FIVE_STAR_RATING) >= 0) {
             return "★★★★★";
         }

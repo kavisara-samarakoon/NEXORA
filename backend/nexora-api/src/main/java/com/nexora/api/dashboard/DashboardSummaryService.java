@@ -17,7 +17,7 @@ import java.util.Optional;
 public class DashboardSummaryService {
 
     private static final String DEMO_MODE = "Demo Mode";
-    private static final String SENTINEL_STATUS = "Gateway Foundation";
+    private static final String SENTINEL_STATUS = "Local NEXORA guidance";
 
     private final DealCatalogService dealCatalogService;
     private final GiveawayCatalogService giveawayCatalogService;

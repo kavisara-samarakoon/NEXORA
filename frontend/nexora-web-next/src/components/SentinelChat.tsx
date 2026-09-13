@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import type { ChatMessage } from "@/data/sentinel";
 import {
@@ -10,6 +10,7 @@ import {
   ensureAuthToken,
   readAuthToken,
 } from "@/lib/auth-client";
+import { createSentinelRequestGuard } from "@/lib/sentinel-request-guard";
 import {
   normalizeSentinelInsightError,
   requestSentinelInsight,
@@ -38,68 +39,113 @@ function SentinelAvatar() {
 }
 
 const fallbackReasonCopy: Record<SentinelProviderFallbackReason, string> = {
-  gemini_not_configured: "Gemini is not configured for this local session.",
-  gemini_non_success_response: "Gemini returned a non-success response.",
-  gemini_invalid_response: "Gemini returned an unusable response.",
-  gemini_timeout_or_network: "Gemini could not be reached in time.",
-  gemini_configuration_invalid: "The local Gemini configuration is invalid.",
-  gemini_unavailable: "Gemini is currently unavailable.",
-  unknown: "Gemini could not complete the request.",
+  gemini_not_configured: "External AI is not configured for this local session.",
+  gemini_non_success_response: "The external provider returned a non-success response.",
+  gemini_invalid_response: "The external provider returned an unusable response.",
+  gemini_timeout_or_network: "The external provider could not be reached in time.",
+  gemini_configuration_invalid: "The external provider configuration is invalid.",
+  gemini_unavailable: "The external provider is currently unavailable.",
+  unknown: "The external provider could not complete the request.",
 };
+
+function MessageSegments({ message }: { message: ChatMessage }) {
+  return (
+    <>
+      {message.segments.map((segment, index) =>
+        "emphasis" in segment && segment.emphasis ? (
+          <strong key={`${message.id}-${index}`}>{segment.text}</strong>
+        ) : (
+          <span key={`${message.id}-${index}`}>{segment.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function SentinelWelcomeMessage({ authenticated }: { authenticated: boolean }) {
+  return (
+    <div className="sn-message sn-message--ai sn-message--welcome">
+      <SentinelAvatar />
+      <div className="sn-message__body">
+        <strong>How can I help with your games today?</strong>
+        <p>
+          Ask Sentinel to find deals, compare prices, explain wishlist alerts, or review gaming-account safety.
+          {authenticated
+            ? " Your signed-in session can use bounded NEXORA context."
+            : " Sign in to use account-aware answers."}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function GatewayResponseCard({ response }: { response: SentinelInsightResponse }) {
   const providerLabel = response.provider === "gemini"
-    ? "Gemini provider"
+    ? "External AI"
     : response.mode === "local-fallback"
       ? "Local fallback"
-      : "Local provider";
+      : "Local AI";
+
   const badgeClass = response.provider === "gemini"
     ? "sn-gateway-response__badge sn-gateway-response__badge--gemini"
     : response.mode === "local-fallback"
       ? "sn-gateway-response__badge sn-gateway-response__badge--fallback"
       : "sn-gateway-response__badge";
 
+  const recommendations = response.recommendations.slice(0, 3);
+  const nextActions = response.nextActions.slice(0, 3);
+
   return (
-    <article className="sn-gateway-response">
-      <header>
-        <div>
-          <span>{response.mode === "gemini-provider-foundation"
-            ? "Gemini Provider Foundation"
-            : "AI Gateway Foundation"}</span>
-          <h3>{response.title}</h3>
-        </div>
-        <span className={badgeClass}>{providerLabel}</span>
-      </header>
+    <div className="sn-message sn-message--ai sn-message--gateway">
+      <SentinelAvatar />
+      <div className="sn-message__body">
+        <header className="sn-gateway-response__compact-header">
+          <div>
+            <span className="sn-gateway-response__kicker">{response.context} insight</span>
+            <h3>{response.title}</h3>
+          </div>
+          <span className={badgeClass}>{providerLabel}</span>
+        </header>
 
-      <p className="sn-gateway-response__answer">{response.answer}</p>
+        <p className="sn-gateway-response__answer">{response.answer}</p>
 
-      {response.mode === "local-fallback" && response.fallbackReason && (
-        <div className="sn-gateway-response__fallback-reason">
-          <strong>Local fallback used</strong>
-          <p>{fallbackReasonCopy[response.fallbackReason]} Sentinel returned a local deterministic response instead. This response is transient, and the public static samples remain available.</p>
-        </div>
-      )}
+        {recommendations.length > 0 ? (
+          <div className="sn-gateway-response__chips" aria-label="Top recommendations">
+            {recommendations.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        ) : null}
 
-      <div className="sn-gateway-response__sections">
-        <section>
-          <h4>Recommendations</h4>
-          <ul>{response.recommendations.map((item) => <li key={item}>{item}</li>)}</ul>
-        </section>
-        <section className="sn-gateway-response__safety">
-          <h4>Safety notes</h4>
-          <ul>{response.safetyNotes.map((item) => <li key={item}>{item}</li>)}</ul>
-        </section>
-        <section>
-          <h4>Next actions</h4>
-          <ul>{response.nextActions.map((item) => <li key={item}>{item}</li>)}</ul>
-        </section>
+        {nextActions.length > 0 ? (
+          <div className="sn-gateway-response__actions" aria-label="Suggested next actions">
+            {nextActions.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        ) : null}
+
+        {response.mode === "local-fallback" && response.fallbackReason ? (
+          <p className="sn-gateway-response__fallback-reason">
+            {fallbackReasonCopy[response.fallbackReason]} Sentinel answered with the local deterministic model instead.
+          </p>
+        ) : null}
+
+        <details className="sn-gateway-response__details">
+          <summary>View safety notes</summary>
+          <ul>
+            {response.safetyNotes.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </details>
+
+        <footer>
+          <span>{response.context} context</span>
+          <span>No conversation saved</span>
+        </footer>
       </div>
-
-      <footer>
-        <span>{response.context} context</span>
-        <span>Transient response — not saved</span>
-      </footer>
-    </article>
+    </div>
   );
 }
 
@@ -124,6 +170,18 @@ export default function SentinelChat({
   const [sessionRetryKey, setSessionRetryKey] = useState(0);
   const [authState, setAuthState] = useState<GatewayAuthState>("checking");
   const composerInputRef = useRef<HTMLInputElement>(null);
+  const requestGuardRef = useRef(createSentinelRequestGuard());
+
+  const clearPrivateConversation = useCallback(() => {
+    requestGuardRef.current.invalidate();
+    setDraft("");
+    setContext("general");
+    setSubmittedMessage(null);
+    setGatewayResponse(null);
+    setGatewayError(null);
+    setShowSignInHint(false);
+    setIsSubmitting(false);
+  }, []);
 
   function returnMessageToComposer(message: string) {
     setDraft(message);
@@ -133,6 +191,7 @@ export default function SentinelChat({
 
   useEffect(() => {
     let active = true;
+    const requestGuard = requestGuardRef.current;
 
     async function refreshAuthentication() {
       setAuthState("checking");
@@ -158,6 +217,7 @@ export default function SentinelChat({
     }
 
     function handleAuthChange() {
+      clearPrivateConversation();
       void refreshAuthentication();
     }
 
@@ -165,14 +225,16 @@ export default function SentinelChat({
     window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
     return () => {
       active = false;
+      requestGuard.invalidate();
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
-  }, [sessionRetryKey]);
+  }, [clearPrivateConversation, sessionRetryKey]);
 
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const message = draft.trim();
     if (!message || isSubmitting || authState === "checking") return;
+    const requestVersion = requestGuardRef.current.begin();
 
     setSubmittedMessage(message);
     setGatewayResponse(null);
@@ -190,17 +252,19 @@ export default function SentinelChat({
         authToken,
         (activeToken) => requestSentinelInsight(activeToken, { message, context }),
       );
+      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
       setAuthToken(result.token);
       setAuthState("authenticated");
       setGatewayResponse(result.value);
       setDraft("");
     } catch (error) {
+      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
       const details = normalizeSentinelInsightError(error);
       if (details.status === 401) {
         clearAuthToken();
+        clearPrivateConversation();
         setAuthToken(null);
         setAuthState("anonymous");
-        setShowSignInHint(true);
       } else {
         setGatewayError({
           code: details.code,
@@ -209,17 +273,34 @@ export default function SentinelChat({
         });
       }
     } finally {
-      setIsSubmitting(false);
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
+        setIsSubmitting(false);
+      }
     }
   }
 
   const statusLabel = authState === "authenticated"
-    ? "Backend gateway ready"
+    ? "Assistant ready"
     : authState === "checking"
       ? "Checking session"
       : authState === "unavailable"
-        ? "Session check unavailable"
-        : "Static preview";
+        ? "Session unavailable"
+        : "Sign in for live assistant";
+
+  const badgeLabel = authState === "authenticated"
+    ? "Live session"
+    : authState === "checking"
+      ? "Checking"
+      : authState === "unavailable"
+        ? "Offline"
+        : "Guest mode";
+
+  const showWelcome = messages.length === 0 &&
+    !submittedMessage &&
+    !gatewayResponse &&
+    !gatewayError &&
+    !showSignInHint &&
+    !isSubmitting;
 
   return (
     <section className="sn-chat" aria-labelledby="sentinel-chat-title">
@@ -231,19 +312,17 @@ export default function SentinelChat({
             <span><span aria-hidden="true" /> {statusLabel}</span>
           </div>
         </div>
-        <span className="sn-chat__preview-badge">
-          {authState === "authenticated" ? "Provider routed" : "Static preview"}
-        </span>
+        <span className="sn-chat__preview-badge">{badgeLabel}</span>
       </div>
 
       <p className="sn-chat__context-note">
         <span aria-hidden="true">◇</span>
         {authState === "authenticated"
-          ? "Uses bounded, backend-generated NEXORA context"
+          ? "Uses bounded, backend-generated NEXORA context for this signed-in session."
           : authState === "unavailable"
-            ? "Static samples remain available while the local session route is unavailable"
-            : "Sign in with a local backend session to use bounded NEXORA context"}
-        <strong>No conversation saved</strong>
+            ? "The local session route is unavailable. You can still review the assistant interface."
+            : "Sign in to use account-aware Sentinel answers for deals, wishlist, and security."}
+        <strong>No chat history saved</strong>
       </p>
 
       {authState === "unavailable" ? (
@@ -255,68 +334,65 @@ export default function SentinelChat({
       <div
         className="sn-chat__messages"
         role="log"
-        aria-label="Sentinel conversation preview"
+        aria-label="Sentinel chat"
         aria-live="polite"
         aria-relevant="additions text"
       >
-        {messages.length === 0 && !submittedMessage ? (
-          <p className="sn-chat__context-note">No sample conversation is available. Enter a message below to get started.</p>
-        ) : null}
+        {showWelcome ? <SentinelWelcomeMessage authenticated={authState === "authenticated"} /> : null}
+
         {messages.map((message) => (
           <div className={`sn-message sn-message--${message.role}`} key={message.id}>
-            {message.role === "ai" && <SentinelAvatar />}
-            <p>
-              {message.segments.map((segment, index) =>
-                "emphasis" in segment && segment.emphasis ? (
-                  <strong key={`${message.id}-${index}`}>{segment.text}</strong>
-                ) : (
-                  <span key={`${message.id}-${index}`}>{segment.text}</span>
-                ),
-              )}
-            </p>
+            {message.role === "ai" ? <SentinelAvatar /> : null}
+            <div className="sn-message__body">
+              <p><MessageSegments message={message} /></p>
+            </div>
           </div>
         ))}
 
-        {submittedMessage && (
+        {submittedMessage ? (
           <div className="sn-message sn-message--user sn-message--preview">
-            <p>{submittedMessage}</p>
+            <div className="sn-message__body">
+              <p>{submittedMessage}</p>
+            </div>
           </div>
-        )}
+        ) : null}
 
-        {isSubmitting && (
+        {isSubmitting ? (
           <div className="sn-message sn-message--ai">
             <SentinelAvatar />
-            <div className="sn-typing" aria-hidden="true"><span /><span /><span /></div>
-            <span className="sr-only">Sentinel gateway is preparing a response.</span>
+            <div className="sn-message__body sn-message__body--typing">
+              <div className="sn-typing" aria-hidden="true"><span /><span /><span /></div>
+              <span className="sr-only">Sentinel is preparing a response.</span>
+            </div>
           </div>
-        )}
+        ) : null}
 
-        {gatewayResponse && <GatewayResponseCard response={gatewayResponse} />}
+        {gatewayResponse ? <GatewayResponseCard response={gatewayResponse} /> : null}
 
-        {showSignInHint && (
+        {showSignInHint ? (
           <div
             className={`sn-gateway-state ${authState === "unavailable" ? "sn-gateway-state--unavailable" : "sn-gateway-state--notice"}`}
           >
-            <strong>{authState === "unavailable" ? "Session check unavailable" : "Sign in required"}</strong>
+            <strong>{authState === "unavailable" ? "Session unavailable" : "Sign in required"}</strong>
             <p>{authState === "unavailable"
-              ? "The local authentication route could not be reached. Static samples remain available; the authenticated gateway needs a reachable local backend and session."
-              : "This composer needs a local backend session for the authenticated gateway. Static sample messages remain available, and NEXORA will not save this conversation."}</p>
+              ? "The local authentication route could not be reached. Start the backend and sign in to use account-aware Sentinel responses."
+              : "Sign in to use backend-generated Sentinel answers for your wishlist, deals, and account context."}</p>
             <Link href="/login?returnTo=%2Fsentinel">{authState === "unavailable" ? "Open sign in" : "Sign in"}</Link>
           </div>
-        )}
+        ) : null}
 
-        {authState === "unavailable" && !showSignInHint && (
+        {authState === "unavailable" && !showSignInHint ? (
           <div className="sn-gateway-state sn-gateway-state--unavailable">
-            <strong>Session check unavailable</strong>
-            <p>The local authentication route could not be reached. Static samples remain available; the authenticated gateway needs a reachable local backend and session.</p>
+            <strong>Session unavailable</strong>
+            <p>The local authentication route could not be reached. Start the backend and sign in to use account-aware Sentinel responses.</p>
             <Link href="/login?returnTo=%2Fsentinel">Open sign in</Link>
           </div>
-        )}
+        ) : null}
 
-        {gatewayError && (
+        {gatewayError ? (
           <div className="sn-gateway-state sn-gateway-state--error" role="alert">
-            <strong>{gatewayError.code === "rate_limit_exceeded" ? "Request limit reached" : "Gateway unavailable"}</strong>
-            <p>{gatewayError.message} {gatewayError.code === "rate_limit_exceeded" ? "Wait briefly, then return the message to the composer and submit it manually." : "Check the local backend and session, then return the message to the composer and submit it manually."} Returning a message does not retry automatically.</p>
+            <strong>{gatewayError.code === "rate_limit_exceeded" ? "Request limit reached" : "Sentinel unavailable"}</strong>
+            <p>{gatewayError.message} {gatewayError.code === "rate_limit_exceeded" ? "Wait briefly, then return the message to the composer and submit it manually." : "Check the local backend and session, then return the message to the composer and submit it manually."}</p>
             <RequestIdSupportText requestId={gatewayError.requestId} />
             {submittedMessage ? (
               <button
@@ -327,10 +403,10 @@ export default function SentinelChat({
               </button>
             ) : null}
           </div>
-        )}
+        ) : null}
       </div>
 
-      <div className="sn-suggestions" role="group" aria-label="Quick suggestions">
+      <div className="sn-suggestions" role="group" aria-label="Try asking Sentinel">
         {suggestions.map((suggestion) => (
           <button type="button" key={suggestion} onClick={() => returnMessageToComposer(suggestion)}>
             {suggestion}
@@ -339,7 +415,7 @@ export default function SentinelChat({
       </div>
 
       <form className="sn-chat__composer" aria-busy={isSubmitting} onSubmit={submitPreview}>
-        <span className="sr-only" id="sentinel-composer-help">Choose a context, then enter a message. This preview does not save conversations.</span>
+        <span className="sr-only" id="sentinel-composer-help">Choose a context, then ask Sentinel a question. This demo does not save chat history.</span>
         <label className="sr-only" htmlFor="sentinel-context">Insight context</label>
         <select
           id="sentinel-context"
@@ -358,7 +434,7 @@ export default function SentinelChat({
           ref={composerInputRef}
           type="text"
           maxLength={500}
-          placeholder="Ask Sentinel about games, deals, giveaways or account security..."
+          placeholder="Ask about deals, prices, wishlist alerts, or account safety..."
           value={draft}
           disabled={isSubmitting}
           aria-describedby="sentinel-composer-help"
@@ -366,7 +442,7 @@ export default function SentinelChat({
         />
         <button
           type="submit"
-          aria-label="Send message to Sentinel gateway preview"
+          aria-label="Send message to Sentinel"
           disabled={!draft.trim() || isSubmitting || authState === "checking"}
         >
           <span aria-hidden="true">↗</span>

@@ -12290,3 +12290,57 @@ textarea {
     display: none;
   }
 }
+
+/* v0.90 demo readiness: smoother cinematic route entry */
+:root {
+  --nx-motion-route-reveal: 720ms;
+  --nx-route-reveal-distance: 18px;
+}
+
+@keyframes nx-route-enter-soft {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, var(--nx-route-reveal-distance), 0) scale(0.992);
+    filter: blur(7px);
+  }
+
+  58% {
+    opacity: 1;
+    filter: blur(1px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.nx-page-reveal {
+  isolation: isolate;
+}
+
+.nx-page-reveal > :not(.auth-page__orb) {
+  animation-name: nx-route-enter-soft;
+  animation-duration: var(--nx-motion-route-reveal);
+  animation-timing-function: var(--nx-ease-premium);
+  animation-fill-mode: both;
+  animation-delay: var(--nx-reveal-delay, 0ms);
+  will-change: opacity, transform, filter;
+}
+
+.nx-page-reveal > :nth-child(1) { --nx-reveal-delay: 40ms; }
+.nx-page-reveal > :nth-child(2) { --nx-reveal-delay: 100ms; }
+.nx-page-reveal > :nth-child(3) { --nx-reveal-delay: 160ms; }
+.nx-page-reveal > :nth-child(4) { --nx-reveal-delay: 220ms; }
+.nx-page-reveal > :nth-child(5) { --nx-reveal-delay: 270ms; }
+.nx-page-reveal > :nth-child(n + 6) { --nx-reveal-delay: 310ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-page-reveal > :not(.auth-page__orb) {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}

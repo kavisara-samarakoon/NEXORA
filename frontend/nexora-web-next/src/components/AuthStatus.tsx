@@ -98,7 +98,7 @@ export default function AuthStatus() {
               });
           }}
         >
-          {isLoggingOut ? "Logging out…" : "Logout"}
+          {isLoggingOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
     );
@@ -120,8 +120,8 @@ export default function AuthStatus() {
 
   return (
     <nav className="auth-status auth-status--anonymous" aria-label="Account">
-      <Link className="auth-status__login" href="/login">Login</Link>
-      <Link className="auth-status__register" href="/register">Register</Link>
+      <Link className="auth-status__login" href="/login">Sign in</Link>
+      <Link className="auth-status__register" href="/register">Create account</Link>
     </nav>
   );
 }

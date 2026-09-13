@@ -427,7 +427,6 @@
 .priceOriginal {
   color: var(--nx-faint);
   font-size: 0.85rem;
-  text-decoration: line-through;
 }
 
 .timerRow {

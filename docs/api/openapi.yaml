@@ -84,19 +84,20 @@ paths:
         - name: pageSize
           in: query
           required: false
-          description: Requested result count, clamped to the configured maximum.
+          description: Requested result count from 1 through 24.
           schema:
             type: integer
             format: int32
             minimum: 1
+            maximum: 24
         - name: upperPrice
           in: query
           required: false
-          description: Optional exclusive positive upper-price filter.
+          description: Optional nonnegative upper-price filter.
           schema:
             type: number
             format: double
-            exclusiveMinimum: 0
+            minimum: 0
       responses:
         "200":
           description: External or fallback deal records
@@ -106,6 +107,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Deal"
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -113,7 +116,7 @@ paths:
     get:
       operationId: listGiveaways
       tags: [Catalog]
-      summary: List active giveaways
+      summary: List unverified giveaway sample records
       responses:
         "200":
           description: Active giveaway records

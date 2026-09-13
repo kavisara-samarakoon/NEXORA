@@ -39,51 +39,14 @@ export type SentinelDemoData = {
   systemStatus: readonly SentinelSystemStatusItem[];
 };
 
-export const sentinelMessages = [
-  {
-    id: 1,
-    role: "user",
-    segments: [{ text: "Find me co-op games under $15" }],
-  },
-  {
-    id: 2,
-    role: "ai",
-    segments: [
-      { text: "I found " },
-      { text: "12 co-op games", emphasis: true },
-      { text: " under $15 across Steam and Epic Games. Top picks: " },
-      { text: "It Takes Two ($9.99)", emphasis: true },
-      { text: ", " },
-      { text: "Deep Rock Galactic ($7.49)", emphasis: true },
-      { text: ", and " },
-      { text: "Stardew Valley ($11.99)", emphasis: true },
-      { text: ". Want me to add any to your wishlist?" },
-    ],
-  },
-  {
-    id: 3,
-    role: "user",
-    segments: [{ text: "Add It Takes Two to my wishlist and set a price alert for $7" }],
-  },
-  {
-    id: 4,
-    role: "ai",
-    segments: [
-      { text: "Preview complete. " },
-      { text: "It Takes Two", emphasis: true },
-      { text: " would be added with a target price of " },
-      { text: "$7.00", emphasis: true },
-      { text: ". Live wishlist actions will require the future backend." },
-    ],
-  },
-] satisfies readonly ChatMessage[];
+export const sentinelMessages = [] satisfies readonly ChatMessage[];
 
 export const sentinelSuggestions = [
-  "Find RPGs under $20",
-  "When is the next Steam sale?",
-  "Free games this week",
-  "Is my account secure?",
+  "Find co-op games under $15",
   "Compare Elden Ring prices",
+  "Show free games this week",
+  "Help me set a wishlist alert",
+  "Is my gaming account secure?",
 ] as const;
 
 export const sentinelCapabilities = [
@@ -118,17 +81,17 @@ export const sentinelCapabilities = [
 ] satisfies readonly SentinelCapability[];
 
 export const sentinelSystemStatus = [
-  { label: "AI Status", value: "Gateway Foundation", badge: "Local", tone: "blue", icon: "bot" },
-  { label: "Backend", value: "Local API", badge: "Fallback", tone: "orange", icon: "network" },
-  { label: "Provider", value: "Local Preview / Gemini Disabled", badge: "External off", tone: "purple", icon: "spark" },
-  { label: "Privacy", value: "No messages saved", badge: "Safe", tone: "green", icon: "lock" },
+  { label: "Assistant", value: "Local NEXORA guidance", badge: "Local", tone: "blue", icon: "bot" },
+  { label: "Backend", value: "Authenticated insight endpoint", badge: "API", tone: "orange", icon: "network" },
+  { label: "Provider", value: "Local by default, external optional", badge: "Optional", tone: "purple", icon: "spark" },
+  { label: "Privacy", value: "No chat history saved", badge: "Safe", tone: "green", icon: "lock" },
 ] satisfies readonly SentinelSystemStatusItem[];
 
 export const sentinelStatus = {
-  aiStatus: "Gateway Foundation",
-  backend: "Local API fallback",
-  geminiApi: "Gemini Disabled",
-  privacy: "No messages saved",
+  aiStatus: "Local NEXORA guidance",
+  backend: "Authenticated insight endpoint",
+  geminiApi: "External provider optional",
+  privacy: "No chat history saved",
 } satisfies SentinelStatus;
 
 export const sentinelDemo = {

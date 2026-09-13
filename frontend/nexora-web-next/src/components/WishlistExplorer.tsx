@@ -20,6 +20,7 @@ import type { WishlistResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
 import { AUTH_STATE_EVENT, clearAuthToken, ensureAuthToken } from "@/lib/auth-client";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
+import { wishlistCardIdentity } from "@/lib/wishlist-card-identity";
 import {
   getMyNotificationPreferences,
   normalizeNotificationPreferenceError,
@@ -997,6 +998,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(() => new Set());
   const [itemMessages, setItemMessages] = useState<Record<number, ItemMessage>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [personalWishlistRevision, setPersonalWishlistRevision] = useState(0);
   const alertEventsRequestVersion = useRef(0);
 
   useEffect(() => {
@@ -1108,6 +1110,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       setAlerts(alertsFor(wishlistResult.value.value));
       setOperationMessage(null);
       setItemMessages({});
+      setPersonalWishlistRevision((current) => current + 1);
       setView("personal");
     }
 
@@ -1439,7 +1442,14 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
                 isUpdating={updatingIds.has(item.id)}
                 item={item}
                 message={itemMessages[item.id]}
-                key={item.id}
+                key={wishlistCardIdentity(
+                  {
+                    accountRevision: personalWishlistRevision,
+                    source,
+                    view,
+                  },
+                  item,
+                )}
                 onAuthenticationRequired={handleAuthenticationRequired}
                 onDelete={(candidate) => void handleDelete(candidate)}
                 onTokenChanged={setAuthToken}

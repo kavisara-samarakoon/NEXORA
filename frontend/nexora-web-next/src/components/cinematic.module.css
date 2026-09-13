@@ -1002,3 +1002,353 @@
     linear-gradient(135deg, rgba(255, 106, 0, 0.16), rgba(0, 212, 255, 0.08)),
     rgba(255, 255, 255, 0.045);
 }
+
+/* v0.90 demo readiness: account-aware cinematic navigation */
+.navAuthStatus {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.navAuthStatus :global(.auth-status) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.navAuthStatus :global(.auth-status--loading),
+.navAuthStatus :global(.auth-status--unavailable) {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 230, 210, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--nx-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.navAuthStatus :global(.auth-status__pulse) {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--nx-electric-blue);
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.42);
+}
+
+.navAuthStatus :global(.auth-status__identity) {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  max-width: 210px;
+  padding: 5px 12px 5px 6px;
+  border: 1px solid rgba(255, 230, 210, 0.13);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 52%, rgba(0, 212, 255, 0.04)),
+    rgba(8, 8, 10, 0.42);
+  color: var(--nx-warm-white);
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.navAuthStatus :global(.auth-status__avatar) {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 212, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--nx-electric-blue);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+.navAuthStatus :global(.auth-status__user-copy) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.navAuthStatus :global(.auth-status__user-copy strong),
+.navAuthStatus :global(.auth-status__user-copy small) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navAuthStatus :global(.auth-status__user-copy strong) {
+  max-width: 145px;
+  color: var(--nx-warm-white);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.navAuthStatus :global(.auth-status__user-copy small) {
+  max-width: 145px;
+  color: var(--nx-muted);
+  font-size: 0.68rem;
+}
+
+.navAuthStatus :global(.auth-status__logout),
+.navAuthStatus :global(.auth-status__login),
+.navAuthStatus :global(.auth-status__register),
+.navAuthStatus :global(.auth-status--unavailable a) {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 230, 210, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--nx-text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.navAuthStatus :global(.auth-status__register) {
+  border-color: rgba(255, 230, 210, 0.18);
+  background: linear-gradient(135deg, rgba(255, 179, 71, 0.18), rgba(255, 106, 0, 0.14));
+  color: var(--nx-warm-white);
+}
+
+.navAuthStatus :global(.auth-status__logout:hover),
+.navAuthStatus :global(.auth-status__login:hover),
+.navAuthStatus :global(.auth-status__register:hover),
+.navAuthStatus :global(.auth-status--unavailable a:hover),
+.navAuthStatus :global(.auth-status__identity:hover) {
+  border-color: rgba(255, 230, 210, 0.28);
+  color: var(--nx-warm-white);
+  box-shadow: 0 0 22px rgba(255, 106, 0, 0.11);
+}
+
+.navAuthStatus :global(.auth-status__logout:disabled) {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.menuAuthStatus {
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 230, 210, 0.1);
+}
+
+.menuAuthStatus :global(.auth-status),
+.menuAuthStatus :global(.auth-status--anonymous),
+.menuAuthStatus :global(.auth-status--authenticated) {
+  display: grid;
+  gap: 8px;
+}
+
+.menuAuthStatus :global(.auth-status__identity),
+.menuAuthStatus :global(.auth-status__logout),
+.menuAuthStatus :global(.auth-status__login),
+.menuAuthStatus :global(.auth-status__register),
+.menuAuthStatus :global(.auth-status--unavailable a) {
+  width: 100%;
+}
+
+.menuAuthStatus :global(.auth-status__identity) {
+  justify-content: flex-start;
+}
+
+@media (max-width: 980px) {
+  .navAuthStatus {
+    display: none;
+  }
+}
+
+/* v0.90 demo readiness: reusable global cinematic scene controls */
+.sceneControlGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sceneControlButton {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 230, 210, 0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(10, 10, 13, 0.36);
+  color: var(--nx-text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s var(--nx-ease);
+}
+
+.sceneControlButton:hover {
+  border-color: rgba(255, 230, 210, 0.24);
+  color: var(--nx-warm-white);
+  box-shadow: 0 0 22px rgba(255, 106, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.sceneControlOn {
+  border-color: rgba(255, 106, 0, 0.32);
+  background:
+    linear-gradient(135deg, rgba(255, 106, 0, 0.18), rgba(0, 212, 255, 0.06)),
+    rgba(10, 10, 13, 0.42);
+  color: var(--nx-warm-white);
+}
+
+.sceneControlDot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.72;
+}
+
+.navSceneControls {
+  margin-left: 2px;
+}
+
+.menuSceneControls {
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 230, 210, 0.1);
+}
+
+.menuSceneControls .sceneControlGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.menuSceneControls .sceneControlButton {
+  width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .navSceneControls {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .menuSceneControls .sceneControlGroup {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* v0.90 demo readiness refinement: compact navbar sound control only */
+.navSceneControls.sceneControlGroup {
+  gap: 0;
+}
+
+.navSceneControls .sceneControlButton {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 0.92rem;
+}
+
+.sceneControlIcon {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.menuSceneControls .sceneControlGroup {
+  display: block;
+  width: 100%;
+}
+
+.menuSceneControls .sceneControlButton {
+  width: 100%;
+}
+
+/* v0.90 polish: stronger electric-blue active navbar indication */
+.navLinkActive {
+  color: #f8fbff;
+  text-shadow:
+    0 0 10px rgba(0, 212, 255, 0.3),
+    0 0 18px rgba(0, 212, 255, 0.18);
+}
+
+.navLinkActive::after {
+  background: linear-gradient(90deg, var(--nx-electric-blue), var(--nx-orange));
+  box-shadow:
+    0 0 12px rgba(0, 212, 255, 0.65),
+    0 0 24px rgba(0, 212, 255, 0.28),
+    0 0 18px rgba(255, 106, 0, 0.16);
+}
+
+.menuLinkActive {
+  color: #f8fbff;
+  border-color: rgba(0, 212, 255, 0.28);
+  background:
+    linear-gradient(135deg, rgba(0, 212, 255, 0.14), rgba(255, 106, 0, 0.08)),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 0 18px rgba(0, 212, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* v0.90 polish: active navbar state uses text glow only, no underline */
+.navLinkActive {
+  color: #f8fbff;
+  text-shadow:
+    0 0 8px rgba(0, 212, 255, 0.55),
+    0 0 18px rgba(0, 212, 255, 0.32),
+    0 0 30px rgba(0, 212, 255, 0.16);
+}
+
+.navLinkActive::after,
+.navLinkActive:hover::after,
+.navLinkActive:focus-visible::after {
+  opacity: 0;
+  transform: scaleX(0);
+  box-shadow: none;
+}
+
+/* v0.90 polish: stronger electric-blue active navbar text glow */
+.navLinkActive {
+  color: #ecfbff;
+  text-shadow:
+    0 0 6px rgba(0, 212, 255, 0.78),
+    0 0 16px rgba(0, 212, 255, 0.52),
+    0 0 30px rgba(0, 212, 255, 0.28),
+    0 0 46px rgba(0, 212, 255, 0.14);
+}
+
+.navLinkActive::after,
+.navLinkActive:hover::after,
+.navLinkActive:focus-visible::after {
+  opacity: 0;
+  transform: scaleX(0);
+  box-shadow: none;
+}

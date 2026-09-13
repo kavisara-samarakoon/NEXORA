@@ -14,6 +14,7 @@ import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
+import { hasAvailableDealRating } from "@/lib/deal-rating";
 import {
   AUTH_STATE_EVENT,
   clearAuthToken,
@@ -51,9 +52,9 @@ function protectedWishlistError(error: unknown) {
 
 
 function statusClass(status: DealStatus) {
-  if (status === "Historical Low" || status === "Lowest Ever") return "hot";
-  if (status === "Great Deal" || status === "Good Price") return "good";
-  if (status === "Free Weekend") return "free";
+  if (status === "Deep discount") return "hot";
+  if (status === "Strong discount" || status === "Current offer") return "good";
+  if (status === "Free offer") return "free";
   return "neutral";
 }
 
@@ -113,7 +114,7 @@ function wishlistPayloadFor(deal: GameDeal): AddWishlistItemPayload {
     store: deal.store,
     currentPrice: deal.priceNew,
     targetPrice: deal.priceNew,
-    lowestEver: deal.priceNew,
+    lowestEver: "Not established",
     discount: deal.discount,
     status: isFree ? "free-now" : deal.discountValue >= 50 ? "price-drop" : "tracking",
     priority: deal.discountValue >= 80 ? "high" : deal.discountValue >= 50 ? "medium" : "low",
@@ -152,6 +153,7 @@ function DealCard({
   onToggleAlert: (dealId: number) => void;
 }) {
   const dealUrl = safeCheapSharkDealUrl(deal.dealUrl);
+  const hasRating = hasAvailableDealRating(deal.rating, deal.stars);
   const titleId = `deal-title-${dealStateKey("curated", deal).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 
   return (
@@ -165,9 +167,18 @@ function DealCard({
       <h2 className={styles.cardTitle} id={titleId}>{deal.title}</h2>
       <p className={styles.category}>{deal.category}</p>
 
-      <div className={styles.rating} aria-label={`${deal.rating} out of 5 stars`}>
-        <span aria-hidden="true">{deal.stars}</span>
-        <span>{deal.rating}</span>
+      <div
+        className={styles.rating}
+        aria-label={hasRating ? `${deal.rating} out of 5 stars` : "Rating unavailable"}
+      >
+        {hasRating ? (
+          <>
+            <span aria-hidden="true">{deal.stars}</span>
+            <span>{deal.rating}</span>
+          </>
+        ) : (
+          <span>Rating unavailable</span>
+        )}
         <span className={`${styles.status} ${STATUS_TONE_CLASS[statusClass(deal.status)]}`}>
           {deal.status}
         </span>
@@ -196,11 +207,12 @@ function DealCard({
           className={alertIsSet ? `${styles.alertButton} ${styles.alertButtonActive}` : styles.alertButton}
           type="button"
           aria-pressed={alertIsSet}
-          aria-label={`${alertIsSet ? "Remove" : "Set"} local alert for ${deal.title}`}
+          aria-label={`${alertIsSet ? "Remove" : "Mark"} page-only alert preview for ${deal.title}`}
+          title="Page-only preview; no alert is saved and no notification will be sent"
           onClick={() => onToggleAlert(deal.id)}
         >
           <span aria-hidden="true">🔔</span>
-          {alertIsSet ? "Alert Set" : "Set Alert"}
+          {alertIsSet ? "Marked on page" : "Preview alert"}
         </button>
         {dealUrl ? (
           <a
@@ -277,7 +289,7 @@ function DealNetworkStatus({
   const isCuratedApi = curatedSource === "api";
   const stateKey = isExternalLive ? "active" : isExternalLoading ? "loading" : isExternalFallback ? "fallback" : "curated";
   const stateLabel = isExternalLive
-    ? "Live"
+    ? "External"
     : isExternalLoading
       ? "Loading"
       : isExternalFallback
@@ -287,7 +299,7 @@ function DealNetworkStatus({
   const items = [
     {
       label: "Price Sync",
-      value: isExternalLive ? "CheapShark via backend" : isExternalLoading ? "Requesting live deals" : isExternalFallback ? "Curated fallback active" : "Curated NEXORA feed",
+      value: isExternalLive ? "CheapShark via backend · may be cached" : isExternalLoading ? "Requesting external offers" : isExternalFallback ? "Curated fallback active" : "Curated NEXORA feed",
       badge: stateLabel,
     },
     {
@@ -296,14 +308,14 @@ function DealNetworkStatus({
       badge: isExternalLive ? "External" : isCuratedApi ? "API" : "Static",
     },
     {
-      label: "Persistence",
-      value: isExternalLive ? "Live results are not stored" : "Curated fallback ready",
-      badge: isExternalLive ? "Session" : "Ready",
+      label: "Freshness",
+      value: isExternalLive ? "Provider response time is not exposed" : "Curated sample data",
+      badge: isExternalLive ? "May be cached" : "Sample",
     },
     {
-      label: "Access",
-      value: "Public deals endpoint",
-      badge: "Public",
+      label: "Alert control",
+      value: "Page-only preview · no notification",
+      badge: "Preview",
     },
   ] as const;
 
@@ -345,6 +357,18 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const [activeExternalTitle, setActiveExternalTitle] = useState("");
   const [activeFilter, setActiveFilter] = useState<DealFilter>("All Stores");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (window.location.hash !== "#deal-search") return;
+
+    const input = document.getElementById("deal-search");
+    if (!(input instanceof HTMLInputElement)) return;
+
+    window.requestAnimationFrame(() => {
+      input.scrollIntoView({ behavior: "smooth", block: "center" });
+      input.focus({ preventScroll: true });
+    });
+  }, []);
   const [alerts, setAlerts] = useState<Set<string>>(() => new Set());
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -469,7 +493,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       if (activeFilter === "All Stores") return true;
       if (activeFilter === "Under $10") return deal.priceValue < 10;
       if (activeFilter === "50%+ Off") return deal.discountValue >= 50;
-      if (activeFilter === "Free Weekend") return deal.status === "Free Weekend";
+      if (activeFilter === "Free offers") return deal.priceValue === 0;
       return deal.store === activeFilter;
     });
   }, [activeFilter, searchQuery, visibleDeals]);
@@ -643,11 +667,11 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const deepDiscountCount = visibleDeals.filter((deal) => deal.discountValue >= 50).length;
   const freeCount = visibleDeals.filter((deal) => deal.priceValue === 0).length;
   const sourceLabel = isExternalReady
-    ? "Live external deals"
+    ? "External offers · may be cached"
     : isExternalFallback
-      ? "Live deals unavailable — showing curated fallback"
+      ? "External offers unavailable — showing fallback preview"
       : isExternalLoading
-        ? "Loading live external deals — curated deals remain available"
+        ? "Loading external offers — curated deals remain available"
         : "Curated NEXORA deals";
 
   return (
@@ -656,12 +680,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         <section className={styles.routeHero} aria-labelledby="deals-title">
           <p className={styles.eyebrow}>
             <span className={styles.eyebrowLine} aria-hidden="true" />
-            {isExternalReady ? "Live external deals" : "Curated intelligence"}
+            {isExternalReady ? "External offers · may be cached" : "Curated intelligence"}
           </p>
           <h1 id="deals-title" className={styles.title}>Game Deals Intelligence</h1>
           <p className={styles.lede}>
             Compare NEXORA&apos;s curated deal set or request current external
-            offers on demand. Curated deals remain ready whenever live data is unavailable.
+            offers on demand. External results may be cached because the API does not expose
+            freshness metadata.
           </p>
           <div className={styles.statsRow} aria-label="Deal statistics">
             <div className={styles.stat}>
@@ -700,7 +725,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
                 disabled={isExternalLoading}
                 onClick={() => selectMode("external")}
               >
-                {isExternalLoading ? "Loading Live Deals…" : "Live External Deals"}
+                {isExternalLoading ? "Loading External Offers…" : "External Offers"}
               </button>
             </div>
             <div className={styles.sourceStatus} role="status">
@@ -711,7 +736,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
           {mode === "external" && (
             <form className={styles.liveSearch} onSubmit={submitExternalSearch}>
-              <label htmlFor="external-deal-title">Search the live external feed</label>
+              <label htmlFor="external-deal-title">Search external offers</label>
               <div className={styles.liveSearchRow}>
                 <input
                   id="external-deal-title"
@@ -723,11 +748,11 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
                   onChange={(event) => setExternalTitle(event.target.value)}
                 />
                 <button className={styles.primaryButton} type="submit" disabled={isExternalLoading}>
-                  {isExternalLoading ? "Searching…" : "Search live deals"}
+                  {isExternalLoading ? "Searching…" : "Search external offers"}
                 </button>
                 {activeExternalTitle && (
                   <button className={styles.ghostButton} type="button" disabled={isExternalLoading} onClick={clearExternalSearch}>
-                    Clear live search
+                    Clear external search
                   </button>
                 )}
               </div>
@@ -737,13 +762,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           {isExternalFallback && (
             <UxStatePanel
               className="ux-state--inline deals-mode-panel__warning"
-              description="The external provider route could not be reached. NEXORA is still showing its bundled curated deal set; retry remains a manual check of the live feed."
+              description="The external provider route could not be reached. NEXORA is showing its bundled curated preview; retry makes another external request."
               role="status"
               title="Curated fallback active"
               tone="fallback"
             >
               <button className="ux-state__action" type="button" onClick={() => void loadExternalDeals(externalTitle)}>
-                Retry live feed
+                Retry external offers
               </button>
             </UxStatePanel>
           )}
@@ -763,7 +788,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           <input
             id="deal-search"
             type="search"
-            placeholder={isExternalReady ? "Filter loaded live deals…" : "Search curated deals, stores, games…"}
+            placeholder={isExternalReady ? "Filter loaded external offers…" : "Search curated deals, stores, games…"}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
@@ -788,11 +813,11 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         </div>
       </section>
 
-      <section className={styles.resultsMain} aria-label={isExternalReady ? "Live external game deals" : "Curated game deals"}>
+      <section className={styles.resultsMain} aria-label={isExternalReady ? "External game offers" : "Curated game deals"}>
         {authChecked && !authToken && (
           <UxStatePanel
             className="ux-state--compact deals-auth-notice"
-            description="Browsing and local alert toggles remain available without an account. Sign in only when you want to save a displayed deal to your personal wishlist."
+            description="Browsing and page-only alert previews remain available without an account. Sign in to save a deal and manage real price-alert settings from Wishlist."
             title="Sign in to save deals"
             tone="auth"
           >
@@ -824,7 +849,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               className="ux-state--grid"
               description={<>Waiting for the external provider response. Bundled curated deals remain visible below while this manual request finishes.<UxSkeleton lines={2} /></>}
               role="status"
-              title="Loading live external deals"
+              title="Loading external offers"
               tone="loading"
             />
           )}
@@ -850,19 +875,19 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
                 ? <>The external feed returned no displayed offers for “{activeExternalTitle}”. This result does not establish that every store has no matching deal; try another title or load the full feed.</>
                 : "The external feed returned no displayed offers for this request. This does not establish global store availability; switch to Curated Deals to keep browsing NEXORA’s bundled set."}
               role="status"
-              title="No live external deals found"
+              title="No external offers found"
               tone="empty"
             >
-              {activeExternalTitle ? <button className="ux-state__action" type="button" onClick={clearExternalSearch}>Load all live deals</button> : null}
+              {activeExternalTitle ? <button className="ux-state__action" type="button" onClick={clearExternalSearch}>Load all external offers</button> : null}
               <button className="ux-state__action ux-state__action--quiet" type="button" onClick={() => selectMode("curated")}>View curated deals</button>
             </UxStatePanel>
           )}
           {!isExternalReady && visibleDeals.length === 0 && !isExternalLoading && (
             <UxStatePanel className="ux-state--grid deals-empty" tone="empty" role="status"
               title="No curated deals available"
-              description="This feed has no deals to display right now. Check again or browse the live external feed.">
+              description="This feed has no deals to display right now. Check again or browse external offers, which may be cached.">
               <ProductFeedRetry label="deals" />
-              <button className="ux-state__action" type="button" onClick={() => selectMode("external")}>Browse live deals</button>
+              <button className="ux-state__action" type="button" onClick={() => selectMode("external")}>Browse external offers</button>
             </UxStatePanel>
           )}
           {visibleDeals.length > 0 && filteredDeals.length === 0 && (
