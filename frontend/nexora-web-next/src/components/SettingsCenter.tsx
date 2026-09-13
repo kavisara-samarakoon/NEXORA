@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import UxStatePanel from "@/components/UxStatePanel";
-import { useState } from "react";
+import { normalizeAuthError, type AuthUser } from "@/lib/auth";
+import { AUTH_STATE_EVENT, readCurrentUser } from "@/lib/auth-client";
+import { useEffect, useMemo, useState } from "react";
 import {
   accountOverview,
   accountSystemStatus,
@@ -14,6 +16,26 @@ import {
   type Preference,
   type SettingsIcon,
 } from "@/data/settings";
+
+type SettingsAuthState =
+  | { status: "loading" }
+  | { status: "anonymous" }
+  | { status: "authenticated"; user: AuthUser }
+  | { status: "unavailable"; message: string };
+
+type ProfileRow = {
+  id: string;
+  label: string;
+  value: string;
+  icon: SettingsIcon;
+};
+
+type StatusRow = {
+  label: "Profile" | "Notifications" | "Platform Links" | "Security";
+  value: string;
+  badge: string;
+  tone: "blue" | "orange" | "purple" | "green";
+};
 
 function SettingsGlyph({ name }: { name: SettingsIcon }) {
   if (name === "user") return "👤";
@@ -33,6 +55,17 @@ const accountStatusIcons = {
   "Platform Links": "🔗",
   Security: "🛡️",
 } as const;
+
+function initialsFor(user: AuthUser): string {
+  const initials = user.displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("");
+
+  return (initials || user.username.slice(0, 2)).toUpperCase();
+}
 
 function PreferenceRows({
   items,
@@ -79,15 +112,132 @@ function SectionHeading({ id, icon, eyebrow, title }: { id: string; icon: Settin
 
 export default function SettingsCenter() {
   const allPreferences = [...notificationPreferences, ...securityPreferences, ...appearancePreferences];
+  const [authState, setAuthState] = useState<SettingsAuthState>({ status: "loading" });
   const [preferences, setPreferences] = useState<Record<string, boolean>>(
     Object.fromEntries(allPreferences.map((item) => [item.id, item.enabled])),
   );
   const [preferenceMessage, setPreferenceMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    let active = true;
+
+    async function refreshAuthState() {
+      try {
+        const user = await readCurrentUser();
+        if (!active) return;
+        setAuthState(user ? { status: "authenticated", user } : { status: "anonymous" });
+      } catch (error) {
+        if (!active) return;
+        setAuthState({ status: "unavailable", message: normalizeAuthError(error).message });
+      }
+    }
+
+    function handleAuthChange() {
+      void refreshAuthState();
+    }
+
+    void refreshAuthState();
+    window.addEventListener("storage", handleAuthChange);
+    window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
+
+    return () => {
+      active = false;
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
+    };
+  }, []);
+
+  const signedInUser = authState.status === "authenticated" ? authState.user : null;
+  const isSignedIn = signedInUser !== null;
+
+  const profileRows = useMemo<ProfileRow[]>(() => {
+    if (!signedInUser) return profileFields;
+
+    return [
+      {
+        id: "display-name",
+        label: "Display Name",
+        value: signedInUser.displayName,
+        icon: "user",
+      },
+      {
+        id: "username",
+        label: "Username",
+        value: `@${signedInUser.username}`,
+        icon: "user",
+      },
+      {
+        id: "email",
+        label: "Email",
+        value: signedInUser.email,
+        icon: "mail",
+      },
+      {
+        id: "session",
+        label: "Session",
+        value: "Authenticated local demo session",
+        icon: "shield",
+      },
+    ];
+  }, [signedInUser]);
+
+  const statusRows = useMemo<readonly StatusRow[]>(() => {
+    if (!signedInUser) return accountSystemStatus;
+
+    return [
+      {
+        label: "Profile",
+        value: `Signed in as @${signedInUser.username}`,
+        badge: "Active",
+        tone: "green",
+      },
+      {
+        label: "Notifications",
+        value: "Preview controls only",
+        badge: "Demo",
+        tone: "orange",
+      },
+      {
+        label: "Platform Links",
+        value: "Demo examples only",
+        badge: "Demo",
+        tone: "purple",
+      },
+      {
+        label: "Security",
+        value: "Local session active",
+        badge: "Local",
+        tone: "blue",
+      },
+    ];
+  }, [signedInUser]);
+
+  const overviewRows = useMemo(() => {
+    if (!signedInUser) return accountOverview;
+
+    return [
+      { label: "Account Type", value: "Local demo account" },
+      { label: "Display Name", value: signedInUser.displayName },
+      { label: "Username", value: `@${signedInUser.username}` },
+      { label: "Email", value: signedInUser.email },
+      { label: "Saved Settings", value: "Preview only" },
+    ];
+  }, [signedInUser]);
+
   function togglePreference(id: string) {
     setPreferences((current) => ({ ...current, [id]: !current[id] }));
-    setPreferenceMessage("Preview preference updated for this rendered view only. No account setting was saved.");
+    setPreferenceMessage(
+      isSignedIn
+        ? "Preview preference updated for this screen only. Persistent account settings are not connected yet."
+        : "Preview preference updated for this rendered view only. No account setting was saved.",
+    );
   }
+
+  const heroTitle = isSignedIn ? "Account Control Center" : "Settings Preview";
+  const heroTag = isSignedIn ? "Signed-in account" : "Settings preview";
+  const heroDescription = isSignedIn
+    ? `Viewing the active local demo session for ${signedInUser.displayName}. Profile identity is loaded from the authentication service.`
+    : "Explore sample profile, preference, and platform layouts without changing a signed-in account.";
 
   return (
     <>
@@ -96,20 +246,41 @@ export default function SettingsCenter() {
         <div className="st-hero__orb st-hero__orb--purple" />
         <div className="st-hero__scanlines" />
         <div className="st-hero__content">
-          <div className="st-hero__tag"><span aria-hidden="true" /> Settings preview</div>
-          <h1 id="settings-title"><span className="page-title-emoji" aria-hidden="true">⚙️</span><strong>Static Settings Preview</strong></h1>
-          <p>Explore sample profile, preference, and platform layouts without changing the signed-in account.</p>
+          <div className="st-hero__tag"><span aria-hidden="true" /> {heroTag}</div>
+          <h1 id="settings-title"><span className="page-title-emoji" aria-hidden="true">⚙️</span><strong>{heroTitle}</strong></h1>
+          <p>{heroDescription}</p>
         </div>
       </section>
 
       <UxStatePanel title="Manage saved notification preferences" tone="auth"
-        description="Your account’s saved notification choices are available in Wishlist. Sign in there to view or update them.">
+        description={isSignedIn
+          ? "Your signed-in account can review wishlist notification preferences from the Wishlist workspace."
+          : "Sign in to review account-linked notification choices from the Wishlist workspace."}
+      >
         <Link className="ux-state__action" href="/wishlist#notification-preferences">Open wishlist preferences</Link>
       </UxStatePanel>
 
       <div className="st-disclaimer">
         <span aria-hidden="true">ℹ️</span>
-        <p><strong>Static settings preview</strong> — This sample profile is not the signed-in account. Toggles affect this rendered preview only and are not saved or enforced. Profile editing, platform management, and persistent account settings remain unavailable.</p>
+        <p>
+          {isSignedIn ? (
+            <>
+              <strong>Signed-in local demo account</strong> — Identity details are loaded from the active authentication session. Preference toggles below remain preview-only until persistent settings workflows are connected.
+            </>
+          ) : authState.status === "loading" ? (
+            <>
+              <strong>Checking account session</strong> — NEXORA is checking whether a local demo account is signed in.
+            </>
+          ) : authState.status === "unavailable" ? (
+            <>
+              <strong>Account status unavailable</strong> — {authState.message}
+            </>
+          ) : (
+            <>
+              <strong>Static settings preview</strong> — Sign in to show the current account identity. Preference toggles affect this rendered preview only and are not saved or enforced.
+            </>
+          )}
+        </p>
       </div>
 
       {preferenceMessage ? <p className="ux-inline-status st-demo-feedback" role="status">{preferenceMessage}</p> : null}
@@ -118,28 +289,47 @@ export default function SettingsCenter() {
         <div className="st-content">
           <section className="st-card st-profile" aria-labelledby="profile-title">
             <div className="st-profile__identity">
-              <div className="st-profile__avatar" aria-hidden="true"><span>DP</span><i /></div>
-              <div className="st-profile__copy">
-                <small>Static demo profile</small>
-                <h2 id="profile-title">Demo Player</h2>
-                <p>Example identity <span>•</span> Not the signed-in profile</p>
+              <div className="st-profile__avatar" aria-hidden="true">
+                <span>{signedInUser ? initialsFor(signedInUser) : "DP"}</span>
+                <i />
               </div>
-              <button className="st-outline-button" type="button" disabled aria-label="Edit profile unavailable in this static settings preview" title="Profile editing is not connected in this preview">✏️ Edit Profile</button>
+              <div className="st-profile__copy">
+                <small>{isSignedIn ? "Active local account" : "Static demo profile"}</small>
+                <h2 id="profile-title">{signedInUser?.displayName ?? "Demo Player"}</h2>
+                <p>
+                  {signedInUser ? `@${signedInUser.username}` : "Example identity"}
+                  <span>•</span>
+                  {signedInUser?.email ?? "Not signed in"}
+                </p>
+              </div>
+              <button
+                className="st-outline-button"
+                type="button"
+                disabled
+                aria-label="Edit profile unavailable in this demo build"
+                title="Profile editing is not connected in this demo build"
+              >
+                ✏️ Edit Profile
+              </button>
             </div>
             <div className="st-profile__fields">
-              {profileFields.map((field) => (
+              {profileRows.map((field) => (
                 <div className="st-profile-field" key={field.id}>
                   <span className="st-profile-field__icon" aria-hidden="true"><SettingsGlyph name={field.icon} /></span>
                   <div><small>{field.label}</small><strong>{field.value}</strong></div>
-                  <button type="button" disabled aria-label={`Edit ${field.label} unavailable in this static settings preview`} title="Editing is not connected in this preview">Edit</button>
+                  <button type="button" disabled aria-label={`Edit ${field.label} unavailable in this demo build`} title="Editing is not connected in this demo build">Edit</button>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="st-card" aria-labelledby="notifications-title">
-            <SectionHeading id="notifications-title" icon="bell" eyebrow="Demo controls" title="Notification Preferences" />
-            <p className="st-section-note">Static settings preview only — these choices are not saved or enforced.</p>
+            <SectionHeading id="notifications-title" icon="bell" eyebrow={isSignedIn ? "Account preview" : "Demo controls"} title="Notification Preferences" />
+            <p className="st-section-note">
+              {isSignedIn
+                ? "Preview controls for the active local account. Persistent notification settings are handled from Wishlist when connected."
+                : "Static settings preview only — these choices are not saved or enforced."}
+            </p>
             <PreferenceRows items={notificationPreferences} values={preferences} onToggle={togglePreference} />
           </section>
 
@@ -166,7 +356,7 @@ export default function SettingsCenter() {
                   <span className={`st-platform__state${platform.connected ? " st-platform__state--connected" : ""}`}>
                     <i aria-hidden="true" /> {platform.connected ? "Demo linked" : "Planned"}
                   </span>
-                  <button type="button" disabled aria-label={`${platform.connected ? "Manage" : "Connect"} ${platform.name} unavailable in this static settings preview`} title="Platform management is not connected in this preview">
+                  <button type="button" disabled aria-label={`${platform.connected ? "Manage" : "Connect"} ${platform.name} unavailable in this demo build`} title="Platform management is not connected in this demo build">
                     {platform.connected ? "Demo only" : "Planned"}
                   </button>
                 </article>
@@ -185,10 +375,10 @@ export default function SettingsCenter() {
               <div><small>Restricted actions</small><h2 id="danger-title">Danger Zone</h2></div>
             </div>
             <div className="st-danger__actions">
-              <div><strong>Clear NEXORA Data</strong><p>Unavailable in this static settings preview. This control does not change account data.</p></div>
-              <button type="button" disabled aria-label="Clear NEXORA data unavailable in this static settings preview" title="This static preview does not clear account data">Clear Data</button>
-              <div><strong>Delete Account</strong><p>Unavailable in this static settings preview. Account deletion needs a separate verified backend workflow.</p></div>
-              <button type="button" disabled aria-label="Delete account unavailable in this static settings preview" title="Account deletion is not connected in this preview">Delete Account</button>
+              <div><strong>Clear NEXORA Data</strong><p>Unavailable in this demo build. This control does not change account data.</p></div>
+              <button type="button" disabled aria-label="Clear NEXORA data unavailable in this demo build" title="This demo build does not clear account data">Clear Data</button>
+              <div><strong>Delete Account</strong><p>Unavailable in this demo build. Account deletion needs a separate verified backend workflow.</p></div>
+              <button type="button" disabled aria-label="Delete account unavailable in this demo build" title="Account deletion is not connected in this demo build">Delete Account</button>
             </div>
           </section>
         </div>
@@ -196,11 +386,16 @@ export default function SettingsCenter() {
         <aside className="st-status" aria-labelledby="account-status-title">
           <div className="st-status__header">
             <span className="st-status__header-icon" aria-hidden="true">📡</span>
-            <div><span>Preview summary</span><h2 id="account-status-title">Settings Preview Status</h2></div>
-            <span className="st-status__live st-status__live--demo"><i aria-hidden="true" /> Demo</span>
+            <div>
+              <span>{isSignedIn ? "Session summary" : "Preview summary"}</span>
+              <h2 id="account-status-title">{isSignedIn ? "Account Session Status" : "Settings Preview Status"}</h2>
+            </div>
+            <span className="st-status__live st-status__live--demo">
+              <i aria-hidden="true" /> {isSignedIn ? "Active" : "Demo"}
+            </span>
           </div>
           <div className="st-status__items">
-            {accountSystemStatus.map((item) => (
+            {statusRows.map((item) => (
               <div className="st-status__item" key={item.label}>
                 <span className={`st-status__item-icon st-status__item-icon--${item.tone}`} aria-hidden="true">
                   {accountStatusIcons[item.label]}
@@ -211,8 +406,11 @@ export default function SettingsCenter() {
             ))}
           </div>
           <div className="st-overview">
-            <div className="st-overview__label"><span>Demo account overview</span><strong>Sample</strong></div>
-            {accountOverview.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
+            <div className="st-overview__label">
+              <span>{isSignedIn ? "Account overview" : "Demo account overview"}</span>
+              <strong>{isSignedIn ? "Live session" : "Sample"}</strong>
+            </div>
+            {overviewRows.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
           </div>
           <div className="st-status__network" aria-hidden="true">
             <span /><span /><span /><span /><span />
