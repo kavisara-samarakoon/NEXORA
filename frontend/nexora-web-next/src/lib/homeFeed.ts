@@ -21,6 +21,8 @@ export const HOME_FEED_ENDPOINTS = {
   summary: "/api/dashboard/summary",
 } as const;
 
+export const HOME_FEED_REQUEST_TIMEOUT_MS = 5_000;
+
 /* ─── Types ──────────────────────────────────────────────────────────── */
 
 export interface DiscoveryDeal {
@@ -45,6 +47,12 @@ export interface HomeSummary {
   deals: number | null;
   giveaways: number | null;
   stores: number | null;
+  wishlistItems: number | null;
+  activePriceAlerts: number | null;
+  bestDiscountPercent: number | null;
+  bestDiscountTitle: string | null;
+  databaseStatus: string | null;
+  sentinelStatus: string | null;
 }
 
 export interface HomeFeedData {
@@ -67,7 +75,17 @@ export interface HomeFeedResult {
 export const EMPTY_HOME_FEED: HomeFeedData = {
   deal: null,
   giveaway: null,
-  summary: { deals: null, giveaways: null, stores: null },
+  summary: {
+    deals: null,
+    giveaways: null,
+    stores: null,
+    wishlistItems: null,
+    activePriceAlerts: null,
+    bestDiscountPercent: null,
+    bestDiscountTitle: null,
+    databaseStatus: null,
+    sentinelStatus: null,
+  },
 };
 
 /* ─── Safe JSON readers (no `any`, no assumptions) ───────────────────── */
@@ -165,13 +183,13 @@ function formatPrice(value: unknown): string | null {
 function formatDiscount(value: unknown): number | null {
   const amount = asNumber(value);
   if (amount === null) return null;
-  const rounded = Math.round(amount);
+  const rounded = Math.round(Math.abs(amount));
   return rounded > 0 && rounded <= 100 ? rounded : null;
 }
 
 /* ─── Mapping ────────────────────────────────────────────────────────── */
 
-function mapDeal(raw: Rec | null): DiscoveryDeal | null {
+export function mapDeal(raw: Rec | null): DiscoveryDeal | null {
   if (!raw) return null;
   const title = readText(raw, ["title", "name", "gameName", "internalName", "dealTitle"]);
   if (!title) return null;
@@ -180,18 +198,27 @@ function mapDeal(raw: Rec | null): DiscoveryDeal | null {
     id: readText(raw, ["id", "dealId", "dealID", "uuid", "slug"]) ?? title,
     title,
     store: readText(raw, ["store", "storeName", "shop", "platform", "source", "provider"]),
-    salePrice: formatPrice(readRaw(raw, ["salePrice", "currentPrice", "dealPrice", "price"])),
+    salePrice: formatPrice(
+      readRaw(raw, ["priceNew", "salePrice", "currentPrice", "dealPrice", "priceValue", "price"]),
+    ),
     normalPrice: formatPrice(
-      readRaw(raw, ["normalPrice", "originalPrice", "retailPrice", "listPrice", "regularPrice"]),
+      readRaw(raw, ["priceOld", "normalPrice", "originalPrice", "retailPrice", "listPrice", "regularPrice"]),
     ),
     discountPercent: formatDiscount(
-      readRaw(raw, ["discountPercent", "discountPercentage", "percentOff", "discount", "savings"]),
+      readRaw(raw, [
+        "discountValue",
+        "discountPercent",
+        "discountPercentage",
+        "percentOff",
+        "discount",
+        "savings",
+      ]),
     ),
-    href: readText(raw, ["url", "dealUrl", "link", "href", "storeUrl"]),
+    href: readText(raw, ["dealUrl", "url", "link", "href", "storeUrl"]),
   };
 }
 
-function mapGiveaway(raw: Rec | null): DiscoveryGiveaway | null {
+export function mapGiveaway(raw: Rec | null): DiscoveryGiveaway | null {
   if (!raw) return null;
   const title = readText(raw, ["title", "name", "gameName", "giveawayTitle"]);
   if (!title) return null;
@@ -199,13 +226,23 @@ function mapGiveaway(raw: Rec | null): DiscoveryGiveaway | null {
   return {
     id: readText(raw, ["id", "giveawayId", "uuid", "slug"]) ?? title,
     title,
-    platform: readText(raw, ["platform", "platforms", "store", "storeName", "type", "source"]),
-    worth: formatPrice(readRaw(raw, ["worth", "value", "retailPrice", "normalPrice"])),
+    platform: readText(raw, [
+      "platformLabel",
+      "platform",
+      "platforms",
+      "store",
+      "storeName",
+      "type",
+      "source",
+    ]),
+    worth: formatPrice(
+      readRaw(raw, ["originalPrice", "worth", "value", "retailPrice", "normalPrice"]),
+    ),
     href: readText(raw, ["url", "openGiveawayUrl", "giveawayUrl", "link", "href"]),
   };
 }
 
-function mapSummary(payload: unknown): HomeSummary {
+export function mapSummary(payload: unknown): HomeSummary {
   const root = asRecord(payload) ?? {};
   const flattened: Rec = {
     ...root,
@@ -221,8 +258,16 @@ function mapSummary(payload: unknown): HomeSummary {
   };
 
   return {
-    deals: count(["deals", "dealCount", "dealsCount", "totalDeals", "activeDeals"]),
+    deals: count([
+      "activeDealsCount",
+      "deals",
+      "dealCount",
+      "dealsCount",
+      "totalDeals",
+      "activeDeals",
+    ]),
     giveaways: count([
+      "activeGiveawaysCount",
       "giveaways",
       "giveawayCount",
       "giveawaysCount",
@@ -230,7 +275,29 @@ function mapSummary(payload: unknown): HomeSummary {
       "activeGiveaways",
     ]),
     stores: count(["stores", "storeCount", "storesCount", "totalStores", "activeStores", "shops"]),
+    wishlistItems: count(["wishlistItemsCount", "wishlistItems", "wishlistCount"]),
+    activePriceAlerts: count([
+      "activePriceAlertsCount",
+      "activePriceAlerts",
+      "priceAlertsCount",
+    ]),
+    bestDiscountPercent: count(["bestDiscountValue", "bestDiscountPercent"]),
+    bestDiscountTitle: readText(flattened, ["bestDiscountTitle"]),
+    databaseStatus: readText(flattened, ["databaseStatus"]),
+    sentinelStatus: readText(flattened, ["sentinelStatus"]),
   };
+}
+
+export type HomeSummaryAvailability = "loading" | "available" | "incomplete" | "unavailable";
+
+export function getHomeSummaryAvailability(
+  status: "loading" | "ready" | "error",
+  summaryFailed: boolean,
+  summary: HomeSummary,
+): HomeSummaryAvailability {
+  if (status === "loading") return "loading";
+  if (status === "error" || summaryFailed) return "unavailable";
+  return summary.deals !== null && summary.giveaways !== null ? "available" : "incomplete";
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -241,8 +308,10 @@ function mapSummary(payload: unknown): HomeSummary {
 
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
   const requestUrl = buildApiUrl(url);
+  const timeoutSignal = AbortSignal.timeout(HOME_FEED_REQUEST_TIMEOUT_MS);
+  const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
   const response = await fetch(requestUrl, {
-    signal,
+    signal: requestSignal,
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
@@ -285,7 +354,7 @@ export async function loadHomeFeed(signal?: AbortSignal): Promise<HomeFeedResult
       summary:
         summaryResult.status === "fulfilled"
           ? mapSummary(summaryResult.value)
-          : { deals: null, giveaways: null, stores: null },
+          : EMPTY_HOME_FEED.summary,
     },
     errors: {
       deals: dealsResult.status === "rejected",

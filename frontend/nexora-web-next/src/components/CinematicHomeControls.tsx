@@ -1,13 +1,14 @@
 "use client";
 
-import { formatCount } from "../lib/homeFeed";
+import { formatCount, getHomeSummaryAvailability } from "../lib/homeFeed";
 import CinematicSceneControls from "./CinematicSceneControls";
 import { useHomeScene } from "./HomeSceneProvider";
 import styles from "./cinematic.module.css";
 
 export default function CinematicHomeControls({ className }: { className?: string }) {
-  const { status, data } = useHomeScene();
+  const { status, data, errors } = useHomeScene();
   const { summary } = data;
+  const summaryAvailability = getHomeSummaryAvailability(status, errors.summary, summary);
 
   const metrics = [
     { label: "Deals", value: summary.deals },
@@ -28,12 +29,18 @@ export default function CinematicHomeControls({ className }: { className?: strin
             </div>
           ))}
         </dl>
-      ) : (
+      ) : null}
+
+      {summaryAvailability !== "available" ? (
         <p className={styles.syncPending} role="status">
           <span aria-hidden="true" />
-          {status === "loading" ? "Syncing discovery" : "Sync pending"}
+          {summaryAvailability === "loading"
+            ? "Syncing discovery"
+            : summaryAvailability === "incomplete"
+              ? "Summary incomplete"
+              : "Summary unavailable"}
         </p>
-      )}
+      ) : null}
 
       <CinematicSceneControls />
     </div>
