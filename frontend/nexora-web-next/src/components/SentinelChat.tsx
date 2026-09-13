@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import type { ChatMessage } from "@/data/sentinel";
 import {
@@ -10,6 +10,7 @@ import {
   ensureAuthToken,
   readAuthToken,
 } from "@/lib/auth-client";
+import { createSentinelRequestGuard } from "@/lib/sentinel-request-guard";
 import {
   normalizeSentinelInsightError,
   requestSentinelInsight,
@@ -169,6 +170,18 @@ export default function SentinelChat({
   const [sessionRetryKey, setSessionRetryKey] = useState(0);
   const [authState, setAuthState] = useState<GatewayAuthState>("checking");
   const composerInputRef = useRef<HTMLInputElement>(null);
+  const requestGuardRef = useRef(createSentinelRequestGuard());
+
+  const clearPrivateConversation = useCallback(() => {
+    requestGuardRef.current.invalidate();
+    setDraft("");
+    setContext("general");
+    setSubmittedMessage(null);
+    setGatewayResponse(null);
+    setGatewayError(null);
+    setShowSignInHint(false);
+    setIsSubmitting(false);
+  }, []);
 
   function returnMessageToComposer(message: string) {
     setDraft(message);
@@ -178,6 +191,7 @@ export default function SentinelChat({
 
   useEffect(() => {
     let active = true;
+    const requestGuard = requestGuardRef.current;
 
     async function refreshAuthentication() {
       setAuthState("checking");
@@ -203,6 +217,7 @@ export default function SentinelChat({
     }
 
     function handleAuthChange() {
+      clearPrivateConversation();
       void refreshAuthentication();
     }
 
@@ -210,14 +225,16 @@ export default function SentinelChat({
     window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
     return () => {
       active = false;
+      requestGuard.invalidate();
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
-  }, [sessionRetryKey]);
+  }, [clearPrivateConversation, sessionRetryKey]);
 
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const message = draft.trim();
     if (!message || isSubmitting || authState === "checking") return;
+    const requestVersion = requestGuardRef.current.begin();
 
     setSubmittedMessage(message);
     setGatewayResponse(null);
@@ -235,17 +252,19 @@ export default function SentinelChat({
         authToken,
         (activeToken) => requestSentinelInsight(activeToken, { message, context }),
       );
+      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
       setAuthToken(result.token);
       setAuthState("authenticated");
       setGatewayResponse(result.value);
       setDraft("");
     } catch (error) {
+      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
       const details = normalizeSentinelInsightError(error);
       if (details.status === 401) {
         clearAuthToken();
+        clearPrivateConversation();
         setAuthToken(null);
         setAuthState("anonymous");
-        setShowSignInHint(true);
       } else {
         setGatewayError({
           code: details.code,
@@ -254,7 +273,9 @@ export default function SentinelChat({
         });
       }
     } finally {
-      setIsSubmitting(false);
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
+        setIsSubmitting(false);
+      }
     }
   }
 

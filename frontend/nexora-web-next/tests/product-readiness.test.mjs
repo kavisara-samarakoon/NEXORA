@@ -17,6 +17,9 @@ const { productReturnTo, authFieldError } = await import(await moduleUrl("../src
 const { wishlistCardIdentity } = await import(
   await moduleUrl("../src/lib/wishlist-card-identity.ts")
 );
+const { createSentinelRequestGuard } = await import(
+  await moduleUrl("../src/lib/sentinel-request-guard.ts")
+);
 
 test("auth return navigation accepts only known product routes", () => {
   for (const route of ["/", "/deals", "/giveaways", "/wishlist", "/sentinel", "/security", "/settings"]) {
@@ -80,6 +83,19 @@ test("wishlist card identity separates preview drafts from personal account item
       item,
     ),
   );
+});
+
+test("Sentinel rejects responses from requests invalidated by an auth change", () => {
+  const guard = createSentinelRequestGuard();
+  const signedInRequest = guard.begin();
+
+  assert.equal(guard.isCurrent(signedInRequest), true);
+  guard.invalidate();
+  assert.equal(guard.isCurrent(signedInRequest), false);
+
+  const nextSessionRequest = guard.begin();
+  assert.equal(guard.isCurrent(signedInRequest), false);
+  assert.equal(guard.isCurrent(nextSessionRequest), true);
 });
 
 test("anonymous bootstrap is coalesced, real auth failures remain visible, and refresh can still recover sessions", async () => {
