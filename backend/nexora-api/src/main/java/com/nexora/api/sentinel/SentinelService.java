@@ -14,39 +14,14 @@ public class SentinelService {
         this.aiProperties = aiProperties;
     }
 
-    private static final List<SentinelMessage> MESSAGES = List.of(
-            new SentinelMessage(1, "user", List.of(
-                    segment("Find me co-op games under $15")
-            )),
-            new SentinelMessage(2, "ai", List.of(
-                    segment("I found "),
-                    emphasizedSegment("12 co-op games"),
-                    segment(" under $15 across Steam and Epic Games. Top picks: "),
-                    emphasizedSegment("It Takes Two ($9.99)"),
-                    segment(", "),
-                    emphasizedSegment("Deep Rock Galactic ($7.49)"),
-                    segment(", and "),
-                    emphasizedSegment("Stardew Valley ($11.99)"),
-                    segment(". Want me to add any to your wishlist?")
-            )),
-            new SentinelMessage(3, "user", List.of(
-                    segment("Add It Takes Two to my wishlist and set a price alert for $7")
-            )),
-            new SentinelMessage(4, "ai", List.of(
-                    segment("Preview complete. "),
-                    emphasizedSegment("It Takes Two"),
-                    segment(" would be added with a target price of "),
-                    emphasizedSegment("$7.00"),
-                    segment(". Live wishlist actions require a future integration.")
-            ))
-    );
+    private static final List<SentinelMessage> MESSAGES = List.of();
 
     private static final List<String> SUGGESTIONS = List.of(
-            "Find RPGs under $20",
-            "When is the next Steam sale?",
-            "Free games this week",
-            "Is my account secure?",
-            "Compare Elden Ring prices"
+            "Find co-op games under $15",
+            "Compare Elden Ring prices",
+            "Show free games this week",
+            "Help me set a wishlist alert",
+            "Is my gaming account secure?"
     );
 
     private static final List<SentinelCapability> CAPABILITIES = List.of(
@@ -63,38 +38,47 @@ public class SentinelService {
     public SentinelStatusResponse getStatus() {
         if (aiProperties.isGeminiConfigured()) {
             return new SentinelStatusResponse(
-                    "Gemini Provider Foundation",
+                    "External AI ready",
                     "Connected",
-                    "Gemini Enabled",
-                    "No messages saved");
+                    "Gemini enabled",
+                    "No chat history saved");
         }
         return new SentinelStatusResponse(
-                "Gateway Foundation",
+                "Local NEXORA guidance",
                 "Connected",
-                "Gemini Disabled",
-                "No messages saved");
+                "External provider optional",
+                "No chat history saved");
     }
 
     public SentinelDemoResponse getDemo() {
         boolean geminiConfigured = aiProperties.isGeminiConfigured();
         List<SentinelStatusItem> systemStatus = List.of(
                 new SentinelStatusItem(
-                        "AI Status",
-                        geminiConfigured ? "Gemini Provider Foundation" : "Gateway Foundation",
+                        "Assistant",
+                        geminiConfigured ? "External AI ready" : "Local NEXORA guidance",
                         geminiConfigured ? "Gemini" : "Local",
                         "blue",
                         "bot"),
-                new SentinelStatusItem("Backend", "Connected", "Online", "green", "network"),
+                new SentinelStatusItem(
+                        "Backend",
+                        "Authenticated insight endpoint",
+                        "API",
+                        "orange",
+                        "network"),
                 new SentinelStatusItem(
                         "Provider",
                         geminiConfigured
-                                ? "Gemini Enabled"
-                                : "Local Preview / Gemini Disabled",
-                        geminiConfigured ? "Enabled" : "External off",
+                                ? "Gemini provider enabled"
+                                : "Local by default, external optional",
+                        geminiConfigured ? "Enabled" : "Optional",
                         "purple",
                         "spark"),
                 new SentinelStatusItem(
-                        "Privacy", "No messages saved", "Safe", "green", "lock"));
+                        "Privacy",
+                        "No chat history saved",
+                        "Safe",
+                        "green",
+                        "lock"));
         return new SentinelDemoResponse(
                 MESSAGES,
                 SUGGESTIONS,
