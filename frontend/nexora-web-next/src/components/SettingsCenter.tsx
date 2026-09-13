@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import UxStatePanel from "@/components/UxStatePanel";
+import { useCinematicSceneControls } from "./CinematicSceneControls";
 import { normalizeAuthError, type AuthUser } from "@/lib/auth";
 import { AUTH_STATE_EVENT, readCurrentUser } from "@/lib/auth-client";
 import { useEffect, useMemo, useState } from "react";
@@ -78,25 +79,37 @@ function PreferenceRows({
 }) {
   return (
     <div className="st-preferences">
-      {items.map((item) => (
-        <div className="st-preference" key={item.id}>
-          <div className="st-preference__copy">
-            <strong id={`setting-${item.id}-label`}>{item.label}</strong>
-            <span id={`setting-${item.id}-description`}>{item.description}</span>
+      {items.map((item) => {
+        const isInteractive = item.interactive !== false;
+        const checked = values[item.id] ?? item.enabled;
+
+        return (
+          <div className={`st-preference${isInteractive ? "" : " st-preference--readonly"}`} key={item.id}>
+            <div className="st-preference__copy">
+              <strong id={`setting-${item.id}-label`}>{item.label}</strong>
+              <span id={`setting-${item.id}-description`}>{item.description}</span>
+            </div>
+
+            {isInteractive ? (
+              <button
+                className={`st-switch${checked ? " st-switch--active" : ""}`}
+                type="button"
+                role="switch"
+                aria-checked={checked}
+                aria-labelledby={`setting-${item.id}-label`}
+                aria-describedby={`setting-${item.id}-description`}
+                onClick={() => onToggle(item.id)}
+              >
+                <span aria-hidden="true" />
+              </button>
+            ) : (
+              <span className="st-setting-pill" aria-label={`${item.label}: ${item.statusLabel ?? "Preview"}`}>
+                <span>{item.statusLabel ?? "Preview"}</span>
+              </span>
+            )}
           </div>
-          <button
-            className={`st-switch${values[item.id] ? " st-switch--active" : ""}`}
-            type="button"
-            role="switch"
-            aria-checked={values[item.id]}
-            aria-labelledby={`setting-${item.id}-label`}
-            aria-describedby={`setting-${item.id}-description`}
-            onClick={() => onToggle(item.id)}
-          >
-            <span aria-hidden="true" />
-          </button>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -117,6 +130,12 @@ export default function SettingsCenter() {
     Object.fromEntries(allPreferences.map((item) => [item.id, item.enabled])),
   );
   const [preferenceMessage, setPreferenceMessage] = useState<string | null>(null);
+  const { motionPaused, toggleMotion } = useCinematicSceneControls();
+
+  const displayedPreferences = useMemo(
+    () => ({ ...preferences, animations: !motionPaused }),
+    [motionPaused, preferences],
+  );
 
   useEffect(() => {
     let active = true;
@@ -194,13 +213,13 @@ export default function SettingsCenter() {
       {
         label: "Notifications",
         value: "Preview controls only",
-        badge: "Demo",
+        badge: "Preview",
         tone: "orange",
       },
       {
         label: "Platform Links",
         value: "Coming soon",
-        badge: "Demo",
+        badge: "Preview",
         tone: "purple",
       },
       {
@@ -225,11 +244,25 @@ export default function SettingsCenter() {
   }, [signedInUser]);
 
   function togglePreference(id: string) {
+    const item = allPreferences.find((preference) => preference.id === id);
+    if (!item || item.interactive === false) return;
+
+    if (id === "animations") {
+      const nextAnimationsEnabled = motionPaused;
+      toggleMotion();
+      setPreferenceMessage(
+        nextAnimationsEnabled
+          ? "Animations are enabled for this browser."
+          : "Animations are paused for this browser.",
+      );
+      return;
+    }
+
     setPreferences((current) => ({ ...current, [id]: !current[id] }));
     setPreferenceMessage(
       isSignedIn
-        ? "Preview preference updated for this screen only. Persistent account settings are not connected yet."
-        : "Preview preference updated for this rendered view only. No account setting was saved.",
+        ? "Preference updated for this screen. Persistent account settings are not connected yet."
+        : "Preference updated for this guest preview only.",
     );
   }
 
@@ -327,16 +360,16 @@ export default function SettingsCenter() {
             <SectionHeading id="notifications-title" icon="bell" eyebrow={isSignedIn ? "Account preview" : "Preview controls"} title="Notification Preferences" />
             <p className="st-section-note">
               {isSignedIn
-                ? "Preview controls for the active local account. Persistent notification settings are handled from Wishlist when connected."
-                : "Guest preview only — these choices are not saved or enforced."}
+                ? "Notification preferences are managed from Wishlist when account notification workflows are available."
+                : "Notification controls are shown here as account capability status. Use Wishlist for alert preferences when signed in."}
             </p>
-            <PreferenceRows items={notificationPreferences} values={preferences} onToggle={togglePreference} />
+            <PreferenceRows items={notificationPreferences} values={displayedPreferences} onToggle={togglePreference} />
           </section>
 
           <section className="st-card" aria-labelledby="security-preferences-title">
             <SectionHeading id="security-preferences-title" icon="shield" eyebrow="Capability preview" title="Security Preferences" />
-            <p className="st-section-note">Preview controls only — they do not represent active account protection.</p>
-            <PreferenceRows items={securityPreferences} values={preferences} onToggle={togglePreference} />
+            <p className="st-section-note">Security controls below show planned account-protection capabilities. They are not interactive in this demo build.</p>
+            <PreferenceRows items={securityPreferences} values={displayedPreferences} onToggle={togglePreference} />
           </section>
 
           <section className="st-card" aria-labelledby="platforms-title">
@@ -366,7 +399,7 @@ export default function SettingsCenter() {
 
           <section className="st-card" aria-labelledby="appearance-title">
             <SectionHeading id="appearance-title" icon="monitor" eyebrow="Interface system" title="Appearance & Liquid Glass Theme" />
-            <PreferenceRows items={appearancePreferences} values={preferences} onToggle={togglePreference} />
+            <PreferenceRows items={appearancePreferences} values={displayedPreferences} onToggle={togglePreference} />
           </section>
 
           <section className="st-card st-danger" aria-labelledby="danger-title">
@@ -388,10 +421,10 @@ export default function SettingsCenter() {
             <span className="st-status__header-icon" aria-hidden="true">📡</span>
             <div>
               <span>{isSignedIn ? "Session summary" : "Preview summary"}</span>
-              <h2 id="account-status-title">{isSignedIn ? "Account Session Status" : "Settings Preview Status"}</h2>
+              <h2 id="account-status-title">{isSignedIn ? "Account Session Status" : "Account Status"}</h2>
             </div>
             <span className="st-status__live st-status__live--demo">
-              <i aria-hidden="true" /> {isSignedIn ? "Active" : "Demo"}
+              <i aria-hidden="true" /> {isSignedIn ? "Active" : "Preview"}
             </span>
           </div>
           <div className="st-status__items">
