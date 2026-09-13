@@ -9,10 +9,13 @@ project.
 
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
-not production-ready. The latest tagged development milestone is
-`v0.89.0-browser-qa-evidence`; the current branch prepares the untagged v0.90
-full-stack demo-readiness candidate documented in
-[the v0.90 QA evidence](qa/BROWSER_QA_V0_90.md).
+not production-ready. The latest released milestone is
+`v0.90.0-full-stack-demo-readiness`, with
+[local QA evidence](qa/BROWSER_QA_V0_90.md). The active branch is
+`feature/hosted-demo-readiness` for v0.91: validate hosted deployment confidence
+for the existing product without adding product features.
+[Hosted evidence is pending](qa/BROWSER_QA_V0_91.md) until real frontend,
+backend, and database checks are completed.
 
 The completed and tagged v0.77 milestone added an opt-in, provider-neutral
 hosted PostgreSQL validation test and redacting wrapper script for disposable
@@ -137,7 +140,7 @@ deployment.
 | Next.js frontend | Primary responsive interface, browser session bootstrap, API integration, typed public-data fallbacks, backend health visibility, source labels, reviewer navigation, accessibility, state-review and screenshot-safe aids, and public-safe portfolio evidence summary |
 | Spring Boot backend | REST endpoints, validation, authentication, ownership rules, provider gateways, and scheduled foundations |
 | Default profile | Database-free local demo with in-memory account and feature stores |
-| `dev` profile | PostgreSQL persistence validated by Flyway V1–V10 and JPA schema checks |
+| `dev` profile | PostgreSQL persistence with Flyway V1–V12 and JPA schema checks |
 | Production-like profile guard | `prod`/`production` requires the existing `dev` persistent profile and otherwise fails startup closed |
 | Optional providers | CheapShark price/deal data, SMTP email delivery, and Gemini Sentinel responses |
 | CI | Backend tests, PostgreSQL integration validation, frontend lint/build, reviewer preflight validation, advisory Dependency Review, separate npm audit and Maven dependency-tree checks, and manual CodeQL-ready analysis |
@@ -145,6 +148,16 @@ deployment.
 The primary frontend is `frontend/nexora-web-next`; the earlier Vite prototype
 is retained only for reference. The default local workflow does not require
 external provider credentials.
+
+The existing hosted plan uses Vercel for that frontend, a Render Docker service
+rooted at `backend/nexora-api`, and disposable Neon PostgreSQL. Browser requests
+use `NEXT_PUBLIC_API_BASE_URL=/`; the Next.js server rewrites `/api/**` to the
+backend HTTPS origin in `NEXORA_API_BASE_URL`, without `/api` or credentials.
+`NEXT_PUBLIC_*` values are browser-visible. Hosted cookies, exact-origin
+CORS/CSRF, persistence after restart, and provider fallbacks require the
+pending v0.91 checks. `/api/health` summarizes sanitized runtime configuration;
+it does not establish database/provider liveness, mail delivery, Gemini
+availability, or frontend proxy correctness by itself.
 
 ## Security foundations
 

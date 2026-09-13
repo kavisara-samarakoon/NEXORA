@@ -1,5 +1,12 @@
 # NEXORA live hosted-demo smoke-test plan
 
+Latest released milestone: `v0.90.0-full-stack-demo-readiness`.
+Active milestone: v0.91 hosted demo readiness on `feature/hosted-demo-readiness`.
+This validates the existing product; it adds no product-feature scope.
+All checks below are pending. Record real results in
+[BROWSER_QA_V0_91.md](../qa/BROWSER_QA_V0_91.md); historical local QA is not
+hosted evidence.
+
 ## Purpose and safety
 
 Run this checklist only after a candidate hosted frontend, API, and PostgreSQL
@@ -44,7 +51,12 @@ does not establish that browser SameSite/Secure handling works.
 Health must report `runtimeMode=production`, `dataMode=postgres-dev`, and an
 active auth production guard. `UP` alone also occurs in the memory-only demo.
 The public profile list sanitizes `hosted-demo` to `custom`; it is not a raw
-profile dump. Health does not execute a live database query.
+profile dump. `/api/health` is a sanitized runtime/configuration summary. It
+does not prove PostgreSQL or provider liveness, mail delivery, Gemini
+availability, or frontend proxy correctness by itself. Check direct backend
+and frontend-proxy health separately, then use SQL, browser, and provider smoke
+checks for dependency evidence. Confirm Flyway V1–V12 and latest version `12`
+separately from the hosted test's current minimum-of-10 assertion.
 
 ## Public API checks
 
@@ -117,8 +129,10 @@ profile dump. Health does not execute a live database query.
 - [ ] Update its alert/target fields and verify the existing evaluation shape.
 - [ ] Read price history and alert events where applicable without assuming an
   event will exist before its documented transition.
-- [ ] Delete the item and verify it no longer appears.
 - [ ] Confirm another account cannot read, update, or delete the item.
+- [ ] Restart the backend against the same disposable database;
+  reload/sign in and verify the saved item and target still belong to the account.
+- [ ] Delete the item and verify it no longer appears.
 
 ## Notification preference checks
 
@@ -126,6 +140,9 @@ profile dump. Health does not execute a live database query.
   defaults.
 - [ ] Apply one reversible preference update and confirm only supplied fields
   change.
+- [ ] Restart the backend against the same database and
+  verify the changed preference through the authenticated API/UI. This tests
+  persistence, not automatic notification delivery.
 - [ ] Restore the original value when practical.
 - [ ] Confirm preferences remain account-scoped. Do not trigger real email unless
   email delivery has separate approval and a controlled recipient.
@@ -150,7 +167,8 @@ profile dump. Health does not execute a live database query.
 - [ ] An untrusted origin receives no permissive CORS response.
 - [ ] No wildcard origin is combined with credentials.
 - [ ] Browser developer tools show both auth cookies as Secure, with reviewed
-  SameSite values and narrow paths; the refresh cookie remains HttpOnly.
+  `SameSite=Lax`, host-only scope (no Domain attribute), and `/api/auth` paths;
+  the refresh cookie remains HttpOnly and the CSRF cookie is readable.
 - [ ] There is no mixed HTTP/HTTPS content and no browser cookie rejection that
   breaks register, refresh, or logout.
 
@@ -190,6 +208,10 @@ profile dump. Health does not execute a live database query.
 - [ ] Re-run affected sections after fixes against the exact candidate artifact.
 - [ ] Complete the deployment readiness checklist and browser QA evidence.
 - [ ] Remove or account for synthetic test data and end the test session.
+- [ ] Review hosted logs for private data, record the cleanup procedure and its
+  outcome, and select a schema-compatible rollback target and owner. No previous
+  deployed rollback target may be assumed for a first deployment; record a
+  takedown/redeploy procedure if none exists.
 - [ ] Record a go/no-go decision. A smoke-test pass means only that the checked
   hosted-demo flows worked at that time; it is not production readiness or an
   availability guarantee.

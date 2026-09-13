@@ -3,10 +3,14 @@
 NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
-The latest tagged development milestone is `v0.89.0-browser-qa-evidence`; v0.90
-is the current untagged full-stack demo-readiness candidate. The earlier v0.77
-hosted PostgreSQL validation milestone remains completed, but no public
-deployment or production readiness is claimed.
+The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
+The active v0.91 branch is `feature/hosted-demo-readiness`; its goal is hosted
+deployment confidence through validation of the existing product, without new
+product features. [Hosted evidence is pending](../qa/BROWSER_QA_V0_91.md),
+including actual cookie/CSRF/CORS behavior, auth/session handling, restart
+persistence, log privacy, cleanup, and rollback. Existing CI and startup guards
+do not establish those results. No workflow changes or live deployment are
+implied by this documentation update.
 
 ## Repository-defined automation
 

@@ -4,13 +4,22 @@ This roadmap organizes possible next milestones. It does not promise dates, a
 public launch, or production readiness. Priorities should be revisited as the
 project's academic, portfolio, and product goals evolve.
 
-## Near-term polish
+## Active milestone: v0.91 hosted demo readiness
 
-- Treat `v0.89.0-browser-qa-evidence` as the latest tagged development
-  milestone and v0.90 as the current untagged full-stack demo-readiness
-  candidate. Preserve the evidence boundaries in
-  [the v0.90 QA record](qa/BROWSER_QA_V0_90.md).
-- Preserve its manual, provider-neutral, opt-in validation path for disposable
+- Latest released milestone: `v0.90.0-full-stack-demo-readiness`; its
+  [local QA record](qa/BROWSER_QA_V0_90.md) remains historical evidence.
+- Active branch: `feature/hosted-demo-readiness`. v0.91 validates hosted
+  deployment confidence without adding new product features.
+- Complete direct backend health, frontend-proxy health, hosted browser auth,
+  cookie attributes, CSRF rejection, trusted/rejected CORS/origins, Wishlist
+  and notification-preference restart persistence, external deals
+  success/cache/fallback, log privacy, cleanup, and rollback review.
+  [Hosted QA evidence is pending](qa/BROWSER_QA_V0_91.md); no check becomes
+  complete until its actual deployed result is recorded.
+
+## Existing foundations and later polish
+
+- Preserve the v0.77 manual, provider-neutral, opt-in validation path for disposable
   hosted-demo PostgreSQL databases. Completion of that foundation is not a live
   deployment or production-readiness claim.
 - Preserve the previous completed v0.76 strict backend-only `hosted-demo`
@@ -135,16 +144,18 @@ project's academic, portfolio, and product goals evolve.
 - Use Neon PostgreSQL, a Render backend, and a Vercel frontend as the planned
   hosted-demo path while keeping provider configuration, credentials, live
   validation, deployment, and operational ownership subject to explicit review.
-- Define backend and frontend application image requirements separately from
-  the existing local PostgreSQL Compose and devcontainer tooling.
+- Validate the existing backend Dockerfile and Next.js framework hosting path
+  separately from local PostgreSQL Compose and devcontainer tooling. Hosted
+  docs select Node.js 24.x; CI still uses Node.js 20. Runtime parity and container
+  CI changes need a separate task.
 - Establish environment-specific configuration, managed secret storage,
   backups, restore testing, health checks, and rollback expectations.
 - Add deployment automation only after those decisions are reviewed.
 - Add broader end-to-end/browser testing only after its scenarios, runtime
   cost, and ownership are defined; the API Smoke CI foundation is API-only.
-- Convert the v0.75 vendor-neutral plans into target-specific deployment and
-  operational runbooks only after a topology, owners, monitoring, rollback, and
-  incident-response processes are approved.
+- Use the existing [provider deployment guide](deployment/production-demo-deployment-plan.md)
+  for the documented demo topology. Record actual validation, owners, rollback,
+  and cleanup before sharing a hosted link; production operations remain later work.
 
 ## Production security requirements
 

@@ -41,9 +41,15 @@ paths:
       operationId: getRuntimeHealth
       tags: [Health]
       summary: Get the safe runtime and configuration summary
+      description: >-
+        Sanitized runtime/configuration summary only. This endpoint does not
+        prove PostgreSQL liveness, provider liveness, mail delivery, Gemini
+        availability, or frontend proxy correctness by itself. Dependency
+        liveness and browser behavior require separate hosted smoke tests;
+        v0.91 hosted validation evidence remains pending.
       responses:
         "200":
-          description: Current local runtime summary
+          description: Sanitized runtime and configuration summary
           content:
             application/json:
               schema:

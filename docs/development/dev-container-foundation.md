@@ -106,11 +106,22 @@ gateway name or run the backend on the host.
 
 ## Run the frontend
 
-In another host or development-container terminal:
+In another host or development-container terminal, copy the example only for a
+fresh setup; preserve any existing `.env.local`:
 
 ```bash
 cd frontend/nexora-web-next
 cp .env.example .env.local
+```
+
+The example now leaves hosted origins blank. For this local browser-to-backend
+flow, edit the ignored
+copy to set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080` and
+`NEXT_PUBLIC_SITE_URL=http://localhost:3000`, leaving `NEXORA_API_BASE_URL`
+unset. To use proxy mode, follow the [frontend routing guide](../../frontend/nexora-web-next/README.md#vercel-to-render-api-routing)
+and choose a backend origin reachable from the Next.js process.
+
+```bash
 npm ci
 npm run dev
 ```

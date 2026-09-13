@@ -1,5 +1,11 @@
 # NEXORA v0.90 full-stack demo-readiness QA evidence
 
+> Historical local evidence for the released
+> `v0.90.0-full-stack-demo-readiness` milestone. Candidate/branch/tag wording
+> below records the validation-time context and is preserved with its results.
+> Current v0.91 hosted evidence is [pending](BROWSER_QA_V0_91.md); this record
+> does not establish a hosted result.
+
 ## Scope and evidence boundary
 
 This document records the final local checks for the v0.90 full-stack

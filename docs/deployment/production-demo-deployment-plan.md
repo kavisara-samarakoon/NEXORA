@@ -1,9 +1,12 @@
 # NEXORA hosted demo: Vercel / Render / Neon
 
-This is the setup path for a controlled portfolio demo. Nothing has been
-deployed by these repository changes. Use a reviewed candidate containing the
-completed homepage and deployment work; select that same candidate for both
-services. Existing API contracts, migrations, and auth guards remain in place.
+This is the existing setup path for a controlled portfolio demo. The latest
+released milestone is `v0.90.0-full-stack-demo-readiness`; the active branch is
+`feature/hosted-demo-readiness` for v0.91. Its goal is hosted validation of the
+existing product, without new product features. Nothing has been deployed by
+this documentation pass. Select the same reviewed candidate for both services.
+[Hosted evidence is pending](../qa/BROWSER_QA_V0_91.md) until real frontend,
+backend, and database checks are completed.
 
 ## 1. Reserve the frontend origin; create a disposable Neon database
 
@@ -30,7 +33,7 @@ or a JDBC URL containing `user`/`password` into `NEXORA_DB_URL`. The Java driver
 uses `channelBinding` (camel case). `sslmode=require` enables TLS; certificate
 verification modes need matching trust configuration. [Neon Java settings](https://neon.com/docs/guides/java)
 
-On startup, existing Flyway V1–V10 migrations initialize the schema and existing
+On startup, existing Flyway V1–V12 migrations initialize the schema and existing
 seed data; Hibernate only validates it. Do not run `clean`, reset migration
 history, or edit migrations to bypass a failure. The hosted validation test
 also starts Flyway, so run it only against this disposable database.
@@ -76,12 +79,17 @@ demo modes. Do not enable optional integrations just to pass deployment checks.
 
 `hosted-demo` composes `dev` persistence and `production` safety guards. It
 enforces Secure refresh/CSRF cookies and CSRF protection; retain `SameSite=Lax`
-and `/api/auth` cookie paths. Spring Boot does **not** automatically load the
+and `/api/auth` cookie paths. Both cookies are host-only (no Domain attribute);
+the refresh cookie is HttpOnly and the CSRF cookie is readable. Actual forwarding
+and session restoration through the hosted proxy remain pending checks.
+Spring Boot does **not** automatically load the
 example env file. Missing/unsafe hosted settings should fail startup.
 
-Render can use `/api/health` as its HTTP health check. This endpoint describes
-application configuration; it does **not** ping PostgreSQL on each request.
-Verify database connectivity separately below. [Render health checks](https://render.com/docs/health-checks)
+Render can use `/api/health` as its HTTP health check. This sanitized runtime/
+configuration summary does **not** prove PostgreSQL liveness, provider liveness,
+mail delivery, Gemini availability, or frontend proxy correctness by itself.
+Verify dependencies and both request paths separately below.
+[Render health checks](https://render.com/docs/health-checks)
 
 ## 3. Deploy the frontend on Vercel
 
@@ -98,11 +106,13 @@ NEXORA_API_BASE_URL=https://<render-backend-host>
 NEXT_PUBLIC_SITE_URL=https://<vercel-frontend-host>
 ```
 
-The browser calls Vercel `/api/...`; the existing Next.js rewrite proxies to
-Render. Server-rendered requests use the Render origin directly. Never append
-`/api` to the backend value or point it at the frontend. Keep the server variable
-available at runtime and rebuild/redeploy after any routing/site change.
-Do not add a second proxy or place credentials in `NEXT_PUBLIC_*` variables.
+The browser calls Vercel `/api/...`; the Next.js server rewrites `/api/**` to
+the Render HTTPS origin from server-side `NEXORA_API_BASE_URL`. Server-rendered
+requests use that origin directly. Use an origin only, without `/api`, other
+paths, credentials, query, or fragment; never point it at the frontend. Keep the
+server variable available at runtime and rebuild/redeploy after routing changes.
+Every `NEXT_PUBLIC_*` value is browser-visible. Do not place secrets in frontend
+environment examples or public variables.
 [Vercel external rewrites](https://vercel.com/docs/routing/rewrites)
 
 Same-origin browser calls avoid reliance on third-party refresh cookies. Retain
@@ -128,8 +138,11 @@ With Render's intended backend variables exported locally (Java 17+, Maven
 NEXORA_RUN_HOSTED_POSTGRES_VALIDATION=true bash scripts/deployment/validate-hosted-postgres.sh
 ```
 
-This checks hosted startup, a live SQL connection/query, Flyway history, and JPA
-schema validation. Keep only redacted pass/fail evidence. Do not share raw
+This checks hosted profile initialization, a live SQL connection/query, Flyway
+history, and JPA schema validation; it does not start the HTTP server or test
+restart persistence. The current opt-in test only asserts at least 10 successful
+migrations, so separately confirm all 12 migrations and latest version `12` for
+this candidate. Keep only redacted results. Do not share raw
 provider errors, database URLs, cookies, or credentials in screenshots/logs.
 
 Set `NEXORA_DEMO_FRONTEND_URL` and `NEXORA_DEMO_BACKEND_URL` to your two real
@@ -165,10 +178,15 @@ Finally, in a fresh browser on the stable Vercel origin:
 
 - Register/login; confirm auth requests use frontend `/api/auth/...`, with no
   cookie rejection, CORS error, mixed content, or hosting protection redirect.
-- Verify the refresh cookie is HttpOnly, Secure, `SameSite=Lax`, path `/api/auth`;
-  reload a signed-in route to exercise refresh, then log out and reload again.
-- Save a real existing deal to Wishlist, reload, restart the backend, and verify
-  the saved item survives. Remove that test item through the normal UI.
+- Verify both cookies are Secure, host-only, `SameSite=Lax`, path `/api/auth`;
+  the refresh cookie is HttpOnly and the CSRF cookie is readable. Reload a
+  signed-in route to exercise refresh, then log out and reload again.
+- Save an existing deal to Wishlist and change a notification preference from
+  Wishlist. Reload, restart the backend against the same database, and verify
+  both persist. Then remove the test item and restore the original preference.
+  Preference persistence does not demonstrate notification delivery.
+- Follow the live checklist for CSRF rejection, trusted/rejected origins,
+  external deals success/cache/fallback, log privacy, and cleanup/rollback.
 - Visit deals/giveaways, Wishlist, Sentinel, security, settings, login/register,
   and the landed homepage at desktop/mobile widths. Check empty/unavailable
   states and keyboard navigation without inventing provider data.

@@ -11,9 +11,10 @@ Sentinel assistant in one locally runnable project.
 
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
-> The current branch is the v0.90 full-stack demo-readiness candidate. The latest
-> tagged development milestone is `v0.89.0-browser-qa-evidence`; v0.90 is not
-> yet tagged or deployed. See the [v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md).
+> Latest released milestone: `v0.90.0-full-stack-demo-readiness`.
+> Active work: v0.91 hosted demo readiness on `feature/hosted-demo-readiness`.
+> This milestone validates hosted deployment confidence without adding product
+> features. [Hosted QA evidence is pending](docs/qa/BROWSER_QA_V0_91.md).
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -27,6 +28,7 @@ Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
 [v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md) ·
+[v0.91 hosted QA — pending](docs/qa/BROWSER_QA_V0_91.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
 
 Deployment setup: [Vercel / Render / Neon commands](docs/deployment/production-demo-deployment-plan.md) ·
@@ -301,9 +303,20 @@ workflow. Host-native setup remains fully supported.
 
 ### Frontend
 
+For a fresh setup, copy the example below. Preserve any existing `.env.local`.
+
 ```bash
 cd frontend/nexora-web-next
 cp .env.example .env.local
+```
+
+Before continuing, configure the copy for local proxy mode:
+`NEXT_PUBLIC_API_BASE_URL=/`, `NEXT_PUBLIC_SITE_URL=http://localhost:3000`, and
+`NEXORA_API_BASE_URL=http://localhost:8080`. The tracked example leaves origins
+blank for hosted configuration; copying it alone is insufficient to start or
+build Next.js.
+
+```bash
 npm ci
 npm run lint
 npm run build
@@ -373,8 +386,10 @@ release documentation rather than runtime metadata that would become stale.
 
 The endpoint and log never include raw property values, secrets, credentials,
 datasource URLs, database identities, cookies, tokens, API keys, or full system
-environment data. These summaries report application configuration mode; they
-do not test external dependency availability or provide production monitoring.
+environment data. `/api/health` is a sanitized runtime/configuration summary;
+it does not prove PostgreSQL liveness, provider liveness, mail delivery, Gemini
+availability, or frontend proxy correctness by itself. Separate hosted smoke
+tests and browser checks must establish those behaviors.
 Prometheus, Grafana, OpenTelemetry, managed logging, alerting, dashboards, and
 operational response remain future deployment decisions.
 
@@ -612,11 +627,13 @@ Smoke CI runs that same script against a locally started backend.
 
 ## Release milestones
 
-The current feature branch prepares the v0.90 full-stack demo-readiness
-candidate. The latest tagged development milestone is
-`v0.89.0-browser-qa-evidence`; v0.90 has not been tagged or deployed.
+The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
+The active branch, `feature/hosted-demo-readiness`, prepares v0.91 hosted demo
+readiness. Its scope is hosted validation of the existing product. Evidence
+remains [pending](docs/qa/BROWSER_QA_V0_91.md) until real frontend, backend, and
+database checks are completed.
 
-The v0.90 candidate scopes Wishlist editor drafts by view, account, and item;
+The v0.90 release scopes Wishlist editor drafts by view, account, and item;
 clears Sentinel conversation state across authentication changes; maps current
 homepage DTO fields and data states; removes unsupported deal price/rating
 claims; identifies giveaway entries and page-local alert/reminder controls as
@@ -770,10 +787,11 @@ availability, scale, security-assurance, or compliance claim.
 - Logout revokes the refresh session and clears frontend account state, but an
   already-issued short-lived Bearer access token is not immediately revoked by
   a server-side denylist and remains valid until expiry.
-- Hosted deployment, cross-origin browser behavior, and persistence across a
-  hosted backend/database restart have not been validated for v0.90. The local
-  default profile may use in-memory account and Wishlist storage that resets on
-  restart.
+- Hosted direct/proxy health, browser auth/cookies/CSRF/CORS, Wishlist and
+  notification-preference persistence after backend restart, external-deal
+  success/cache/fallback behavior, log privacy, cleanup, and rollback are
+  pending v0.91 evidence. The local default profile may use in-memory account
+  and Wishlist storage that resets on restart.
 
 ## Roadmap
 
