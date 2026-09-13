@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import AuthStatus from "./AuthStatus";
 import styles from "./cinematic.module.css";
 
 /**
@@ -14,6 +15,7 @@ import styles from "./cinematic.module.css";
  */
 
 const PRIMARY_LINKS = [
+  { href: "/", label: "Dashboard" },
   { href: "/deals", label: "Deals" },
   { href: "/giveaways", label: "Giveaways" },
   { href: "/wishlist", label: "Wishlist" },
@@ -102,21 +104,9 @@ export default function CinematicTopNav({ className }: { className?: string }) {
             </svg>
           </Link>
 
-          <Link
-            href="/login"
-            className={isActiveRoute("/login") ? `${styles.signIn} ${styles.signInActive}` : styles.signIn}
-            aria-current={isActiveRoute("/login") ? "page" : undefined}
-          >
-            Sign in
-          </Link>
-
-          <Link
-            href="/register"
-            className={isActiveRoute("/register") ? `${styles.register} ${styles.registerActive}` : styles.register}
-            aria-current={isActiveRoute("/register") ? "page" : undefined}
-          >
-            Create account
-          </Link>
+          <div className={styles.navAuthStatus}>
+            <AuthStatus />
+          </div>
 
           <button
             type="button"
@@ -156,25 +146,8 @@ export default function CinematicTopNav({ className }: { className?: string }) {
                 </li>
               );
             })}
-            <li>
-              <Link
-                href="/login"
-                className={isActiveRoute("/login") ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
-                aria-current={isActiveRoute("/login") ? "page" : undefined}
-                onClick={() => setMenuOpen(false)}
-              >
-                Sign in
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/register"
-                className={isActiveRoute("/register") ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
-                aria-current={isActiveRoute("/register") ? "page" : undefined}
-                onClick={() => setMenuOpen(false)}
-              >
-                Create account
-              </Link>
+            <li className={styles.menuAuthStatus}>
+              <AuthStatus />
             </li>
           </ul>
         ) : null}
