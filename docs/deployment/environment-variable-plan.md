@@ -10,10 +10,12 @@ deployable provider configuration. The completed and tagged
 `v0.76.0-backend-hosted-environment-configuration-foundation` added the
 backend-only `hosted-demo` Spring profile described below. The completed and
 tagged `v0.77.0-hosted-postgresql-persistence-validation-foundation` is the
-earlier hosted-PostgreSQL validation milestone. The latest tagged development
-milestone is `v0.89.0-browser-qa-evidence`, and v0.90 is the current untagged
-full-stack demo-readiness candidate. All displayed secret values remain
-non-secret placeholders; no hosted environment or live deployment exists yet.
+earlier hosted-PostgreSQL validation milestone. The latest released milestone
+is `v0.90.0-full-stack-demo-readiness`. v0.91 on
+`feature/hosted-demo-readiness` validates hosted deployment confidence without
+new product features. [Hosted evidence is pending](../qa/BROWSER_QA_V0_91.md).
+All displayed secret values remain non-secret placeholders; no hosted
+environment or live deployment is established by this plan.
 
 Placeholder vocabulary:
 
@@ -36,8 +38,9 @@ pull requests, screenshots, shell history, or logs.
 | Java runtime | The backend Dockerfile builds and runs on Eclipse Temurin Java 17. | Public-safe configuration |
 
 The selected host must distinguish build-time settings from runtime settings,
-support graceful restart, and expose the backend only through HTTPS. v0.76 does
-not choose a provider/start command or create a hosting manifest.
+support graceful restart, and expose the backend only through HTTPS. The
+historical v0.76 scope did not choose a provider or start command; the current
+Render Docker setup is documented in the linked deployment guide.
 
 ## Database connection category
 
@@ -102,6 +105,9 @@ origin requires an explicit need, lifecycle owner, and removal plan. The
 `hosted-demo` profile has no trusted-origin fallback and forces CSRF plus both
 cookie Secure flags. Keep both SameSite settings at `Lax` for the selected
 Vercel proxy topology; browser API calls stay on the frontend origin.
+Both cookies are host-only and scoped to `/api/auth`; the refresh cookie is
+HttpOnly, while the CSRF cookie is readable. These are expected settings, not
+evidence that the deployed proxy forwards cookies or restores sessions correctly.
 
 ## Frontend routing and public configuration
 
@@ -111,7 +117,11 @@ Vercel proxy topology; browser API calls stay on the frontend origin.
 | `NEXORA_API_BASE_URL` | `<backend-api-url>` | Server-side HTTPS Render origin, without `/api`; rewrite target and server-rendered API base |
 | `NEXT_PUBLIC_SITE_URL` | `<frontend-origin>` | Browser-visible canonical site/metadata origin |
 
-Set these on Vercel before building, and rebuild/redeploy after changes. Keep
+All three frontend settings are required for the documented hosted topology.
+The tracked [frontend example](../../frontend/nexora-web-next/.env.example)
+leaves both origins blank deliberately; complete an ignored local copy or the
+provider environment before starting/building Next.js. Set these on Vercel
+before building, and rebuild/redeploy after changes. Keep
 `NEXORA_API_BASE_URL` available at runtime too. It must target Render, never the
 frontend or an alias that routes back to it. See the
 [frontend routing guide](../../frontend/nexora-web-next/README.md#vercel-to-render-api-routing)
@@ -121,7 +131,9 @@ Every `NEXT_PUBLIC_*` value is visible in the built client. Only the `/` routing
 selector and public origins belong in this category; secrets, private database addresses, internal service
 names, provider credentials, and administrative URLs do not.
 
-The server-side rewrite target must also contain no credentials or secrets.
+The Next.js server rewrites `/api/**` to `NEXORA_API_BASE_URL/api/**`.
+The server-side rewrite target must be a backend HTTPS origin only, without
+`/api`, other paths, credentials, query, or fragment. It contains no secrets.
 
 ## Local safety-control category
 
@@ -219,6 +231,12 @@ SQL query after startup. The test itself adds no application records, but
 existing Flyway migrations may initialize schema and seed data; therefore the
 database must be disposable. The test is skipped during ordinary backend tests
 unless the opt-in flag is true.
+
+The current schema is Flyway V1–V12. The hosted test still accepts at least 10
+successful migrations; separately record 12 successful migrations and latest
+version `12` until that assertion is tightened in a later test-only task.
+Neither this test nor `/api/health` proves persistence across backend restart;
+Wishlist and notification preferences need separate pending v0.91 checks.
 
 ## v0.76 implementation state
 

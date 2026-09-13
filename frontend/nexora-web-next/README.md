@@ -28,10 +28,26 @@ frontend environment-variable or secret-handling rules.
 
 ## Install and run
 
-From `frontend/nexora-web-next`:
+From `frontend/nexora-web-next`, copy the example only if `.env.local` does not
+already contain your configuration:
 
 ```bash
 cp .env.example .env.local
+```
+
+The tracked example is a hosted template with blank origins. For local proxy mode,
+edit the ignored copy before continuing:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=/
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXORA_API_BASE_URL=http://localhost:8080
+```
+
+Selecting `/` with an empty backend target fails startup/build. For hosted use,
+fill the origins in provider settings using the deployment guide below.
+
+```bash
 npm ci
 npm run lint
 npm run build
@@ -51,6 +67,9 @@ The backend runs at [http://localhost:8080](http://localhost:8080). Confirm it
 at [http://localhost:8080/api/health](http://localhost:8080/api/health).
 
 ## Environment variables
+
+For local direct API mode instead of the proxy, use the following and leave
+`NEXORA_API_BASE_URL` unset:
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
@@ -73,9 +92,15 @@ Set these on the Vercel project rooted at `frontend/nexora-web-next` before buil
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=/
-NEXORA_API_BASE_URL=https://your-backend.onrender.com
-NEXT_PUBLIC_SITE_URL=https://your-frontend.example.com
+NEXORA_API_BASE_URL=
+NEXT_PUBLIC_SITE_URL=
 ```
+
+Both origins above are deliberately blank. Supply the actual backend HTTPS
+origin and canonical frontend HTTPS origin before building. No deployed URLs
+are recorded by this example. Latest release: `v0.90.0-full-stack-demo-readiness`;
+v0.91 on `feature/hosted-demo-readiness` validates hosted confidence without
+new product features. [Hosted QA remains pending](../../docs/qa/BROWSER_QA_V0_91.md).
 
 Browser requests such as `/api/auth/csrf` stay on the frontend origin.
 Next.js rewrites `/api/:path*` to `NEXORA_API_BASE_URL/api/:path*`, preserving
@@ -97,12 +122,20 @@ An explicit public backend origin continues to make direct requests.
 The rewrite adds no auth logic or cookie/header transformations. Keep the
 backend's trusted origins configured for the exact frontend HTTPS origin and
 retain its existing secure cookie and CSRF requirements.
+Both auth cookies are expected to be Secure, host-only, `SameSite=Lax`, and
+scoped to `/api/auth`; the refresh cookie is HttpOnly. Actual hosted forwarding,
+refresh restoration, logout, CSRF, and CORS/origin checks are pending evidence.
 
 Validation: with the backend and Next.js running in local proxy mode, request
 `http://localhost:3000/api/health` and compare its status/body with
 `http://localhost:8080/api/health`. In browser Network tools, confirm auth calls
 use the frontend `/api/auth/...` paths. Before deployment sign-off, verify
 login, refresh, logout, and cookie handling through the hosted frontend.
+
+`/api/health` is a sanitized runtime/configuration summary. It does not prove
+PostgreSQL or provider liveness, mail delivery, Gemini availability, or proxy
+correctness by itself. Check direct and proxied health separately and use the
+hosted smoke plan for dependencies, browser auth, and restart persistence.
 
 Vercel setup: framework **Next.js**, root `frontend/nexora-web-next`, install
 `npm ci`, build `npm run build`, and the default framework output setting.

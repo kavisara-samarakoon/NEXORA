@@ -1,0 +1,81 @@
+name: Hosted Demo Readiness
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Build-time checks only; hosted smoke tests and PostgreSQL validation stay opt-in.
+jobs:
+  deployment-tooling:
+    name: Offline deployment tooling
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check deployment script syntax and executable bits
+        run: |
+          python3 -m py_compile scripts/deployment/check-hosted-demo.py
+          bash -n scripts/deployment/validate-hosted-postgres.sh
+          bash -n scripts/api-smoke-test.sh
+          test -x scripts/deployment/validate-hosted-postgres.sh
+          test -x scripts/api-smoke-test.sh
+
+      - name: Run offline deployment checker tests
+        run: python3 -m unittest discover -s scripts/deployment/tests -p "*test*.py" -v
+
+  backend-image:
+    name: Backend Docker build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build backend image without starting it
+        run: docker build --file backend/nexora-api/Dockerfile --tag nexora-api:ci backend/nexora-api
+
+  frontend-build:
+    name: Frontend hosted configuration build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend/nexora-web-next
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/nexora-web-next/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend with placeholder origins
+        # Reserved example domains validate configuration shape, not hosted connectivity.
+        env:
+          NEXT_PUBLIC_API_BASE_URL: /
+          NEXT_PUBLIC_SITE_URL: https://example.com
+          NEXORA_API_BASE_URL: https://api.example.com
+        run: npm run build

@@ -2,9 +2,9 @@
 
 > Historical evidence: this file records the v0.88 route/navbar browser pass
 > that was included in the tagged v0.89 evidence milestone. It does not describe
-> the current v0.90 behavior changes. See
-> [BROWSER_QA_V0_90.md](BROWSER_QA_V0_90.md) for the current candidate evidence
-> and its explicit browser/hosted limitations.
+> the v0.90 behavior changes. See
+> [BROWSER_QA_V0_90.md](BROWSER_QA_V0_90.md) for that release's local evidence
+> and [BROWSER_QA_V0_91.md](BROWSER_QA_V0_91.md) for pending hosted validation.
 
 ## Scope
 

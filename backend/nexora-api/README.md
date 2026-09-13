@@ -17,7 +17,7 @@ the `dev` profile · Not documented as production-ready
 | Profile | Storage and behavior |
 | --- | --- |
 | Default | Starts without a datasource. Public catalog data is local demo data; accounts, refresh sessions, personal wishlists, alert history, price history, and notification preferences are held in memory. CheapShark external deals remain available on demand. |
-| `dev` | Enables PostgreSQL, Flyway V1–V10, Spring Data JPA, persisted catalog/account/refresh-session/auth-security-event/wishlist/alert/price-history/notification-preference data, and the optional wishlist refresh scheduler. |
+| `dev` | Enables PostgreSQL, Flyway V1–V12, Spring Data JPA, persisted catalog/account/refresh-session/auth-security-event/wishlist/alert/price-history/notification-preference data, and the optional wishlist refresh scheduler. |
 | `prod` / `production` | Activates auth safety checks and requires `dev` persistence; starting this profile alone is rejected. |
 | `hosted-demo` | Composes `dev` + `production`; requires external PostgreSQL, secrets, exact HTTPS origins and `PORT`, with secure cookies and CSRF enforced. |
 
@@ -845,7 +845,7 @@ The repository's `Backend CI` GitHub Actions workflow uses Temurin Java 17 for
 pushes to `main` and pull requests targeting `main`. One job runs the normal
 database-free `mvn test` suite. A separate job starts a PostgreSQL 16 service
 and explicitly runs `PostgresDevProfileIntegrationTests` to confirm the `dev`
-profile connects, applies Flyway V1–V10, validates the JPA schema, and exposes
+profile connects, applies Flyway V1–V12, validates the JPA schema, and exposes
 the expected tables and seed data.
 
 The PostgreSQL integration test is enabled only when

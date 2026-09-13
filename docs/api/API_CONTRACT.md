@@ -10,8 +10,11 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.89.0-browser-qa-evidence` is the latest tagged development milestone. The
-current branch prepares the untagged v0.90 full-stack demo-readiness candidate.
+`v0.90.0-full-stack-demo-readiness` is the latest released milestone.
+The active v0.91 branch, `feature/hosted-demo-readiness`, validates hosted
+deployment confidence without adding product features.
+[Hosted evidence remains pending](../qa/BROWSER_QA_V0_91.md) until real deployed
+frontend, backend, and database checks are completed.
 The earlier v0.77 milestone added manual hosted
 PostgreSQL validation tooling without changing any endpoint path, method, query
 parameter, response shape, authentication rule, or OpenAPI YAML. It did not
@@ -54,6 +57,14 @@ the documentation should be corrected.
 
 “Foundation” means the behavior exists and is testable in local development.
 It does not imply production-scale security, support, uptime, or operations.
+
+The [hosted topology](../deployment/production-demo-deployment-plan.md) keeps
+browser requests on the frontend origin with `NEXT_PUBLIC_API_BASE_URL=/`.
+Next.js rewrites `/api/**` to server-side `NEXORA_API_BASE_URL`, which must be
+the backend HTTPS origin without `/api` or credentials. Server-rendered API
+reads use that backend origin directly. `NEXT_PUBLIC_*` values are
+browser-visible; frontend configuration must contain no secrets. No hosted
+server URL is added to OpenAPI before an actual deployed target is recorded.
 
 ## Public and protected access
 
@@ -158,6 +169,12 @@ the cookie. `SameSite=None` is rejected for either auth cookie unless
 profile guard requires secure refresh/CSRF cookies and rejects other core unsafe
 production settings. That guard is a startup safety foundation, not a complete
 production session design.
+
+For the current `hosted-demo` topology, both cookies are expected to be Secure,
+host-only (no Domain attribute), `SameSite=Lax`, and scoped to `/api/auth`.
+The backend requires the exact frontend HTTPS trusted origin for CORS and auth
+origin checks. These expectations still require hosted cookie/proxy, refresh,
+logout, CSRF-negative, and trusted/rejected-origin evidence.
 
 The v0.64 persistence guard also prevents `prod` or `production` from starting
 unless `dev` activates the existing database-backed stores. Default local/demo
@@ -310,6 +327,12 @@ legacy alias with the same value. Neither field is the current repository
 release tag; current release status belongs in project and release documentation
 rather than runtime contract metadata that would require milestone-by-milestone
 updates.
+
+`/api/health` is a sanitized runtime/configuration summary. It does not prove
+PostgreSQL liveness, provider liveness, mail delivery, Gemini availability, or
+frontend proxy correctness by itself. Direct backend and frontend-proxy health
+must be checked separately; dependency liveness and browser behavior need
+additional hosted smoke tests.
 
 The primary frontend may display selected safe `/api/health` fields for local
 reviewer visibility, including service, runtime/data modes, the auth-production-
@@ -467,7 +490,7 @@ This mode is designed for controlled local review, not durable hosting.
 
 With `--spring.profiles.active=dev` (or the equivalent Maven profile argument):
 
-- PostgreSQL datasource auto-configuration, Spring Data JPA, and Flyway V1–V10
+- PostgreSQL datasource auto-configuration, Spring Data JPA, and Flyway V1–V12
   are enabled;
 - catalog, account, refresh-session, auth-security-event, personal wishlist,
   alert-event, price-history, and notification-preference data use their
@@ -480,6 +503,11 @@ With `--spring.profiles.active=dev` (or the equivalent Maven profile argument):
 
 The `dev` profile is a local integration profile. It is not a production data
 architecture or operations plan.
+
+The `hosted-demo` profile composes `dev` with `production` safety guards and
+requires external database/auth/origin settings plus `PORT`. This configuration
+does not establish hosted durability: Wishlist and notification-preference
+persistence after backend restart remain pending v0.91 evidence.
 
 ## Security and privacy limitations
 

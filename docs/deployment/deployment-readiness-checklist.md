@@ -10,9 +10,14 @@ complete a live deployment. Every checked item must link to current evidence,
 an owner, and an observation date. “Not applicable” requires a written reason;
 it must not conceal a failed security, persistence, or browser requirement.
 
-The [v0.90 local QA record](../qa/BROWSER_QA_V0_90.md) supports the current
-full-stack demo candidate but does not complete or check off hosted deployment,
-cross-origin browser, notification delivery, or restart-persistence gates.
+The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
+Its [local QA record](../qa/BROWSER_QA_V0_90.md) does not check off hosted gates.
+The active v0.91 branch is `feature/hosted-demo-readiness`; it validates hosted
+confidence without new product features. All hosted evidence remains
+[pending in BROWSER_QA_V0_91.md](../qa/BROWSER_QA_V0_91.md), including direct and
+proxy health, browser auth, both cookies, CSRF failure, trusted/rejected origins,
+Wishlist and notification-preference restart persistence, external offers,
+log privacy, cleanup, and a reviewed rollback target.
 
 Use the [provider setup and verification commands](production-demo-deployment-plan.md)
 for the concrete Vercel / Render / Neon path; record evidence here after running them.
@@ -51,8 +56,10 @@ for the concrete Vercel / Render / Neon path; record evidence here after running
 - [ ] The hosted-demo profile starts only with external database/auth/origin
   settings; all production-like guards pass without local defaults,
   placeholder values, embedded JDBC credentials, or wildcard origins.
-- [ ] `GET /api/health` works as the current safe application-health summary and
-  is not misrepresented as a complete dependency/availability probe.
+- [ ] Direct backend and frontend-proxy `GET /api/health` are checked separately.
+  This sanitized runtime/configuration summary does not itself prove PostgreSQL
+  or provider liveness, mail delivery, Gemini availability, or proxy correctness;
+  separate hosted smoke checks supply dependency evidence.
 - [ ] Public method/path allowlisting and terminal default deny are retained.
 - [ ] `/api/auth/me` and `/api/me/**` remain authenticated and account-scoped.
 - [ ] Request-ID, shared error, security-header, provider-timeout, cache,
@@ -82,10 +89,13 @@ for the concrete Vercel / Render / Neon path; record evidence here after running
   hosted profile, PostgreSQL connectivity, Flyway history, and basic SQL.
 - [ ] Restart persistence and provider failure handling are validated separately
   against the selected service before public launch.
+- [ ] Wishlist items/targets and notification preferences survive a backend
+  restart in the same disposable database and remain account-scoped.
 - [ ] Backend access uses a least-privilege identity and encrypted transport
   verified using the selected service's actual settings.
 - [ ] Flyway migration ownership is single and explicit; migrations and JPA
-  validation pass on a disposable candidate database first.
+  validation pass on a disposable candidate database first, with 12 successful
+  migrations (V1–V12), latest version `12`, and no failed migrations.
 - [ ] Backup schedule, retention, encryption, deletion/export process, and restore
   test are documented and evidenced.
 - [ ] Application rollback and database recovery are treated separately.

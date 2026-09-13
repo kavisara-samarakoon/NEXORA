@@ -518,7 +518,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 The `dev` profile uses the repository’s existing environment-driven datasource
-configuration, Flyway V1–V10, and JPA schema validation. Do not put real
+configuration, Flyway V1–V12, and JPA schema validation. Do not put real
 database credentials into commands, screenshots, or documentation. In this
 mode, `/api/health` should report `dev-postgres` and `postgres-dev` without
 returning datasource details.

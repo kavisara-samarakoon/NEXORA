@@ -1,14 +1,16 @@
 # NEXORA project status
 
-**Current stage:** Local/development v0.90 full-stack demo-readiness candidate.
+**Current stage:** v0.91 hosted demo readiness; hosted validation pending.
 NEXORA is not documented as a deployed or production-ready service.
 
-The latest tagged development milestone is `v0.89.0-browser-qa-evidence`.
-The current v0.90 candidate is on `feature/full-stack-demo-readiness`; it is not
-yet tagged or deployed. Its local verification record is
-[BROWSER_QA_V0_90.md](qa/BROWSER_QA_V0_90.md).
+The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
+The active branch is `feature/hosted-demo-readiness`. v0.91 validates hosted
+deployment confidence for the existing product; it adds no new product-feature
+scope. The [v0.90 local record](qa/BROWSER_QA_V0_90.md) remains historical
+evidence. The [v0.91 hosted evidence record](qa/BROWSER_QA_V0_91.md) is pending
+until real deployed frontend, backend, and database checks are completed.
 
-The v0.90 candidate addresses six focused audit findings: Wishlist draft
+The v0.90 release addresses six focused audit findings: Wishlist draft
 identity collisions, Sentinel state retention across authentication changes,
 homepage DTO mapping and data-state accuracy, unsupported deal pricing/rating
 claims and invalid provider prices, giveaway/reminder wording honesty, and
@@ -16,6 +18,24 @@ structured external-deal query validation errors. These changes strengthen a
 controlled university/FYP demonstration. They do not add verified giveaway
 redemption, complete market price intelligence, guaranteed notifications,
 hosted validation, or production operations.
+
+The existing hosted target is Vercel for `frontend/nexora-web-next`, a Render
+Docker service for `backend/nexora-api`, and disposable Neon PostgreSQL with
+Flyway V1–V12. Browser requests use `NEXT_PUBLIC_API_BASE_URL=/`; Next.js
+rewrites `/api/**` to the backend HTTPS origin in server-side
+`NEXORA_API_BASE_URL`, without `/api` or credentials. `NEXT_PUBLIC_*` values
+are browser-visible. The backend trusts the exact frontend HTTPS origin;
+both auth cookies are expected to be Secure, host-only, `SameSite=Lax`, and
+scoped to `/api/auth`.
+
+Pending v0.91 evidence covers direct backend and frontend-proxy health;
+hosted register/login/refresh/logout; cookie attributes; CSRF rejection;
+trusted/rejected CORS and origins; Wishlist and notification-preference
+persistence after backend restart; external deals success/cache/fallback;
+log privacy; cleanup; and a reviewed rollback target. `/api/health` is a
+sanitized runtime/configuration summary, not proof of PostgreSQL or provider
+liveness, mail delivery, Gemini availability, or proxy correctness. Each needs
+separate hosted smoke evidence.
 
 The earlier completed and tagged v0.77 milestone added a manual, provider-neutral
 validation path for a disposable hosted-demo PostgreSQL database. Its opt-in
@@ -226,8 +246,8 @@ including the v0.30 loading shimmer, respects reduced-motion preferences.
 The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
-readiness of the project. The latest tagged development milestone is
-`v0.89.0-browser-qa-evidence`; v0.90 remains the current untagged candidate.
+readiness of the project. Current milestone and hosted evidence status are
+recorded at the top of this document.
 
 ## Completed foundations
 
@@ -419,7 +439,7 @@ readiness of the project. The latest tagged development milestone is
   verified-recipient workflow exists.
 - Notification delivery has no persistent status, retries, outbox, or
   asynchronous after-commit processing. The dispatcher is disabled by default,
-  and automatic delivery has not been validated for v0.90.
+  and automatic delivery remains unvalidated.
 - The Wishlist page has notification preference controls, but no provider,
   recipient, or delivery-status management UI.
 - Access tokens are memory-first and legacy `localStorage` tokens are removed.
@@ -452,9 +472,11 @@ readiness of the project. The latest tagged development milestone is
   alerting, SLOs, on-call ownership, or incident-response integration. The
   v0.33 safe summaries do not close these gaps.
 - No deployment or continuous-delivery pipeline.
-- No backend/frontend production application images or production container
-  workflow. Compose runs local PostgreSQL only, and the optional devcontainer
-  is local developer tooling rather than a release image.
+- The backend Dockerfile packages Java 17 for the documented hosted demo, but
+  CI does not build the image and hosted startup/restart evidence is pending.
+  No frontend release image is supplied; the Next.js target uses framework
+  hosting. Compose runs local PostgreSQL only, and the optional devcontainer
+  is local developer tooling.
 - Repository secret scanning, push protection, private vulnerability reporting,
   code-scanning availability/alert policy, and required-check enforcement depend on GitHub
   repository settings and are not asserted as enabled by repository files.
@@ -483,6 +505,11 @@ readiness of the project. The latest tagged development milestone is
   AI observability.
 
 ## Recommended next milestones
+
+First complete the pending v0.91 checks in the
+[hosted QA record](qa/BROWSER_QA_V0_91.md) using the
+[deployment guide](deployment/production-demo-deployment-plan.md). The broader
+production and product items below are later work, not v0.91 feature scope.
 
 1. Review GitHub private vulnerability reporting, secret scanning/push
    protection, Dependabot alerts/security updates, code-scanning alerts, and

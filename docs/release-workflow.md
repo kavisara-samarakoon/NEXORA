@@ -141,11 +141,17 @@ tagged, and the closure does not create or move another release tag.
 
 ## Current milestone state
 
-The latest tagged development milestone is
-`v0.89.0-browser-qa-evidence`. The current v0.90 full-stack demo-readiness
-candidate is untagged. The earlier v0.77 milestone added a manual,
-provider-neutral hosted PostgreSQL validation path; neither that validation nor
-the v0.90 local QA evidence deployed NEXORA. The planned Neon, Render, and
-Vercel hosted-demo path is not yet publicly live. The target remains a fully
-functional hosted portfolio/demo MVP, not production SaaS. NEXORA remains not
-production-ready.
+The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
+The active branch is `feature/hosted-demo-readiness` for v0.91 hosted demo
+readiness. v0.91 validates hosted deployment confidence without adding product
+features. The [hosted QA record](qa/BROWSER_QA_V0_91.md) remains pending until
+real deployed frontend, backend, and database checks are completed.
+
+The earlier v0.77 milestone added manual, provider-neutral hosted PostgreSQL
+validation tooling. Neither that foundation, the v0.90 local QA record, nor a
+release tag proves hosted validation. The existing Neon, Render, and Vercel
+demo path still needs real evidence. Release helpers do not deploy or validate
+hosted cookies, restart persistence, provider behavior, or rollback. Use small
+reviewed commits and record hosted evidence against the actual candidate SHA;
+do not treat the v0.90 source tag as a previously deployed rollback artifact.
+NEXORA remains not production-ready.
