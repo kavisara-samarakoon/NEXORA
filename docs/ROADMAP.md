@@ -6,9 +6,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## Near-term polish
 
-- Treat the completed and tagged
-  `v0.77.0-hosted-postgresql-persistence-validation-foundation` milestone as
-  the latest stable development milestone.
+- Treat `v0.89.0-browser-qa-evidence` as the latest tagged development
+  milestone and v0.90 as the current untagged full-stack demo-readiness
+  candidate. Preserve the evidence boundaries in
+  [the v0.90 QA record](qa/BROWSER_QA_V0_90.md).
 - Preserve its manual, provider-neutral, opt-in validation path for disposable
   hosted-demo PostgreSQL databases. Completion of that foundation is not a live
   deployment or production-readiness claim.

@@ -52,9 +52,11 @@ profile dump. Health does not execute a live database query.
 - [ ] `GET /api/health` returns the safe health shape and HTTP 200 without
   exposing raw configuration, database identity, or secrets.
 - [ ] `GET /api/deals` returns the public deals array.
-- [ ] `GET /api/deals/external` returns its existing response shape through live,
-  stale, or local-fallback behavior.
-- [ ] `GET /api/giveaways` returns the public giveaways array.
+- [ ] `GET /api/deals/external` returns its existing response shape through a
+  provider response, stale cache, or local-fallback behavior without claiming
+  freshness that the response metadata cannot prove.
+- [ ] `GET /api/giveaways` returns the unverified public sample array without
+  presenting it as verified redemption data.
 - [ ] `GET /api/wishlist` returns the public demo Wishlist array and no personal
   account data.
 - [ ] `GET /api/dashboard/summary` returns the public summary.
@@ -91,8 +93,10 @@ profile dump. Health does not execute a live database query.
 - [ ] Reload the frontend and verify its existing refresh/session restoration
   behavior without exposing the raw refresh token to JavaScript.
 - [ ] Logout revokes/clears the refresh session and returns the existing status.
-- [ ] After logout, protected calls fail with 401/403 and refresh cannot restore
-  the revoked session.
+- [ ] After the frontend discards its access token, unauthenticated protected
+  calls fail with 401/403 and refresh cannot restore the revoked session. Record
+  that an already-issued short-lived Bearer token is not immediately revoked by
+  logout and can remain valid until expiry.
 - [ ] Missing/mismatched CSRF data and an untrusted origin are rejected safely.
 
 ## Protected route checks

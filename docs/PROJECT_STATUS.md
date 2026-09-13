@@ -1,12 +1,23 @@
 # NEXORA project status
 
-**Current stage:** Local/development MVP. NEXORA is not documented as a deployed
-or production-ready service.
+**Current stage:** Local/development v0.90 full-stack demo-readiness candidate.
+NEXORA is not documented as a deployed or production-ready service.
 
-The latest stable development milestone is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
+The latest tagged development milestone is `v0.89.0-browser-qa-evidence`.
+The current v0.90 candidate is on `feature/full-stack-demo-readiness`; it is not
+yet tagged or deployed. Its local verification record is
+[BROWSER_QA_V0_90.md](qa/BROWSER_QA_V0_90.md).
 
-The completed and tagged v0.77 milestone added a manual, provider-neutral
+The v0.90 candidate addresses six focused audit findings: Wishlist draft
+identity collisions, Sentinel state retention across authentication changes,
+homepage DTO mapping and data-state accuracy, unsupported deal pricing/rating
+claims and invalid provider prices, giveaway/reminder wording honesty, and
+structured external-deal query validation errors. These changes strengthen a
+controlled university/FYP demonstration. They do not add verified giveaway
+redemption, complete market price intelligence, guaranteed notifications,
+hosted validation, or production operations.
+
+The earlier completed and tagged v0.77 milestone added a manual, provider-neutral
 validation path for a disposable hosted-demo PostgreSQL database. Its opt-in
 integration test starts the existing `hosted-demo` profile with externally
 supplied settings, verifies PostgreSQL connectivity and Flyway history, and runs
@@ -215,8 +226,8 @@ including the v0.30 loading shimmer, respects reduced-motion preferences.
 The v0.27 repository presentation work was documentation-only. The
 [reviewer overview](PROJECT_OVERVIEW.md) and [roadmap](ROADMAP.md) improve
 navigation and evaluation without changing the technical or production
-readiness of the project. The latest stable development milestone is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
+readiness of the project. The latest tagged development milestone is
+`v0.89.0-browser-qa-evidence`; v0.90 remains the current untagged candidate.
 
 ## Completed foundations
 
@@ -235,11 +246,26 @@ readiness of the project. The latest stable development milestone is
   without adding a runtime mode, masking identity, or changing account data.
 - Frontend truthfulness polish marks Settings and Security content as static
   preview/sample data and removes live-looking counts and telemetry claims.
+- Wishlist card/editor state is scoped by public/personal view, account, and
+  item identity so preview target drafts cannot leak into personal items.
+- Sentinel clears transient draft, request, response, error, and sign-in-hint
+  state when authentication or account identity changes, and ignores responses
+  from invalidated in-flight requests.
+- Homepage feed mapping accepts the current backend deal and dashboard DTO fields
+  and distinguishes successful, incomplete, unavailable, and fallback states.
+- External deal mapping rejects invalid provider prices, reserves `FREE` for an
+  explicit valid zero price, and avoids unsupported historical-low or rating
+  claims.
+- Giveaway seed/fallback entries are marked as unverified samples; page-local
+  deal alerts and giveaway reminders disclose that they do not persist or send
+  notifications.
+- Invalid external-deal numeric query parameters return the existing structured
+  `400 validation_failed` error response instead of `500 internal_error`.
 - Spring Boot REST API with validation, security, and profile-based services.
 - Production-like profile persistence guard that requires the existing `dev`
   database-backed profile instead of allowing in-memory demo stores.
 - JWT registration, login, and authenticated account lookup.
-- PostgreSQL, Flyway V1–V10, and JPA-backed data in the `dev` profile.
+- PostgreSQL, Flyway V1–V12, and JPA-backed data in the `dev` profile.
 - Public demo wishlist and isolated authenticated personal wishlists.
 - Wishlist alert configuration, evaluation, transition events, and history UI.
 - Bounded account-scoped Wishlist alert-event history: latest 50 returned,
@@ -295,7 +321,7 @@ readiness of the project. The latest stable development milestone is
   HttpOnly refresh issuance/rotation/clearing, raw-token non-disclosure, and
   the `SameSite=None`/`Secure` configuration rule.
 - GitHub Actions PostgreSQL 16 service validation for the backend `dev` profile,
-  Flyway V1–V10, JPA schema validation, required tables, and seed data.
+  Flyway migrations, JPA schema validation, required tables, and seed data.
 - Weekly Dependabot checks for GitHub Actions, backend Maven, and primary
   frontend npm dependencies.
 - Lightweight security CI for high-severity production npm auditing and backend
@@ -381,31 +407,43 @@ readiness of the project. The latest stable development milestone is
   reporting, tracing, production monitoring, or incident response.
 - CheapShark is a third-party dependency with incomplete game/store coverage.
 - External-deals cache, in-flight loads, and provider request budget are
-  process-local, not a distributed cache or distributed rate limiter.
+  process-local, not a distributed cache or distributed rate limiter. External
+  responses may be cached and do not prove provider freshness.
+- Giveaway entries are unverified samples without verified claim URLs, expiry,
+  eligibility, region, or entitlement data. Giveaway reminder controls are
+  page-local previews and are not persisted.
 - Scheduled price refresh is `dev`-profile, single-process, and disabled by
   default.
 - Email delivery requires explicit SMTP configuration plus enabled account
   email and target-reached preferences. No credentials are committed and no
   verified-recipient workflow exists.
 - Notification delivery has no persistent status, retries, outbox, or
-  asynchronous after-commit processing.
+  asynchronous after-commit processing. The dispatcher is disabled by default,
+  and automatic delivery has not been validated for v0.90.
 - The Wishlist page has notification preference controls, but no provider,
   recipient, or delivery-status management UI.
 - Access tokens are memory-first and legacy `localStorage` tokens are removed.
   The production-profile startup gate rejects unsafe local auth settings, but
   the browser session lifecycle still lacks a reviewed, deployed production
-  cookie, CORS, origin, proxy, and persistent-store configuration.
+  cookie, CORS, origin, proxy, and persistent-store configuration. Logout
+  revokes refresh state and clears the frontend session, but does not
+  immediately revoke an already-issued short-lived Bearer access token.
 - Sentinel has bounded backend-generated contextual summaries with an optional
   backend-only Gemini provider disabled by default and deterministic local
   fallback. Its rate windows and provider-health counters are in-memory only and
   reset on restart. It has no conversation persistence or autonomous actions.
-- Price-history visualization is a compact card-level view; full analytics,
-  aggregation, retention policy, and advanced charts are still not implemented.
+- Price-history visualization contains NEXORA-observed snapshots for an account
+  item. It does not prove complete market history or a market-wide lowest price;
+  full aggregation, retention policy, and advanced charts are still not
+  implemented.
 - The price-history foundation reuses the existing stored/CheapShark provider
   options. It adds no external data provider and no Steam, Epic, or GOG account
   linking.
 - The visualization polish uses the existing owner-scoped Bearer API and adds no
   chart dependency, backend migration, AI, deployment, or authentication change.
+- Hosted deployment, hosted browser/session behavior, and persistence after a
+  hosted service/database restart have not been validated. The local/default
+  profile may retain account and Wishlist data only in memory until restart.
 
 ## Production-readiness gaps
 

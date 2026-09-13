@@ -11,9 +11,9 @@ Sentinel assistant in one locally runnable project.
 
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
-> The latest stable development milestone is
-> `v0.77.0-hosted-postgresql-persistence-validation-foundation`. A live public
-> deployment has not happened.
+> The current branch is the v0.90 full-stack demo-readiness candidate. The latest
+> tagged development milestone is `v0.89.0-browser-qa-evidence`; v0.90 is not
+> yet tagged or deployed. See the [v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md).
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -26,6 +26,7 @@ Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [local release workflow](docs/release-workflow.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
+[v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
 
 Deployment setup: [Vercel / Render / Neon commands](docs/deployment/production-demo-deployment-plan.md) ·
@@ -60,13 +61,14 @@ security controls, and testable optional integrations.
 
 | Area | Current capability | Maturity |
 | --- | --- | --- |
-| Deals and giveaways | Browse, search, filter, and inspect catalogue records | Implemented MVP |
+| Deals | Browse local catalogue records and external offers with explicit cached/fallback boundaries | Implemented demo MVP |
+| Giveaways | Browse an unverified sample catalogue; verified claim destinations and redemption data are not implemented | Sample/demo foundation |
 | Authentication | Register, sign in, rotate sessions, sign out, and inspect the current account | Local security foundation |
 | Wishlist | Save and remove games with account ownership boundaries | Implemented MVP |
 | Price targets and alerts | Set thresholds, generate alerts, and review generated alert history | Implemented MVP |
-| Price history | Record and query snapshots used by deal and alert workflows | Implemented foundation |
+| Price history | Record and query NEXORA-observed snapshots used by alert workflows | Implemented foundation |
 | Price refresh | Run manual or scheduled refresh through stored or optional external providers | Optional foundation |
-| Notifications | Store account preferences, enforce email and target-reached choices before dispatch, and optionally deliver through SMTP | Optional foundation |
+| Notifications | Store account preferences and provide disabled-by-default log/email adapters; automatic delivery is not claimed by v0.90 QA | Optional foundation |
 | Sentinel | Use deterministic local responses or optional Gemini responses with bounded context | Experimental foundation |
 | Auth security events | Record bounded safe metadata, local abuse decisions, and optional retention cleanup | Local security foundation |
 | Runtime observability | Public safe runtime summary and one bounded startup summary line | Local observability foundation |
@@ -81,7 +83,7 @@ security controls, and testable optional integrations.
 | Request correlation | Safe CORS-exposed response header, request-scoped MDC value, local console correlation, and safe unexpected-error logging | Local observability foundation |
 | Frontend API client | Centralized public API base URL handling and response request-ID awareness | Frontend safety foundation |
 | Frontend error observability | Selected error/support states expose safe response request-ID metadata | Local debugging foundation |
-| API error contract | Shared safe error shape across auth, wishlist, Sentinel, and notification preferences | Backend foundation |
+| API error contract | Shared safe error shape across auth, wishlist, Sentinel, notification preferences, and external-deal query validation | Backend foundation |
 | OpenAPI contract | Hand-maintained OpenAPI 3.1 route and schema reference | Documentation foundation |
 | Backend response security | Explicit browser-facing headers and no-cache behavior for sensitive API responses | Backend security foundation |
 | Production-profile persistence guard | `prod`/`production` fail closed unless the existing `dev` database-backed profile is also active | Backend safety foundation |
@@ -97,9 +99,9 @@ development; it does not imply production-scale operations.
 | Frontend | Next.js App Router, React, TypeScript, and CSS in `frontend/nexora-web-next` |
 | Backend | Spring Boot REST API with Spring Security, validation, JPA, and scheduling |
 | Default backend profile | Database-free demo catalogs plus in-memory accounts and personal wishlist state |
-| `dev` backend profile | PostgreSQL, Flyway V1–V10, and JPA-backed catalog, account, refresh-session, auth-security-event, wishlist, alert, price-history, and notification-preference data |
+| `dev` backend profile | PostgreSQL, Flyway V1–V12, and JPA-backed catalog, account, refresh-session, auth-security-event, wishlist, alert, price-history, and notification-preference data |
 | Production-like profile guard | `prod` or `production` requires `dev` so in-memory demo persistence cannot be selected |
-| External data | CheapShark for live deals and optional wishlist price snapshots |
+| External data | CheapShark for external offers that may be cached or fall back locally, plus optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
 | Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, local API smoke testing, OpenAPI contract checking, frontend lint/build, dependency checks, manual CodeQL-ready scanning, and pull-request dependency review |
 
@@ -610,10 +612,19 @@ Smoke CI runs that same script against a locally started backend.
 
 ## Release milestones
 
-The latest stable development milestone is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
+The current feature branch prepares the v0.90 full-stack demo-readiness
+candidate. The latest tagged development milestone is
+`v0.89.0-browser-qa-evidence`; v0.90 has not been tagged or deployed.
 
-The completed and tagged v0.77 milestone added a manual, provider-neutral,
+The v0.90 candidate scopes Wishlist editor drafts by view, account, and item;
+clears Sentinel conversation state across authentication changes; maps current
+homepage DTO fields and data states; removes unsupported deal price/rating
+claims; identifies giveaway entries and page-local alert/reminder controls as
+sample or preview behavior; and returns structured 400 responses for invalid
+external-deal query parameters. The exact local evidence and its boundaries are
+recorded in [BROWSER_QA_V0_90.md](docs/qa/BROWSER_QA_V0_90.md).
+
+The earlier completed and tagged v0.77 milestone added a manual, provider-neutral,
 opt-in validation path for a disposable hosted-demo PostgreSQL database. It
 checks hosted-profile startup, PostgreSQL connectivity, Flyway history, and
 basic SQL while keeping secrets redacted. It did not deploy NEXORA or validate
@@ -735,18 +746,34 @@ availability, scale, security-assurance, or compliance claim.
   game or store.
 - External-deals caching, same-key load sharing, and the four-call outbound
   provider budget remain process-local; there is no distributed cache or
-  distributed rate limiter.
+  distributed rate limiter. External offers may therefore be cached, and the
+  response does not prove provider freshness.
+- Giveaways are unverified sample entries. NEXORA does not yet provide a
+  verified claim source, claim URL, eligibility, region, entitlement type, or
+  confirmed end date.
+- Giveaway reminders and page-local deal alert buttons are preview interactions;
+  there is no persisted giveaway-reminder workflow. Persisted price-alert
+  settings belong to authenticated Wishlist items.
 - Notification preferences are account-scoped, but notifications have no
   persistent delivery status, retries, outbox, or asynchronous after-commit
-  delivery.
+  delivery. The default notification dispatcher is disabled; v0.90 QA does not
+  claim that automatic notification delivery was enabled or validated.
 - Email requires explicit SMTP configuration and has no verified-recipient
   workflow.
 - Sentinel has an optional backend-only Gemini provider, bounded context, local
   safety controls, and deterministic fallback. It has no conversation
   persistence, autonomous actions, moderation pipeline, distributed rate
   limiting, or production AI observability.
-- Price history has persisted snapshots and a compact visualization, but no
-  production retention policy, aggregation, or advanced analytics.
+- Price history contains prices observed by NEXORA for an account item. It is
+  not complete historical market coverage or proof of a market-wide lowest
+  price, and it has no production retention policy or advanced analytics.
+- Logout revokes the refresh session and clears frontend account state, but an
+  already-issued short-lived Bearer access token is not immediately revoked by
+  a server-side denylist and remains valid until expiry.
+- Hosted deployment, cross-origin browser behavior, and persistence across a
+  hosted backend/database restart have not been validated for v0.90. The local
+  default profile may use in-memory account and Wishlist storage that resets on
+  restart.
 
 ## Roadmap
 
@@ -766,11 +793,15 @@ mvn test
 cd frontend/nexora-web-next
 npm run lint
 npm run build
+node --test tests/product-readiness.test.mjs
 ```
 
 ```bash
 git diff --check
 ```
+
+The command outcomes and focused runtime checks for the current candidate are
+recorded in [the v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md).
 
 NEXORA is presented as a portfolio and academic software-engineering project.
 The repository demonstrates an end-to-end MVP and its tested foundations while

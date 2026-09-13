@@ -9,8 +9,10 @@ project.
 
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
-not production-ready. The latest stable development milestone is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
+not production-ready. The latest tagged development milestone is
+`v0.89.0-browser-qa-evidence`; the current branch prepares the untagged v0.90
+full-stack demo-readiness candidate documented in
+[the v0.90 QA evidence](qa/BROWSER_QA_V0_90.md).
 
 The completed and tagged v0.77 milestone added an opt-in, provider-neutral
 hosted PostgreSQL validation test and redacting wrapper script for disposable

@@ -10,7 +10,9 @@ deployable provider configuration. The completed and tagged
 `v0.76.0-backend-hosted-environment-configuration-foundation` added the
 backend-only `hosted-demo` Spring profile described below. The completed and
 tagged `v0.77.0-hosted-postgresql-persistence-validation-foundation` is the
-latest stable development milestone. All displayed secret values remain
+earlier hosted-PostgreSQL validation milestone. The latest tagged development
+milestone is `v0.89.0-browser-qa-evidence`, and v0.90 is the current untagged
+full-stack demo-readiness candidate. All displayed secret values remain
 non-secret placeholders; no hosted environment or live deployment exists yet.
 
 Placeholder vocabulary:

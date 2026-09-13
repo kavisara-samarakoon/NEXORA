@@ -10,9 +10,9 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.77.0-hosted-postgresql-persistence-validation-foundation` is the completed,
-tagged, latest stable development milestone. The previous completed
-hosted-environment configuration milestone is v0.76. v0.77 added manual hosted
+`v0.89.0-browser-qa-evidence` is the latest tagged development milestone. The
+current branch prepares the untagged v0.90 full-stack demo-readiness candidate.
+The earlier v0.77 milestone added manual hosted
 PostgreSQL validation tooling without changing any endpoint path, method, query
 parameter, response shape, authentication rule, or OpenAPI YAML. It did not
 deploy NEXORA or establish production readiness. The completed v0.72 work
@@ -340,16 +340,17 @@ contract or `openapi.yaml`.
 | Method | Path | Access | Purpose | Request | Success response | Common errors | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/api/deals` | Public | Return active curated deals | None | `200`; array of `Deal` records | `internal_error` for unexpected failure | Default profile uses local demo data; `dev` uses active PostgreSQL records. |
-| GET | `/api/deals/external` | Public | Fetch/map external CheapShark deals | Optional query: `title` max 80 chars, `pageSize` minimum 1, `upperPrice` greater than 0 | `200`; array of `Deal` records | Safe fallback normally returns `200`; otherwise `internal_error` | Page size is clamped to configured maximum. Provider/cache failure or saturated process-local provider admission prefers stale same-key data and otherwise falls back to curated deals. |
-| GET | `/api/giveaways` | Public | Return active giveaways | None | `200`; array of `Giveaway` records | `internal_error` for unexpected failure | Default profile uses local demo data; `dev` uses active PostgreSQL records. |
+| GET | `/api/deals/external` | Public | Fetch/map external CheapShark deals | Optional query: `title` max 80 chars, `pageSize` range 1–24, `upperPrice` zero or greater | `200`; array of `Deal` records | Invalid query values return `validation_failed`; safe provider fallback normally returns `200`; otherwise `internal_error` | Provider/cache failure or saturated process-local provider admission prefers stale same-key data and otherwise falls back to curated deals. |
+| GET | `/api/giveaways` | Public | Return the unverified giveaway sample catalogue | None | `200`; array of `Giveaway` records | `internal_error` for unexpected failure | Default and seeded `dev` data are samples without verified claim destinations, eligibility, or end dates. |
 | GET | `/api/wishlist` | Public | Return the public demo/global wishlist catalog | None | `200`; array of `WishlistItem` records | `internal_error` for unexpected failure | Separate from account-owned `/api/me/wishlist`. It must not be treated as a personal account response. |
 
 Primary catalog response fields are:
 
 - `Deal`: `id`, `store`, discount labels/value, title, old/new prices,
   numeric price/rating, stars, category, status, and optional `dealUrl`.
-- `Giveaway`: `id`, platform values, title, genre, timer/day count, claimed
-  percentage, status, tag, and original price.
+- `Giveaway`: `id`, platform values, title, genre, legacy timer/day and claimed
+  fields, status, tag, and original price. Current seed data identifies itself
+  as `sample`; zero legacy counters are not verified claim metrics.
 - `WishlistItem`: identity/title/store and price labels, status, alert flag,
   priority, and `alertEvaluation` (`targetReached`, `state`, `message`).
 

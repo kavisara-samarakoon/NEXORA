@@ -10,6 +10,10 @@ complete a live deployment. Every checked item must link to current evidence,
 an owner, and an observation date. “Not applicable” requires a written reason;
 it must not conceal a failed security, persistence, or browser requirement.
 
+The [v0.90 local QA record](../qa/BROWSER_QA_V0_90.md) supports the current
+full-stack demo candidate but does not complete or check off hosted deployment,
+cross-origin browser, notification delivery, or restart-persistence gates.
+
 Use the [provider setup and verification commands](production-demo-deployment-plan.md)
 for the concrete Vercel / Render / Neon path; record evidence here after running them.
 
@@ -164,7 +168,13 @@ for the concrete Vercel / Render / Neon path; record evidence here after running
   bridge; the completed v0.76 configuration and v0.77 validation foundations do
   not provide production operations, backup, restore, or durability guarantees.
 - [ ] Record incomplete account verification/recovery and complete session
-  administration/revocation boundaries.
+  administration/revocation boundaries, including that logout revokes refresh
+  state but does not immediately deny an already-issued short-lived access token.
+- [ ] Record that giveaway data is an unverified sample catalogue and giveaway
+  reminders are not persisted.
+- [ ] Record that external offers may be cached, price history contains only
+  NEXORA-observed snapshots, and notification delivery must not be claimed
+  unless it is separately enabled and validated.
 - [ ] Record missing distributed coordination, formal monitoring/alerting,
   incident automation, tested disaster recovery, privacy/compliance program,
   and operational support commitments.
