@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import AuthStatus from "./AuthStatus";
+import CinematicSceneControls from "./CinematicSceneControls";
 import styles from "./cinematic.module.css";
 
 /**
@@ -33,6 +34,8 @@ export default function CinematicTopNav({ className }: { className?: string }) {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
   };
+
+  const showNavbarSceneControls = !isActiveRoute("/");
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -104,6 +107,14 @@ export default function CinematicTopNav({ className }: { className?: string }) {
             </svg>
           </Link>
 
+          {showNavbarSceneControls ? (
+            <CinematicSceneControls
+              className={styles.navSceneControls}
+              showMotion={false}
+              soundIconOnly
+            />
+          ) : null}
+
           <div className={styles.navAuthStatus}>
             <AuthStatus />
           </div>
@@ -146,6 +157,11 @@ export default function CinematicTopNav({ className }: { className?: string }) {
                 </li>
               );
             })}
+            {showNavbarSceneControls ? (
+              <li className={styles.menuSceneControls}>
+                <CinematicSceneControls showMotion={false} />
+              </li>
+            ) : null}
             <li className={styles.menuAuthStatus}>
               <AuthStatus />
             </li>

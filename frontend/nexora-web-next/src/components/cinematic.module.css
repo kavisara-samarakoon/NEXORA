@@ -1172,3 +1172,121 @@
     display: none;
   }
 }
+
+/* v0.90 demo readiness: reusable global cinematic scene controls */
+.sceneControlGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sceneControlButton {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 230, 210, 0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(10, 10, 13, 0.36);
+  color: var(--nx-text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s var(--nx-ease);
+}
+
+.sceneControlButton:hover {
+  border-color: rgba(255, 230, 210, 0.24);
+  color: var(--nx-warm-white);
+  box-shadow: 0 0 22px rgba(255, 106, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.sceneControlOn {
+  border-color: rgba(255, 106, 0, 0.32);
+  background:
+    linear-gradient(135deg, rgba(255, 106, 0, 0.18), rgba(0, 212, 255, 0.06)),
+    rgba(10, 10, 13, 0.42);
+  color: var(--nx-warm-white);
+}
+
+.sceneControlDot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.72;
+}
+
+.navSceneControls {
+  margin-left: 2px;
+}
+
+.menuSceneControls {
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 230, 210, 0.1);
+}
+
+.menuSceneControls .sceneControlGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.menuSceneControls .sceneControlButton {
+  width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .navSceneControls {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .menuSceneControls .sceneControlGroup {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* v0.90 demo readiness refinement: compact navbar sound control only */
+.navSceneControls.sceneControlGroup {
+  gap: 0;
+}
+
+.navSceneControls .sceneControlButton {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 0.92rem;
+}
+
+.sceneControlIcon {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.menuSceneControls .sceneControlGroup {
+  display: block;
+  width: 100%;
+}
+
+.menuSceneControls .sceneControlButton {
+  width: 100%;
+}
