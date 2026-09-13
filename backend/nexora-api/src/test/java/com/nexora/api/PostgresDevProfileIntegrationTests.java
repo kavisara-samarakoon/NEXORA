@@ -57,7 +57,17 @@ class PostgresDevProfileIntegrationTests {
                 where version is not null
                   and success = true
                 """, Long.class);
-        assertEquals(10L, successfulMigrations);
+        assertEquals(12L, successfulMigrations);
+
+        String latestMigrationVersion = jdbcTemplate.queryForObject("""
+                select version
+                from flyway_schema_history
+                where version is not null
+                  and success = true
+                order by installed_rank desc
+                limit 1
+                """, String.class);
+        assertEquals("12", latestMigrationVersion);
 
         Integer requiredTableCount = jdbcTemplate.queryForObject("""
                 select count(*)
