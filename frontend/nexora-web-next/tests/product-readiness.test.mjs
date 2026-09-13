@@ -14,6 +14,9 @@ async function moduleUrl(path, replacements = {}) {
 }
 
 const { productReturnTo, authFieldError } = await import(await moduleUrl("../src/lib/auth-form.ts"));
+const { wishlistCardIdentity } = await import(
+  await moduleUrl("../src/lib/wishlist-card-identity.ts")
+);
 
 test("auth return navigation accepts only known product routes", () => {
   for (const route of ["/", "/deals", "/giveaways", "/wishlist", "/sentinel", "/security", "/settings"]) {
@@ -37,6 +40,46 @@ test("registration validates the trimmed username and blank fields without trimm
   assert.match(authFieldError("password", "é".repeat(37), "register"), /too long/);
   assert.equal(authFieldError("password", "🎮".repeat(18), "login"), "");
   assert.match(authFieldError("password", "🎮".repeat(19), "login"), /too long/);
+});
+
+test("wishlist card identity separates preview drafts from personal account items", () => {
+  const item = { id: 1, store: "Steam", title: "Example Game" };
+  const previewIdentity = wishlistCardIdentity(
+    { accountRevision: 0, source: "api", view: "public" },
+    item,
+  );
+  const personalIdentity = wishlistCardIdentity(
+    { accountRevision: 1, source: "api", view: "personal" },
+    item,
+  );
+  const nextAccountIdentity = wishlistCardIdentity(
+    { accountRevision: 2, source: "api", view: "personal" },
+    item,
+  );
+
+  assert.notEqual(previewIdentity, personalIdentity);
+  assert.notEqual(personalIdentity, nextAccountIdentity);
+  assert.notEqual(
+    previewIdentity,
+    wishlistCardIdentity(
+      { accountRevision: 0, source: "fallback", view: "public" },
+      item,
+    ),
+  );
+  assert.notEqual(
+    personalIdentity,
+    wishlistCardIdentity(
+      { accountRevision: 1, source: "api", view: "personal" },
+      { ...item, title: "Another Game" },
+    ),
+  );
+  assert.equal(
+    personalIdentity,
+    wishlistCardIdentity(
+      { accountRevision: 1, source: "api", view: "personal" },
+      item,
+    ),
+  );
 });
 
 test("anonymous bootstrap is coalesced, real auth failures remain visible, and refresh can still recover sessions", async () => {
