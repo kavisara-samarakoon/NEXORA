@@ -23,6 +23,12 @@ const { createSentinelRequestGuard } = await import(
 const { hasAvailableDealRating, isValidDealRatingPayload } = await import(
   await moduleUrl("../src/lib/deal-rating.ts")
 );
+const { giveaways: giveawaySamples } = await import(
+  await moduleUrl("../src/data/giveaways.ts")
+);
+const { notificationPreferences } = await import(
+  await moduleUrl("../src/data/settings.ts")
+);
 const homeFeedApiClientUrl = `data:text/javascript,${encodeURIComponent('export const buildApiUrl = path => "http://localhost:8080" + path;')}`;
 const {
   HOME_FEED_REQUEST_TIMEOUT_MS,
@@ -117,6 +123,36 @@ test("deal ratings distinguish unavailable data from real ratings", () => {
   assert.equal(isValidDealRatingPayload(0, "★★☆☆☆"), false);
   assert.equal(hasAvailableDealRating(4.6, "★★★★★"), true);
   assert.equal(isValidDealRatingPayload(4.6, "★★★★★"), true);
+});
+
+test("giveaway seed data and settings identify unverified sample capabilities", () => {
+  assert.ok(giveawaySamples.every((item) =>
+    item.status === "sample" &&
+    item.tag === "sample" &&
+    item.timer === "End date unverified" &&
+    item.daysRemaining === 0 &&
+    item.claimed === 0
+  ));
+
+  const giveawayPreference = notificationPreferences.find(
+    (item) => item.id === "giveaway-reminders",
+  );
+  assert.equal(giveawayPreference?.enabled, false);
+  assert.equal(giveawayPreference?.statusLabel, "Planned");
+  assert.match(giveawayPreference?.description ?? "", /No persisted giveaway-reminder/);
+});
+
+test("page-local deal alerts and giveaway reminders disclose their preview-only behavior", async () => {
+  const [dealsSource, giveawaysSource] = await Promise.all([
+    readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/GiveawaysExplorer.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(dealsSource, /no alert is saved and no notification will be sent/);
+  assert.doesNotMatch(dealsSource, /\{alertIsSet \? "Alert Set" : "Set Alert"\}/);
+  assert.match(giveawaysSource, /no reminder is saved and no notification will be sent/);
+  assert.doesNotMatch(giveawaysSource, /\{reminderIsSet \? "Reminder set" : "Add reminder"\}/);
+  assert.match(giveawaysSource, /No verified claim destination/);
 });
 
 test("homepage feed maps the current backend deal, giveaway, and dashboard DTO fields", () => {

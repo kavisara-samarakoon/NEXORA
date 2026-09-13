@@ -57,11 +57,7 @@ const GIVEAWAY_PLATFORM_LABELS: readonly Giveaway["platformLabel"][] = [
   "GOG",
   "Prime Gaming",
 ];
-const GIVEAWAY_TAGS: readonly GiveawayTag[] = [
-  "ending-soon",
-  "new",
-  "popular",
-];
+const GIVEAWAY_TAGS: readonly GiveawayTag[] = ["sample"];
 const PROTECTION_ICONS: readonly ProtectionIcon[] = [
   "key",
   "lock",
@@ -245,7 +241,7 @@ function isGiveaway(value: unknown): value is Giveaway {
     typeof giveaway.timer === "string" &&
     typeof giveaway.daysRemaining === "number" &&
     typeof giveaway.claimed === "number" &&
-    giveaway.status === "live" &&
+    giveaway.status === "sample" &&
     GIVEAWAY_TAGS.includes(giveaway.tag as GiveawayTag) &&
     typeof giveaway.originalPrice === "string"
   );

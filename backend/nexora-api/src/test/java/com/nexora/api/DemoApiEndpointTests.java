@@ -46,11 +46,11 @@ class DemoApiEndpointTests {
                 .andExpect(jsonPath("$[0].title").value("Cyber Shadow"))
                 .andExpect(jsonPath("$[0].platformLabel").value("Steam"))
                 .andExpect(jsonPath("$[0].genre").value("Action · Platformer · Indie"))
-                .andExpect(jsonPath("$[0].timer").value("2d 14h 32m"))
-                .andExpect(jsonPath("$[0].daysRemaining").value(2))
-                .andExpect(jsonPath("$[0].claimed").value(78))
-                .andExpect(jsonPath("$[0].status").value("live"))
-                .andExpect(jsonPath("$[0].tag").value("popular"))
+                .andExpect(jsonPath("$[0].timer").value("End date unverified"))
+                .andExpect(jsonPath("$[0].daysRemaining").value(0))
+                .andExpect(jsonPath("$[0].claimed").value(0))
+                .andExpect(jsonPath("$[0].status").value("sample"))
+                .andExpect(jsonPath("$[0].tag").value("sample"))
                 .andExpect(jsonPath("$[0].originalPrice").value("$19.99"));
     }
 

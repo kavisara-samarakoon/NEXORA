@@ -43,8 +43,8 @@ export const profileFields = [
 export const notificationPreferences = [
   {
     id: "deal-alerts",
-    label: "Deal Alerts",
-    description: "Managed from Wishlist when account notification preferences are available",
+    label: "Wishlist Price Alerts",
+    description: "Persisted price-alert settings and notification choices are managed from Wishlist",
     enabled: true,
     interactive: false,
     statusLabel: "Wishlist",
@@ -52,15 +52,15 @@ export const notificationPreferences = [
   {
     id: "giveaway-reminders",
     label: "Giveaway Reminders",
-    description: "Managed from Wishlist when account notification preferences are available",
-    enabled: true,
+    description: "No persisted giveaway-reminder or notification workflow exists in v0.90",
+    enabled: false,
     interactive: false,
-    statusLabel: "Wishlist",
+    statusLabel: "Planned",
   },
   {
     id: "price-drops",
     label: "Price Drop Notifications",
-    description: "Managed from Wishlist when account notification preferences are available",
+    description: "Account notification delivery preferences are managed from Wishlist",
     enabled: true,
     interactive: false,
     statusLabel: "Wishlist",

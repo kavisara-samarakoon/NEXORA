@@ -360,8 +360,8 @@ export default function SettingsCenter() {
             <SectionHeading id="notifications-title" icon="bell" eyebrow={isSignedIn ? "Account preview" : "Preview controls"} title="Notification Preferences" />
             <p className="st-section-note">
               {isSignedIn
-                ? "Notification preferences are managed from Wishlist when account notification workflows are available."
-                : "Notification controls are shown here as account capability status. Use Wishlist for alert preferences when signed in."}
+                ? "Wishlist price-alert notification preferences are managed in Wishlist. Giveaway reminders are planned and are not persisted in v0.90."
+                : "These rows show capability status. Sign in to manage Wishlist price-alert notifications; giveaway reminders are not connected in v0.90."}
             </p>
             <PreferenceRows items={notificationPreferences} values={displayedPreferences} onToggle={togglePreference} />
           </section>
