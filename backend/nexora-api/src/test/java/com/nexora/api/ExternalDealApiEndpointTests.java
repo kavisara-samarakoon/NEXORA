@@ -77,7 +77,7 @@ class ExternalDealApiEndpointTests {
                 .andExpect(jsonPath("$[0].rating").value(4.6))
                 .andExpect(jsonPath("$[0].stars").value("★★★★★"))
                 .andExpect(jsonPath("$[0].category").value("External Deal"))
-                .andExpect(jsonPath("$[0].status").value("Lowest Ever"))
+                .andExpect(jsonPath("$[0].status").value("Deep discount"))
                 .andExpect(jsonPath("$[0].dealUrl").value(
                         "https://www.cheapshark.com/redirect?dealID=deal%2F123"));
 

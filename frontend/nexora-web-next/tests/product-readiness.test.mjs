@@ -20,6 +20,9 @@ const { wishlistCardIdentity } = await import(
 const { createSentinelRequestGuard } = await import(
   await moduleUrl("../src/lib/sentinel-request-guard.ts")
 );
+const { hasAvailableDealRating, isValidDealRatingPayload } = await import(
+  await moduleUrl("../src/lib/deal-rating.ts")
+);
 const homeFeedApiClientUrl = `data:text/javascript,${encodeURIComponent('export const buildApiUrl = path => "http://localhost:8080" + path;')}`;
 const {
   HOME_FEED_REQUEST_TIMEOUT_MS,
@@ -106,6 +109,14 @@ test("Sentinel rejects responses from requests invalidated by an auth change", (
   const nextSessionRequest = guard.begin();
   assert.equal(guard.isCurrent(signedInRequest), false);
   assert.equal(guard.isCurrent(nextSessionRequest), true);
+});
+
+test("deal ratings distinguish unavailable data from real ratings", () => {
+  assert.equal(hasAvailableDealRating(0, ""), false);
+  assert.equal(isValidDealRatingPayload(0, ""), true);
+  assert.equal(isValidDealRatingPayload(0, "★★☆☆☆"), false);
+  assert.equal(hasAvailableDealRating(4.6, "★★★★★"), true);
+  assert.equal(isValidDealRatingPayload(4.6, "★★★★★"), true);
 });
 
 test("homepage feed maps the current backend deal, giveaway, and dashboard DTO fields", () => {

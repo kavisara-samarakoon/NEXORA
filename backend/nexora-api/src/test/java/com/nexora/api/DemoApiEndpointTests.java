@@ -33,7 +33,7 @@ class DemoApiEndpointTests {
                 .andExpect(jsonPath("$[0].rating").value(4.8))
                 .andExpect(jsonPath("$[0].stars").value("★★★★★"))
                 .andExpect(jsonPath("$[0].category").value("Action RPG"))
-                .andExpect(jsonPath("$[0].status").value("Historical Low"));
+                .andExpect(jsonPath("$[0].status").value("Strong discount"));
     }
 
     @Test

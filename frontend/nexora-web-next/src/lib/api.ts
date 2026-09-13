@@ -36,14 +36,14 @@ import {
   type WishlistStatus,
 } from "@/data/wishlist";
 import { buildApiUrl } from "@/lib/api-client";
+import { isValidDealRatingPayload } from "@/lib/deal-rating";
 
 const DEAL_STATUSES: readonly DealStatus[] = [
-  "Historical Low",
-  "Lowest Ever",
-  "Great Deal",
-  "Good Price",
-  "Free Weekend",
-  "Average",
+  "Deep discount",
+  "Strong discount",
+  "Current offer",
+  "Observed offer",
+  "Free offer",
 ];
 const GIVEAWAY_PLATFORMS: readonly GiveawayPlatform[] = [
   "steam",
@@ -219,12 +219,7 @@ function isGameDeal(value: unknown): value is GameDeal {
     typeof deal.priceValue === "number" &&
     Number.isFinite(deal.priceValue) &&
     deal.priceValue >= 0 &&
-    typeof deal.rating === "number" &&
-    Number.isFinite(deal.rating) &&
-    deal.rating >= 0 &&
-    deal.rating <= 5 &&
-    typeof deal.stars === "string" &&
-    deal.stars.trim().length > 0 &&
+    isValidDealRatingPayload(deal.rating, deal.stars) &&
     typeof deal.category === "string" &&
     deal.category.trim().length > 0 &&
     DEAL_STATUSES.includes(deal.status as DealStatus) &&

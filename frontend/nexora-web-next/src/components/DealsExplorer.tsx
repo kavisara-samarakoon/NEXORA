@@ -14,6 +14,7 @@ import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
+import { hasAvailableDealRating } from "@/lib/deal-rating";
 import {
   AUTH_STATE_EVENT,
   clearAuthToken,
@@ -51,9 +52,9 @@ function protectedWishlistError(error: unknown) {
 
 
 function statusClass(status: DealStatus) {
-  if (status === "Historical Low" || status === "Lowest Ever") return "hot";
-  if (status === "Great Deal" || status === "Good Price") return "good";
-  if (status === "Free Weekend") return "free";
+  if (status === "Deep discount") return "hot";
+  if (status === "Strong discount" || status === "Current offer") return "good";
+  if (status === "Free offer") return "free";
   return "neutral";
 }
 
@@ -113,7 +114,7 @@ function wishlistPayloadFor(deal: GameDeal): AddWishlistItemPayload {
     store: deal.store,
     currentPrice: deal.priceNew,
     targetPrice: deal.priceNew,
-    lowestEver: deal.priceNew,
+    lowestEver: "Not established",
     discount: deal.discount,
     status: isFree ? "free-now" : deal.discountValue >= 50 ? "price-drop" : "tracking",
     priority: deal.discountValue >= 80 ? "high" : deal.discountValue >= 50 ? "medium" : "low",
@@ -152,6 +153,7 @@ function DealCard({
   onToggleAlert: (dealId: number) => void;
 }) {
   const dealUrl = safeCheapSharkDealUrl(deal.dealUrl);
+  const hasRating = hasAvailableDealRating(deal.rating, deal.stars);
   const titleId = `deal-title-${dealStateKey("curated", deal).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 
   return (
@@ -165,9 +167,18 @@ function DealCard({
       <h2 className={styles.cardTitle} id={titleId}>{deal.title}</h2>
       <p className={styles.category}>{deal.category}</p>
 
-      <div className={styles.rating} aria-label={`${deal.rating} out of 5 stars`}>
-        <span aria-hidden="true">{deal.stars}</span>
-        <span>{deal.rating}</span>
+      <div
+        className={styles.rating}
+        aria-label={hasRating ? `${deal.rating} out of 5 stars` : "Rating unavailable"}
+      >
+        {hasRating ? (
+          <>
+            <span aria-hidden="true">{deal.stars}</span>
+            <span>{deal.rating}</span>
+          </>
+        ) : (
+          <span>Rating unavailable</span>
+        )}
         <span className={`${styles.status} ${STATUS_TONE_CLASS[statusClass(deal.status)]}`}>
           {deal.status}
         </span>
@@ -481,7 +492,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       if (activeFilter === "All Stores") return true;
       if (activeFilter === "Under $10") return deal.priceValue < 10;
       if (activeFilter === "50%+ Off") return deal.discountValue >= 50;
-      if (activeFilter === "Free Weekend") return deal.status === "Free Weekend";
+      if (activeFilter === "Free offers") return deal.priceValue === 0;
       return deal.store === activeFilter;
     });
   }, [activeFilter, searchQuery, visibleDeals]);

@@ -7,14 +7,13 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 @Component
 public class CheapSharkDealMapper {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
-    private static final BigDecimal FIVE = new BigDecimal("5");
-    private static final BigDecimal TEN = new BigDecimal("10");
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final String CHEAPSHARK_REDIRECT_URL =
             "https://www.cheapshark.com/redirect?dealID=";
@@ -34,8 +33,23 @@ public class CheapSharkDealMapper {
         }
 
         return IntStream.range(0, responses.size())
-                .mapToObj(index -> toDeal(responses.get(index), index + 1L, storeLookup))
+                .mapToObj(index -> toDealIfValid(
+                        responses.get(index),
+                        index + 1L,
+                        storeLookup))
+                .filter(Objects::nonNull)
                 .toList();
+    }
+
+    private Deal toDealIfValid(
+            CheapSharkDealResponse response,
+            long id,
+            Map<String, String> storeLookup) {
+        try {
+            return toDeal(response, id, storeLookup);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     Deal toDeal(CheapSharkDealResponse response, long id, Map<String, String> storeLookup) {
@@ -43,10 +57,10 @@ public class CheapSharkDealMapper {
             throw new IllegalArgumentException("CheapShark deal title is missing");
         }
 
-        BigDecimal salePrice = nonNegativeDecimal(response.salePrice()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal normalPrice = nonNegativeDecimal(response.normalPrice()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal salePrice = providerPrice(response.salePrice()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal normalPrice = providerPrice(response.normalPrice()).setScale(2, RoundingMode.HALF_UP);
         int discountValue = discountValue(response.savings());
-        BigDecimal rating = rating(response.steamRatingPercent(), response.dealRating());
+        BigDecimal rating = rating(response.steamRatingPercent());
 
         return new Deal(
                 id,
@@ -60,7 +74,7 @@ public class CheapSharkDealMapper {
                 rating,
                 DatabaseDealService.starsFor(rating),
                 "External Deal",
-                status(discountValue),
+                status(discountValue, salePrice),
                 dealUrl(response.dealID())
         );
     }
@@ -126,27 +140,20 @@ public class CheapSharkDealMapper {
                 .intValue();
     }
 
-    private static BigDecimal rating(String steamRatingPercent, String dealRating) {
+    private static BigDecimal rating(String steamRatingPercent) {
         BigDecimal steamRating = nullableDecimal(steamRatingPercent);
-        if (steamRating != null) {
-            return steamRating.max(ZERO)
-                    .min(ONE_HUNDRED)
-                    .divide(new BigDecimal("20"), 1, RoundingMode.HALF_UP);
-        }
+        if (steamRating == null || steamRating.signum() <= 0) return ZERO.setScale(1);
 
-        BigDecimal externalDealRating = nullableDecimal(dealRating);
-        if (externalDealRating != null) {
-            return externalDealRating.max(ZERO)
-                    .min(TEN)
-                    .divide(new BigDecimal("2"), 1, RoundingMode.HALF_UP)
-                    .min(FIVE);
-        }
-        return ZERO.setScale(1);
+        return steamRating.min(ONE_HUNDRED)
+                .divide(new BigDecimal("20"), 1, RoundingMode.HALF_UP);
     }
 
-    private static BigDecimal nonNegativeDecimal(String value) {
+    private static BigDecimal providerPrice(String value) {
         BigDecimal parsed = nullableDecimal(value);
-        return parsed == null ? ZERO : parsed.max(ZERO);
+        if (parsed == null || parsed.signum() < 0) {
+            throw new IllegalArgumentException("CheapShark deal price is invalid");
+        }
+        return parsed;
     }
 
     private static BigDecimal nullableDecimal(String value) {
@@ -162,10 +169,11 @@ public class CheapSharkDealMapper {
         return "$" + value.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
-    private static String status(int discountValue) {
-        if (discountValue >= 80) return "Lowest Ever";
-        if (discountValue >= 60) return "Great Deal";
-        if (discountValue >= 30) return "Good Price";
-        return "Average";
+    private static String status(int discountValue, BigDecimal salePrice) {
+        if (salePrice.signum() == 0) return "Free offer";
+        if (discountValue >= 80) return "Deep discount";
+        if (discountValue >= 60) return "Strong discount";
+        if (discountValue >= 30) return "Current offer";
+        return "Observed offer";
     }
 }
