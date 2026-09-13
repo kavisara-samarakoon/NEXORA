@@ -345,6 +345,18 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const [activeExternalTitle, setActiveExternalTitle] = useState("");
   const [activeFilter, setActiveFilter] = useState<DealFilter>("All Stores");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (window.location.hash !== "#deal-search") return;
+
+    const input = document.getElementById("deal-search");
+    if (!(input instanceof HTMLInputElement)) return;
+
+    window.requestAnimationFrame(() => {
+      input.scrollIntoView({ behavior: "smooth", block: "center" });
+      input.focus({ preventScroll: true });
+    });
+  }, []);
   const [alerts, setAlerts] = useState<Set<string>>(() => new Set());
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);

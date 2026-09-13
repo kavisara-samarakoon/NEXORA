@@ -37,6 +37,24 @@ export default function CinematicTopNav({ className }: { className?: string }) {
 
   const showNavbarSceneControls = !isActiveRoute("/");
 
+  const focusDealsSearch = () => {
+    const input = document.getElementById("deal-search");
+    if (!(input instanceof HTMLInputElement)) return false;
+
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => input.focus({ preventScroll: true }), 250);
+    window.history.replaceState(null, "", "/deals#deal-search");
+    return true;
+  };
+
+  const handleSearchShortcut = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!isActiveRoute("/deals")) return;
+
+    event.preventDefault();
+    focusDealsSearch();
+    setMenuOpen(false);
+  };
+
   useEffect(() => {
     if (!menuOpen) return;
 
@@ -87,7 +105,7 @@ export default function CinematicTopNav({ className }: { className?: string }) {
         </ul>
 
         <div className={styles.navActions}>
-          <Link href="/deals" className={styles.iconButton} aria-label="Search deals">
+          <Link href="/deals#deal-search" className={styles.iconButton} aria-label="Focus deals search" onClick={handleSearchShortcut}>
             <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
               <circle
                 cx="9"

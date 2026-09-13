@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 import styles from "./cinematic.module.css";
 
@@ -9,8 +9,6 @@ type SceneControlState = {
   soundOn: boolean;
 };
 
-type SceneControlEvent = CustomEvent<SceneControlState>;
-
 type CinematicSceneControlsProps = {
   className?: string;
   showMotion?: boolean;
@@ -18,9 +16,17 @@ type CinematicSceneControlsProps = {
 };
 
 const MOTION_STORAGE_KEY = "nexora.cinematic.motion.paused";
-const SCENE_CONTROL_EVENT = "nexora:cinematic-scene-controls-change";
 
+const DEFAULT_SCENE_STATE: SceneControlState = {
+  motionPaused: false,
+  soundOn: false,
+};
+
+let sceneState: SceneControlState = DEFAULT_SCENE_STATE;
 let ambienceRef: Ambience | null = null;
+let browserStateBootstrapped = false;
+
+const subscribers = new Set<() => void>();
 
 interface Ambience {
   context: AudioContext;
@@ -29,6 +35,23 @@ interface Ambience {
 }
 
 type AudioCtor = typeof AudioContext;
+
+function getSceneSnapshot(): SceneControlState {
+  return sceneState;
+}
+
+function getServerSceneSnapshot(): SceneControlState {
+  return DEFAULT_SCENE_STATE;
+}
+
+function notifySceneSubscribers(): void {
+  subscribers.forEach((listener) => listener());
+}
+
+function applyMotionState(motionPaused: boolean): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.nxMotion = motionPaused ? "paused" : "running";
+}
 
 function readStoredMotionPreference(): boolean | null {
   if (typeof window === "undefined") return null;
@@ -42,34 +65,76 @@ function readStoredMotionPreference(): boolean | null {
   }
 }
 
-function readInitialSceneControlState(): SceneControlState {
-  if (typeof window === "undefined") {
-    return { motionPaused: false, soundOn: false };
-  }
-
-  const storedMotionPreference = readStoredMotionPreference();
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  return {
-    motionPaused: storedMotionPreference ?? prefersReducedMotion,
-    soundOn: ambienceRef !== null,
-  };
-}
-
-function dispatchSceneControlState(state: SceneControlState): void {
-  window.dispatchEvent(new CustomEvent<SceneControlState>(SCENE_CONTROL_EVENT, { detail: state }));
-}
-
-function applyMotionState(motionPaused: boolean): void {
-  document.documentElement.dataset.nxMotion = motionPaused ? "paused" : "running";
-}
-
 function writeStoredMotionPreference(motionPaused: boolean): void {
+  if (typeof window === "undefined") return;
+
   try {
     window.localStorage.setItem(MOTION_STORAGE_KEY, String(motionPaused));
   } catch {
     // Motion control still works for the current page when localStorage is blocked.
   }
+}
+
+function setSceneState(next: SceneControlState): void {
+  sceneState = next;
+  applyMotionState(next.motionPaused);
+  notifySceneSubscribers();
+}
+
+function bootstrapBrowserSceneState(): void {
+  if (browserStateBootstrapped || typeof window === "undefined") return;
+
+  browserStateBootstrapped = true;
+
+  const storedMotionPreference = readStoredMotionPreference();
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const next = {
+    motionPaused: storedMotionPreference ?? prefersReducedMotion,
+    soundOn: ambienceRef !== null,
+  };
+
+  sceneState = next;
+  applyMotionState(next.motionPaused);
+
+  window.requestAnimationFrame(notifySceneSubscribers);
+}
+
+function subscribeSceneState(listener: () => void): () => void {
+  subscribers.add(listener);
+  bootstrapBrowserSceneState();
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  const onPreferenceChange = (event: MediaQueryListEvent) => {
+    if (!event.matches) return;
+
+    const next = {
+      ...sceneState,
+      motionPaused: true,
+    };
+
+    writeStoredMotionPreference(next.motionPaused);
+    setSceneState(next);
+  };
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== MOTION_STORAGE_KEY) return;
+
+    setSceneState({
+      ...sceneState,
+      motionPaused: event.newValue === "true",
+    });
+  };
+
+  reducedMotion.addEventListener("change", onPreferenceChange);
+  window.addEventListener("storage", onStorage);
+
+  return () => {
+    subscribers.delete(listener);
+    reducedMotion.removeEventListener("change", onPreferenceChange);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 function createAmbience(): Ambience | null {
@@ -146,6 +211,8 @@ function disposeAmbience(ambience: Ambience): void {
 }
 
 function startAmbience(): boolean {
+  if (typeof window === "undefined") return false;
+
   if (ambienceRef) {
     void ambienceRef.context.resume().catch(() => undefined);
     return true;
@@ -166,79 +233,32 @@ function stopAmbience(): void {
 }
 
 export function useCinematicSceneControls() {
-  const [state, setState] = useState<SceneControlState>(() => readInitialSceneControlState());
-
-  useEffect(() => {
-    applyMotionState(state.motionPaused);
-  }, [state.motionPaused]);
-
-  useEffect(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-    const onPreferenceChange = (event: MediaQueryListEvent) => {
-      if (!event.matches) return;
-
-      const next = {
-        motionPaused: true,
-        soundOn: ambienceRef !== null,
-      };
-
-      writeStoredMotionPreference(next.motionPaused);
-      setState(next);
-      dispatchSceneControlState(next);
-    };
-
-    const onSceneControlChange = (event: Event) => {
-      const detail = (event as SceneControlEvent).detail;
-      if (!detail) return;
-      setState(detail);
-    };
-
-    const onStorage = (event: StorageEvent) => {
-      if (event.key !== MOTION_STORAGE_KEY) return;
-
-      setState({
-        motionPaused: event.newValue === "true",
-        soundOn: ambienceRef !== null,
-      });
-    };
-
-    reducedMotion.addEventListener("change", onPreferenceChange);
-    window.addEventListener(SCENE_CONTROL_EVENT, onSceneControlChange);
-    window.addEventListener("storage", onStorage);
-
-    return () => {
-      reducedMotion.removeEventListener("change", onPreferenceChange);
-      window.removeEventListener(SCENE_CONTROL_EVENT, onSceneControlChange);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  const publishState = useCallback((next: SceneControlState) => {
-    setState(next);
-    dispatchSceneControlState(next);
-  }, []);
+  const state = useSyncExternalStore(
+    subscribeSceneState,
+    getSceneSnapshot,
+    getServerSceneSnapshot,
+  );
 
   const toggleMotion = useCallback(() => {
     const next = {
-      ...state,
-      motionPaused: !state.motionPaused,
+      ...sceneState,
+      motionPaused: !sceneState.motionPaused,
     };
 
     writeStoredMotionPreference(next.motionPaused);
-    publishState(next);
-  }, [publishState, state]);
+    setSceneState(next);
+  }, []);
 
   const toggleSound = useCallback(() => {
-    if (state.soundOn) {
+    if (sceneState.soundOn) {
       stopAmbience();
-      publishState({ ...state, soundOn: false });
+      setSceneState({ ...sceneState, soundOn: false });
       return;
     }
 
     const started = startAmbience();
-    publishState({ ...state, soundOn: started });
-  }, [publishState, state]);
+    setSceneState({ ...sceneState, soundOn: started });
+  }, []);
 
   return {
     motionPaused: state.motionPaused,
@@ -274,7 +294,9 @@ export default function CinematicSceneControls({
       {showMotion ? (
         <button
           type="button"
+          aria-label={motionPaused ? "Resume cinematic motion" : "Pause cinematic motion"}
           aria-pressed={motionPaused}
+          title={motionPaused ? "Resume motion" : "Pause motion"}
           className={motionPaused ? `${styles.sceneControlButton} ${styles.sceneControlOn}` : styles.sceneControlButton}
           onClick={toggleMotion}
         >
