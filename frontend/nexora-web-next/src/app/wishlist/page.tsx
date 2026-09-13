@@ -27,7 +27,7 @@ export default async function WishlistPage() {
       <main className={styles.stage} id="main-content" tabIndex={-1}>
         <div className={styles.noticeArea}>
           <ProductFeedNotice
-            label="Public wishlist preview"
+            label="Wishlist"
             source={source}
           />
         </div>

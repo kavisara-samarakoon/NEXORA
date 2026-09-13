@@ -199,7 +199,7 @@ export default function SettingsCenter() {
       },
       {
         label: "Platform Links",
-        value: "Demo examples only",
+        value: "Coming soon",
         badge: "Demo",
         tone: "purple",
       },
@@ -237,7 +237,7 @@ export default function SettingsCenter() {
   const heroTag = isSignedIn ? "Signed-in account" : "Settings preview";
   const heroDescription = isSignedIn
     ? `Viewing the active local demo session for ${signedInUser.displayName}. Profile identity is loaded from the authentication service.`
-    : "Explore sample profile, preference, and platform layouts without changing a signed-in account.";
+    : "Explore account preferences and platform layouts in guest mode. Sign in to show your current account identity.";
 
   return (
     <>
@@ -277,7 +277,7 @@ export default function SettingsCenter() {
             </>
           ) : (
             <>
-              <strong>Static settings preview</strong> — Sign in to show the current account identity. Preference toggles affect this rendered preview only and are not saved or enforced.
+              <strong>Guest settings preview</strong> — Sign in to show the current account identity. Preference toggles affect this screen only until persistent settings workflows are connected.
             </>
           )}
         </p>
@@ -294,8 +294,8 @@ export default function SettingsCenter() {
                 <i />
               </div>
               <div className="st-profile__copy">
-                <small>{isSignedIn ? "Active local account" : "Static demo profile"}</small>
-                <h2 id="profile-title">{signedInUser?.displayName ?? "Demo Player"}</h2>
+                <small>{isSignedIn ? "Active local account" : "Guest preview"}</small>
+                <h2 id="profile-title">{signedInUser?.displayName ?? "Guest Preview"}</h2>
                 <p>
                   {signedInUser ? `@${signedInUser.username}` : "Example identity"}
                   <span>•</span>
@@ -324,18 +324,18 @@ export default function SettingsCenter() {
           </section>
 
           <section className="st-card" aria-labelledby="notifications-title">
-            <SectionHeading id="notifications-title" icon="bell" eyebrow={isSignedIn ? "Account preview" : "Demo controls"} title="Notification Preferences" />
+            <SectionHeading id="notifications-title" icon="bell" eyebrow={isSignedIn ? "Account preview" : "Preview controls"} title="Notification Preferences" />
             <p className="st-section-note">
               {isSignedIn
                 ? "Preview controls for the active local account. Persistent notification settings are handled from Wishlist when connected."
-                : "Static settings preview only — these choices are not saved or enforced."}
+                : "Guest preview only — these choices are not saved or enforced."}
             </p>
             <PreferenceRows items={notificationPreferences} values={preferences} onToggle={togglePreference} />
           </section>
 
           <section className="st-card" aria-labelledby="security-preferences-title">
             <SectionHeading id="security-preferences-title" icon="shield" eyebrow="Capability preview" title="Security Preferences" />
-            <p className="st-section-note">Demo controls only — they do not represent active account protection.</p>
+            <p className="st-section-note">Preview controls only — they do not represent active account protection.</p>
             <PreferenceRows items={securityPreferences} values={preferences} onToggle={togglePreference} />
           </section>
 
@@ -407,7 +407,7 @@ export default function SettingsCenter() {
           </div>
           <div className="st-overview">
             <div className="st-overview__label">
-              <span>{isSignedIn ? "Account overview" : "Demo account overview"}</span>
+              <span>{isSignedIn ? "Account overview" : "Guest account overview"}</span>
               <strong>{isSignedIn ? "Live session" : "Sample"}</strong>
             </div>
             {overviewRows.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}

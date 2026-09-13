@@ -1290,3 +1290,65 @@
 .menuSceneControls .sceneControlButton {
   width: 100%;
 }
+
+/* v0.90 polish: stronger electric-blue active navbar indication */
+.navLinkActive {
+  color: #f8fbff;
+  text-shadow:
+    0 0 10px rgba(0, 212, 255, 0.3),
+    0 0 18px rgba(0, 212, 255, 0.18);
+}
+
+.navLinkActive::after {
+  background: linear-gradient(90deg, var(--nx-electric-blue), var(--nx-orange));
+  box-shadow:
+    0 0 12px rgba(0, 212, 255, 0.65),
+    0 0 24px rgba(0, 212, 255, 0.28),
+    0 0 18px rgba(255, 106, 0, 0.16);
+}
+
+.menuLinkActive {
+  color: #f8fbff;
+  border-color: rgba(0, 212, 255, 0.28);
+  background:
+    linear-gradient(135deg, rgba(0, 212, 255, 0.14), rgba(255, 106, 0, 0.08)),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 0 18px rgba(0, 212, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* v0.90 polish: active navbar state uses text glow only, no underline */
+.navLinkActive {
+  color: #f8fbff;
+  text-shadow:
+    0 0 8px rgba(0, 212, 255, 0.55),
+    0 0 18px rgba(0, 212, 255, 0.32),
+    0 0 30px rgba(0, 212, 255, 0.16);
+}
+
+.navLinkActive::after,
+.navLinkActive:hover::after,
+.navLinkActive:focus-visible::after {
+  opacity: 0;
+  transform: scaleX(0);
+  box-shadow: none;
+}
+
+/* v0.90 polish: stronger electric-blue active navbar text glow */
+.navLinkActive {
+  color: #ecfbff;
+  text-shadow:
+    0 0 6px rgba(0, 212, 255, 0.78),
+    0 0 16px rgba(0, 212, 255, 0.52),
+    0 0 30px rgba(0, 212, 255, 0.28),
+    0 0 46px rgba(0, 212, 255, 0.14);
+}
+
+.navLinkActive::after,
+.navLinkActive:hover::after,
+.navLinkActive:focus-visible::after {
+  opacity: 0;
+  transform: scaleX(0);
+  box-shadow: none;
+}
