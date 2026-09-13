@@ -24,7 +24,7 @@ export default async function WishlistPage() {
 
       <CinematicTopNav className={styles.productHeader} />
 
-      <main className={styles.stage} id="main-content" tabIndex={-1}>
+      <main className={`${styles.stage} nx-page-reveal`} id="main-content" tabIndex={-1}>
         <div className={styles.noticeArea}>
           <ProductFeedNotice
             label="Wishlist"
