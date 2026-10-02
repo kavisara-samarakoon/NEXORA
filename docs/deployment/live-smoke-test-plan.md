@@ -1,11 +1,13 @@
 # NEXORA live hosted-demo smoke-test plan
 
-Latest released milestone: `v0.90.0-full-stack-demo-readiness`.
-Active milestone: v0.91 hosted demo readiness on `feature/hosted-demo-readiness`.
-This validates the existing product; it adds no product-feature scope.
-All checks below are pending. Record real results in
-[BROWSER_QA_V0_91.md](../qa/BROWSER_QA_V0_91.md); historical local QA is not
-hosted evidence.
+Latest released milestone: `v0.91.0-hosted-demo-readiness-foundation`.
+Active milestone: v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`.
+This covers private synthetic hosted deployment and evidence capture across
+Vercel, Render, and disposable Neon PostgreSQL. NEXORA is not production-ready.
+No real hosted evidence exists yet. All checks below are pending. Record real
+results in [BROWSER_QA_V0_92.md](../qa/BROWSER_QA_V0_92.md); historical local QA
+is not hosted evidence.
 
 ## Purpose and safety
 
@@ -55,8 +57,9 @@ profile dump. `/api/health` is a sanitized runtime/configuration summary. It
 does not prove PostgreSQL or provider liveness, mail delivery, Gemini
 availability, or frontend proxy correctness by itself. Check direct backend
 and frontend-proxy health separately, then use SQL, browser, and provider smoke
-checks for dependency evidence. Confirm Flyway V1–V12 and latest version `12`
-separately from the hosted test's current minimum-of-10 assertion.
+checks for dependency evidence. The hosted PostgreSQL test requires exactly 12
+successful versioned migrations (Flyway V1–V12), latest successful migration
+version `12`, and zero failed migrations.
 
 ## Public API checks
 

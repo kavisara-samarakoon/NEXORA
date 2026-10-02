@@ -1,11 +1,13 @@
 # NEXORA hosted demo: Vercel / Render / Neon
 
 This is the existing setup path for a controlled portfolio demo. The latest
-released milestone is `v0.90.0-full-stack-demo-readiness`; the active branch is
-`feature/hosted-demo-readiness` for v0.91. Its goal is hosted validation of the
-existing product, without new product features. Nothing has been deployed by
-this documentation pass. Select the same reviewed candidate for both services.
-[Hosted evidence is pending](../qa/BROWSER_QA_V0_91.md) until real frontend,
+released milestone is `v0.91.0-hosted-demo-readiness-foundation`. The active
+milestone is v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`: private synthetic hosted deployment
+and evidence capture across Vercel, Render, and disposable Neon PostgreSQL.
+No real hosted evidence exists yet, and NEXORA is not production-ready.
+Select the same reviewed candidate for both services.
+[Hosted evidence is pending](../qa/BROWSER_QA_V0_92.md) until real frontend,
 backend, and database checks are completed.
 
 ## 1. Reserve the frontend origin; create a disposable Neon database
@@ -140,9 +142,9 @@ NEXORA_RUN_HOSTED_POSTGRES_VALIDATION=true bash scripts/deployment/validate-host
 
 This checks hosted profile initialization, a live SQL connection/query, Flyway
 history, and JPA schema validation; it does not start the HTTP server or test
-restart persistence. The current opt-in test only asserts at least 10 successful
-migrations, so separately confirm all 12 migrations and latest version `12` for
-this candidate. Keep only redacted results. Do not share raw
+restart persistence. The current opt-in test requires exactly 12 successful
+versioned migrations (V1–V12), latest successful migration version `12`, and
+zero failed migrations. Keep only redacted results. Do not share raw
 provider errors, database URLs, cookies, or credentials in screenshots/logs.
 
 Set `NEXORA_DEMO_FRONTEND_URL` and `NEXORA_DEMO_BACKEND_URL` to your two real

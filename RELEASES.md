@@ -4,7 +4,7 @@ These labels summarize repository development milestones. They do not imply a
 public deployment, published package, or production release.
 
 The latest stable development tag is
-`v0.77.0-hosted-postgresql-persistence-validation-foundation`.
+`v0.91.0-hosted-demo-readiness-foundation`.
 Older headings retain the wording used when each milestone was recorded.
 
 ## Completed validation milestone — v0.77.0 Hosted PostgreSQL Persistence Validation foundation

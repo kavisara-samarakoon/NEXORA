@@ -10,10 +10,12 @@ The human-readable contract was established by the completed
 `v0.35.0-api-contract-documentation-foundation` milestone. The completed v0.38
 milestone added a hand-maintained OpenAPI companion, and the completed v0.39
 milestone added lightweight structural validation around it.
-`v0.90.0-full-stack-demo-readiness` is the latest released milestone.
-The active v0.91 branch, `feature/hosted-demo-readiness`, validates hosted
-deployment confidence without adding product features.
-[Hosted evidence remains pending](../qa/BROWSER_QA_V0_91.md) until real deployed
+`v0.91.0-hosted-demo-readiness-foundation` is the latest released milestone.
+The active milestone is v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`, covering private synthetic hosted
+deployment and evidence capture across Vercel, Render, and disposable Neon
+PostgreSQL. No real hosted evidence exists yet.
+[Hosted evidence remains pending](../qa/BROWSER_QA_V0_92.md) until real deployed
 frontend, backend, and database checks are completed.
 The earlier v0.77 milestone added manual hosted
 PostgreSQL validation tooling without changing any endpoint path, method, query
@@ -507,7 +509,7 @@ architecture or operations plan.
 The `hosted-demo` profile composes `dev` with `production` safety guards and
 requires external database/auth/origin settings plus `PORT`. This configuration
 does not establish hosted durability: Wishlist and notification-preference
-persistence after backend restart remain pending v0.91 evidence.
+persistence after backend restart remain pending v0.92 evidence.
 
 ## Security and privacy limitations
 

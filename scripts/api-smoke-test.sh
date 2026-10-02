@@ -265,15 +265,6 @@ assert_error_contract() {
     pass "${label} includes the shared error fields"
 }
 
-masked_token() {
-    local token="$1"
-    if (( ${#token} <= 6 )); then
-        printf '<masked>'
-    else
-        printf '%s...<masked>' "${token:0:6}"
-    fi
-}
-
 check_public_get() {
     local path="$1"
     local label="$2"
@@ -396,7 +387,7 @@ if ! ACCESS_TOKEN="$(extract_json_field "${RESPONSE_BODY}" "token")" \
     || [[ -z "${ACCESS_TOKEN}" ]]; then
     fail "Registration response did not contain a usable access token."
 fi
-info "Registration access token: $(masked_token "${ACCESS_TOKEN}")"
+info "Registration access token: present"
 
 request GET "/api/auth/me" \
     --header "Authorization: Bearer ${ACCESS_TOKEN}"
@@ -425,7 +416,7 @@ if ! LOGIN_ACCESS_TOKEN="$(extract_json_field "${RESPONSE_BODY}" "token")" \
     fail "Login response did not contain a usable access token."
 fi
 ACCESS_TOKEN="${LOGIN_ACCESS_TOKEN}"
-info "Login access token: $(masked_token "${ACCESS_TOKEN}")"
+info "Login access token: present"
 
 request POST "/api/auth/refresh" \
     --cookie "${COOKIE_JAR}" \

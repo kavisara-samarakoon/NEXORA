@@ -1,14 +1,15 @@
 # NEXORA project status
 
-**Current stage:** v0.91 hosted demo readiness; hosted validation pending.
+**Current stage:** v0.92 — Real Hosted Deployment Execution; hosted evidence pending.
 NEXORA is not documented as a deployed or production-ready service.
 
-The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
-The active branch is `feature/hosted-demo-readiness`. v0.91 validates hosted
-deployment confidence for the existing product; it adds no new product-feature
-scope. The [v0.90 local record](qa/BROWSER_QA_V0_90.md) remains historical
-evidence. The [v0.91 hosted evidence record](qa/BROWSER_QA_V0_91.md) is pending
-until real deployed frontend, backend, and database checks are completed.
+The latest released milestone is `v0.91.0-hosted-demo-readiness-foundation`.
+The active branch is `feature/real-hosted-deployment-execution`. v0.92 covers
+private synthetic hosted deployment and evidence capture across Vercel, Render,
+and disposable Neon PostgreSQL. The [v0.90 local record](qa/BROWSER_QA_V0_90.md)
+remains historical evidence. No real hosted evidence exists yet; the
+[v0.92 hosted evidence record](qa/BROWSER_QA_V0_92.md) is pending until real
+deployed frontend, backend, and database checks are completed.
 
 The v0.90 release addresses six focused audit findings: Wishlist draft
 identity collisions, Sentinel state retention across authentication changes,
@@ -28,7 +29,7 @@ are browser-visible. The backend trusts the exact frontend HTTPS origin;
 both auth cookies are expected to be Secure, host-only, `SameSite=Lax`, and
 scoped to `/api/auth`.
 
-Pending v0.91 evidence covers direct backend and frontend-proxy health;
+Pending v0.92 evidence covers direct backend and frontend-proxy health;
 hosted register/login/refresh/logout; cookie attributes; CSRF rejection;
 trusted/rejected CORS and origins; Wishlist and notification-preference
 persistence after backend restart; external deals success/cache/fallback;
@@ -313,6 +314,9 @@ recorded at the top of this document.
   provider fallback classification, process-local provider health/failure
   tracking, and configurable bounded context-prompt and answer limits.
 - Backend tests plus frontend lint and production-build checks.
+- Hosted Demo Readiness CI includes Offline deployment tooling, Backend Docker
+  build, and Frontend hosted configuration build; it does not run hosted checks
+  or deploy NEXORA.
 - GitHub Actions validation for backend Maven tests and primary frontend
   dependency installation, lint, and production build.
 - API Smoke CI validation that starts the default backend on localhost, waits
@@ -473,7 +477,8 @@ recorded at the top of this document.
   v0.33 safe summaries do not close these gaps.
 - No deployment or continuous-delivery pipeline.
 - The backend Dockerfile packages Java 17 for the documented hosted demo, but
-  CI does not build the image and hosted startup/restart evidence is pending.
+  its Hosted Demo Readiness CI build does not establish hosted startup/restart
+  behavior; that evidence is pending.
   No frontend release image is supplied; the Next.js target uses framework
   hosting. Compose runs local PostgreSQL only, and the optional devcontainer
   is local developer tooling.
@@ -506,10 +511,10 @@ recorded at the top of this document.
 
 ## Recommended next milestones
 
-First complete the pending v0.91 checks in the
-[hosted QA record](qa/BROWSER_QA_V0_91.md) using the
+First complete the pending v0.92 checks in the
+[hosted QA record](qa/BROWSER_QA_V0_92.md) using the
 [deployment guide](deployment/production-demo-deployment-plan.md). The broader
-production and product items below are later work, not v0.91 feature scope.
+production and product items below are later work, outside v0.92 scope.
 
 1. Review GitHub private vulnerability reporting, secret scanning/push
    protection, Dependabot alerts/security updates, code-scanning alerts, and

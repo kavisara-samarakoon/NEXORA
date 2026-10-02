@@ -10,11 +10,13 @@ complete a live deployment. Every checked item must link to current evidence,
 an owner, and an observation date. “Not applicable” requires a written reason;
 it must not conceal a failed security, persistence, or browser requirement.
 
-The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
-Its [local QA record](../qa/BROWSER_QA_V0_90.md) does not check off hosted gates.
-The active v0.91 branch is `feature/hosted-demo-readiness`; it validates hosted
-confidence without new product features. All hosted evidence remains
-[pending in BROWSER_QA_V0_91.md](../qa/BROWSER_QA_V0_91.md), including direct and
+The latest released milestone is `v0.91.0-hosted-demo-readiness-foundation`.
+The [v0.90 local QA record](../qa/BROWSER_QA_V0_90.md) does not check off hosted gates.
+The active milestone is v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`, covering private synthetic hosted
+deployment and evidence capture across Vercel, Render, and disposable Neon
+PostgreSQL. No real hosted evidence exists yet. All hosted evidence remains
+[pending in BROWSER_QA_V0_92.md](../qa/BROWSER_QA_V0_92.md), including direct and
 proxy health, browser auth, both cookies, CSRF failure, trusted/rejected origins,
 Wishlist and notification-preference restart persistence, external offers,
 log privacy, cleanup, and a reviewed rollback target.
@@ -37,6 +39,9 @@ for the concrete Vercel / Render / Neon path; record evidence here after running
 
 - [ ] Required backend, frontend, security, reviewer-tooling, and contract checks
   pass for the candidate commit.
+- [ ] Hosted Demo Readiness CI's Offline deployment tooling, Backend Docker
+  build, and Frontend hosted configuration build pass for the candidate commit;
+  these jobs do not establish hosted runtime results.
 - [ ] Advisory checks are described accurately and are not presented as gates.
 - [ ] Dependency and action findings are triaged without suppressing failures
   merely to deploy the demo.
@@ -94,8 +99,9 @@ for the concrete Vercel / Render / Neon path; record evidence here after running
 - [ ] Backend access uses a least-privilege identity and encrypted transport
   verified using the selected service's actual settings.
 - [ ] Flyway migration ownership is single and explicit; migrations and JPA
-  validation pass on a disposable candidate database first, with 12 successful
-  migrations (V1–V12), latest version `12`, and no failed migrations.
+  validation pass on a disposable candidate database first, with exactly 12
+  successful versioned migrations (V1–V12), latest successful version `12`, and
+  zero failed migrations.
 - [ ] Backup schedule, retention, encryption, deletion/export process, and restore
   test are documented and evidenced.
 - [ ] Application rollback and database recovery are treated separately.

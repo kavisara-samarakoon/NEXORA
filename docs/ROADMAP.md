@@ -4,17 +4,18 @@ This roadmap organizes possible next milestones. It does not promise dates, a
 public launch, or production readiness. Priorities should be revisited as the
 project's academic, portfolio, and product goals evolve.
 
-## Active milestone: v0.91 hosted demo readiness
+## Active milestone: v0.92 — Real Hosted Deployment Execution
 
-- Latest released milestone: `v0.90.0-full-stack-demo-readiness`; its
-  [local QA record](qa/BROWSER_QA_V0_90.md) remains historical evidence.
-- Active branch: `feature/hosted-demo-readiness`. v0.91 validates hosted
-  deployment confidence without adding new product features.
+- Latest released milestone: `v0.91.0-hosted-demo-readiness-foundation`;
+  the [v0.90 local QA record](qa/BROWSER_QA_V0_90.md) remains historical evidence.
+- Active branch: `feature/real-hosted-deployment-execution`. v0.92 covers private
+  synthetic hosted deployment and evidence capture across Vercel, Render, and
+  disposable Neon PostgreSQL. No real hosted evidence exists yet.
 - Complete direct backend health, frontend-proxy health, hosted browser auth,
   cookie attributes, CSRF rejection, trusted/rejected CORS/origins, Wishlist
   and notification-preference restart persistence, external deals
   success/cache/fallback, log privacy, cleanup, and rollback review.
-  [Hosted QA evidence is pending](qa/BROWSER_QA_V0_91.md); no check becomes
+  [Hosted QA evidence is pending](qa/BROWSER_QA_V0_92.md); no check becomes
   complete until its actual deployed result is recorded.
 
 ## Existing foundations and later polish
@@ -145,9 +146,10 @@ project's academic, portfolio, and product goals evolve.
   hosted-demo path while keeping provider configuration, credentials, live
   validation, deployment, and operational ownership subject to explicit review.
 - Validate the existing backend Dockerfile and Next.js framework hosting path
-  separately from local PostgreSQL Compose and devcontainer tooling. Hosted
-  docs select Node.js 24.x; CI still uses Node.js 20. Runtime parity and container
-  CI changes need a separate task.
+  separately from local PostgreSQL Compose and devcontainer tooling. Hosted Demo
+  Readiness CI includes Offline deployment tooling, Backend Docker build, and
+  Frontend hosted configuration build on Node.js 24; Frontend CI uses Node.js 20.
+  These builds do not establish hosted runtime behavior.
 - Establish environment-specific configuration, managed secret storage,
   backups, restore testing, health checks, and rollback expectations.
 - Add deployment automation only after those decisions are reviewed.

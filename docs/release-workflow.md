@@ -141,11 +141,13 @@ tagged, and the closure does not create or move another release tag.
 
 ## Current milestone state
 
-The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
-The active branch is `feature/hosted-demo-readiness` for v0.91 hosted demo
-readiness. v0.91 validates hosted deployment confidence without adding product
-features. The [hosted QA record](qa/BROWSER_QA_V0_91.md) remains pending until
-real deployed frontend, backend, and database checks are completed.
+The latest released milestone is `v0.91.0-hosted-demo-readiness-foundation`.
+The active milestone is v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`. v0.92 covers private synthetic hosted
+deployment and evidence capture across Vercel, Render, and disposable Neon
+PostgreSQL. No real hosted evidence exists yet. The
+[hosted QA record](qa/BROWSER_QA_V0_92.md) remains pending until real deployed
+frontend, backend, and database checks are completed.
 
 The earlier v0.77 milestone added manual, provider-neutral hosted PostgreSQL
 validation tooling. Neither that foundation, the v0.90 local QA record, nor a
