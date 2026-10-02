@@ -98,9 +98,12 @@ NEXT_PUBLIC_SITE_URL=
 
 Both origins above are deliberately blank. Supply the actual backend HTTPS
 origin and canonical frontend HTTPS origin before building. No deployed URLs
-are recorded by this example. Latest release: `v0.90.0-full-stack-demo-readiness`;
-v0.91 on `feature/hosted-demo-readiness` validates hosted confidence without
-new product features. [Hosted QA remains pending](../../docs/qa/BROWSER_QA_V0_91.md).
+are recorded by this example. Latest release: `v0.91.0-hosted-demo-readiness-foundation`.
+Active milestone: v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`, covering private synthetic hosted
+deployment and evidence capture across Vercel, Render, and disposable Neon
+PostgreSQL. No real hosted evidence exists yet.
+[Hosted QA remains pending](../../docs/qa/BROWSER_QA_V0_92.md).
 
 Browser requests such as `/api/auth/csrf` stay on the frontend origin.
 Next.js rewrites `/api/:path*` to `NEXORA_API_BASE_URL/api/:path*`, preserving

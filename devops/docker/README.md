@@ -58,7 +58,7 @@ export NEXORA_DB_PASSWORD=nexora_password
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Flyway runs from backend startup and applies migrations V1–V9 before JPA
+Flyway runs from backend startup and applies migrations V1–V12 before JPA
 validates the mapped schema. Docker Compose does not apply migrations itself.
 
 When the backend runs in the optional development container while Compose uses

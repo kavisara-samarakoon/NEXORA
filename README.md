@@ -11,10 +11,12 @@ Sentinel assistant in one locally runnable project.
 
 > **Project status:** Local/development MVP for learning, portfolio review, and
 > controlled evaluation. NEXORA is not deployed and is not production-ready.
-> Latest released milestone: `v0.90.0-full-stack-demo-readiness`.
-> Active work: v0.91 hosted demo readiness on `feature/hosted-demo-readiness`.
-> This milestone validates hosted deployment confidence without adding product
-> features. [Hosted QA evidence is pending](docs/qa/BROWSER_QA_V0_91.md).
+> Latest released milestone: `v0.91.0-hosted-demo-readiness-foundation`.
+> Active milestone: v0.92 — Real Hosted Deployment Execution on
+> `feature/real-hosted-deployment-execution`.
+> This milestone covers private synthetic hosted deployment and evidence capture
+> across Vercel, Render, and disposable Neon PostgreSQL. No real hosted evidence
+> exists yet. [Hosted QA evidence is pending](docs/qa/BROWSER_QA_V0_92.md).
 
 Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [project status](docs/PROJECT_STATUS.md) · [roadmap](docs/ROADMAP.md) ·
@@ -28,7 +30,7 @@ Reviewer links: [project overview](docs/PROJECT_OVERVIEW.md) ·
 [backend guide](backend/nexora-api/README.md) · [security policy](SECURITY.md) ·
 [development milestones](RELEASES.md) ·
 [v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md) ·
-[v0.91 hosted QA — pending](docs/qa/BROWSER_QA_V0_91.md) ·
+[v0.92 hosted QA — pending](docs/qa/BROWSER_QA_V0_92.md) ·
 [auth production-policy plan](docs/security/auth-production-policy-plan.md)
 
 Deployment setup: [Vercel / Render / Neon commands](docs/deployment/production-demo-deployment-plan.md) ·
@@ -105,7 +107,7 @@ development; it does not imply production-scale operations.
 | Production-like profile guard | `prod` or `production` requires `dev` so in-memory demo persistence cannot be selected |
 | External data | CheapShark for external offers that may be cached or fall back locally, plus optional wishlist price snapshots |
 | Delivery adapters | Log notification sender by default; optional Spring mail gateway |
-| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, local API smoke testing, OpenAPI contract checking, frontend lint/build, dependency checks, manual CodeQL-ready scanning, and pull-request dependency review |
+| Continuous integration | GitHub Actions for backend tests, PostgreSQL validation, local API smoke testing, OpenAPI contract checking, frontend lint/build, Hosted Demo Readiness, dependency checks, manual CodeQL-ready scanning, and pull-request dependency review |
 
 The public `GET /api/wishlist` contract remains separate from authenticated
 personal wishlist endpoints under `/api/me/wishlist`.
@@ -531,7 +533,8 @@ production retention/backup policy, or distributed storage was added.
 ## Continuous integration
 
 GitHub Actions validates both primary applications on pushes to `main` and pull
-requests targeting `main`:
+requests targeting `main`. Hosted Demo Readiness runs on pull requests and manual
+dispatch:
 
 | Workflow | Validation |
 | --- | --- |
@@ -540,6 +543,7 @@ requests targeting `main`:
 | `api-contract-ci.yml` | Runs the standard-library checker for the hand-maintained OpenAPI path, operation, schema, security, error, and localhost markers |
 | `reviewer-tooling-ci.yml` | Validates the reviewer preflight script's Bash syntax, executable bit, and read-only behavior from both the repository root and `/tmp` |
 | `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
+| `hosted-demo-readiness.yml` | Hosted Demo Readiness: Offline deployment tooling, Backend Docker build, and Frontend hosted configuration build with placeholder origins on Node.js 24; no hosted validation or deployment |
 | `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
 | `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
 | `dependency-review.yml` | Runs advisory pull-request dependency review with an intended high-severity threshold when repository support is available |
@@ -547,8 +551,9 @@ requests targeting `main`:
 The completed v0.67 workflow/tooling milestone updated official GitHub action
 majors to current Node 24-compatible releases. This action execution runtime is
 separate from the application toolchains: backend validation remains on Java 17
-and frontend validation remains on Node.js 20. Workflow triggers, commands,
-permissions, and Dependency Review's advisory policy are unchanged.
+and Frontend CI remains on Node.js 20; Hosted Demo Readiness uses Node.js 24.
+Workflow triggers, commands, permissions, and Dependency Review's advisory
+policy are unchanged.
 
 The frontend workflow does not build the retained Vite prototype. Backend CI
 keeps the normal test suite database-free and runs PostgreSQL validation in a
@@ -627,11 +632,12 @@ Smoke CI runs that same script against a locally started backend.
 
 ## Release milestones
 
-The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
-The active branch, `feature/hosted-demo-readiness`, prepares v0.91 hosted demo
-readiness. Its scope is hosted validation of the existing product. Evidence
-remains [pending](docs/qa/BROWSER_QA_V0_91.md) until real frontend, backend, and
-database checks are completed.
+The latest released milestone is `v0.91.0-hosted-demo-readiness-foundation`.
+The active milestone is v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`. Its scope is private synthetic hosted
+deployment and evidence capture across Vercel, Render, and disposable Neon
+PostgreSQL. Evidence remains [pending](docs/qa/BROWSER_QA_V0_92.md) until real
+frontend, backend, and database checks are completed.
 
 The v0.90 release scopes Wishlist editor drafts by view, account, and item;
 clears Sentinel conversation state across authentication changes; maps current
@@ -743,7 +749,8 @@ availability, scale, security-assurance, or compliance claim.
 - The [backend Dockerfile](backend/nexora-api/Dockerfile) packages Java 17 for
   Render. Docker Compose still covers local PostgreSQL only, and the optional
   devcontainer supplies a local toolchain. No frontend release image is provided.
-- CI does not build application containers. CodeQL and pull-request Dependency
+- Hosted Demo Readiness CI builds the backend Docker image; hosted execution
+  evidence remains pending. CodeQL and pull-request Dependency
   Review workflows are included, while repository secret scanning/push
   protection remain owner-managed settings and Maven dependency output remains
   visibility rather than a full vulnerability scan.
@@ -790,7 +797,7 @@ availability, scale, security-assurance, or compliance claim.
 - Hosted direct/proxy health, browser auth/cookies/CSRF/CORS, Wishlist and
   notification-preference persistence after backend restart, external-deal
   success/cache/fallback behavior, log privacy, cleanup, and rollback are
-  pending v0.91 evidence. The local default profile may use in-memory account
+  pending v0.92 evidence. The local default profile may use in-memory account
   and Wishlist storage that resets on restart.
 
 ## Roadmap
@@ -818,8 +825,9 @@ node --test tests/product-readiness.test.mjs
 git diff --check
 ```
 
-The command outcomes and focused runtime checks for the current candidate are
-recorded in [the v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md).
+Historical local command outcomes and focused runtime checks are recorded in
+[the v0.90 QA evidence](docs/qa/BROWSER_QA_V0_90.md). Current hosted evidence is
+[pending for v0.92](docs/qa/BROWSER_QA_V0_92.md).
 
 NEXORA is presented as a portfolio and academic software-engineering project.
 The repository demonstrates an end-to-end MVP and its tested foundations while

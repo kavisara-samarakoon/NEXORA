@@ -11,9 +11,12 @@ deployable provider configuration. The completed and tagged
 backend-only `hosted-demo` Spring profile described below. The completed and
 tagged `v0.77.0-hosted-postgresql-persistence-validation-foundation` is the
 earlier hosted-PostgreSQL validation milestone. The latest released milestone
-is `v0.90.0-full-stack-demo-readiness`. v0.91 on
-`feature/hosted-demo-readiness` validates hosted deployment confidence without
-new product features. [Hosted evidence is pending](../qa/BROWSER_QA_V0_91.md).
+is `v0.91.0-hosted-demo-readiness-foundation`. The active milestone is
+v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`, covering private synthetic hosted
+deployment and evidence capture across Vercel, Render, and disposable Neon
+PostgreSQL. No real hosted evidence exists yet.
+[Hosted evidence is pending](../qa/BROWSER_QA_V0_92.md).
 All displayed secret values remain non-secret placeholders; no hosted
 environment or live deployment is established by this plan.
 
@@ -232,11 +235,11 @@ existing Flyway migrations may initialize schema and seed data; therefore the
 database must be disposable. The test is skipped during ordinary backend tests
 unless the opt-in flag is true.
 
-The current schema is Flyway V1–V12. The hosted test still accepts at least 10
-successful migrations; separately record 12 successful migrations and latest
-version `12` until that assertion is tightened in a later test-only task.
+The current schema is Flyway V1–V12. The hosted test requires exactly 12
+successful versioned migrations, latest successful migration version `12`, and
+zero failed migrations.
 Neither this test nor `/api/health` proves persistence across backend restart;
-Wishlist and notification preferences need separate pending v0.91 checks.
+Wishlist and notification preferences need separate pending v0.92 checks.
 
 ## v0.76 implementation state
 

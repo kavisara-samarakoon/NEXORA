@@ -10,11 +10,13 @@ project.
 The project is built for software-engineering learning, academic evaluation,
 portfolio review, and continued local development. It is not deployed and is
 not production-ready. The latest released milestone is
-`v0.90.0-full-stack-demo-readiness`, with
-[local QA evidence](qa/BROWSER_QA_V0_90.md). The active branch is
-`feature/hosted-demo-readiness` for v0.91: validate hosted deployment confidence
-for the existing product without adding product features.
-[Hosted evidence is pending](qa/BROWSER_QA_V0_91.md) until real frontend,
+`v0.91.0-hosted-demo-readiness-foundation`. The
+[v0.90 local QA evidence](qa/BROWSER_QA_V0_90.md) remains historical. The active
+milestone is v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`: private synthetic hosted deployment
+and evidence capture across Vercel, Render, and disposable Neon PostgreSQL.
+No real hosted evidence exists yet.
+[Hosted evidence is pending](qa/BROWSER_QA_V0_92.md) until real frontend,
 backend, and database checks are completed.
 
 The completed and tagged v0.77 milestone added an opt-in, provider-neutral
@@ -144,6 +146,7 @@ deployment.
 | Production-like profile guard | `prod`/`production` requires the existing `dev` persistent profile and otherwise fails startup closed |
 | Optional providers | CheapShark price/deal data, SMTP email delivery, and Gemini Sentinel responses |
 | CI | Backend tests, PostgreSQL integration validation, frontend lint/build, reviewer preflight validation, advisory Dependency Review, separate npm audit and Maven dependency-tree checks, and manual CodeQL-ready analysis |
+| Hosted Demo Readiness CI | Offline deployment tooling, Backend Docker build, and Frontend hosted configuration build; build-time validation only |
 
 The primary frontend is `frontend/nexora-web-next`; the earlier Vite prototype
 is retained only for reference. The default local workflow does not require
@@ -155,7 +158,7 @@ use `NEXT_PUBLIC_API_BASE_URL=/`; the Next.js server rewrites `/api/**` to the
 backend HTTPS origin in `NEXORA_API_BASE_URL`, without `/api` or credentials.
 `NEXT_PUBLIC_*` values are browser-visible. Hosted cookies, exact-origin
 CORS/CSRF, persistence after restart, and provider fallbacks require the
-pending v0.91 checks. `/api/health` summarizes sanitized runtime configuration;
+pending v0.92 checks. `/api/health` summarizes sanitized runtime configuration;
 it does not establish database/provider liveness, mail delivery, Gemini
 availability, or frontend proxy correctness by itself.
 

@@ -3,10 +3,12 @@
 NEXORA is a local/development MVP, not a deployed or production-ready service.
 This guide distinguishes security automation stored in the repository from
 GitHub settings that the repository owner must configure and review separately.
-The latest released milestone is `v0.90.0-full-stack-demo-readiness`.
-The active v0.91 branch is `feature/hosted-demo-readiness`; its goal is hosted
-deployment confidence through validation of the existing product, without new
-product features. [Hosted evidence is pending](../qa/BROWSER_QA_V0_91.md),
+The latest released milestone is `v0.91.0-hosted-demo-readiness-foundation`.
+The active milestone is v0.92 — Real Hosted Deployment Execution on
+`feature/real-hosted-deployment-execution`, covering private synthetic hosted
+deployment and evidence capture across Vercel, Render, and disposable Neon
+PostgreSQL. No real hosted evidence exists yet.
+[Hosted evidence is pending](../qa/BROWSER_QA_V0_92.md),
 including actual cookie/CSRF/CORS behavior, auth/session handling, restart
 persistence, log privacy, cleanup, and rollback. Existing CI and startup guards
 do not establish those results. No workflow changes or live deployment are
@@ -18,6 +20,7 @@ implied by this documentation update.
 | --- | --- |
 | Backend CI | Runs the database-free Maven test suite and a separate PostgreSQL 16 `dev`-profile integration test. |
 | Frontend CI | Installs the primary Next.js dependencies, runs ESLint, and creates a production build for validation only. |
+| Hosted Demo Readiness CI | Runs Offline deployment tooling, Backend Docker build, and Frontend hosted configuration build; no hosted checks or deployment. |
 | Security CI | Gates on high-severity production npm audit findings and retains the JSON report; exports the Maven dependency tree as a visibility artifact. |
 | CodeQL | Manual CodeQL-ready workflow for Java and JavaScript/TypeScript. Automatic upload is disabled while private-repository code scanning is unavailable. |
 | Dependency Review | Runs advisory review of dependency changes on pull requests to `main`; `fail-on-severity: high` records the intended threshold when repository support is available. |
