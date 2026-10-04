@@ -18,7 +18,14 @@ import {
 } from "@/data/wishlist";
 import type { WishlistResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
-import { AUTH_STATE_EVENT, clearAuthToken, ensureAuthToken } from "@/lib/auth-client";
+import {
+  AUTH_STATE_EVENT,
+  clearAuthToken,
+  ensureAuthToken,
+  assertAuthSessionRevision,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
+} from "@/lib/auth-client";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
 import { wishlistCardIdentity } from "@/lib/wishlist-card-identity";
 import NotificationPreferencesPanel from "@/components/NotificationPreferencesPanel";
@@ -373,6 +380,7 @@ function WishlistCard({
   const settingsMessageId = `wishlist-settings-message-${item.id}`;
 
   async function loadPriceHistory() {
+    const sessionRevision = readAuthSessionRevision();
     if (!authToken || priceHistoryState === "loading") return;
     setPriceHistoryState("loading");
 
@@ -385,10 +393,12 @@ function WishlistCard({
           PRICE_HISTORY_REQUEST_LIMIT,
         ),
       );
+      assertAuthSessionRevision(result.sessionRevision);
       onTokenChanged(result.token);
       setPriceHistory(result.value);
       setPriceHistoryState("loaded");
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         onAuthenticationRequired();
@@ -830,12 +840,17 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       setAlertEventsLoading(true);
       setView("checking");
 
+      const sessionRevision = readAuthSessionRevision();
       const eventRequestVersion = ++alertEventsRequestVersion.current;
       const [wishlistResult, alertEventsResult] = await Promise.allSettled([
         withWishlistAuthRetry(token, getMyWishlist),
         withWishlistAuthRetry(token, getMyWishlistAlertEvents),
       ]);
       if (!active || currentVersion !== requestVersion) return;
+
+      if (sessionRevision !== readAuthSessionRevision()) return;
+      if ([wishlistResult, alertEventsResult].some((result) =>
+        result.status === "rejected" && isAuthSessionInvalidatedError(result.reason))) return;
 
       if (wishlistResult.status === "rejected") {
         const details = protectedWishlistError(wishlistResult.reason);
@@ -950,6 +965,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }, [wishlistItems]);
 
   async function refreshAlertEvents(token: string) {
+    const sessionRevision = readAuthSessionRevision();
     const requestVersion = ++alertEventsRequestVersion.current;
     setAlertEventsLoading(true);
     setAlertEventsMessage(null);
@@ -957,10 +973,12 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     try {
       const result = await withWishlistAuthRetry(token, getMyWishlistAlertEvents);
       if (requestVersion !== alertEventsRequestVersion.current) return;
+      assertAuthSessionRevision(result.sessionRevision);
       setAuthToken(result.token);
       setAlertEvents(result.value);
     } catch (error) {
       if (requestVersion !== alertEventsRequestVersion.current) return;
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -994,6 +1012,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     payload: UpdateWishlistAlertPayload,
     successMessage: string,
   ) {
+    const sessionRevision = readAuthSessionRevision();
     if (view !== "personal" || !authToken || updatingIds.has(item.id)) return;
 
     setUpdatingIds((current) => new Set(current).add(item.id));
@@ -1008,6 +1027,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         authToken,
         (activeToken) => updateMyWishlistAlert(activeToken, item.id, payload),
       );
+      assertAuthSessionRevision(result.sessionRevision);
       const updatedItem = result.value;
       setAuthToken(result.token);
       setPersonalItems((current) => current.map((candidate) =>
@@ -1019,6 +1039,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       }));
       void refreshAlertEvents(result.token);
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1042,6 +1063,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }
 
   async function handleDelete(item: WishlistItem) {
+    const sessionRevision = readAuthSessionRevision();
     if (view !== "personal" || !authToken || deletingIds.has(item.id)) return;
 
     setDeletingIds((current) => new Set(current).add(item.id));
@@ -1052,6 +1074,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         authToken,
         (activeToken) => deleteMyWishlistItem(activeToken, item.id),
       );
+      assertAuthSessionRevision(result.sessionRevision);
       setAuthToken(result.token);
       setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
       setAlerts((current) => {
@@ -1066,6 +1089,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       });
       setOperationMessage({ kind: "success", text: `${item.title} was removed from your personal wishlist.` });
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();

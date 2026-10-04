@@ -1,6 +1,11 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
+import {
+  assertAuthSessionRevision,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
+} from "@/lib/auth-client";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import {
@@ -73,6 +78,7 @@ export default function NotificationPreferencesPanel({
     let active = true;
 
     async function loadPreferences() {
+      const sessionRevision = readAuthSessionRevision();
       setLoadState("loading");
       setMessage(null);
 
@@ -82,12 +88,14 @@ export default function NotificationPreferencesPanel({
           getMyNotificationPreferences,
         );
         if (!active) return;
+        assertAuthSessionRevision(result.sessionRevision);
         onTokenChanged(result.token);
         setSavedPreferences(result.value);
         setDraftPreferences(result.value);
         setLoadState("ready");
       } catch (error) {
         if (!active) return;
+        if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
         const details = normalizeNotificationPreferenceError(error);
         if (details.status === 401) {
           onAuthenticationRequired();
@@ -117,6 +125,7 @@ export default function NotificationPreferencesPanel({
     event.preventDefault();
     if (!draftPreferences || !hasChanges || isSaving) return;
 
+    const sessionRevision = readAuthSessionRevision();
     setIsSaving(true);
     setMessage(null);
     try {
@@ -127,11 +136,13 @@ export default function NotificationPreferencesPanel({
           draftPreferences,
         ),
       );
+      assertAuthSessionRevision(result.sessionRevision);
       onTokenChanged(result.token);
       setSavedPreferences(result.value);
       setDraftPreferences(result.value);
       setMessage({ kind: "success", text: "Preferences saved to your account." });
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = normalizeNotificationPreferenceError(error);
       if (details.status === 401) {
         onAuthenticationRequired();

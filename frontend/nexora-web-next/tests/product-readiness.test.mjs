@@ -162,10 +162,20 @@ async function dealsWishlistHarness(initialItems = []) {
     assert.ok(node, `missing production declaration ${name}`);
     return node.getText(ast);
   };
+  const clientSource = await readFile(new URL("../src/lib/auth-client.ts", import.meta.url), "utf8");
+  const clientAst = ts.createSourceFile("auth-client.ts", clientSource, ts.ScriptTarget.Latest, true);
+  const sharedNames = ["AuthSessionInvalidatedError", "isAuthSessionInvalidatedError", "assertAuthSessionRevision", "withAuthSessionRetry"];
+  const sharedSource = clientAst.statements.filter(node => sharedNames.includes(node.name?.text))
+    .map(node => node.getText(clientAst)).join("\n");
+  const sharedRuntime = ts.transpileModule(sharedSource, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
   const authUrl = `data:text/javascript,${encodeURIComponent(`
-    export const controls = { token: "initial", refreshedToken: "rotated", refreshCalls: 0, clearCalls: 0, error: null, pending: null };
+    export const controls = { revision: 0, token: "initial", refreshedToken: "rotated", refreshCalls: 0, clearCalls: 0, error: null, pending: null };
+    ${sharedRuntime}
+    export const readAuthSessionRevision = () => controls.revision;
     export const readAuthToken = () => controls.token;
-    export const clearAuthToken = () => { controls.clearCalls++; controls.token = null; };
+    export const clearAuthToken = () => { controls.clearCalls++; controls.token = null; controls.revision++; };
     export const ensureAuthToken = async (options = {}) => {
       if (controls.pending) await controls.pending;
       if (controls.error) throw controls.error;
@@ -174,7 +184,7 @@ async function dealsWishlistHarness(initialItems = []) {
     };
   `)}`;
   const auth = await import(authUrl);
-  Object.assign(auth.controls, { token: "initial", refreshedToken: "rotated", refreshCalls: 0, clearCalls: 0, error: null, pending: null });
+  Object.assign(auth.controls, { revision: 0, token: "initial", refreshedToken: "rotated", refreshCalls: 0, clearCalls: 0, error: null, pending: null });
   const apiUrl = `data:text/javascript,${encodeURIComponent('export const buildApiUrl = path => "http://localhost:8080" + path; export const readResponseRequestId = response => response.headers.get("X-NEXORA-Request-ID");')}`;
   const wishlist = await import(await moduleUrl("../src/lib/user-wishlist.ts", {
     "@/lib/auth-client": authUrl,
@@ -273,6 +283,13 @@ async function sentinelChatHarness() {
   const sentinel = await import(await moduleUrl("../src/lib/user-sentinel.ts", {
     "@/lib/auth-client": clientUrl, "@/lib/api-client": apiUrl,
   }));
+  const wishlist = await import(await moduleUrl("../src/lib/user-wishlist.ts", {
+    "@/lib/auth-client": clientUrl, "@/lib/api-client": apiUrl,
+    "@/data/wishlist": await moduleUrl("../src/data/wishlist.ts"),
+  }));
+  const preferences = await import(await moduleUrl("../src/lib/user-notification-preferences.ts", {
+    "@/lib/auth-client": clientUrl, "@/lib/api-client": apiUrl,
+  }));
   const source = await readFile(new URL("../src/components/SentinelChat.tsx", import.meta.url), "utf8");
   const ast = ts.createSourceFile("sentinel.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const program = ast.statements.filter(node => !ts.isImportDeclaration(node))
@@ -294,11 +311,11 @@ async function sentinelChatHarness() {
   const responses = [];
   globalThis.fetch = async (url, init) => {
     const path = new URL(url).pathname;
-    calls.push({ path, token: init.headers?.Authorization, body: init.body ? JSON.parse(init.body) : undefined });
+    calls.push({ path, method: init.method, token: init.headers?.Authorization, body: init.body ? JSON.parse(init.body) : undefined });
     if (path.endsWith("/csrf")) return Response.json({ csrfToken: "a".repeat(43) });
-    assert.ok(responses.length, `unexpected Sentinel/auth request ${path}`);
-    const next = responses.shift();
-    assert.equal(path, next.path);
+    const index = responses.findIndex(next => next.path === path);
+    assert.ok(index >= 0, `unexpected protected/auth request ${path}`);
+    const [next] = responses.splice(index, 1);
     return next.reply();
   };
   auth.startAuthSession(sentinelSession());
@@ -358,7 +375,7 @@ async function sentinelChatHarness() {
   await settle();
   render();
   return {
-    auth, calls, storageCalls, render,
+    auth, authApi: await import(authUrl), wishlist, preferences, calls, storageCalls, render,
     answer: () => { render(); return find(node => node.type.name === "GatewayResponseCard")?.props.response; },
     input: () => { render(); return find(node => node.props.id === "sentinel-message").props; },
     signIn: () => { render(); return find(node => node.props.href === "/login?returnTo=%2Fsentinel"); },
@@ -391,6 +408,375 @@ async function sentinelChatHarness() {
 
 const insightPath = "/api/me/sentinel/insight";
 const refreshPath = "/api/auth/refresh";
+
+const preferencePath = "/api/me/notification-preferences";
+const wishlistPath = "/api/me/wishlist";
+const persistedPreferences = {
+  emailEnabled: false, inAppEnabled: true, targetReachedEnabled: true,
+  priceDropEnabled: true, freeGameEnabled: false,
+};
+
+// Extract actual component handlers, retaining their success/error callbacks.
+async function accountOperationHandlers(h) {
+  const state = {
+    added: [], authRequired: 0, changedTokens: [], resets: 0,
+    message: null, isSubmitting: false, isSaving: false,
+    savedPreferences: { ...persistedPreferences, emailEnabled: true },
+    draftPreferences: { ...persistedPreferences, emailEnabled: true },
+    personalItems: [{ ...alertItem, title: "Account B item" }],
+    alerts: { [alertItem.id]: false }, itemMessages: {}, operationMessage: null,
+    updatingIds: new Set(), deletingIds: new Set(),
+    priceHistory: [], priceHistoryState: "idle", loadState: "idle",
+    alertEvents: [], alertEventsLoading: false, alertEventsMessage: null,
+    savedWishlistItems: [], saveMessages: {}, savingDeals: new Set(),
+    authChecked: true, authToken: "initial", wishlistSyncRevision: 0,
+  };
+  const setters = Object.fromEntries(Object.keys(state).map(key => [
+    `set${key[0].toUpperCase()}${key.slice(1)}`,
+    value => { state[key] = typeof value === "function" ? value(state[key]) : value; },
+  ]));
+  const mocks = {
+    ...h.auth, ...h.wishlist, ...h.preferences, ...setters,
+    token: "initial", authToken: "initial", view: "personal",
+    updatingIds: new Set(), deletingIds: new Set(),
+    draftPreferences: persistedPreferences, hasChanges: true, isSaving: false,
+    onAdded: item => state.added.push(item),
+    onTokenChanged: token => state.changedTokens.push(token),
+    onAuthenticationRequired: () => { state.authRequired++; h.auth.clearAuthToken(); },
+    handleAuthenticationRequired: () => { state.authRequired++; h.auth.clearAuthToken(); },
+    refreshAlertEvents: () => {},
+    active: true, item: alertItem, priceHistoryState: "idle", PRICE_HISTORY_REQUEST_LIMIT: 12,
+    alertEventsRequestVersion: { current: 0 },
+    useCallback: callback => callback, displayedDealScope: "curated",
+    savingDealKeys: { current: new Set() }, savedWishlistItemsRef: { current: [] },
+    wishlistVersion: { current: 0 }, mounted: { current: true },
+    normalizeAuthError: h.authApi.normalizeAuthError,
+    protectedWishlistError: h.wishlist.normalizeUserWishlistError,
+    normalizeTargetPriceInput: value => value,
+    FormData: class {
+      get(name) { return { title: "Account A private title", currentPrice: "$10.00", targetPrice: "$5.00", store: "Steam", priority: "high", status: "tracking", alertActive: "on" }[name]; }
+    },
+  };
+  async function extract(file, componentName, names, topLevelNames = []) {
+    const source = await readFile(new URL(`../src/components/${file}`, import.meta.url), "utf8");
+    const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const component = ast.statements.find(node => node.name?.text === componentName);
+    const declarations = [];
+    function collect(node) {
+      if ((ts.isFunctionDeclaration(node) && names.includes(node.name?.text)) ||
+        (ts.isVariableStatement(node) && node.declarationList.declarations.some(item => names.includes(item.name.getText(ast))))) declarations.push(node);
+      else ts.forEachChild(node, collect);
+    }
+    collect(component);
+    const program = [
+      ...ast.statements.filter(node => topLevelNames.includes(node.name?.text)),
+      ...declarations,
+    ].map(node => node.getText(ast)).join("\n");
+    const output = ts.transpileModule(program, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+    return new Function(...Object.keys(mocks), `${output}\nreturn { ${names.join(", ")} };`)(...Object.values(mocks));
+  }
+  return {
+    state,
+    ...await extract("AddWishlistItemForm.tsx", "AddWishlistItemForm", ["handleSubmit"], ["readRequiredText"]),
+    ...await extract("NotificationPreferencesPanel.tsx", "NotificationPreferencesPanel", ["savePreferences", "loadPreferences"]),
+    ...await extract("WishlistExplorer.tsx", "WishlistExplorer", ["handleAlertUpdate", "handleDelete", "refreshAlertEvents"]),
+    ...await extract("WishlistExplorer.tsx", "WishlistCard", ["loadPriceHistory"]),
+    ...await extract("DealsExplorer.tsx", "DealsExplorer", ["saveDeal", "storeWishlistItems"],
+      ["protectedWishlistError", "normalizedWishlistValue", "findMatchingWishlistItem", "dealStateKey", "wishlistOperationKey", "wishlistPayloadFor"]),
+    event: { preventDefault() {}, currentTarget: { reset: () => { state.resets++; } } },
+  };
+}
+
+test("wishlist and preference helpers reject late success/401/failure across logout, account switch and explicit same-user login", async () => {
+  for (const domain of ["wishlist", "preferences"]) {
+    for (const transition of ["logout", "other-account", "new-same-account-session"]) {
+      for (const status of [200, 401, 503]) {
+        const h = await sentinelChatHarness();
+        try {
+          const path = domain === "wishlist" ? wishlistPath : preferencePath;
+          const reply = h.defer(path);
+          const operation = domain === "wishlist"
+            ? h.wishlist.withWishlistAuthRetry("initial", token => h.wishlist.addMyWishlistItem(token, { title: "A private title", store: "Steam", currentPrice: "$10.00", targetPrice: "$5.00" }))
+            : h.preferences.withNotificationPreferenceAuthRetry("initial", token => h.preferences.updateMyNotificationPreferences(token, persistedPreferences));
+          // Attach rejection handling before ending the originating session.
+          const rejected = assert.rejects(operation, error => h.auth.isAuthSessionInvalidatedError(error));
+          if (transition === "logout") {
+            h.respond("/api/auth/logout", {});
+            await h.auth.logout();
+          } else {
+            h.auth.startAuthSession(sentinelSession(transition === "other-account" ? 2 : 1, "replacement"));
+          }
+          const revision = h.auth.readAuthSessionRevision();
+          reply(domain === "wishlist" ? alertItem : persistedPreferences, status);
+          await rejected;
+          assert.deepEqual(h.calls.filter(call => call.path === path).map(call => call.token), ["Bearer initial"]);
+          assert.equal(h.auth.readAuthToken(), transition === "logout" ? null : "replacement");
+          assert.equal(h.auth.readAuthSessionRevision(), revision, "stale failure must not end replacement session");
+          assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+        } finally { h.restore(); }
+      }
+    }
+  }
+});
+
+test("production add, preference save, wishlist PATCH and delete handlers discard old-account completions without callbacks or success feedback", async () => {
+  for (const action of ["add", "preferences", "update", "delete"]) {
+    for (const status of [200, 401, 503]) {
+      const h = await sentinelChatHarness();
+      try {
+        const handlers = await accountOperationHandlers(h);
+        const path = action === "preferences" ? preferencePath : action === "update"
+          ? `${wishlistPath}/${alertItem.id}/alert` : action === "delete" ? `${wishlistPath}/${alertItem.id}` : wishlistPath;
+        const reply = h.defer(path);
+        const operation = action === "add" ? handlers.handleSubmit(handlers.event)
+          : action === "preferences" ? handlers.savePreferences(handlers.event)
+          : action === "update" ? handlers.handleAlertUpdate(alertItem, { alertActive: true }, "Alert enabled")
+          : handlers.handleDelete(alertItem);
+        h.auth.clearAuthToken();
+        h.auth.startAuthSession(sentinelSession(2, "account-b"));
+        const revision = h.auth.readAuthSessionRevision();
+        const before = structuredClone(handlers.state);
+        reply(action === "preferences" ? persistedPreferences : { ...alertItem, alertActive: true }, status);
+        await operation;
+        const state = handlers.state;
+        assert.deepEqual(state.personalItems, before.personalItems);
+        assert.deepEqual(state.alerts, before.alerts);
+        assert.deepEqual(state.savedPreferences, before.savedPreferences);
+        assert.deepEqual(state.draftPreferences, before.draftPreferences);
+        assert.deepEqual(state.added, []);
+        assert.deepEqual(state.changedTokens, []);
+        assert.equal(state.authRequired, 0);
+        assert.equal(state.resets, 0);
+        assert.equal(state.message, null);
+        assert.equal(state.operationMessage, null);
+        assert.deepEqual(state.itemMessages, {});
+        assert.equal(h.auth.readAuthToken(), "account-b");
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal(h.calls.filter(call => call.path === path).length, 1);
+      } finally { h.restore(); }
+    }
+  }
+});
+
+test("wishlist and preference retries share a coalesced same-user refresh and preserve the session revision", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const revision = h.auth.readAuthSessionRevision();
+    const wishlistReply = h.defer(wishlistPath);
+    const preferenceReply = h.defer(preferencePath);
+    const a = h.wishlist.withWishlistAuthRetry("initial", token => h.wishlist.addMyWishlistItem(token, { title: "Title", store: "Steam", currentPrice: "$10", targetPrice: "$5" }));
+    const b = h.preferences.withNotificationPreferenceAuthRetry("initial", token => h.preferences.updateMyNotificationPreferences(token, persistedPreferences));
+    const refreshReply = h.defer(refreshPath);
+    wishlistReply({}, 401);
+    preferenceReply({}, 401);
+    await settle();
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 1);
+    h.respond(wishlistPath, alertItem);
+    h.respond(preferencePath, persistedPreferences);
+    refreshReply(sentinelSession(1, "rotated"));
+    const results = await Promise.all([a, b]);
+    assert.deepEqual(results.map(result => result.token), ["rotated", "rotated"]);
+    assert.deepEqual(results.map(result => result.sessionRevision), [revision, revision]);
+    assert.deepEqual(results.map(result => result.value), [alertItem, persistedPreferences]);
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.deepEqual(h.calls.filter(call => [wishlistPath, preferencePath].includes(call.path)).map(call => call.token),
+      ["Bearer initial", "Bearer initial", "Bearer rotated", "Bearer rotated"]);
+  } finally { h.restore(); }
+});
+
+test("protected read handlers discard late account-A history/events/preferences without touching B state or auth", async () => {
+  for (const action of ["history", "events", "preferences"]) {
+    for (const status of [200, 401]) {
+      const h = await sentinelChatHarness();
+      try {
+        const handlers = await accountOperationHandlers(h);
+        const path = action === "preferences" ? preferencePath : action === "history"
+          ? `${wishlistPath}/${alertItem.id}/price-history` : `${wishlistPath}/alert-events`;
+        const reply = h.defer(path);
+        const operation = action === "preferences" ? handlers.loadPreferences()
+          : action === "history" ? handlers.loadPriceHistory() : handlers.refreshAlertEvents("initial");
+        h.auth.startAuthSession(sentinelSession(2, "account-b"));
+        const before = structuredClone(handlers.state);
+        reply(action === "preferences" ? persistedPreferences : [], status);
+        await operation;
+        assert.deepEqual(handlers.state.savedPreferences, before.savedPreferences);
+        assert.deepEqual(handlers.state.draftPreferences, before.draftPreferences);
+        assert.deepEqual(handlers.state.priceHistory, before.priceHistory);
+        assert.deepEqual(handlers.state.alertEvents, before.alertEvents);
+        assert.equal(handlers.state.authRequired, 0);
+        assert.deepEqual(handlers.state.changedTokens, []);
+        assert.equal(handlers.state.message, null);
+        assert.equal(h.auth.readAuthToken(), "account-b");
+        assert.equal(h.calls.filter(call => call.path === path).length, 1);
+      } finally { h.restore(); }
+    }
+  }
+});
+
+test("consumer continuation guards reject a boundary after helper completion, including an ordinary late 401", async () => {
+  for (const domain of ["wishlist", "preferences"]) {
+    for (const status of [200, 401]) {
+      const h = await sentinelChatHarness();
+      try {
+        const client = domain === "wishlist" ? h.wishlist : h.preferences;
+        const name = domain === "wishlist" ? "withWishlistAuthRetry" : "withNotificationPreferenceAuthRetry";
+        // Resolve/reject the real helper, then change session before the handler resumes.
+        h[domain] = { ...client, [name]: async (...args) => {
+          try { return await client[name](...args); }
+          finally { h.auth.startAuthSession(sentinelSession(2, "account-b")); }
+        } };
+        const handlers = await accountOperationHandlers(h);
+        const path = domain === "wishlist" ? wishlistPath : preferencePath;
+        h.respond(path, domain === "wishlist" ? alertItem : persistedPreferences, status);
+        if (status === 401) {
+          h.respond(refreshPath, sentinelSession(1, "rotated"));
+          h.respond(path, {}, 401);
+        }
+        await (domain === "wishlist" ? handlers.handleSubmit(handlers.event) : handlers.savePreferences(handlers.event));
+        assert.deepEqual(handlers.state.added, []);
+        assert.deepEqual(handlers.state.changedTokens, []);
+        assert.equal(handlers.state.message, null);
+        assert.equal(handlers.state.authRequired, 0);
+        assert.equal(h.auth.readAuthToken(), "account-b");
+      } finally { h.restore(); }
+    }
+  }
+});
+
+test("production add and preference save handlers accept same-user rotation and preserve persisted success callbacks", async () => {
+  for (const domain of ["wishlist", "preferences"]) {
+    const h = await sentinelChatHarness();
+    try {
+      const handlers = await accountOperationHandlers(h);
+      const path = domain === "wishlist" ? wishlistPath : preferencePath;
+      const reply = h.defer(path);
+      const operation = domain === "wishlist" ? handlers.handleSubmit(handlers.event) : handlers.savePreferences(handlers.event);
+      const revision = h.auth.readAuthSessionRevision();
+      h.respond(refreshPath, sentinelSession(1, "rotated"));
+      await h.auth.ensureAuthToken({ forceRefresh: true });
+      h.respond(path, domain === "wishlist" ? alertItem : persistedPreferences);
+      reply({}, 401);
+      await operation;
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.deepEqual(handlers.state.changedTokens, ["rotated"]);
+      assert.equal(handlers.state.authRequired, 0);
+      assert.equal(handlers.state.message[domain === "wishlist" ? "tone" : "kind"], "success");
+      if (domain === "wishlist") assert.deepEqual(handlers.state.added, [alertItem]);
+      else assert.deepEqual(handlers.state.savedPreferences, persistedPreferences);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 1, "already rotated token needs no second refresh");
+    } finally { h.restore(); }
+  }
+});
+
+test("boundary during refresh rejects replacement credentials, and boundary during retry rejects success and 401", async () => {
+  for (const domain of ["wishlist", "preferences"]) {
+    for (const phase of ["refresh", "retry-success", "retry-401"]) {
+      const h = await sentinelChatHarness();
+      try {
+        const path = domain === "wishlist" ? wishlistPath : preferencePath;
+        h.respond(path, {}, 401);
+        const refreshReply = h.defer(refreshPath);
+        const operation = domain === "wishlist"
+          ? h.wishlist.withWishlistAuthRetry("initial", h.wishlist.getMyWishlist)
+          : h.preferences.withNotificationPreferenceAuthRetry("initial", h.preferences.getMyNotificationPreferences);
+        const rejected = assert.rejects(operation, error => h.auth.isAuthSessionInvalidatedError(error));
+        await settle();
+        let retryReply;
+        if (phase !== "refresh") {
+          retryReply = h.defer(path);
+          refreshReply(sentinelSession(1, "rotated"));
+          await settle();
+        }
+        h.auth.startAuthSession(sentinelSession(2, "account-b"));
+        const revision = h.auth.readAuthSessionRevision();
+        if (phase === "refresh") refreshReply(sentinelSession(1, "late-rotation"));
+        else retryReply(domain === "wishlist" ? [alertItem] : persistedPreferences, phase === "retry-401" ? 401 : 200);
+        await rejected;
+        assert.equal(h.auth.readAuthToken(), "account-b");
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.ok(h.calls.filter(call => call.path === path).every(call => call.token !== "Bearer account-b"));
+        assert.equal(h.calls.filter(call => call.path === path).length, phase === "refresh" ? 1 : 2);
+      } finally { h.restore(); }
+    }
+  }
+});
+
+test("current-session service errors retain request IDs and terminal refresh failure never retries mutations", async () => {
+  for (const domain of ["wishlist", "preferences"]) {
+    for (const terminal of [false, true]) {
+      const h = await sentinelChatHarness();
+      try {
+        const path = domain === "wishlist" ? wishlistPath : preferencePath;
+        h.respond(path, {}, terminal ? 401 : 503, "b04-request-id");
+        if (terminal) h.respond(refreshPath, {}, 401);
+        const operation = domain === "wishlist"
+          ? h.wishlist.withWishlistAuthRetry("initial", h.wishlist.getMyWishlist)
+          : h.preferences.withNotificationPreferenceAuthRetry("initial", h.preferences.getMyNotificationPreferences);
+        await assert.rejects(operation, error => terminal
+          ? h.auth.isAuthSessionInvalidatedError(error)
+          : (error.requestId === "b04-request-id" && error.details.status === 503));
+        assert.equal(h.auth.readAuthToken(), terminal ? null : "initial");
+        assert.equal(h.calls.filter(call => call.path === path).length, 1);
+      } finally { h.restore(); }
+    }
+  }
+});
+
+test("Deals session boundary blocks delayed POST retry, follow-up alert PATCH and stale success feedback", async () => {
+  for (const status of [200, 401, 409, 503]) {
+    const h = await sentinelChatHarness();
+    try {
+      const handlers = await accountOperationHandlers(h);
+      const reply = h.defer(wishlistPath);
+      const operation = handlers.saveDeal(alertDeal, true);
+      await settle();
+      h.auth.startAuthSession(sentinelSession(2, "account-b"));
+      const before = structuredClone(handlers.state);
+      reply(alertItem, status);
+      await operation;
+      assert.deepEqual(handlers.state.savedWishlistItems, before.savedWishlistItems);
+      assert.deepEqual(handlers.state.saveMessages, before.saveMessages);
+      assert.equal(h.auth.readAuthToken(), "account-b");
+      assert.deepEqual(h.calls.filter(call => call.path.startsWith(wishlistPath)).map(call => call.method), ["POST"]);
+    } finally { h.restore(); }
+  }
+});
+
+test("production login/register handlers establish a new session and logout invalidates it", async () => {
+  for (const mode of ["login", "register"]) {
+    const h = await sentinelChatHarness();
+    try {
+      const componentName = mode === "login" ? "LoginForm" : "RegisterForm";
+      const source = await readFile(new URL(`../src/components/${componentName}.tsx`, import.meta.url), "utf8");
+      const ast = ts.createSourceFile("auth-form.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const component = ast.statements.find(node => node.name?.text === componentName);
+      const handler = component.body.statements.find(node => node.name?.text === "handleSubmit");
+      const output = ts.transpileModule(handler.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+      const routes = [];
+      let reset = false;
+      const mocks = {
+        ...h.auth, ...h.authApi, authFieldError, isSubmitting: false,
+        setIsSubmitting() {}, setErrorDetails() {}, returnTo: productReturnTo("/wishlist"),
+        router: { replace: value => routes.push(value) },
+        FormData: class { get(name) { return name === "password" ? "pass1234" : " player "; } },
+      };
+      const submit = new Function(...Object.keys(mocks), `${output}\nreturn handleSubmit;`)(...Object.values(mocks));
+      const revision = h.auth.readAuthSessionRevision();
+      h.respond(`/api/auth/${mode}`, sentinelSession(2, "new-session"));
+      await submit({ preventDefault() {}, currentTarget: {
+        querySelectorAll: () => [], reportValidity: () => true, reset: () => { reset = true; },
+      } });
+      assert.equal(h.auth.readAuthToken(), "new-session");
+      assert.ok(h.auth.readAuthSessionRevision() > revision);
+      assert.deepEqual(routes, ["/wishlist"]);
+      assert.equal(reset, true);
+      h.respond("/api/auth/logout", {});
+      await h.auth.logout();
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.ok(h.auth.readAuthSessionRevision() > revision + 1);
+    } finally { h.restore(); }
+  }
+});
 
 test("Sentinel renders normal success and a real 401 / same-user refresh / retry success", async () => {
   for (const refresh of [false, true]) {

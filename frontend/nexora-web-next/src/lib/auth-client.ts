@@ -56,6 +56,57 @@ export function readAuthSessionRevision(): number {
   return authSessionRevision;
 }
 
+export class AuthSessionInvalidatedError extends Error {
+  constructor() {
+    super("The authentication session changed.");
+    this.name = "AuthSessionInvalidatedError";
+  }
+}
+
+export function isAuthSessionInvalidatedError(error: unknown): error is AuthSessionInvalidatedError {
+  return error instanceof AuthSessionInvalidatedError;
+}
+
+export function assertAuthSessionRevision(revision: number): void {
+  if (revision !== readAuthSessionRevision()) throw new AuthSessionInvalidatedError();
+}
+
+// Bind both attempts and their completions to the originating client session.
+// Consumers also check the returned revision immediately before applying state.
+export async function withAuthSessionRetry<T>(
+  token: string,
+  request: (activeToken: string) => Promise<T>,
+  isAuthenticationError: (error: unknown) => boolean,
+): Promise<{ value: T; token: string; sessionRevision: number }> {
+  const sessionRevision = readAuthSessionRevision();
+  async function attempt(activeToken: string) {
+    assertAuthSessionRevision(sessionRevision);
+    const value = await request(activeToken);
+    assertAuthSessionRevision(sessionRevision);
+    return { value, token: activeToken, sessionRevision };
+  }
+
+  try {
+    return await attempt(token);
+  } catch (error) {
+    assertAuthSessionRevision(sessionRevision);
+    if (!isAuthenticationError(error)) throw error;
+
+    try {
+      const currentToken = readAuthToken();
+      const refreshedToken = currentToken && currentToken !== token
+        ? currentToken
+        : await ensureAuthToken({ forceRefresh: true });
+      assertAuthSessionRevision(sessionRevision);
+      if (!refreshedToken) throw error;
+      return await attempt(refreshedToken);
+    } catch (retryError) {
+      assertAuthSessionRevision(sessionRevision);
+      throw retryError;
+    }
+  }
+}
+
 export function saveAuthToken(token: string): void {
   currentAccessToken = token;
   currentUser = null;
