@@ -115,6 +115,9 @@ test("Sentinel rejects responses from requests invalidated by an auth change", (
   const nextSessionRequest = guard.begin();
   assert.equal(guard.isCurrent(signedInRequest), false);
   assert.equal(guard.isCurrent(nextSessionRequest), true);
+  const newerRequest = guard.begin();
+  assert.equal(guard.isCurrent(nextSessionRequest), false, "a superseded request cannot overwrite its successor");
+  assert.equal(guard.isCurrent(newerRequest), true);
 });
 
 test("deal ratings distinguish unavailable data from real ratings", () => {
@@ -240,6 +243,327 @@ const alertDeal = { id: 7, title: "Example Game", store: "Steam", priceNew: "$9.
 const alertItem = { ...alertDeal, id: 42, currentPrice: "$10.99", targetPrice: "$5.00", lowestEver: "$8.00", status: "tracking", priority: "high", alertActive: false };
 const alertMessage = harness => harness.state.saveMessages["curated:7:Example Game"];
 const settle = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+
+let sentinelHarnessId = 0;
+const sentinelSession = (id = 1, token = "initial") => ({
+  token, tokenType: "Bearer",
+  user: { id, username: `player${id}`, displayName: `Player ${id}`, email: `player${id}@example.test` },
+});
+const sentinelAnswer = (answer = "Current answer", overrides = {}) => ({
+  mode: "local-foundation", provider: "local", context: "general",
+  title: "Insight", answer, recommendations: [], safetyNotes: ["Bounded context"],
+  nextActions: [], fallbackReason: null, createdAt: "2026-10-04T00:00:00Z", ...overrides,
+});
+
+// Run the production component (including its JSX and auth-event effect) with
+// stable hook cells, real auth/HTTP/retry modules, and controlled network replies.
+async function sentinelChatHarness() {
+  const apiUrl = `data:text/javascript,${encodeURIComponent(`
+    export const harnessId = ${++sentinelHarnessId};
+    export const buildApiUrl = path => "http://localhost:8080" + path;
+    export const readResponseRequestId = response => response.headers.get("X-NEXORA-Request-ID");
+  `)}`;
+  const authUrl = await moduleUrl("../src/lib/auth.ts", { "@/lib/api-client": apiUrl });
+  const clientUrl = await moduleUrl("../src/lib/auth-client.ts", { "@/lib/auth": authUrl });
+  const auth = await import(clientUrl);
+  const sentinel = await import(await moduleUrl("../src/lib/user-sentinel.ts", {
+    "@/lib/auth-client": clientUrl, "@/lib/api-client": apiUrl,
+  }));
+  const source = await readFile(new URL("../src/components/SentinelChat.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("sentinel.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const program = ast.statements.filter(node => !ts.isImportDeclaration(node))
+    .map(node => node.getText(ast)).join("\n").replace("export default function SentinelChat", "function SentinelChat");
+  const output = ts.transpileModule(program, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
+  }).outputText;
+  const originalWindow = globalThis.window;
+  const originalFetch = globalThis.fetch;
+  const eventTarget = new EventTarget();
+  const storageCalls = [];
+  eventTarget.localStorage = {
+    removeItem: key => storageCalls.push(["remove", key]),
+    setItem: (...args) => { storageCalls.push(["set", ...args]); },
+  };
+  eventTarget.requestAnimationFrame = callback => { callback(); return 1; };
+  globalThis.window = eventTarget;
+  const calls = [];
+  const responses = [];
+  globalThis.fetch = async (url, init) => {
+    const path = new URL(url).pathname;
+    calls.push({ path, token: init.headers?.Authorization, body: init.body ? JSON.parse(init.body) : undefined });
+    if (path.endsWith("/csrf")) return Response.json({ csrfToken: "a".repeat(43) });
+    assert.ok(responses.length, `unexpected Sentinel/auth request ${path}`);
+    const next = responses.shift();
+    assert.equal(path, next.path);
+    return next.reply();
+  };
+  auth.startAuthSession(sentinelSession());
+  let cursor = 0;
+  const cells = [];
+  let effects = [];
+  const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
+  const hooks = {
+    useState(initial) {
+      const index = cursor++;
+      cells[index] ??= { value: typeof initial === "function" ? initial() : initial };
+      return [cells[index].value, value => {
+        cells[index].value = typeof value === "function" ? value(cells[index].value) : value;
+      }];
+    },
+    useRef(initial) {
+      const index = cursor++;
+      cells[index] ??= { current: initial };
+      return cells[index];
+    },
+    useCallback(callback, deps) {
+      const index = cursor++;
+      if (!sameDeps(cells[index]?.deps, deps)) cells[index] = { value: callback, deps };
+      return cells[index].value;
+    },
+    useEffect(callback, deps) {
+      const index = cursor++;
+      if (sameDeps(cells[index]?.deps, deps)) return;
+      effects.push(() => {
+        cells[index]?.cleanup?.();
+        cells[index] = { deps, cleanup: callback() };
+      });
+    },
+  };
+  const mocks = {
+    ...hooks, ...auth, ...sentinel, createSentinelRequestGuard,
+    Link: "Link", RequestIdSupportText: "RequestIdSupportText",
+    React: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }), Fragment: "Fragment" },
+  };
+  const Component = new Function(...Object.keys(mocks), `${output}\nreturn SentinelChat;`)(...Object.values(mocks));
+  let tree;
+  const render = () => {
+    cursor = 0;
+    tree = Component({ messages: [], suggestions: [] });
+    const pending = effects;
+    effects = [];
+    pending.forEach(effect => effect());
+    return tree;
+  };
+  const nodes = (node = tree) => {
+    if (Array.isArray(node)) return node.flatMap(item => nodes(item));
+    if (!node || typeof node !== "object") return [];
+    return [node, ...nodes(node.props.children)];
+  };
+  const find = predicate => nodes().find(predicate);
+  render();
+  await settle();
+  render();
+  return {
+    auth, calls, storageCalls, render,
+    answer: () => { render(); return find(node => node.type.name === "GatewayResponseCard")?.props.response; },
+    input: () => { render(); return find(node => node.props.id === "sentinel-message").props; },
+    signIn: () => { render(); return find(node => node.props.href === "/login?returnTo=%2Fsentinel"); },
+    errorId: () => { render(); return find(node => node.type === "RequestIdSupportText")?.props.requestId; },
+    text: () => { render(); return JSON.stringify(tree); },
+    submit(message) {
+      render();
+      const input = find(node => node.props.id === "sentinel-message").props;
+      if (!input.disabled) input.onChange({ target: { value: message } });
+      render();
+      return find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+    },
+    respond(path, value, status = 200, requestId = null) {
+      responses.push({ path, reply: () => Response.json(value, { status, headers: requestId ? { "X-NEXORA-Request-ID": requestId } : {} }) });
+    },
+    defer(path) {
+      let resolve;
+      const promise = new Promise(done => { resolve = done; });
+      responses.push({ path, reply: () => promise });
+      return (value, status = 200) => resolve(Response.json(value, { status }));
+    },
+    restore() {
+      cells.forEach(cell => cell.cleanup?.());
+      globalThis.fetch = originalFetch;
+      if (originalWindow === undefined) delete globalThis.window;
+      else globalThis.window = originalWindow;
+    },
+  };
+}
+
+const insightPath = "/api/me/sentinel/insight";
+const refreshPath = "/api/auth/refresh";
+
+test("Sentinel renders normal success and a real 401 / same-user refresh / retry success", async () => {
+  for (const refresh of [false, true]) {
+    const h = await sentinelChatHarness();
+    try {
+      const revision = h.auth.readAuthSessionRevision();
+      let events = 0;
+      window.addEventListener(h.auth.AUTH_STATE_EVENT, () => { events++; });
+      if (refresh) {
+        h.respond(insightPath, {}, 401);
+        h.respond(refreshPath, sentinelSession(1, "rotated"));
+      }
+      h.respond(insightPath, sentinelAnswer());
+      await h.submit("Find wishlist deals");
+      assert.deepEqual(h.answer(), sentinelAnswer());
+      assert.match(h.text(), /Find wishlist deals/);
+      assert.equal(h.input().value, "");
+      assert.equal(h.input().disabled, false);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(events, refresh ? 1 : 0, "rotation still broadcasts the auth event");
+      assert.deepEqual(h.calls.filter(call => call.path === insightPath).map(call => call.token),
+        refresh ? ["Bearer initial", "Bearer rotated"] : ["Bearer initial"]);
+      assert.equal(h.auth.readAuthToken(), refresh ? "rotated" : "initial");
+      assert.ok(h.storageCalls.every(([operation]) => operation === "remove"), "tokens are never persisted");
+    } finally { h.restore(); }
+  }
+});
+
+test("Sentinel preserves an in-flight request and completed conversation during same-user rotation", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const reply = h.defer(insightPath);
+    const pending = h.submit("Retain my prompt");
+    await h.submit("Duplicate submission");
+    assert.equal(h.calls.filter(call => call.path === insightPath).length, 1, "pending request blocks concurrent submission");
+    const revision = h.auth.readAuthSessionRevision();
+    h.respond(refreshPath, sentinelSession(1, "rotated"));
+    await h.auth.ensureAuthToken({ forceRefresh: true });
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.equal(h.input().disabled, true);
+    assert.equal(h.input().value, "Retain my prompt");
+    reply(sentinelAnswer());
+    await pending;
+    assert.deepEqual(h.answer(), sentinelAnswer());
+    h.respond(refreshPath, sentinelSession(1, "rotated-again"));
+    await h.auth.ensureAuthToken({ forceRefresh: true });
+    assert.deepEqual(h.answer(), sentinelAnswer(), "completed private conversation survives rotation too");
+  } finally { h.restore(); }
+});
+
+test("Sentinel rejects an old response immediately on logout, even while server logout is pending", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const reply = h.defer(insightPath);
+    const pending = h.submit("Private old request");
+    const completeLogout = h.defer("/api/auth/logout");
+    const loggingOut = h.auth.logout();
+    await settle();
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.ok(h.signIn());
+    reply(sentinelAnswer("Old private answer"));
+    await pending;
+    assert.equal(h.answer(), undefined);
+    assert.doesNotMatch(h.text(), /Private old request|Old private answer/);
+    assert.equal(h.input().disabled, false);
+    completeLogout({});
+    await loggingOut;
+  } finally { h.restore(); }
+});
+
+test("Sentinel rejects old account/session responses and keeps a newer request authoritative", async () => {
+  for (const transition of ["different-account", "same-account-new-session", "refresh-to-different-account"]) {
+    const h = await sentinelChatHarness();
+    try {
+      const oldReply = h.defer(insightPath);
+      const oldRequest = h.submit("Old private prompt");
+      const revision = h.auth.readAuthSessionRevision();
+      if (transition === "refresh-to-different-account") {
+        h.respond(refreshPath, sentinelSession(2, "new-account"));
+        await h.auth.ensureAuthToken({ forceRefresh: true });
+      } else {
+        h.auth.startAuthSession(sentinelSession(transition === "different-account" ? 2 : 1, "new-session"));
+      }
+      assert.notEqual(h.auth.readAuthSessionRevision(), revision);
+      assert.doesNotMatch(h.text(), /Old private prompt/);
+      const newReply = h.defer(insightPath);
+      const newRequest = h.submit("New prompt");
+      newReply(sentinelAnswer("New answer"));
+      await newRequest;
+      oldReply(sentinelAnswer("Old private answer"));
+      await oldRequest;
+      assert.equal(h.answer().answer, "New answer");
+      assert.doesNotMatch(h.text(), /Old private answer|Old private prompt/);
+    } finally { h.restore(); }
+  }
+});
+
+test("Sentinel terminal refresh or retry authentication failure clears private state and supports signing in again", async () => {
+  for (const retryFails of [false, true]) {
+    const h = await sentinelChatHarness();
+    try {
+      h.respond(insightPath, {}, 401, "expired-request-id");
+      h.respond(refreshPath, retryFails ? sentinelSession(1, "rotated") : {}, retryFails ? 200 : 401);
+      if (retryFails) h.respond(insightPath, {}, 401, "retry-request-id");
+      await h.submit("Expired private prompt");
+      await settle();
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(h.answer(), undefined);
+      assert.ok(h.signIn());
+      assert.doesNotMatch(h.text(), /Expired private prompt/);
+      assert.equal(h.input().disabled, false);
+      h.auth.startAuthSession(sentinelSession(1, "signed-in-again"));
+      h.respond(insightPath, sentinelAnswer("Recovered answer"));
+      await h.submit("Try again after sign in");
+      assert.equal(h.answer().answer, "Recovered answer");
+    } finally { h.restore(); }
+  }
+});
+
+test("Sentinel does not retry an old prompt or restore stale auth after a transition during refresh", async () => {
+  for (const transition of ["logout", "account-switch"]) {
+    const h = await sentinelChatHarness();
+    try {
+      h.respond(insightPath, {}, 401);
+      const finishRefresh = h.defer(refreshPath);
+      const pending = h.submit("Old private prompt awaiting refresh");
+      await settle();
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 1);
+      let loggingOut;
+      if (transition === "logout") {
+        h.respond("/api/auth/logout", {});
+        loggingOut = h.auth.logout();
+      } else {
+        h.auth.startAuthSession(sentinelSession(2, "new-account"));
+      }
+      finishRefresh(sentinelSession(1, "stale-rotated"));
+      await pending;
+      if (loggingOut) await loggingOut;
+      assert.equal(h.calls.filter(call => call.path === insightPath).length, 1, "no retry under a changed session");
+      assert.equal(h.auth.readAuthToken(), transition === "logout" ? null : "new-account");
+      assert.equal(h.answer(), undefined);
+      assert.doesNotMatch(h.text(), /Old private prompt awaiting refresh/);
+      assert.equal(h.input().disabled, false);
+      if (transition === "logout") assert.ok(h.signIn());
+    } finally { h.restore(); }
+  }
+});
+
+test("Sentinel retains provider/fallback responses and request-ID service error recovery", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    for (const overrides of [
+      { mode: "local-fallback", fallbackReason: "gemini_timeout_or_network" },
+      { mode: "gemini-provider-foundation", provider: "gemini" },
+    ]) {
+      const response = sentinelAnswer("Provider answer", overrides);
+      h.respond(insightPath, response);
+      await h.submit("Provider question");
+      assert.deepEqual(h.answer(), response);
+    }
+    h.respond(insightPath, {}, 503, "service-request-id");
+    await h.submit("Retryable question");
+    assert.equal(h.answer(), undefined);
+    assert.equal(h.errorId(), "service-request-id");
+    assert.match(h.text(), /Return message to composer/);
+    assert.equal(h.input().disabled, false);
+    h.respond(insightPath, {}, 401);
+    h.respond(refreshPath, {}, 503, "refresh-unavailable");
+    await h.submit("Refresh service unavailable");
+    assert.equal(h.answer(), undefined);
+    assert.equal(h.auth.readAuthToken(), "initial", "service failure does not imply logout");
+    assert.match(h.text(), /Return message to composer/);
+    h.respond(insightPath, sentinelAnswer("Service recovered"));
+    await h.submit("Manual retry");
+    assert.equal(h.answer().answer, "Service recovered");
+  } finally { h.restore(); }
+});
 
 test("Deals removes local previews and renders persisted wishlist alert state", async () => {
   const h = await dealsWishlistHarness();

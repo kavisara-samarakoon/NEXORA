@@ -17,6 +17,9 @@ let currentUser: AuthUser | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 let sessionBootstrapComplete = false;
 let sessionVersion = 0;
+// Unlike sessionVersion (which guards token writes), this changes only at an
+// authentication boundary, so private requests can survive token rotation.
+let authSessionRevision = 0;
 
 function dispatchAuthStateEvent(): void {
   if (typeof window !== "undefined") {
@@ -34,13 +37,23 @@ function removeLegacyStoredToken(): void {
   }
 }
 
-export function startAuthSession(response: AuthResponse): void {
+function applyAuthSession(response: AuthResponse, preserveSession: boolean): void {
   currentAccessToken = response.token;
   currentUser = response.user;
   sessionBootstrapComplete = true;
   sessionVersion += 1;
+  if (!preserveSession) authSessionRevision += 1;
   removeLegacyStoredToken();
   dispatchAuthStateEvent();
+}
+
+export function startAuthSession(response: AuthResponse): void {
+  // Explicit sign-in starts a new session even for the same account.
+  applyAuthSession(response, false);
+}
+
+export function readAuthSessionRevision(): number {
+  return authSessionRevision;
 }
 
 export function saveAuthToken(token: string): void {
@@ -48,6 +61,7 @@ export function saveAuthToken(token: string): void {
   currentUser = null;
   sessionBootstrapComplete = true;
   sessionVersion += 1;
+  authSessionRevision += 1;
   removeLegacyStoredToken();
   dispatchAuthStateEvent();
 }
@@ -61,6 +75,7 @@ export function clearAuthToken(): void {
   currentUser = null;
   sessionBootstrapComplete = true;
   sessionVersion += 1;
+  authSessionRevision += 1;
   removeLegacyStoredToken();
   dispatchAuthStateEvent();
 }
@@ -78,7 +93,8 @@ async function refreshAccessToken(): Promise<string | null> {
     return null;
   }
 
-  startAuthSession(response);
+  const sameUser = currentAccessToken !== null && currentUser?.id === response.user.id;
+  applyAuthSession(response, sameUser);
   return response.token;
 }
 
@@ -121,6 +137,8 @@ export async function readCurrentUser(): Promise<AuthUser | null> {
 }
 
 export async function logout(): Promise<void> {
+  // Stop private requests immediately, including while cookie logout is pending.
+  clearAuthToken();
   try {
     if (refreshPromise) {
       await refreshPromise.catch(() => null);
