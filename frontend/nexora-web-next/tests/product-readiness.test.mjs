@@ -858,8 +858,9 @@ async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous =
     form.body.statements.find(node => node.name?.text === "handleSubmit"),
   ].map(node => node.getText(formAst)).join("\n");
   const compiled = ts.transpileModule(declarations, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const addFormState = { message: null, isSubmitting: false, resets: 0, addedCalls: 0 };
   return {
-    ...h, render,
+    ...h, render, addFormState,
     state: () => render().state,
     update: (item, payload) => render().handleAlertUpdate(item, payload, "Persisted wishlist settings updated."),
     remove: item => render().handleDelete(item),
@@ -869,17 +870,153 @@ async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous =
       const callbacks = {
         ...h.auth, ...h.wishlist, token: h.auth.readAuthToken(),
         normalizeTargetPriceInput: value => value,
-        setIsSubmitting() {}, setMessage() {}, onTokenChanged() {},
-        onAdded: saved => render().handleItemAdded(saved),
+        setIsSubmitting: value => { addFormState.isSubmitting = value; },
+        setMessage: value => { addFormState.message = value; }, onTokenChanged() {},
+        onAdded: saved => { addFormState.addedCalls++; render().handleItemAdded(saved); },
         onAuthenticationRequired: () => h.auth.clearAuthToken(),
         FormData: class { get(name) { return name === "alertActive" ? (item.alertActive ? "on" : null) : item[name]; } },
       };
       const submit = new Function(...Object.keys(callbacks), `${compiled}\nreturn handleSubmit;`)(...Object.values(callbacks));
-      return submit({ preventDefault() {}, currentTarget: { reset() {} } });
+      return submit({ preventDefault() {}, currentTarget: { reset() { addFormState.resets++; } } });
     },
     restore() { cells.forEach(cell => cell.cleanup?.()); h.restore(); },
   };
 }
+
+test("Wishlist idempotent add replaces the complete returned item in place without increasing visible count", async () => {
+  const before = { ...alertItem, id: 11, title: "Before" };
+  const after = { ...alertItem, id: 77, title: "After" };
+  const h = await wishlistExplorerHarness([before, { ...alertItem, staleLocalField: true }, after]);
+  try {
+    const returned = {
+      id: 42, title: "Example Game canonical", store: "GOG", currentPrice: "$8.00",
+      targetPrice: "$9.00", lowestEver: "$4.00", discount: "-80%",
+      status: "price-drop", priority: "low", alertActive: true,
+      alertEvaluation: { targetReached: true, state: "target-reached", message: "Returned server evaluation" },
+    };
+    for (let count = 1; count <= 3; count++) {
+      h.respond(wishlistPath, returned, 201);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      await h.add({ ...alertItem, title: "  EXAMPLE GAME  ", store: "  steam  " });
+      const state = h.state();
+      assert.deepEqual(state.personalItems, [before, returned, after]);
+      assert.deepEqual(state.personalItems.map(item => item.id), [11, 42, 77]);
+      assert.equal(state.personalItems.filter(item => item.id === 42).length, 1);
+      assert.equal(state.personalItems.length, 3);
+      assert.equal(state.alerts[42], true);
+      assert.equal(state.generation, count, "one generation advance per authoritative callback");
+      assert.equal(h.addFormState.addedCalls, count);
+      assert.equal(h.addFormState.resets, count);
+      assert.equal(h.addFormState.isSubmitting, false);
+      assert.deepEqual(h.addFormState.message, {
+        tone: "success", text: `${returned.title} is now stored in this account’s personal wishlist.`,
+      });
+      assert.doesNotMatch(h.addFormState.message.text, /newly|created/i);
+    }
+    assert.equal(h.calls.filter(call => call.path === wishlistPath && call.method === "POST").length, 3);
+  } finally { h.restore(); }
+});
+
+test("Wishlist new add is prepended once, repeated returned IDs stay singular, and upsert collapses existing copies", async () => {
+  const h = await wishlistExplorerHarness();
+  try {
+    const item = { ...alertItem, id: 99, title: "New personal game", alertActive: true };
+    for (let count = 1; count <= 2; count++) {
+      h.respond(wishlistPath, item, 201);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      await h.add(item);
+      assert.deepEqual(h.state().personalItems, [item, alertItem]);
+      assert.equal(h.state().personalItems.length, 2);
+      assert.equal(h.state().generation, count);
+      assert.equal(h.state().alerts[99], true);
+    }
+  } finally { h.restore(); }
+  const duplicated = await wishlistExplorerHarness([alertItem, { ...alertItem, targetPrice: "$1.00" }]);
+  try {
+    const returned = { ...alertItem, alertActive: true };
+    duplicated.respond(wishlistPath, returned, 201);
+    duplicated.respond(`${wishlistPath}/alert-events`, []);
+    await duplicated.add(returned);
+    assert.deepEqual(duplicated.state().personalItems, [returned]);
+    assert.equal(duplicated.state().alerts[42], true);
+  } finally { duplicated.restore(); }
+});
+
+test("Wishlist idempotent upsert keeps one item through alert, target-price, priority updates and delete", async () => {
+  const h = await wishlistExplorerHarness();
+  try {
+    let current = { ...alertItem, alertActive: true };
+    h.respond(wishlistPath, current, 201);
+    h.respond(`${wishlistPath}/alert-events`, []);
+    await h.add(current);
+    const identity = item => wishlistCardIdentity({ accountRevision: 1, source: "api", view: "personal" }, item);
+    const key = identity(current);
+    for (const payload of [{ alertActive: false }, { targetPrice: "$2.00" }, { priority: "low" }]) {
+      const returned = { ...current, ...payload };
+      h.respond(`${wishlistPath}/42/alert`, returned);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      await h.update(current, payload);
+      current = returned;
+      assert.deepEqual(h.state().personalItems, [current]);
+      assert.equal(h.state().alerts[42], current.alertActive);
+      assert.equal(identity(current), key);
+    }
+    h.respond(`${wishlistPath}/42`, {});
+    await h.remove(current);
+    assert.deepEqual(h.state().personalItems, []);
+    assert.equal(h.state().alerts[42], undefined);
+    assert.equal(h.state().generation, 5);
+    assert.equal(h.state().operationMessage.kind, "success");
+  } finally { h.restore(); }
+});
+
+test("Wishlist idempotent upsert invalidates an older pending GET without restoring duplicate or stale fields", async () => {
+  const h = await wishlistExplorerHarness();
+  try {
+    const snapshotReply = h.defer(wishlistPath);
+    h.respond(`${wishlistPath}/alert-events`, []);
+    h.retry();
+    await settle();
+    const returned = { ...alertItem, targetPrice: "$2.00", priority: "low", alertActive: true };
+    h.respond(wishlistPath, returned, 201);
+    h.respond(`${wishlistPath}/alert-events`, []);
+    await h.add(returned);
+    assert.deepEqual(h.state().personalItems, [returned]);
+    assert.equal(h.state().generation, 1);
+    snapshotReply([alertItem]);
+    await settle();
+    assert.deepEqual(h.state().personalItems, [returned]);
+    assert.equal(h.state().alerts[42], true);
+    assert.equal(h.state().view, "personal");
+    assert.equal(h.state().generation, 1);
+  } finally { h.restore(); }
+});
+
+test("Wishlist old-session add never reaches the replacement account upsert callback", async () => {
+  for (const status of [201, 401]) {
+    const h = await wishlistExplorerHarness();
+    try {
+      const oldReply = h.defer(wishlistPath);
+      const operation = h.add({ ...alertItem, alertActive: true });
+      const replacement = { ...alertItem, title: "Account B item", targetPrice: "$3.00" };
+      h.respond(wishlistPath, [replacement]);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      h.auth.clearAuthToken();
+      h.auth.startAuthSession(sentinelSession(2, "account-b"));
+      await settle();
+      oldReply({ ...alertItem, alertActive: true }, status);
+      await operation;
+      await settle();
+      assert.deepEqual(h.state().personalItems, [replacement]);
+      assert.equal(h.state().generation, 0);
+      assert.equal(h.addFormState.addedCalls, 0);
+      assert.equal(h.addFormState.resets, 0);
+      assert.equal(h.addFormState.message, null);
+      assert.equal(h.auth.readAuthToken(), "account-b");
+      assert.deepEqual(h.calls.filter(call => call.path === wishlistPath && call.method === "POST").map(call => call.token), ["Bearer initial"]);
+    } finally { h.restore(); }
+  }
+});
 
 test("Wishlist auth-refresh GET cannot overwrite a newer successful alert, target-price or priority PATCH", async () => {
   for (const payload of [{ alertActive: true }, { targetPrice: "$3.00" }, { priority: "low" }]) {

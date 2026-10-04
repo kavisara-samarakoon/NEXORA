@@ -1007,7 +1007,15 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
 
   function handleItemAdded(item: WishlistItem) {
     wishlistDataGeneration.current += 1;
-    setPersonalItems((current) => [item, ...current]);
+    setPersonalItems((current) => {
+      const existingIndex = current.findIndex((candidate) => candidate.id === item.id);
+      if (existingIndex === -1) return [item, ...current];
+
+      return current.flatMap((candidate, index) => {
+        if (candidate.id !== item.id) return [candidate];
+        return index === existingIndex ? [item] : [];
+      });
+    });
     setAlerts((current) => ({ ...current, [item.id]: item.alertActive }));
     setView("personal");
     setOperationMessage(null);
