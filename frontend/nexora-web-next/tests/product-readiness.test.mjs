@@ -142,20 +142,285 @@ test("giveaway seed data and settings identify unverified sample capabilities", 
   assert.match(giveawayPreference?.description ?? "", /No persisted giveaway-reminder/);
 });
 
-test("page-local deal alerts and giveaway reminders disclose their preview-only behavior", async () => {
-  const [dealsSource, giveawaysSource] = await Promise.all([
-    readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../src/components/GiveawaysExplorer.tsx", import.meta.url), "utf8"),
-  ]);
+// Execute production Deals handlers and the HTTP/retry client with controlled
+// hooks and responses, without adding a browser or test-renderer dependency.
+async function dealsWishlistHarness(initialItems = []) {
+  const source = await readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("deals.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const explorer = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "DealsExplorer");
+  const declaration = (name, statements) => {
+    const node = statements.find(statement =>
+      (ts.isFunctionDeclaration(statement) && statement.name?.text === name) ||
+      (ts.isVariableStatement(statement) && statement.declarationList.declarations.some(item => item.name.getText(ast) === name)));
+    assert.ok(node, `missing production declaration ${name}`);
+    return node.getText(ast);
+  };
+  const authUrl = `data:text/javascript,${encodeURIComponent(`
+    export const controls = { token: "initial", refreshedToken: "rotated", refreshCalls: 0, clearCalls: 0, error: null, pending: null };
+    export const readAuthToken = () => controls.token;
+    export const clearAuthToken = () => { controls.clearCalls++; controls.token = null; };
+    export const ensureAuthToken = async (options = {}) => {
+      if (controls.pending) await controls.pending;
+      if (controls.error) throw controls.error;
+      if (options.forceRefresh) { controls.refreshCalls++; controls.token = controls.refreshedToken; }
+      return controls.token;
+    };
+  `)}`;
+  const auth = await import(authUrl);
+  Object.assign(auth.controls, { token: "initial", refreshedToken: "rotated", refreshCalls: 0, clearCalls: 0, error: null, pending: null });
+  const apiUrl = `data:text/javascript,${encodeURIComponent('export const buildApiUrl = path => "http://localhost:8080" + path; export const readResponseRequestId = response => response.headers.get("X-NEXORA-Request-ID");')}`;
+  const wishlist = await import(await moduleUrl("../src/lib/user-wishlist.ts", {
+    "@/lib/auth-client": authUrl,
+    "@/lib/api-client": apiUrl,
+    "@/data/wishlist": await moduleUrl("../src/data/wishlist.ts"),
+  }));
+  const state = {
+    authToken: "initial", authChecked: true, savingDeals: new Set(),
+    savedWishlistItems: initialItems, saveMessages: {}, wishlistSyncRevision: 0,
+    wishlistSyncWarning: null,
+  };
+  const setters = Object.fromEntries(Object.keys(state).map(key => [
+    `set${key[0].toUpperCase()}${key.slice(1)}`,
+    value => { state[key] = typeof value === "function" ? value(state[key]) : value; },
+  ]));
+  const refs = {
+    savingDealKeys: { current: new Set() }, savedWishlistItemsRef: { current: initialItems },
+    wishlistVersion: { current: 0 }, mounted: { current: true },
+  };
+  const mocks = {
+    ...setters, ...refs, ...auth, ...wishlist, displayedDealScope: "curated",
+    useCallback: callback => callback,
+    normalizeAuthError: error => error.authDetails ?? { code: "unknown_error" },
+  };
+  const names = ["storeWishlistItems", "toggleDealAlert", "saveDeal"];
+  const program = [
+    ...["protectedWishlistError", "normalizedWishlistValue", "findMatchingWishlistItem", "dealStateKey", "wishlistOperationKey", "wishlistPayloadFor"].map(name => declaration(name, ast.statements)),
+    ...names.map(name => declaration(name, explorer.body.statements)),
+  ].join("\n");
+  const output = ts.transpileModule(program, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const handlers = new Function(...Object.keys(mocks), `${output}\nreturn { ${names.join(", ")}, findMatchingWishlistItem, wishlistPayloadFor };`)(...Object.values(mocks));
+  const syncEffect = explorer.body.statements.find(statement => ts.isExpressionStatement(statement) &&
+    ts.isCallExpression(statement.expression) && statement.expression.expression.getText(ast) === "useEffect" &&
+    statement.getText(ast).includes("async function syncSavedWishlist"));
+  assert.ok(syncEffect);
+  const syncOutput = ts.transpileModule(syncEffect.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const runSync = () => {
+    let cleanup;
+    const syncMocks = {
+      ...mocks, ...state, ...handlers, externalDeals: [], externalStatus: "idle", mode: "curated",
+      useEffect: callback => { cleanup = callback(); },
+    };
+    new Function(...Object.keys(syncMocks), syncOutput)(...Object.values(syncMocks));
+    return cleanup;
+  };
+  const calls = [];
+  const responses = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ path: new URL(url).pathname, method: init.method, token: init.headers.Authorization, body: init.body ? JSON.parse(init.body) : undefined });
+    assert.ok(responses.length, "unexpected wishlist HTTP request");
+    return await responses.shift()();
+  };
+  return {
+    source, state, refs, handlers, auth: auth.controls, calls, runSync,
+    respond: (item, status = 200, requestId = null) => responses.push(() => Response.json(item, {
+      status, headers: requestId ? { "X-NEXORA-Request-ID": requestId } : {},
+    })),
+    defer: () => {
+      let resolve;
+      const promise = new Promise(done => { resolve = done; });
+      responses.push(() => promise);
+      return item => resolve(Response.json(item));
+    },
+    restore: () => { globalThis.fetch = originalFetch; },
+  };
+}
 
-  assert.match(dealsSource, /no alert is saved and no notification will be sent/);
-  assert.doesNotMatch(dealsSource, /\{alertIsSet \? "Alert Set" : "Set Alert"\}/);
+const alertDeal = { id: 7, title: "Example Game", store: "Steam", priceNew: "$9.99", priceValue: 9.99, discount: "-75%", discountValue: 75 };
+const alertItem = { ...alertDeal, id: 42, currentPrice: "$10.99", targetPrice: "$5.00", lowestEver: "$8.00", status: "tracking", priority: "high", alertActive: false };
+const alertMessage = harness => harness.state.saveMessages["curated:7:Example Game"];
+const settle = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+
+test("Deals removes local previews and renders persisted wishlist alert state", async () => {
+  const h = await dealsWishlistHarness();
+  try {
+    assert.doesNotMatch(h.source, /Preview alert|Marked on page|page-only|setAlerts|\[alerts,|function toggleAlert\(/i);
+    assert.match(h.source, /alertIsSet=\{findMatchingWishlistItem\(deal, savedWishlistItems\)\?\.alertActive \?\? false\}/);
+    assert.match(h.source, /onToggleAlert=\{toggleDealAlert\}/);
+    assert.match(h.source, /disabled=\{isSaving\}\s+aria-busy=\{isSaving\}\s+aria-pressed=\{alertIsSet\}/);
+    assert.match(h.source, /href="\/login\?returnTo=%2Fdeals"/);
+    assert.match(h.source, /<RequestIdSupportText requestId=\{saveMessage.requestId\}/);
+    assert.equal((h.source.match(/addMyWishlistItem\(/g) ?? []).length, 1, "Save and Alert share one creation path");
+  } finally { h.restore(); }
+});
+
+test("Deals enables and pauses existing wishlist alerts using server items and auth retry", async () => {
+  const otherItem = { ...alertItem, id: 99, title: "Another Game" };
+  const h = await dealsWishlistHarness([alertItem, otherItem]);
+  try {
+    const enabled = { ...alertItem, alertActive: true, alertEvaluation: { state: "watching", targetReached: false, message: "Watching" } };
+    h.respond({}, 401);
+    h.respond(enabled);
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.deepEqual(h.calls.map(call => [call.method, call.path, call.token, call.body]), [
+      ["PATCH", "/api/me/wishlist/42/alert", "Bearer initial", { alertActive: true }],
+      ["PATCH", "/api/me/wishlist/42/alert", "Bearer rotated", { alertActive: true }],
+    ]);
+    assert.equal(h.auth.refreshCalls, 1);
+    assert.equal(h.state.authToken, "rotated");
+    assert.deepEqual(h.state.savedWishlistItems, [enabled, otherItem]);
+    assert.match(alertMessage(h).text, /wishlist alert is enabled/);
+    const paused = { ...enabled, alertActive: false, priority: "medium" };
+    h.respond(paused);
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.deepEqual(h.calls.at(-1).body, { alertActive: false });
+    assert.deepEqual(h.state.savedWishlistItems, [paused, otherItem], "replace the complete returned item");
+    assert.match(alertMessage(h).text, /wishlist alert is paused/);
+    assert.equal(paused.targetPrice, "$5.00", "PATCH does not invent a new target");
+    h.respond(paused); // The server remains authoritative even when its setting differs.
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.equal(h.state.savedWishlistItems[0].alertActive, false);
+    assert.match(alertMessage(h).text, /paused/);
+    await h.handlers.saveDeal(alertDeal);
+    assert.equal(h.calls.length, 4, "saving an existing item creates no duplicate");
+  } finally { h.restore(); }
+});
+
+test("unsaved Deals alerts share wishlist creation with Save and block concurrent operations before auth", async () => {
+  for (const firstAction of ["saveDeal", "toggleDealAlert"]) {
+    const h = await dealsWishlistHarness();
+    try {
+      let releaseAuth;
+      h.auth.pending = new Promise(resolve => { releaseAuth = resolve; });
+      const first = h.handlers[firstAction](alertDeal);
+      await h.handlers.saveDeal({ ...alertDeal, id: 101, title: " EXAMPLE GAME ", store: " steam " });
+      await h.handlers.toggleDealAlert(alertDeal);
+      assert.equal(h.calls.length, 0, "lock acquired before auth resolves");
+      assert.equal(h.state.savingDeals.size, 1);
+      const created = { ...alertItem, alertActive: true, targetPrice: alertDeal.priceNew };
+      h.respond(created);
+      releaseAuth();
+      await first;
+      assert.equal(h.calls.length, 1);
+      assert.equal(h.calls[0].method, "POST");
+      assert.equal(h.calls[0].path, "/api/me/wishlist");
+      assert.equal(h.calls[0].body.alertActive, true);
+      assert.equal(h.calls[0].body.targetPrice, alertDeal.priceNew);
+      assert.deepEqual(h.state.savedWishlistItems, [created]);
+      assert.match(alertMessage(h).text, /was saved to your personal wishlist.*alert is enabled/);
+      assert.equal(h.refs.savingDealKeys.current.size, 0);
+      assert.equal(h.state.savingDeals.size, 0);
+    } finally { h.restore(); }
+  }
+});
+
+test("Deals alert conflict recovery loads the real item and enables a paused alert", async () => {
+  for (const active of [false, true]) {
+    const h = await dealsWishlistHarness();
+    try {
+      h.respond({}, 409);
+      h.respond([{ ...alertItem, alertActive: active }]);
+      const enabled = { ...alertItem, alertActive: true };
+      if (!active) h.respond(enabled);
+      await h.handlers.toggleDealAlert(alertDeal);
+      assert.deepEqual(h.calls.map(call => call.method), active ? ["POST", "GET"] : ["POST", "GET", "PATCH"]);
+      if (!active) assert.deepEqual(h.calls.at(-1).body, { alertActive: true });
+      assert.deepEqual(h.state.savedWishlistItems, [enabled]);
+      assert.match(alertMessage(h).text, /wishlist alert is enabled/);
+    } finally { h.restore(); }
+  }
+});
+
+test("Deals anonymous and failed alert actions never invent local success and retain request IDs", async () => {
+  const h = await dealsWishlistHarness();
+  try {
+    h.auth.token = null;
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.equal(h.calls.length, 0);
+    assert.deepEqual(h.state.savedWishlistItems, []);
+    assert.equal(alertMessage(h).tone, "auth");
+    assert.equal(h.state.authChecked, true);
+
+    h.auth.token = "initial";
+    h.auth.error = { authDetails: { code: "service_unavailable", status: 503, message: "Auth service unavailable.", requestId: "auth-service-id" } };
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.equal(h.calls.length, 0);
+    assert.equal(alertMessage(h).tone, "error");
+    assert.equal(alertMessage(h).requestId, "auth-service-id");
+    assert.match(alertMessage(h).text, /retry from this card/);
+
+    h.auth.error = null;
+    h.handlers.storeWishlistItems([alertItem]);
+    h.respond({}, 503, "wishlist-service-id");
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.deepEqual(h.state.savedWishlistItems, [alertItem]);
+    assert.equal(alertMessage(h).tone, "error");
+    assert.equal(alertMessage(h).requestId, "wishlist-service-id");
+    assert.match(alertMessage(h).text, /retry from this card/);
+
+    h.respond({}, 401);
+    h.respond({}, 401, "expired-session-id");
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.equal(h.auth.refreshCalls, 1);
+    assert.equal(h.auth.clearCalls, 1);
+    assert.equal(h.state.authToken, null);
+    assert.deepEqual(h.state.savedWishlistItems, []);
+    assert.equal(alertMessage(h).tone, "auth");
+    assert.equal(alertMessage(h).requestId, "expired-session-id");
+    assert.match(alertMessage(h).text, /Sign in again/);
+    assert.equal(h.state.savingDeals.size, 0);
+  } finally { h.restore(); }
+});
+
+test("Deals ignores stale sync and unmounted or signed-out mutation responses", async () => {
+  const h = await dealsWishlistHarness([alertItem]);
+  try {
+    const finishSync = h.defer();
+    const cleanup = h.runSync();
+    const enabled = { ...alertItem, alertActive: true };
+    h.respond(enabled);
+    await h.handlers.toggleDealAlert(alertDeal);
+    finishSync([alertItem]);
+    await settle();
+    assert.deepEqual(h.state.savedWishlistItems, [enabled], "old GET cannot replace the PATCH result");
+    cleanup();
+    h.respond([enabled]);
+    const stopSync = h.runSync();
+    await settle();
+    assert.deepEqual(h.state.savedWishlistItems, [enabled], "later sync still reconciles normally");
+    stopSync();
+
+    const finishPatch = h.defer();
+    const pending = h.handlers.toggleDealAlert(alertDeal);
+    await settle();
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.equal(h.calls.length, 4, "concurrent PATCH is suppressed");
+    h.auth.token = null;
+    h.handlers.storeWishlistItems([]);
+    finishPatch(alertItem);
+    await pending;
+    assert.deepEqual(h.state.savedWishlistItems, [], "sign-out rejects the old session result");
+
+    h.auth.token = "initial";
+    const finishPost = h.defer();
+    const saving = h.handlers.saveDeal(alertDeal);
+    await settle();
+    h.refs.mounted.current = false;
+    finishPost(enabled);
+    await saving;
+    assert.deepEqual(h.state.savedWishlistItems, [], "unmount rejects the mutation result");
+    assert.equal(h.refs.savingDealKeys.current.size, 0);
+  } finally { h.restore(); }
+});
+
+test("giveaway reminders retain their preview-only behavior", async () => {
+  const giveawaysSource = await readFile(new URL("../src/components/GiveawaysExplorer.tsx", import.meta.url), "utf8");
   assert.match(giveawaysSource, /no reminder is saved and no notification will be sent/);
   assert.doesNotMatch(giveawaysSource, /\{reminderIsSet \? "Reminder set" : "Add reminder"\}/);
   assert.match(giveawaysSource, /No verified claim destination/);
 });
 
-test("wishlist View Deal routes encoded titles through the existing external search without changing alert previews", async () => {
+test("wishlist View Deal routes encoded titles through the existing external search", async () => {
   const [wishlistSource, dealsSource] = await Promise.all([
     readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8"),
@@ -193,13 +458,13 @@ test("wishlist View Deal routes encoded titles through the existing external sea
   };
   // Execute the production query effect and request handlers with controlled
   // hooks and promises, without introducing a browser/test-renderer dependency.
-  const names = ["loadExternalDeals", "searchExternalTitle", "selectMode", "submitExternalSearch", "clearExternalSearch", "toggleAlert"];
+  const names = ["loadExternalDeals", "searchExternalTitle", "selectMode", "submitExternalSearch", "clearExternalSearch"];
   const program = [declaration("DealSearchQuery", dealsAst.statements), ...names.map(name => declaration(name))].join("\n");
   const { outputText } = ts.transpileModule(program, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
   });
-  const state = { alerts: new Set(), mode: "curated", externalTitle: "", externalStatus: "idle" };
-  const setters = Object.fromEntries(["mode", "externalTitle", "externalStatus", "activeExternalTitle", "activeFilter", "searchQuery", "externalDeals", "alerts"].map(key => [
+  const state = { mode: "curated", externalTitle: "", externalStatus: "idle" };
+  const setters = Object.fromEntries(["mode", "externalTitle", "externalStatus", "activeExternalTitle", "activeFilter", "searchQuery", "externalDeals"].map(key => [
     `set${key[0].toUpperCase()}${key.slice(1)}`,
     value => { state[key] = typeof value === "function" ? value(state[key]) : value; },
   ]));
@@ -327,13 +592,7 @@ test("wishlist View Deal routes encoded titles through the existing external sea
   focusSetup()();
   assert.equal(frames.size, 0, "ordinary /deals navigation does not force focus");
 
-  handlers.toggleAlert(7);
-  assert.deepEqual([...state.alerts], ["curated:7"]);
-  handlers.toggleAlert(7);
-  assert.equal(state.alerts.size, 0);
-  assert.equal(requests.length, 6, "page-only alert toggles make no provider request");
-  assert.match(dealsSource, /no alert is saved and no notification will be sent/);
-  assert.match(dealsSource, /\{alertIsSet \? "Marked on page" : "Preview alert"\}/);
+
 });
 
 test("homepage feed maps the current backend deal, giveaway, and dashboard DTO fields", () => {
