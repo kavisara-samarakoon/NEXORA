@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 // Use the installed compiler so these checks also run on the project's Node 20 baseline.
 async function moduleUrl(path, replacements = {}) {
@@ -33,6 +35,8 @@ const homeFeedApiClientUrl = `data:text/javascript,${encodeURIComponent('export 
 const {
   HOME_FEED_REQUEST_TIMEOUT_MS,
   getHomeSummaryAvailability,
+  isExternalHref,
+  loadHomeFeed,
   mapDeal,
   mapGiveaway,
   mapSummary,
@@ -848,6 +852,9 @@ test("giveaway reminders retain their preview-only behavior", async () => {
   assert.match(giveawaysSource, /no reminder is saved and no notification will be sent/);
   assert.doesNotMatch(giveawaysSource, /\{reminderIsSet \? "Reminder set" : "Add reminder"\}/);
   assert.match(giveawaysSource, /No verified claim destination/);
+  assert.match(giveawaysSource, /Unverified sample catalog/);
+  assert.match(giveawaysSource, /not verified\s+offers/);
+  assert.match(giveawaysSource, /Sample list price/);
 });
 
 async function dealCardControls() {
@@ -1176,9 +1183,13 @@ test("homepage feed maps the current backend deal, giveaway, and dashboard DTO f
     platformLabel: "Steam",
     title: "Example Giveaway",
     originalPrice: "$24.99",
+    status: "sample",
+    tag: "sample",
   });
   assert.equal(giveaway?.platform, "Steam");
   assert.equal(giveaway?.worth, "$24.99");
+  assert.equal(giveaway?.status, "sample");
+  assert.equal(giveaway?.href, null, "no claim destination is invented");
 
   const summary = mapSummary({
     activeDealsCount: 28,
@@ -1203,6 +1214,118 @@ test("homepage feed maps the current backend deal, giveaway, and dashboard DTO f
   });
   assert.equal(getHomeSummaryAvailability("ready", false, summary), "available");
   assert.equal(HOME_FEED_REQUEST_TIMEOUT_MS, 5_000);
+});
+
+async function discoveryWindowHarness(scene, initialTab = "giveaways") {
+  const source = await readFile(new URL("../src/components/DiscoveryWindow.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("discovery.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const program = ast.statements.filter(node => !ts.isImportDeclaration(node))
+    .map(node => node.getText(ast)).join("\n").replace("export default function DiscoveryWindow", "function DiscoveryWindow");
+  const output = ts.transpileModule(program, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
+  }).outputText;
+  let activeTab = initialTab;
+  const mocks = {
+    React, isExternalHref,
+    Link: ({ children, ...props }) => React.createElement("a", props, children),
+    useState: () => [activeTab, value => { activeTab = typeof value === "function" ? value(activeTab) : value; }],
+    useHomeScene: () => scene,
+    styles: new Proxy({}, { get: (_target, key) => String(key) }),
+  };
+  const Component = new Function(...Object.keys(mocks), `${output}\nreturn DiscoveryWindow;`)(...Object.values(mocks));
+  const nodes = node => {
+    if (Array.isArray(node)) return node.flatMap(nodes);
+    if (!node || typeof node !== "object") return [];
+    return [node, ...nodes(node.props.children)];
+  };
+  return {
+    html: () => renderToStaticMarkup(Component()),
+    find: predicate => nodes(Component()).find(predicate),
+  };
+}
+
+const giveawayDiscoveryScene = giveaway => ({
+  status: "ready", data: { deal: null, giveaway, summary: mapSummary({}) },
+  errors: { deals: false, giveaways: false, summary: false }, reload() {},
+});
+
+test("homepage giveaway discovery renders sample disclosure and truthful internal navigation", async () => {
+  const source = await readFile(new URL("../src/components/DiscoveryWindow.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /Claim giveaway/);
+  for (const url of [undefined, "https://unverified.example/claim"]) {
+    const giveaway = mapGiveaway({ ...giveawaySamples[0], url });
+    assert.equal(giveaway.status, "sample");
+    const h = await discoveryWindowHarness(giveawayDiscoveryScene(giveaway));
+    const html = h.html();
+    assert.match(html, /<p class="stateText">Unverified sample\. No verified claim destination\.<\/p>/);
+    assert.match(html, /Sample list price.*\$19\.99/);
+    assert.match(html, /<a class="itemLink" href="\/giveaways">Explore giveaway samples/);
+    assert.doesNotMatch(html, /Claim giveaway|https?:\/\/|target="_blank"/);
+  }
+  const unknown = mapGiveaway({ title: "Unknown provenance", originalPrice: "$9.99" });
+  assert.equal(unknown.status, null, "missing status is not inferred to be sample or verified");
+  const h = await discoveryWindowHarness(giveawayDiscoveryScene(unknown));
+  assert.match(h.html(), /Unverified entry\. No verified claim destination\./);
+  assert.match(h.html(), /href="\/giveaways">View giveaway details/);
+});
+
+test("homepage discovery preserves loading, errors, empty states, refresh, tabs, and deal links", async () => {
+  let reloads = 0;
+  const scene = giveawayDiscoveryScene(mapGiveaway(giveawaySamples[0]));
+  scene.reload = () => { reloads++; scene.status = "loading"; };
+  const h = await discoveryWindowHarness(scene);
+  scene.status = "loading";
+  assert.match(h.html(), /aria-busy="true"/);
+  assert.match(h.html(), /class="skeleton"/);
+  assert.doesNotMatch(h.html(), /Explore giveaway samples|Claim giveaway/);
+  scene.status = "ready";
+  scene.errors.giveaways = true;
+  assert.match(h.html(), /Discovery on standby/);
+  assert.doesNotMatch(h.html(), /Cyber Shadow/);
+  h.find(node => node.type === "button" && node.props.className === "retry").props.onClick();
+  assert.equal(reloads, 1);
+  assert.match(h.html(), /aria-busy="true"/);
+  scene.status = "error";
+  assert.match(h.html(), /Refresh discovery/);
+  scene.status = "ready";
+  scene.errors.giveaways = false;
+  scene.data.giveaway = null;
+  assert.match(h.html(), /Between discoveries/);
+  assert.match(h.html(), /href="\/giveaways">Explore giveaways/);
+  scene.data.giveaway = mapGiveaway(giveawaySamples[0]);
+  scene.data.deal = mapDeal({ title: "Homepage deal", store: "Steam", priceNew: "$9.99", dealUrl: "https://www.cheapshark.com/redirect?dealID=example" });
+  h.find(node => node.props.id === "discovery-tab-deals").props.onClick();
+  assert.match(h.html(), /Homepage deal/);
+  assert.match(h.html(), /href="https:\/\/www\.cheapshark\.com\/redirect\?dealID=example" target="_blank" rel="noopener noreferrer">View deal/);
+  let prevented = false;
+  h.find(node => node.props.id === "discovery-tab-deals").props.onKeyDown({ key: "ArrowRight", preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.match(h.html(), /Explore giveaway samples/);
+  assert.match(h.html(), /aria-labelledby="discovery-tab-giveaways"/);
+});
+
+test("homepage feed transport preserves giveaway provenance and independent source failures", async () => {
+  const originalFetch = globalThis.fetch;
+  let giveawaysFail = false;
+  globalThis.fetch = async url => {
+    const path = new URL(url).pathname;
+    if (path === "/api/deals") return Response.json([{ title: "Retained deal", priceNew: "$4.99" }]);
+    if (path === "/api/giveaways") return giveawaysFail ? Response.json({}, { status: 503 }) : Response.json(giveawaySamples);
+    assert.equal(path, "/api/dashboard/summary");
+    return Response.json({ activeDealsCount: 4, activeGiveawaysCount: 8 });
+  };
+  try {
+    const ready = await loadHomeFeed();
+    assert.equal(ready.data.giveaway.status, "sample");
+    assert.equal(ready.data.giveaway.href, null);
+    assert.deepEqual(ready.errors, { deals: false, giveaways: false, summary: false });
+    giveawaysFail = true;
+    const failed = await loadHomeFeed();
+    assert.equal(failed.data.giveaway, null);
+    assert.equal(failed.data.deal.title, "Retained deal");
+    assert.equal(failed.data.summary.giveaways, 8, "summary counts retain the returned API value");
+    assert.deepEqual(failed.errors, { deals: false, giveaways: true, summary: false });
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test("homepage summary distinguishes incomplete and unavailable responses", () => {
