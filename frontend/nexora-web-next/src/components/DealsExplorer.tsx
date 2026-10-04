@@ -152,6 +152,7 @@ function DealCard({
   saveMessage,
   onSave,
   onToggleAlert,
+  onFindOffers,
 }: {
   deal: GameDeal;
   alertIsSet: boolean;
@@ -160,6 +161,7 @@ function DealCard({
   saveMessage?: SaveMessage;
   onSave: (deal: GameDeal) => void;
   onToggleAlert: (deal: GameDeal) => void;
+  onFindOffers: (title: string) => void;
 }) {
   const dealUrl = safeCheapSharkDealUrl(deal.dealUrl);
   const hasRating = hasAvailableDealRating(deal.rating, deal.stars);
@@ -238,11 +240,11 @@ function DealCard({
           </a>
         ) : (
           <button
-            className={styles.viewButton}
+            className={`${styles.viewButton} ${styles.viewButtonActive}`}
             type="button"
-            disabled
-            aria-label={`View deal for ${deal.title} unavailable for this curated preview`}
-            title="Store redirects are planned for curated deals"
+            aria-label={`Find current offers for ${deal.title}`}
+            title="Search External Offers for this game title"
+            onClick={() => onFindOffers(deal.title)}
           >
             <span aria-hidden="true">↗</span>
             View Deal
@@ -406,6 +408,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const previousAuthToken = useRef<string | null>(null);
   const requestVersion = useRef(0);
   const mounted = useRef(false);
+  const sourcePanelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -566,6 +569,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     setExternalTitle(title);
     void loadExternalDeals(title);
   }, [loadExternalDeals]);
+
+  function findCurrentOffers(title: string) {
+    searchExternalTitle(title);
+    // The source panel exists in both modes, including while its input is disabled.
+    sourcePanelRef.current?.scrollIntoView({ block: "center" });
+    sourcePanelRef.current?.focus({ preventScroll: true });
+  }
 
   function selectMode(nextMode: DealsMode) {
     if (nextMode === "curated") {
@@ -752,6 +762,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         </section>
 
         <section
+          ref={sourcePanelRef}
+          tabIndex={-1}
           className={isExternalFallback ? `${styles.sourcePanel} ${styles.sourcePanelWarning}` : styles.sourcePanel}
           aria-label="Deal source selection"
         >
@@ -910,6 +922,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
               saveMessage={saveMessages[dealStateKey(displayedDealScope, deal)]}
               onSave={saveDeal}
               onToggleAlert={toggleDealAlert}
+              onFindOffers={findCurrentOffers}
             />
           ))}
           {isExternalReady && externalDeals.length === 0 && (

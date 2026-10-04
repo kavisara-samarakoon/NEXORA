@@ -420,7 +420,92 @@ test("giveaway reminders retain their preview-only behavior", async () => {
   assert.match(giveawaysSource, /No verified claim destination/);
 });
 
-test("wishlist View Deal routes encoded titles through the existing external search", async () => {
+async function dealCardControls() {
+  const source = await readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("deals.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const names = ["safeCheapSharkDealUrl", "statusClass", "dealStateKey", "STATUS_TONE_CLASS", "SAVE_TONE_CLASS", "DealCard"];
+  const program = names.map(name => {
+    const node = ast.statements.find(statement =>
+      (ts.isFunctionDeclaration(statement) && statement.name?.text === name) ||
+      (ts.isVariableStatement(statement) && statement.declarationList.declarations.some(item => item.name.getText(ast) === name)));
+    assert.ok(node, `missing production declaration ${name}`);
+    return node.getText(ast);
+  }).join("\n");
+  const output = ts.transpileModule(program, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
+  }).outputText;
+  const mocks = {
+    React: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) },
+    styles: new Proxy({}, { get: (_, key) => key }), hasAvailableDealRating,
+    Link: "Link", RequestIdSupportText: "RequestIdSupportText",
+  };
+  const { DealCard, safeCheapSharkDealUrl } = new Function(...Object.keys(mocks), `${output}\nreturn { DealCard, safeCheapSharkDealUrl };`)(...Object.values(mocks));
+  const viewControl = (deal, onFindOffers = () => {}) => {
+    const tree = DealCard({ deal, onFindOffers, alertIsSet: false, isSaved: false, isSaving: false });
+    const find = node => {
+      if (!node || typeof node !== "object") return;
+      if (["a", "button"].includes(node.type) && node.props.children.includes("View Deal")) return node;
+      for (const child of node.props?.children ?? []) {
+        const result = find(child);
+        if (result) return result;
+      }
+    };
+    const control = find(tree);
+    assert.ok(control, "card renders View Deal");
+    return control;
+  };
+  return { source, safeCheapSharkDealUrl, viewControl };
+}
+
+test("Deals provider URL validation continues to reject unsafe or unverified destinations", async () => {
+  const { safeCheapSharkDealUrl } = await dealCardControls();
+  const verified = "https://www.cheapshark.com/redirect?dealID=verified%2Fid";
+  assert.equal(safeCheapSharkDealUrl(`  ${verified}  `), verified);
+  for (const value of [
+    undefined, null, "", "  ", {}, "not a URL", "javascript:alert(1)",
+    "http://www.cheapshark.com/redirect?dealID=1",
+    "https://cheapshark.com/redirect?dealID=1",
+    "https://www.cheapshark.com.evil.example/redirect?dealID=1",
+    "https://www.cheapshark.com@evil.example/redirect?dealID=1",
+    "https://user:password@www.cheapshark.com/redirect?dealID=1",
+    "https://www.cheapshark.com:8443/redirect?dealID=1",
+    "https://www.cheapshark.com/redirect/other?dealID=1",
+    "https://www.cheapshark.com/redirect", "https://www.cheapshark.com/redirect?dealID=",
+    "https://www.cheapshark.com/redirect?dealID=%20",
+    "https://store.steampowered.com/app/123", "https://store.epicgames.com/p/example",
+    "https://www.gog.com/game/example",
+  ]) assert.equal(safeCheapSharkDealUrl(value), null, `reject ${String(value)}`);
+});
+
+test("Deals View Deal preserves verified anchors and makes missing or unsafe URLs actionable searches", async () => {
+  const { viewControl, source } = await dealCardControls();
+  const verified = "https://www.cheapshark.com/redirect?dealID=verified-id";
+  const anchor = viewControl({ ...alertDeal, dealUrl: verified });
+  assert.equal(anchor.type, "a");
+  assert.equal(anchor.props.href, verified);
+  assert.equal(anchor.props.target, "_blank");
+  assert.equal(anchor.props.rel, "noopener noreferrer sponsored");
+  assert.match(anchor.props["aria-label"], /in a new tab/);
+  assert.equal(anchor.props.onClick, undefined, "verified links retain native navigation");
+
+  for (const dealUrl of [undefined, null, "", "https://store.steampowered.com/app/123", "javascript:alert(1)"]) {
+    const selectedTitles = [];
+    const button = viewControl({ ...alertDeal, dealUrl }, title => selectedTitles.push(title));
+    assert.equal(button.type, "button");
+    assert.equal(button.props.type, "button");
+    assert.ok(!button.props.disabled, "fallback View Deal is actionable");
+    assert.equal(button.props["aria-label"], `Find current offers for ${alertDeal.title}`);
+    assert.match(button.props.title, /Search External Offers/);
+    assert.equal(button.props.href, undefined, "no guessed store URL");
+    button.props.onClick();
+    assert.deepEqual(selectedTitles, [alertDeal.title]);
+  }
+  assert.doesNotMatch(source, /Store redirects are planned|unavailable for this curated preview/);
+  assert.match(source, /onFindOffers=\{findCurrentOffers\}/);
+  assert.match(source, /ref=\{sourcePanelRef\}\s+tabIndex=\{-1\}/);
+});
+
+test("wishlist and curated View Deal share the existing external title search", async () => {
   const [wishlistSource, dealsSource] = await Promise.all([
     readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8"),
@@ -458,7 +543,7 @@ test("wishlist View Deal routes encoded titles through the existing external sea
   };
   // Execute the production query effect and request handlers with controlled
   // hooks and promises, without introducing a browser/test-renderer dependency.
-  const names = ["loadExternalDeals", "searchExternalTitle", "selectMode", "submitExternalSearch", "clearExternalSearch"];
+  const names = ["loadExternalDeals", "searchExternalTitle", "findCurrentOffers", "selectMode", "submitExternalSearch", "clearExternalSearch"];
   const program = [declaration("DealSearchQuery", dealsAst.statements), ...names.map(name => declaration(name))].join("\n");
   const { outputText } = ts.transpileModule(program, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
@@ -474,8 +559,13 @@ test("wishlist View Deal routes encoded titles through the existing external sea
   let params = new URLSearchParams();
   let effect;
   let dependencies;
+  const offerFocusCalls = [];
+  const sourcePanelRef = { current: {
+    scrollIntoView: options => offerFocusCalls.push(["scroll", options]),
+    focus: options => offerFocusCalls.push(["focus", options]),
+  } };
   const mocks = {
-    ...setters, requestVersion, mounted,
+    ...setters, requestVersion, mounted, sourcePanelRef,
     useCallback: callback => callback,
     useSearchParams: () => params,
     useEffect: (callback, deps) => { effect = callback; dependencies = deps; },
@@ -592,7 +682,40 @@ test("wishlist View Deal routes encoded titles through the existing external sea
   focusSetup()();
   assert.equal(frames.size, 0, "ordinary /deals navigation does not force focus");
 
+  mounted.current = true;
+  const { viewControl: renderViewControl } = await dealCardControls();
+  const selectedTitle = "A & B + C/#?=100% 🎮";
+  const fallbackButton = renderViewControl({ ...alertDeal, title: selectedTitle }, handlers.findCurrentOffers);
+  fallbackButton.props.onClick();
+  assert.equal(requests.length, 7, "card click starts one request through the shared search path");
+  assert.deepEqual(requests[6].options, { pageSize: 12, title: selectedTitle });
+  assert.equal(state.mode, "external");
+  assert.equal(state.externalTitle, selectedTitle);
+  assert.equal(state.activeExternalTitle, selectedTitle);
+  assert.equal(state.externalStatus, "loading");
+  assert.equal(state.activeFilter, "All Stores");
+  assert.equal(state.searchQuery, "");
+  assert.deepEqual(offerFocusCalls, [["scroll", { block: "center" }], ["focus", { preventScroll: true }]]);
 
+  // A later manual search supersedes the card request through the same guard.
+  handlers.submitExternalSearch({ preventDefault() {} });
+  assert.equal(requests[7].options.title, "Manual Title");
+  requests[6].resolve({ source: "external-api", deals: [{ id: 7 }] });
+  await Promise.resolve();
+  assert.equal(state.externalStatus, "loading");
+  assert.deepEqual(state.externalDeals, [], "stale card search cannot replace a newer manual search");
+  requests[7].resolve({ source: "external-api", deals: [{ id: 8 }] });
+  await Promise.resolve();
+  assert.equal(state.externalStatus, "ready");
+  assert.deepEqual(state.externalDeals, [{ id: 8 }]);
+
+  sourcePanelRef.current = null; // Search still works if the panel has unmounted.
+  handlers.findCurrentOffers("Provider unavailable");
+  assert.deepEqual(requests[8].options, { pageSize: 12, title: "Provider unavailable" });
+  requests[8].resolve({ source: "fallback", deals: [{ id: 9 }] });
+  await Promise.resolve();
+  assert.equal(state.externalStatus, "fallback");
+  assert.deepEqual(state.externalDeals, [], "unavailable provider retains curated fallback behavior");
 });
 
 test("homepage feed maps the current backend deal, giveaway, and dashboard DTO fields", () => {
