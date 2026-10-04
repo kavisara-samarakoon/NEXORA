@@ -791,6 +791,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [refreshKey, setRefreshKey] = useState(0);
   const [personalWishlistRevision, setPersonalWishlistRevision] = useState(0);
   const alertEventsRequestVersion = useRef(0);
+  // Successful mutations invalidate snapshots captured before their completion.
+  const wishlistDataGeneration = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -841,6 +843,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       setView("checking");
 
       const sessionRevision = readAuthSessionRevision();
+      const dataGeneration = wishlistDataGeneration.current;
       const eventRequestVersion = ++alertEventsRequestVersion.current;
       const [wishlistResult, alertEventsResult] = await Promise.allSettled([
         withWishlistAuthRetry(token, getMyWishlist),
@@ -851,6 +854,14 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       if (sessionRevision !== readAuthSessionRevision()) return;
       if ([wishlistResult, alertEventsResult].some((result) =>
         result.status === "rejected" && isAuthSessionInvalidatedError(result.reason))) return;
+
+      if (dataGeneration !== wishlistDataGeneration.current) {
+        if (eventRequestVersion === alertEventsRequestVersion.current) {
+          setAlertEventsLoading(false);
+        }
+        setView("personal");
+        return;
+      }
 
       if (wishlistResult.status === "rejected") {
         const details = protectedWishlistError(wishlistResult.reason);
@@ -995,8 +1006,10 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }
 
   function handleItemAdded(item: WishlistItem) {
+    wishlistDataGeneration.current += 1;
     setPersonalItems((current) => [item, ...current]);
     setAlerts((current) => ({ ...current, [item.id]: item.alertActive }));
+    setView("personal");
     setOperationMessage(null);
     setItemMessages((current) => {
       const next = { ...current };
@@ -1029,10 +1042,12 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       );
       assertAuthSessionRevision(result.sessionRevision);
       const updatedItem = result.value;
+      wishlistDataGeneration.current += 1;
       setAuthToken(result.token);
       setPersonalItems((current) => current.map((candidate) =>
         candidate.id === updatedItem.id ? updatedItem : candidate));
       setAlerts((current) => ({ ...current, [updatedItem.id]: updatedItem.alertActive }));
+      setView("personal");
       setItemMessages((current) => ({
         ...current,
         [updatedItem.id]: { kind: "success", text: successMessage },
@@ -1075,8 +1090,10 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         (activeToken) => deleteMyWishlistItem(activeToken, item.id),
       );
       assertAuthSessionRevision(result.sessionRevision);
+      wishlistDataGeneration.current += 1;
       setAuthToken(result.token);
       setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
+      setView("personal");
       setAlerts((current) => {
         const next = { ...current };
         delete next[item.id];

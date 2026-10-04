@@ -203,6 +203,7 @@ async function dealsWishlistHarness(initialItems = []) {
   const refs = {
     savingDealKeys: { current: new Set() }, savedWishlistItemsRef: { current: initialItems },
     wishlistVersion: { current: 0 }, mounted: { current: true },
+    wishlistDataGeneration: { current: 0 }, setView() {},
   };
   const mocks = {
     ...setters, ...refs, ...auth, ...wishlist, displayedDealScope: "curated",
@@ -776,6 +777,303 @@ test("production login/register handlers establish a new session and logout inva
       assert.ok(h.auth.readAuthSessionRevision() > revision + 1);
     } finally { h.restore(); }
   }
+});
+
+// Execute Wishlist's actual state declarations, refresh effect and mutation
+// handlers with stable hook cells and the production auth/HTTP/retry clients.
+async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous = false, loadStatus = 200 } = {}) {
+  const h = await sentinelChatHarness();
+  const source = await readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("wishlist.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const component = ast.statements.find(node => node.name?.text === "WishlistExplorer");
+  const end = component.body.statements.findIndex(node => ts.isVariableStatement(node) &&
+    node.declarationList.declarations.some(item => item.name.getText(ast) === "priceDropCount"));
+  assert.ok(end > 0);
+  const program = [
+    ...ast.statements.filter(node => ["alertsFor", "protectedWishlistError"].includes(node.name?.text)),
+    ...component.body.statements.slice(0, end),
+  ].map(node => node.getText(ast)).join("\n");
+  const output = ts.transpileModule(program, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  let cursor = 0;
+  const cells = [];
+  let effects = [];
+  const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
+  const hooks = {
+    useState(initial) {
+      const index = cursor++;
+      cells[index] ??= { value: typeof initial === "function" ? initial() : initial };
+      return [cells[index].value, value => {
+        cells[index].value = typeof value === "function" ? value(cells[index].value) : value;
+      }];
+    },
+    useRef(initial) {
+      const index = cursor++;
+      cells[index] ??= { current: initial };
+      return cells[index];
+    },
+    useCallback(callback) { cursor++; return callback; },
+    useMemo(callback) { cursor++; return callback(); },
+    useEffect(callback, deps) {
+      const index = cursor++;
+      if (sameDeps(cells[index]?.deps, deps)) return;
+      effects.push(() => {
+        cells[index]?.cleanup?.();
+        cells[index] = { deps, cleanup: callback() };
+      });
+    },
+  };
+  const mocks = {
+    ...hooks, ...h.auth, ...h.wishlist, normalizeAuthError: h.authApi.normalizeAuthError,
+    wishlistItems: [], source: "api",
+  };
+  const renderState = new Function(...Object.keys(mocks), `${output}\nreturn {
+    handleAlertUpdate, handleDelete, handleItemAdded,
+    retry: () => setRefreshKey(current => current + 1),
+    state: { personalItems, alerts, view, authToken, serviceMessage, operationMessage,
+      itemMessages, alertEvents, alertEventsLoading, alertEventsMessage,
+      generation: wishlistDataGeneration.current }
+  };`);
+  let handlers;
+  const render = () => {
+    cursor = 0;
+    handlers = renderState(...Object.values(mocks));
+    const pending = effects;
+    effects = [];
+    pending.forEach(effect => effect());
+    return handlers;
+  };
+  if (anonymous) h.auth.clearAuthToken();
+  else {
+    h.respond(wishlistPath, initialItems, loadStatus);
+    h.respond(`${wishlistPath}/alert-events`, []);
+  }
+  render();
+  await settle();
+  render();
+  const formSource = await readFile(new URL("../src/components/AddWishlistItemForm.tsx", import.meta.url), "utf8");
+  const formAst = ts.createSourceFile("add.tsx", formSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const form = formAst.statements.find(node => node.name?.text === "AddWishlistItemForm");
+  const declarations = [
+    formAst.statements.find(node => node.name?.text === "readRequiredText"),
+    form.body.statements.find(node => node.name?.text === "handleSubmit"),
+  ].map(node => node.getText(formAst)).join("\n");
+  const compiled = ts.transpileModule(declarations, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  return {
+    ...h, render,
+    state: () => render().state,
+    update: (item, payload) => render().handleAlertUpdate(item, payload, "Persisted wishlist settings updated."),
+    remove: item => render().handleDelete(item),
+    added: item => render().handleItemAdded(item),
+    retry: () => { render().retry(); render(); },
+    add(item) {
+      const callbacks = {
+        ...h.auth, ...h.wishlist, token: h.auth.readAuthToken(),
+        normalizeTargetPriceInput: value => value,
+        setIsSubmitting() {}, setMessage() {}, onTokenChanged() {},
+        onAdded: saved => render().handleItemAdded(saved),
+        onAuthenticationRequired: () => h.auth.clearAuthToken(),
+        FormData: class { get(name) { return name === "alertActive" ? (item.alertActive ? "on" : null) : item[name]; } },
+      };
+      const submit = new Function(...Object.keys(callbacks), `${compiled}\nreturn handleSubmit;`)(...Object.values(callbacks));
+      return submit({ preventDefault() {}, currentTarget: { reset() {} } });
+    },
+    restore() { cells.forEach(cell => cell.cleanup?.()); h.restore(); },
+  };
+}
+
+test("Wishlist auth-refresh GET cannot overwrite a newer successful alert, target-price or priority PATCH", async () => {
+  for (const payload of [{ alertActive: true }, { targetPrice: "$3.00" }, { priority: "low" }]) {
+    const h = await wishlistExplorerHarness();
+    try {
+      const revision = h.auth.readAuthSessionRevision();
+      const patchPath = `${wishlistPath}/${alertItem.id}/alert`;
+      h.respond(patchPath, {}, 401);
+      const refreshReply = h.defer(refreshPath);
+      const mutation = h.update(alertItem, payload);
+      await settle();
+      const snapshotReply = h.defer(wishlistPath);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      const patchReply = h.defer(patchPath);
+      refreshReply(sentinelSession(1, "rotated"));
+      await settle();
+      assert.equal(h.state().view, "checking");
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      const authoritative = { ...alertItem, ...payload, alertEvaluation: {
+        targetReached: false, state: "watching", message: "Server evaluation after mutation",
+      } };
+      h.respond(`${wishlistPath}/alert-events`, []);
+      patchReply(authoritative);
+      await mutation;
+      assert.deepEqual(h.state().personalItems, [authoritative]);
+      assert.equal(h.state().view, "personal", "mutation remains visible while the stale GET is pending");
+      const generation = h.state().generation;
+      snapshotReply([alertItem]);
+      await settle();
+      assert.deepEqual(h.state().personalItems, [authoritative]);
+      assert.equal(h.state().alerts[alertItem.id], authoritative.alertActive);
+      assert.equal(h.state().generation, generation);
+      assert.match(h.state().itemMessages[alertItem.id].text, /Persisted/);
+      assert.equal(h.state().alertEventsLoading, false);
+      assert.deepEqual(h.calls.filter(call => call.path === patchPath).map(call => call.token), ["Bearer initial", "Bearer rotated"]);
+
+      // A post-mutation refresh is allowed to accept current server changes.
+      const current = { ...authoritative, currentPrice: "$2.00" };
+      h.respond(wishlistPath, [current]);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      h.retry();
+      await settle();
+      assert.deepEqual(h.state().personalItems, [current]);
+      assert.equal(h.state().view, "personal");
+    } finally { h.restore(); }
+  }
+});
+
+test("Wishlist pre-completion GET cannot reinsert a deleted item or remove a newly added item", async () => {
+  for (const action of ["add", "delete"]) {
+    const h = await wishlistExplorerHarness();
+    try {
+      const path = action === "add" ? wishlistPath : `${wishlistPath}/${alertItem.id}`;
+      const mutationReply = h.defer(path);
+      const addedItem = { ...alertItem, id: 99, title: "New personal game" };
+      const mutation = action === "add" ? h.add(addedItem) : h.remove(alertItem);
+      await settle();
+      const snapshotReply = h.defer(wishlistPath);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      h.retry();
+      await settle();
+      if (action === "add") h.respond(`${wishlistPath}/alert-events`, []);
+      mutationReply(addedItem);
+      await mutation;
+      const expected = action === "add" ? [addedItem, alertItem] : [];
+      assert.deepEqual(h.state().personalItems, expected);
+      snapshotReply([alertItem]);
+      await settle();
+      assert.deepEqual(h.state().personalItems, expected);
+      assert.equal(h.state().view, "personal");
+      assert.equal(h.state().alertEventsLoading, false);
+      assert.equal(h.state().generation, 1);
+      assert.equal(h.state().alerts[alertItem.id], action === "delete" ? undefined : false);
+    } finally { h.restore(); }
+  }
+});
+
+test("Wishlist accepts fresh GETs, empty states and same-user auth-event refreshes without a mutation", async () => {
+  const h = await wishlistExplorerHarness([]);
+  try {
+    assert.equal(h.state().view, "personal");
+    assert.deepEqual(h.state().personalItems, []);
+    const reply = h.defer(wishlistPath);
+    h.respond(`${wishlistPath}/alert-events`, []);
+    h.respond(refreshPath, sentinelSession(1, "rotated"));
+    const revision = h.auth.readAuthSessionRevision();
+    await h.auth.ensureAuthToken({ forceRefresh: true });
+    await settle();
+    assert.equal(h.state().view, "checking");
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    reply([alertItem]);
+    await settle();
+    assert.deepEqual(h.state().personalItems, [alertItem]);
+    assert.equal(h.state().authToken, "rotated");
+    assert.equal(h.state().view, "personal");
+    assert.equal(h.state().generation, 0);
+  } finally { h.restore(); }
+});
+
+test("Wishlist failed mutations retain data, do not advance generation and allow pending GET reconciliation", async () => {
+  for (const action of ["update", "delete", "add"]) {
+    const h = await wishlistExplorerHarness();
+    try {
+      const path = action === "update" ? `${wishlistPath}/${alertItem.id}/alert`
+        : action === "delete" ? `${wishlistPath}/${alertItem.id}` : wishlistPath;
+      const failedReply = h.defer(path);
+      const mutation = action === "update" ? h.update(alertItem, { alertActive: true })
+        : action === "delete" ? h.remove(alertItem) : h.add({ ...alertItem, id: 99 });
+      await settle();
+      const snapshotReply = h.defer(wishlistPath);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      h.retry();
+      await settle();
+      failedReply({}, 503);
+      await mutation;
+      assert.deepEqual(h.state().personalItems, [alertItem]);
+      assert.equal(h.state().generation, 0);
+      if (action === "update") assert.equal(h.state().itemMessages[alertItem.id].kind, "error");
+      if (action === "delete") assert.equal(h.state().operationMessage.kind, "error");
+      const reconciled = { ...alertItem, currentPrice: "$8.00" };
+      snapshotReply([reconciled]);
+      await settle();
+      assert.deepEqual(h.state().personalItems, [reconciled]);
+      assert.equal(h.state().view, "personal");
+    } finally { h.restore(); }
+  }
+});
+
+test("Wishlist ignores stale GET failures after mutation and still recovers from a fresh load failure", async () => {
+  const h = await wishlistExplorerHarness([alertItem], { loadStatus: 503 });
+  try {
+    assert.equal(h.state().view, "offline");
+    h.respond(wishlistPath, [alertItem]);
+    h.respond(`${wishlistPath}/alert-events`, []);
+    h.retry();
+    await settle();
+    assert.equal(h.state().view, "personal");
+    const staleReply = h.defer(wishlistPath);
+    h.respond(`${wishlistPath}/alert-events`, []);
+    h.retry();
+    await settle();
+    h.respond(`${wishlistPath}/alert-events`, []);
+    h.added({ ...alertItem, id: 99, title: "Added game" });
+    staleReply({}, 503);
+    await settle();
+    assert.equal(h.state().personalItems.length, 2);
+    assert.equal(h.state().view, "personal");
+    assert.equal(h.state().serviceMessage, null);
+  } finally { h.restore(); }
+});
+
+test("Wishlist refresh ordering and session boundaries reject old GETs while keeping the replacement account authoritative", async () => {
+  for (const status of [200, 401]) {
+    const h = await wishlistExplorerHarness();
+    try {
+      const oldReply = h.defer(wishlistPath);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      h.retry();
+      await settle();
+      const replacement = { ...alertItem, id: 72, title: "Account B game" };
+      h.respond(wishlistPath, [replacement]);
+      h.respond(`${wishlistPath}/alert-events`, []);
+      h.auth.startAuthSession(sentinelSession(2, "account-b"));
+      await settle();
+      assert.deepEqual(h.state().personalItems, [replacement]);
+      oldReply([alertItem], status);
+      await settle();
+      assert.deepEqual(h.state().personalItems, [replacement]);
+      assert.equal(h.auth.readAuthToken(), "account-b");
+      assert.equal(h.calls.filter(call => call.path === wishlistPath && call.token === "Bearer account-b").length, 1);
+    } finally { h.restore(); }
+  }
+  const ordered = await wishlistExplorerHarness();
+  try {
+    const olderReply = ordered.defer(wishlistPath);
+    ordered.respond(`${wishlistPath}/alert-events`, []);
+    ordered.retry();
+    await settle();
+    const current = { ...alertItem, currentPrice: "$7.00" };
+    ordered.respond(wishlistPath, [current]);
+    ordered.respond(`${wishlistPath}/alert-events`, []);
+    ordered.retry();
+    await settle();
+    olderReply([alertItem]);
+    await settle();
+    assert.deepEqual(ordered.state().personalItems, [current]);
+    assert.equal(ordered.state().generation, 0, "refresh ordering is independent of mutation generation");
+  } finally { ordered.restore(); }
+  const anonymous = await wishlistExplorerHarness([], { anonymous: true });
+  try {
+    assert.equal(anonymous.state().view, "public");
+    assert.deepEqual(anonymous.state().personalItems, []);
+    assert.equal(anonymous.calls.filter(call => call.path === wishlistPath).length, 0);
+  } finally { anonymous.restore(); }
 });
 
 test("Sentinel renders normal success and a real 401 / same-user refresh / retry success", async () => {
