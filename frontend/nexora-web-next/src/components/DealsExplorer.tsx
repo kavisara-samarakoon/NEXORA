@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   dealFilters,
   type DealFilter,
@@ -349,6 +350,26 @@ function DealNetworkStatus({
   );
 }
 
+function DealSearchQuery({ onSearch }: { onSearch: (title: string) => void }) {
+  const searchParams = useSearchParams();
+  const requestedTitle = (searchParams.get("title") ?? "").trim().slice(0, 80);
+
+  useEffect(() => {
+    if (!requestedTitle) return;
+
+    let active = true;
+    // Let Strict Mode's setup/cleanup replay finish before starting a request.
+    queueMicrotask(() => {
+      if (active) onSearch(requestedTitle);
+    });
+    return () => {
+      active = false;
+    };
+  }, [onSearch, requestedTitle]);
+
+  return null;
+}
+
 export default function DealsExplorer({ deals, source }: DealsResult) {
   const [mode, setMode] = useState<DealsMode>("curated");
   const [externalStatus, setExternalStatus] = useState<ExternalDealsStatus>("idle");
@@ -357,18 +378,6 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const [activeExternalTitle, setActiveExternalTitle] = useState("");
   const [activeFilter, setActiveFilter] = useState<DealFilter>("All Stores");
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    if (window.location.hash !== "#deal-search") return;
-
-    const input = document.getElementById("deal-search");
-    if (!(input instanceof HTMLInputElement)) return;
-
-    window.requestAnimationFrame(() => {
-      input.scrollIntoView({ behavior: "smooth", block: "center" });
-      input.focus({ preventScroll: true });
-    });
-  }, []);
   const [alerts, setAlerts] = useState<Set<string>>(() => new Set());
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -380,6 +389,27 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const savingDealKeys = useRef(new Set<string>());
   const previousAuthToken = useRef<string | null>(null);
   const requestVersion = useRef(0);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    let focusFrame: number | undefined;
+
+    if (window.location.hash === "#deal-search") {
+      const input = document.getElementById("deal-search");
+      if (input instanceof HTMLInputElement) {
+        focusFrame = window.requestAnimationFrame(() => {
+          input.scrollIntoView({ behavior: "smooth", block: "center" });
+          input.focus({ preventScroll: true });
+        });
+      }
+    }
+
+    return () => {
+      mounted.current = false;
+      if (focusFrame !== undefined) window.cancelAnimationFrame(focusFrame);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -498,7 +528,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     });
   }, [activeFilter, searchQuery, visibleDeals]);
 
-  async function loadExternalDeals(title: string) {
+  const loadExternalDeals = useCallback(async (title: string) => {
     const currentRequest = ++requestVersion.current;
     const normalizedTitle = title.trim();
     setExternalStatus("loading");
@@ -510,7 +540,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       pageSize: 12,
       title: normalizedTitle || undefined,
     });
-    if (currentRequest !== requestVersion.current) return;
+    if (!mounted.current || currentRequest !== requestVersion.current) return;
 
     if (result.source === "external-api") {
       setExternalDeals(result.deals);
@@ -519,7 +549,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       setExternalDeals([]);
       setExternalStatus("fallback");
     }
-  }
+  }, []);
+
+  const searchExternalTitle = useCallback((title: string) => {
+    setMode("external");
+    setExternalTitle(title);
+    void loadExternalDeals(title);
+  }, [loadExternalDeals]);
 
   function selectMode(nextMode: DealsMode) {
     if (nextMode === "curated") {
@@ -676,6 +712,9 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <DealSearchQuery onSearch={searchExternalTitle} />
+      </Suspense>
       <div className={styles.overview}>
         <section className={styles.routeHero} aria-labelledby="deals-title">
           <p className={styles.eyebrow}>

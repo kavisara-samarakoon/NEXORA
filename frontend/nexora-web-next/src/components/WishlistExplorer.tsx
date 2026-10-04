@@ -507,16 +507,27 @@ function WishlistCard({
       )}
 
       <div className="wl-card__actions">
-        <button
+        <Link
           className={`wl-card__view wl-card__view--${storeClass}`}
-          type="button"
-          disabled
-          aria-label={`View deal for ${item.title} unavailable in this preview`}
-          title="Store redirects are planned for a later migration"
+          style={{
+            display: "inline-flex",
+            minHeight: 44,
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            border: "1px solid var(--nx-glass-border-strong)",
+            borderRadius: 999,
+            font: "inherit",
+            fontWeight: 700,
+          }}
+          href={`/deals?title=${encodeURIComponent(item.title)}#deal-search`}
+          aria-label={`Find current deals for ${item.title}`}
+          title={`Search current external offers for ${item.title}`}
         >
           <span aria-hidden="true">↗</span>
           View Deal
-        </button>
+        </Link>
         {canManage && (
           <button
             className={alertIsActive ? "wl-card__edit wl-card__edit--active" : "wl-card__edit"}

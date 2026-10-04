@@ -155,6 +155,187 @@ test("page-local deal alerts and giveaway reminders disclose their preview-only 
   assert.match(giveawaysSource, /No verified claim destination/);
 });
 
+test("wishlist View Deal routes encoded titles through the existing external search without changing alert previews", async () => {
+  const [wishlistSource, dealsSource] = await Promise.all([
+    readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8"),
+  ]);
+  const parse = source => ts.createSourceFile("component.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const wishlistAst = parse(wishlistSource);
+  const dealsAst = parse(dealsSource);
+  const find = (node, predicate) => {
+    if (predicate(node)) return node;
+    return ts.forEachChild(node, child => find(child, predicate));
+  };
+  const viewControl = find(wishlistAst, node => ts.isJsxElement(node) &&
+    node.children.some(child => ts.isJsxText(child) && child.text.trim() === "View Deal"));
+  assert.ok(viewControl, "wishlist must expose a View Deal control");
+  assert.equal(viewControl.openingElement.tagName.getText(wishlistAst), "Link");
+  const attributes = viewControl.openingElement.attributes.properties;
+  assert.ok(!attributes.some(attribute => attribute.name?.getText(wishlistAst) === "disabled"));
+  const href = attributes.find(attribute => attribute.name?.getText(wishlistAst) === "href");
+  const makeHref = new Function("item", `return ${href.initializer.expression.getText(wishlistAst)};`);
+  for (const title of ["Elden Ring", "A & B + C/#?=100%", "遊戲 🎮", " title "]) {
+    const url = new URL(makeHref({ title }), "https://nexora.example");
+    assert.equal(url.pathname, "/deals");
+    assert.equal(url.searchParams.get("title"), title);
+    assert.equal(url.hash, "#deal-search");
+    assert.deepEqual([...url.searchParams.keys()], ["title"]);
+  }
+
+  const explorer = dealsAst.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "DealsExplorer");
+  const declaration = (name, statements = explorer.body.statements) => {
+    const node = statements.find(statement =>
+      (ts.isFunctionDeclaration(statement) && statement.name?.text === name) ||
+      (ts.isVariableStatement(statement) && statement.declarationList.declarations.some(item => item.name.getText(dealsAst) === name)));
+    assert.ok(node, `missing ${name}`);
+    return node.getText(dealsAst);
+  };
+  // Execute the production query effect and request handlers with controlled
+  // hooks and promises, without introducing a browser/test-renderer dependency.
+  const names = ["loadExternalDeals", "searchExternalTitle", "selectMode", "submitExternalSearch", "clearExternalSearch", "toggleAlert"];
+  const program = [declaration("DealSearchQuery", dealsAst.statements), ...names.map(name => declaration(name))].join("\n");
+  const { outputText } = ts.transpileModule(program, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  });
+  const state = { alerts: new Set(), mode: "curated", externalTitle: "", externalStatus: "idle" };
+  const setters = Object.fromEntries(["mode", "externalTitle", "externalStatus", "activeExternalTitle", "activeFilter", "searchQuery", "externalDeals", "alerts"].map(key => [
+    `set${key[0].toUpperCase()}${key.slice(1)}`,
+    value => { state[key] = typeof value === "function" ? value(state[key]) : value; },
+  ]));
+  const requests = [];
+  const requestVersion = { current: 0 };
+  const mounted = { current: true };
+  let params = new URLSearchParams();
+  let effect;
+  let dependencies;
+  const mocks = {
+    ...setters, requestVersion, mounted,
+    useCallback: callback => callback,
+    useSearchParams: () => params,
+    useEffect: (callback, deps) => { effect = callback; dependencies = deps; },
+    getExternalDeals: options => new Promise(resolve => requests.push({ options, resolve })),
+    // These represent the values read by the existing manual handlers.
+    externalTitle: " Manual Title ", mode: "curated", externalStatus: "idle",
+  };
+  const handlers = new Function(...Object.keys(mocks), `${outputText}\nreturn { DealSearchQuery, ${names.join(", ")} };`)(...Object.values(mocks));
+  assert.match(dealsSource, /<Suspense fallback=\{null\}>\s*<DealSearchQuery onSearch=\{searchExternalTitle\}/);
+  assert.equal((dealsSource.match(/\bgetExternalDeals\(\{/g) ?? []).length, 1, "query and manual searches share one provider path");
+  const setup = search => {
+    params = new URLSearchParams(search);
+    handlers.DealSearchQuery({ onSearch: handlers.searchExternalTitle });
+    return effect();
+  };
+  for (const search of ["", "title=", "title=+%20+"]) {
+    setup(search);
+    await Promise.resolve();
+    assert.equal(requests.length, 0, "absent or blank titles preserve curated browsing");
+    assert.equal(state.mode, "curated");
+  }
+  const title = "A & B + C/#?=100% 🎮";
+  const search = `title=${encodeURIComponent(`  ${title}  `)}&title=ignored`;
+  const cleanup = setup(search);
+  cleanup(); // Strict Mode replays effect setup after cleanup.
+  setup(search);
+  await Promise.resolve();
+  assert.equal(requests.length, 1, "Strict Mode replay must start only one provider request");
+  assert.deepEqual(requests[0].options, { pageSize: 12, title });
+  assert.equal(state.mode, "external");
+  assert.equal(state.externalTitle, title);
+  assert.equal(state.externalStatus, "loading");
+  assert.deepEqual(dependencies, [handlers.searchExternalTitle, title]);
+  requests[0].resolve({ source: "external-api", deals: [{ id: 1 }] });
+  await Promise.resolve();
+  assert.equal(state.externalStatus, "ready");
+  assert.deepEqual(state.externalDeals, [{ id: 1 }]);
+
+  setup(`title=${"x".repeat(100)}`); // A later query navigation is consumed too.
+  await Promise.resolve();
+  assert.equal(state.externalTitle.length, 80);
+  assert.equal(requests[1].options.title.length, 80);
+  const manual = handlers.loadExternalDeals(" New title ");
+  requests[1].resolve({ source: "external-api", deals: [{ id: 2 }] });
+  await Promise.resolve();
+  assert.equal(state.externalStatus, "loading", "older query response must not replace a manual request");
+  requests[2].resolve({ source: "fallback", deals: [{ id: 3 }] });
+  await manual;
+  assert.equal(state.externalStatus, "fallback");
+  assert.deepEqual(state.externalDeals, []);
+
+  handlers.selectMode("external");
+  assert.deepEqual(requests[3].options, { pageSize: 12, title: "Manual Title" });
+  handlers.selectMode("curated");
+  requests[3].resolve({ source: "external-api", deals: [{ id: 4 }] });
+  await Promise.resolve();
+  assert.equal(state.mode, "curated");
+  assert.deepEqual(state.externalDeals, [], "curated selection invalidates the pending response");
+  let prevented = false;
+  handlers.submitExternalSearch({ preventDefault: () => { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(requests[4].options.title, "Manual Title");
+  handlers.clearExternalSearch();
+  assert.equal(state.externalTitle, "");
+  assert.deepEqual(requests[5].options, { pageSize: 12, title: undefined });
+  mounted.current = false;
+  requests[4].resolve({ source: "external-api", deals: [{ id: 5 }] });
+  requests[5].resolve({ source: "external-api", deals: [{ id: 6 }] });
+  await Promise.resolve();
+  assert.deepEqual(state.externalDeals, [], "unmounted requests cannot update the feed");
+  const cancelled = setup("title=cancelled");
+  cancelled();
+  await Promise.resolve();
+  assert.equal(requests.length, 6, "cleanup cancels a queued query request");
+
+  const focusEffect = explorer.body.statements.find(statement =>
+    ts.isExpressionStatement(statement) && ts.isCallExpression(statement.expression) &&
+    statement.expression.expression.getText(dealsAst) === "useEffect" &&
+    statement.expression.arguments[0].getText(dealsAst).includes("scrollIntoView"));
+  assert.ok(focusEffect, "the deals hash shortcut retains its focus effect");
+  const focusProgram = ts.transpileModule(focusEffect.getText(dealsAst), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const focusCalls = [];
+  class Input {
+    scrollIntoView(options) { focusCalls.push(["scroll", options]); }
+    focus(options) { focusCalls.push(["focus", options]); }
+  }
+  const frames = new Map();
+  let frameId = 0;
+  const windowMock = {
+    location: { hash: "#deal-search" },
+    requestAnimationFrame: callback => { frames.set(++frameId, callback); return frameId; },
+    cancelAnimationFrame: id => frames.delete(id),
+  };
+  const runFocusEffect = new Function("useEffect", "mounted", "window", "document", "HTMLInputElement", focusProgram);
+  const focusSetup = () => {
+    let cleanup;
+    runFocusEffect(callback => { cleanup = callback(); }, mounted, windowMock, {
+      getElementById: id => { assert.equal(id, "deal-search"); return new Input(); },
+    }, Input);
+    return cleanup;
+  };
+  focusSetup()();
+  const stopFocus = focusSetup();
+  assert.equal(frames.size, 1, "Strict Mode cancels the first focus frame");
+  [...frames.values()][0]();
+  assert.deepEqual(focusCalls, [
+    ["scroll", { behavior: "smooth", block: "center" }],
+    ["focus", { preventScroll: true }],
+  ]);
+  stopFocus();
+  windowMock.location.hash = "";
+  focusSetup()();
+  assert.equal(frames.size, 0, "ordinary /deals navigation does not force focus");
+
+  handlers.toggleAlert(7);
+  assert.deepEqual([...state.alerts], ["curated:7"]);
+  handlers.toggleAlert(7);
+  assert.equal(state.alerts.size, 0);
+  assert.equal(requests.length, 6, "page-only alert toggles make no provider request");
+  assert.match(dealsSource, /no alert is saved and no notification will be sent/);
+  assert.match(dealsSource, /\{alertIsSet \? "Marked on page" : "Preview alert"\}/);
+});
+
 test("homepage feed maps the current backend deal, giveaway, and dashboard DTO fields", () => {
   const deal = mapDeal({
     id: 17,
