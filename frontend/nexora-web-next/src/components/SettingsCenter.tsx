@@ -1,17 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import NotificationPreferencesPanel from "@/components/NotificationPreferencesPanel";
 import UxStatePanel from "@/components/UxStatePanel";
 import { useCinematicSceneControls } from "./CinematicSceneControls";
 import { normalizeAuthError, type AuthUser } from "@/lib/auth";
-import { AUTH_STATE_EVENT, readCurrentUser } from "@/lib/auth-client";
-import { useEffect, useMemo, useState } from "react";
+import {
+  AUTH_STATE_EVENT,
+  clearAuthToken,
+  readAuthToken,
+  readCurrentUser,
+} from "@/lib/auth-client";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   accountOverview,
   accountSystemStatus,
   appearancePreferences,
   connectedPlatforms,
-  notificationPreferences,
   profileFields,
   securityPreferences,
   type Preference,
@@ -124,8 +129,9 @@ function SectionHeading({ id, icon, eyebrow, title }: { id: string; icon: Settin
 }
 
 export default function SettingsCenter() {
-  const allPreferences = [...notificationPreferences, ...securityPreferences, ...appearancePreferences];
+  const allPreferences = [...securityPreferences, ...appearancePreferences];
   const [authState, setAuthState] = useState<SettingsAuthState>({ status: "loading" });
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<Record<string, boolean>>(
     Object.fromEntries(allPreferences.map((item) => [item.id, item.enabled])),
   );
@@ -144,9 +150,20 @@ export default function SettingsCenter() {
       try {
         const user = await readCurrentUser();
         if (!active) return;
-        setAuthState(user ? { status: "authenticated", user } : { status: "anonymous" });
+
+        if (user) {
+          const token = readAuthToken();
+          setAuthToken(token);
+          setAuthState(token
+            ? { status: "authenticated", user }
+            : { status: "anonymous" });
+        } else {
+          setAuthToken(null);
+          setAuthState({ status: "anonymous" });
+        }
       } catch (error) {
         if (!active) return;
+        setAuthToken(null);
         setAuthState({ status: "unavailable", message: normalizeAuthError(error).message });
       }
     }
@@ -212,9 +229,9 @@ export default function SettingsCenter() {
       },
       {
         label: "Notifications",
-        value: "Preview controls only",
-        badge: "Preview",
-        tone: "orange",
+        value: "Saved account preferences",
+        badge: "Active",
+        tone: "green",
       },
       {
         label: "Platform Links",
@@ -239,7 +256,7 @@ export default function SettingsCenter() {
       { label: "Display Name", value: signedInUser.displayName },
       { label: "Username", value: `@${signedInUser.username}` },
       { label: "Email", value: signedInUser.email },
-      { label: "Saved Settings", value: "Preview only" },
+      { label: "Saved Settings", value: "Notification preferences connected" },
     ];
   }, [signedInUser]);
 
@@ -266,6 +283,12 @@ export default function SettingsCenter() {
     );
   }
 
+  const handleNotificationAuthenticationRequired = useCallback(() => {
+    clearAuthToken();
+    setAuthToken(null);
+    setAuthState({ status: "anonymous" });
+  }, [setAuthState, setAuthToken]);
+
   const heroTitle = isSignedIn ? "Account Control Center" : "Settings Preview";
   const heroTag = isSignedIn ? "Signed-in account" : "Settings preview";
   const heroDescription = isSignedIn
@@ -285,20 +308,23 @@ export default function SettingsCenter() {
         </div>
       </section>
 
-      <UxStatePanel title="Manage saved notification preferences" tone="auth"
-        description={isSignedIn
-          ? "Your signed-in account can review wishlist notification preferences from the Wishlist workspace."
-          : "Sign in to review account-linked notification choices from the Wishlist workspace."}
-      >
-        <Link className="ux-state__action" href="/wishlist#notification-preferences">Open wishlist preferences</Link>
-      </UxStatePanel>
+      {!isSignedIn && authState.status !== "loading" && (
+        <UxStatePanel
+          title="Sign in to manage notification preferences"
+          tone="auth"
+          description="Account-linked notification preferences can be loaded and saved directly from Settings after you sign in."
+        >
+          <Link className="ux-state__action" href="/login?returnTo=%2Fsettings">Sign in</Link>
+          <Link className="ux-state__action ux-state__action--quiet" href="/register?returnTo=%2Fsettings">Register</Link>
+        </UxStatePanel>
+      )}
 
       <div className="st-disclaimer">
         <span aria-hidden="true">ℹ️</span>
         <p>
           {isSignedIn ? (
             <>
-              <strong>Signed-in local demo account</strong> — Identity details are loaded from the active authentication session. Preference toggles below remain preview-only until persistent settings workflows are connected.
+              <strong>Signed-in account</strong> — Identity details are loaded from the active authentication session. Notification preferences below load from and save to your account. Controls explicitly labelled preview or planned remain non-persistent.
             </>
           ) : authState.status === "loading" ? (
             <>
@@ -310,7 +336,7 @@ export default function SettingsCenter() {
             </>
           ) : (
             <>
-              <strong>Guest settings preview</strong> — Sign in to show the current account identity. Preference toggles affect this screen only until persistent settings workflows are connected.
+              <strong>Guest settings preview</strong> — Sign in to show your account identity and manage saved notification preferences. Controls labelled preview or planned remain examples of future capabilities.
             </>
           )}
         </p>
@@ -357,13 +383,47 @@ export default function SettingsCenter() {
           </section>
 
           <section className="st-card" aria-labelledby="notifications-title">
-            <SectionHeading id="notifications-title" icon="bell" eyebrow={isSignedIn ? "Account preview" : "Preview controls"} title="Notification Preferences" />
+            <SectionHeading
+              id="notifications-title"
+              icon="bell"
+              eyebrow={isSignedIn ? "Account controls" : "Account preferences"}
+              title="Notification Preferences"
+            />
             <p className="st-section-note">
               {isSignedIn
-                ? "Wishlist price-alert notification preferences are managed in Wishlist. Giveaway reminders are planned and are not persisted in v0.90."
-                : "These rows show capability status. Sign in to manage Wishlist price-alert notifications; giveaway reminders are not connected in v0.90."}
+                ? "Review and save the notification preferences stored with your NEXORA account."
+                : "Sign in to load and manage notification preferences stored with your NEXORA account."}
             </p>
-            <PreferenceRows items={notificationPreferences} values={displayedPreferences} onToggle={togglePreference} />
+
+            {isSignedIn && authToken ? (
+              <NotificationPreferencesPanel
+                authToken={authToken}
+                onAuthenticationRequired={handleNotificationAuthenticationRequired}
+                onTokenChanged={setAuthToken}
+              />
+            ) : authState.status === "loading" ? (
+              <UxStatePanel
+                title="Loading account preferences"
+                tone="loading"
+                role="status"
+                description="NEXORA is checking the current account session before loading notification preferences."
+              />
+            ) : authState.status === "unavailable" ? (
+              <UxStatePanel
+                title="Notification preferences unavailable"
+                tone="unavailable"
+                role="status"
+                description={authState.message}
+              />
+            ) : (
+              <UxStatePanel
+                title="Sign in to manage notification preferences"
+                tone="auth"
+                description="Saved notification preferences belong to your account and are unavailable in guest preview mode."
+              >
+                <Link className="ux-state__action" href="/login?returnTo=%2Fsettings">Sign in</Link>
+              </UxStatePanel>
+            )}
           </section>
 
           <section className="st-card" aria-labelledby="security-preferences-title">

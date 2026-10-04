@@ -220,6 +220,26 @@ test("homepage summary distinguishes incomplete and unavailable responses", () =
   assert.equal(getHomeSummaryAvailability("ready", true, incomplete), "unavailable");
 });
 
+test("settings uses the persisted notification preference workflow shared with wishlist", async () => {
+  const [settingsSource, wishlistSource, panelSource] = await Promise.all([
+    readFile(new URL("../src/components/SettingsCenter.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/NotificationPreferencesPanel.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(settingsSource, /import NotificationPreferencesPanel/);
+  assert.match(settingsSource, /<NotificationPreferencesPanel/);
+  assert.doesNotMatch(settingsSource, /Open wishlist preferences/);
+  assert.doesNotMatch(settingsSource, /managed from Wishlist/);
+
+  assert.match(wishlistSource, /import NotificationPreferencesPanel/);
+  assert.match(wishlistSource, /<NotificationPreferencesPanel/);
+
+  assert.match(panelSource, /getMyNotificationPreferences/);
+  assert.match(panelSource, /updateMyNotificationPreferences/);
+  assert.match(panelSource, /Preferences saved to your account/);
+});
+
 test("anonymous bootstrap is coalesced, real auth failures remain visible, and refresh can still recover sessions", async () => {
   const apiUrl = `data:text/javascript,${encodeURIComponent('export const buildApiUrl = path => "http://localhost:8080" + path; export const readResponseRequestId = response => response.headers.get("X-NEXORA-Request-ID");')}`;
   const authUrl = await moduleUrl("../src/lib/auth.ts", { "@/lib/api-client": apiUrl });
