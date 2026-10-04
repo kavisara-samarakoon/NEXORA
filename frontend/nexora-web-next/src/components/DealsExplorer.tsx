@@ -639,7 +639,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
       setAuthToken(token);
       const existingItem = findMatchingWishlistItem(deal, savedWishlistItemsRef.current);
-      let created = false;
+      let postedItem: WishlistItem | undefined;
       const result = await withWishlistAuthRetry(token, async (activeToken) => {
         if (existingItem) {
           return changeAlert
@@ -650,9 +650,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         }
 
         try {
-          const item = await addMyWishlistItem(activeToken, wishlistPayloadFor(deal));
-          created = true;
-          return item;
+          // A successful idempotent POST may return an existing paused item.
+          // Keep it across auth retry so a PATCH 401 does not repeat the POST.
+          const item = postedItem ?? await addMyWishlistItem(activeToken, wishlistPayloadFor(deal));
+          postedItem = item;
+          return changeAlert && !item.alertActive
+            ? updateMyWishlistAlert(activeToken, item.id, { alertActive: true })
+            : item;
         } catch (error) {
           if (protectedWishlistError(error).status !== 409) throw error;
           // Another tab or a not-yet-completed sync may already have saved it.
@@ -677,7 +681,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         ...current,
         [key]: {
           tone: "success",
-          text: `${savedItem.title} ${created ? "was saved to" : "is in"} your personal wishlist. Its wishlist alert is ${savedItem.alertActive ? "enabled" : "paused"}.`,
+          text: `${savedItem.title} is in your personal wishlist. Its wishlist alert is ${savedItem.alertActive ? "enabled" : "paused"}.`,
         },
       }));
     } catch (error) {

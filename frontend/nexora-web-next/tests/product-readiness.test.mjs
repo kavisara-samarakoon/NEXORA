@@ -622,7 +622,7 @@ test("unsaved Deals alerts share wishlist creation with Save and block concurren
       assert.equal(h.calls.length, 0, "lock acquired before auth resolves");
       assert.equal(h.state.savingDeals.size, 1);
       const created = { ...alertItem, alertActive: true, targetPrice: alertDeal.priceNew };
-      h.respond(created);
+      h.respond(created, 201);
       releaseAuth();
       await first;
       assert.equal(h.calls.length, 1);
@@ -631,9 +631,115 @@ test("unsaved Deals alerts share wishlist creation with Save and block concurren
       assert.equal(h.calls[0].body.alertActive, true);
       assert.equal(h.calls[0].body.targetPrice, alertDeal.priceNew);
       assert.deepEqual(h.state.savedWishlistItems, [created]);
-      assert.match(alertMessage(h).text, /was saved to your personal wishlist.*alert is enabled/);
+      assert.match(alertMessage(h).text, /is in your personal wishlist.*alert is enabled/);
       assert.equal(h.refs.savingDealKeys.current.size, 0);
       assert.equal(h.state.savingDeals.size, 0);
+    } finally { h.restore(); }
+  }
+});
+
+test("Deals enables a paused item returned by idempotent POST and holds the shared lock through PATCH", async () => {
+  const otherItem = { ...alertItem, id: 99, title: "Another Game" };
+  const h = await dealsWishlistHarness([otherItem]);
+  try {
+    h.respond(alertItem, 201);
+    const finishPatch = h.defer();
+    const pending = h.handlers.toggleDealAlert(alertDeal);
+    await settle();
+    assert.deepEqual(h.calls.map(call => [call.method, call.path]), [
+      ["POST", "/api/me/wishlist"], ["PATCH", "/api/me/wishlist/42/alert"],
+    ]);
+    assert.deepEqual(h.calls[1].body, { alertActive: true });
+    assert.deepEqual(h.state.savedWishlistItems, [otherItem], "no enabled state before PATCH succeeds");
+    assert.equal(alertMessage(h), undefined, "no premature success feedback");
+    assert.equal(h.state.savingDeals.size, 1);
+    await h.handlers.saveDeal({ ...alertDeal, id: 101, title: " EXAMPLE GAME ", store: " steam " });
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.equal(h.calls.length, 2, "normalized title/store lock covers the follow-up PATCH");
+    const enabled = {
+      ...alertItem, alertActive: true, currentPrice: "$8.99",
+      alertEvaluation: { state: "watching", targetReached: false, message: "Watching target" },
+    };
+    finishPatch(enabled);
+    await pending;
+    assert.deepEqual(h.state.savedWishlistItems, [otherItem, enabled]);
+    assert.deepEqual(h.refs.savedWishlistItemsRef.current, [otherItem, enabled]);
+    assert.equal(alertMessage(h).tone, "success");
+    assert.equal(alertMessage(h).text, "Example Game is in your personal wishlist. Its wishlist alert is enabled.");
+    assert.equal(h.state.savedWishlistItems[1].targetPrice, "$5.00");
+    assert.equal(h.state.savedWishlistItems[1].priority, "high");
+    assert.equal(h.refs.savingDealKeys.current.size, 0);
+    assert.equal(h.state.savingDeals.size, 0);
+  } finally { h.restore(); }
+});
+
+test("Deals idempotent POST does not PATCH an active alert or alter a save-only paused item", async () => {
+  for (const [action, alertActive] of [["toggleDealAlert", true], ["saveDeal", false], ["saveDeal", true]]) {
+    const h = await dealsWishlistHarness();
+    try {
+      const item = { ...alertItem, alertActive };
+      h.respond(item, 201);
+      await h.handlers[action](alertDeal);
+      assert.deepEqual(h.calls.map(call => call.method), ["POST"]);
+      assert.deepEqual(h.state.savedWishlistItems, [item], "preserve all returned fields, including target and priority");
+      assert.equal(h.state.savedWishlistItems[0].alertActive, alertActive);
+      assert.equal(h.calls[0].body.targetPrice, alertDeal.priceNew, "existing creation target semantics remain unchanged");
+      assert.equal(alertMessage(h).tone, "success");
+      assert.match(alertMessage(h).text, /is in your personal wishlist/);
+      assert.match(alertMessage(h).text, alertActive ? /alert is enabled/ : /alert is paused/);
+      assert.doesNotMatch(alertMessage(h).text, /newly|was saved|created/);
+    } finally { h.restore(); }
+  }
+});
+
+test("Deals reports follow-up PATCH failure truthfully with request ID and permits a safe retry", async () => {
+  const h = await dealsWishlistHarness();
+  try {
+    h.respond(alertItem, 201);
+    h.respond({}, 503, "enable-patch-request-id");
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.deepEqual(h.calls.map(call => call.method), ["POST", "PATCH"]);
+    assert.deepEqual(h.state.savedWishlistItems, []);
+    assert.equal(alertMessage(h).tone, "error");
+    assert.equal(alertMessage(h).requestId, "enable-patch-request-id");
+    assert.match(alertMessage(h).text, /retry from this card/);
+    assert.doesNotMatch(alertMessage(h).text, /alert is enabled/);
+    assert.equal(h.refs.savingDealKeys.current.size, 0);
+    assert.equal(h.state.savingDeals.size, 0);
+    assert.equal(h.state.wishlistSyncRevision, 1, "reconcile persisted state after a partial failure");
+    const enabled = { ...alertItem, alertActive: true };
+    h.respond(alertItem, 201); // Retry before sync: POST remains idempotent.
+    h.respond(enabled);
+    await h.handlers.toggleDealAlert(alertDeal);
+    assert.deepEqual(h.calls.map(call => call.method), ["POST", "PATCH", "POST", "PATCH"]);
+    assert.deepEqual(h.calls.at(-1).body, { alertActive: true });
+    assert.deepEqual(h.state.savedWishlistItems, [enabled]);
+    assert.equal(alertMessage(h).tone, "success");
+    assert.match(alertMessage(h).text, /wishlist alert is enabled/);
+  } finally { h.restore(); }
+});
+
+test("Deals retries auth for POST or follow-up PATCH without repeating a successful POST", async () => {
+  for (const failurePhase of ["POST", "PATCH"]) {
+    const h = await dealsWishlistHarness();
+    try {
+      if (failurePhase === "POST") h.respond({}, 401);
+      h.respond(alertItem, 201);
+      if (failurePhase === "PATCH") h.respond({}, 401);
+      const enabled = { ...alertItem, alertActive: true };
+      h.respond(enabled);
+      await h.handlers.toggleDealAlert(alertDeal);
+      assert.deepEqual(h.calls.map(call => [call.method, call.token]), failurePhase === "POST"
+        ? [["POST", "Bearer initial"], ["POST", "Bearer rotated"], ["PATCH", "Bearer rotated"]]
+        : [["POST", "Bearer initial"], ["PATCH", "Bearer initial"], ["PATCH", "Bearer rotated"]]);
+      assert.ok(h.calls.filter(call => call.method === "PATCH").every(call =>
+        call.path === "/api/me/wishlist/42/alert" && JSON.stringify(call.body) === '{"alertActive":true}'));
+      assert.equal(h.auth.refreshCalls, 1);
+      assert.equal(h.state.authToken, "rotated");
+      assert.deepEqual(h.state.savedWishlistItems, [enabled]);
+      assert.equal(alertMessage(h).tone, "success");
+      assert.match(alertMessage(h).text, /wishlist alert is enabled/);
+      assert.equal(h.refs.savingDealKeys.current.size, 0);
     } finally { h.restore(); }
   }
 });
