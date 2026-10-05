@@ -448,6 +448,8 @@ async function accountOperationHandlers(h) {
     refreshAlertEvents: () => {},
     active: true, item: alertItem, priceHistoryState: "idle", PRICE_HISTORY_REQUEST_LIMIT: 12,
     alertEventsRequestVersion: { current: 0 },
+    preferenceDataGeneration: { current: 0 },
+    preferenceMutationListeners: new Set(),
     useCallback: callback => callback, displayedDealScope: "curated",
     savingDealKeys: { current: new Set() }, savedWishlistItemsRef: { current: [] },
     wishlistVersion: { current: 0 }, mounted: { current: true },
@@ -2155,6 +2157,401 @@ test("homepage summary distinguishes incomplete and unavailable responses", () =
   assert.equal(incomplete.giveaways, null);
   assert.equal(getHomeSummaryAvailability("ready", false, incomplete), "incomplete");
   assert.equal(getHomeSummaryAvailability("ready", true, incomplete), "unavailable");
+});
+
+// Run the panel's production hooks, load/save handlers and JSX with controlled
+// network completions. Obtain its props and auth-required callback from each
+// consumer's actual source rather than duplicating preference state logic.
+async function notificationPreferencesHarness(consumer = "SettingsCenter") {
+  const h = await sentinelChatHarness();
+  const source = await readFile(new URL("../src/components/NotificationPreferencesPanel.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("preferences.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const component = ast.statements.find(node => node.name?.text === "NotificationPreferencesPanel");
+  const renderReturn = component.body.statements.at(-1);
+  assert.ok(ts.isReturnStatement(renderReturn));
+  const program = [
+    ...ast.statements.filter(node => ts.isVariableStatement(node) &&
+      node.declarationList.declarations.some(item => ["notificationPreferenceFields", "preferenceDataGeneration",
+        "preferenceMutationListeners"].includes(item.name.getText(ast)))).map(node => node.getText(ast)),
+    `function NotificationPreferencesPanel({ authToken, onAuthenticationRequired, onTokenChanged }) {
+      ${component.body.statements.slice(0, -1).map(node => node.getText(ast)).join("\n")
+        .replace("void loadPreferences();", "pendingLoads.push(loadPreferences());")}
+      return { savePreferences, retry: () => setRetryKey(current => current + 1),
+        state: { savedPreferences, draftPreferences, loadState, message, isSaving,
+          generation: preferenceDataGeneration.current }, tree: ${renderReturn.expression.getText(ast)} };
+    }`,
+  ].join("\n");
+  const compile = code => ts.transpileModule(code, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
+  }).outputText;
+  let cursor = 0;
+  const cells = [];
+  let effects = [];
+  const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
+  const hooks = {
+    useState(initial) {
+      const index = cursor++;
+      cells[index] ??= { value: typeof initial === "function" ? initial() : initial };
+      return [cells[index].value, value => {
+        cells[index].value = typeof value === "function" ? value(cells[index].value) : value;
+      }];
+    },
+    useRef(initial) {
+      const index = cursor++;
+      cells[index] ??= { current: initial };
+      return cells[index];
+    },
+    useEffect(callback, deps) {
+      const index = cursor++;
+      if (sameDeps(cells[index]?.deps, deps)) return;
+      effects.push(() => {
+        cells[index]?.cleanup?.();
+        cells[index] = { deps, cleanup: callback() };
+      });
+    },
+  };
+  const react = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) };
+  const pendingLoads = [];
+  const mocks = {
+    ...hooks, ...h.auth, ...h.preferences, React: react, pendingLoads,
+    UxStatePanel: "UxStatePanel", UxSkeleton: "UxSkeleton", RequestIdSupportText: "RequestIdSupportText",
+  };
+  const Panel = new Function(...Object.keys(mocks), `${compile(program)}\nreturn NotificationPreferencesPanel;`)(...Object.values(mocks));
+  const consumerSource = await readFile(new URL(`../src/components/${consumer}.tsx`, import.meta.url), "utf8");
+  const consumerAst = ts.createSourceFile("consumer.tsx", consumerSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let panelJsx;
+  const collect = node => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(consumerAst) === "NotificationPreferencesPanel") panelJsx = node;
+    ts.forEachChild(node, collect);
+  };
+  collect(consumerAst);
+  assert.ok(panelJsx, `${consumer} renders the shared panel`);
+  const callbackName = consumer === "SettingsCenter" ? "handleNotificationAuthenticationRequired" : "handleAuthenticationRequired";
+  const parent = consumerAst.statements.find(node => node.name?.text === consumer);
+  const callbackDeclaration = parent.body.statements.find(node => ts.isVariableStatement(node) &&
+    node.declarationList.declarations.some(item => item.name.getText(consumerAst) === callbackName));
+  let authToken = h.auth.readAuthToken();
+  let authRequired = 0;
+  const changedTokens = [];
+  const setAuthToken = token => { authToken = token; changedTokens.push(token); };
+  const callbackMocks = {
+    clearAuthToken: () => { authRequired++; h.auth.clearAuthToken(); }, setAuthToken,
+    useCallback: callback => callback, alertEventsRequestVersion: { current: 0 },
+    wishlistItems: [], alertsFor: () => ({}),
+    ...Object.fromEntries(["AuthState", "PersonalItems", "AlertEvents", "AlertEventsLoading",
+      "AlertEventsMessage", "Alerts", "UpdatingIds", "ItemMessages", "ServiceMessage", "View"].map(name => [`set${name}`, () => {}])),
+  };
+  const onAuthenticationRequired = new Function(...Object.keys(callbackMocks),
+    `${compile(callbackDeclaration.getText(consumerAst))}\nreturn ${callbackName};`)(...Object.values(callbackMocks));
+  const propsFactory = new Function("React", "NotificationPreferencesPanel", "authToken", callbackName,
+    "setAuthToken", "onAuthenticationRequired", "onTokenChanged",
+    `${compile(`const panel = ${panelJsx.getText(consumerAst)};`)}\nreturn panel.props;`);
+  let handlers;
+  const render = () => {
+    if (!authToken) return handlers;
+    cursor = 0;
+    const props = propsFactory(react, Panel, authToken, onAuthenticationRequired,
+      setAuthToken, onAuthenticationRequired, setAuthToken);
+    assert.equal(props.onTokenChanged, setAuthToken);
+    assert.equal(props.onAuthenticationRequired, onAuthenticationRequired);
+    handlers = Panel(props);
+    const pending = effects;
+    effects = [];
+    pending.forEach(effect => effect());
+    return handlers;
+  };
+  // Emulate the parent delivering its auth-event token update and rerender.
+  const handleAuthChange = () => {
+    authToken = h.auth.readAuthToken();
+    if (authToken) render();
+    else cells.forEach(cell => cell.cleanup?.());
+  };
+  window.addEventListener(h.auth.AUTH_STATE_EVENT, handleAuthChange);
+  h.respond(preferencePath, persistedPreferences);
+  render();
+  await settle();
+  render();
+  const nodes = node => {
+    if (Array.isArray(node)) return node.flatMap(nodes);
+    if (!node || typeof node !== "object") return [];
+    return [node, ...nodes(node.props?.children)];
+  };
+  return {
+    ...h, render, changedTokens,
+    state: () => render().state,
+    loaded: () => pendingLoads.at(-1),
+    authRequired: () => authRequired,
+    tree: () => render().tree,
+    // Hold parent auth-event delivery while a current effect finishes its retry.
+    pauseAuthUpdates: () => window.removeEventListener(h.auth.AUTH_STATE_EVENT, handleAuthChange),
+    toggleEmail(value) {
+      const checkbox = nodes(render().tree).find(node => node.type === "input");
+      assert.ok(checkbox && !checkbox.props.disabled);
+      checkbox.props.onChange({ target: { checked: value } });
+      render();
+    },
+    save: () => render().savePreferences({ preventDefault() {} }),
+    retry: () => { render().retry(); render(); },
+    remount() {
+      cells.forEach(cell => cell.cleanup?.());
+      cells.length = 0;
+      effects = [];
+      authToken = h.auth.readAuthToken();
+      render();
+    },
+    restore() {
+      window.removeEventListener(h.auth.AUTH_STATE_EVENT, handleAuthChange);
+      cells.forEach(cell => cell.cleanup?.());
+      h.restore();
+    },
+  };
+}
+
+const preferenceConsumers = ["SettingsCenter", "WishlistExplorer"];
+const savedPreferenceMessage = { kind: "success", text: "Preferences saved to your account." };
+
+test("B-07 both consumers preserve the complete successful PATCH after the exact same-user auth-refresh GET race", async () => {
+  for (const consumer of preferenceConsumers) {
+    const h = await notificationPreferencesHarness(consumer);
+    try {
+      assert.deepEqual(h.state().savedPreferences, persistedPreferences);
+      assert.deepEqual(h.state().draftPreferences, persistedPreferences);
+      h.toggleEmail(true);
+      const revision = h.auth.readAuthSessionRevision();
+      h.respond(preferencePath, {}, 401);
+      const refreshReply = h.defer(refreshPath);
+      const mutation = h.save();
+      await settle();
+      const olderGetReply = h.defer(preferencePath);
+      const patchReply = h.defer(preferencePath);
+      refreshReply(sentinelSession(1, "rotated"));
+      await settle();
+      assert.equal(h.state().loadState, "loading");
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.deepEqual(h.calls.filter(call => call.path === preferencePath).map(({ method, token }) => [method, token]),
+        [["GET", "Bearer initial"], ["PATCH", "Bearer initial"], ["GET", "Bearer rotated"], ["PATCH", "Bearer rotated"]]);
+      // Server changes to other fields must also replace the submitted draft.
+      const authoritative = { ...persistedPreferences, emailEnabled: true, inAppEnabled: false, freeGameEnabled: true };
+      patchReply(authoritative);
+      await mutation;
+      for (const beforeOrAfter of ["before", "after"]) {
+        if (beforeOrAfter === "after") { olderGetReply(persistedPreferences); await settle(); }
+        assert.deepEqual(h.state().savedPreferences, authoritative);
+        assert.deepEqual(h.state().draftPreferences, authoritative);
+        assert.deepEqual(h.state().message, savedPreferenceMessage);
+        assert.equal(h.state().loadState, "ready");
+        assert.equal(h.state().generation, 1);
+        assert.match(JSON.stringify(h.tree()), /Preferences saved to your account/);
+      }
+      assert.equal(h.authRequired(), 0);
+      assert.equal(h.auth.readAuthToken(), "rotated");
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 1);
+      // A genuinely post-save GET may reconcile a different current snapshot.
+      const current = { ...authoritative, priceDropEnabled: false };
+      h.respond(preferencePath, current);
+      h.retry();
+      await settle();
+      assert.deepEqual(h.state().savedPreferences, current);
+      assert.deepEqual(h.state().draftPreferences, current);
+      assert.equal(h.state().loadState, "ready");
+      assert.equal(h.state().generation, 1);
+    } finally { h.restore(); }
+  }
+});
+
+test("B-07 a same-session replacement panel receives PATCH authority and discards its pre-save GET across remount", async () => {
+  const h = await notificationPreferencesHarness("WishlistExplorer");
+  try {
+    h.toggleEmail(true);
+    h.pauseAuthUpdates();
+    h.respond(preferencePath, {}, 401);
+    const refreshReply = h.defer(refreshPath);
+    const mutation = h.save();
+    await settle();
+    const patchReply = h.defer(preferencePath);
+    refreshReply(sentinelSession(1, "rotated"));
+    await settle();
+    const getReply = h.defer(preferencePath);
+    h.remount(); // Wishlist's checking -> personal transition creates a new panel.
+    assert.equal(h.state().loadState, "loading");
+    assert.equal(h.state().savedPreferences, null);
+    const authoritative = { ...persistedPreferences, emailEnabled: true, inAppEnabled: false };
+    patchReply(authoritative);
+    await mutation;
+    assert.deepEqual(h.state().savedPreferences, authoritative);
+    assert.deepEqual(h.state().draftPreferences, authoritative);
+    assert.deepEqual(h.state().message, savedPreferenceMessage);
+    assert.equal(h.state().loadState, "ready");
+    getReply(persistedPreferences);
+    await h.loaded();
+    assert.deepEqual(h.state().savedPreferences, authoritative);
+    assert.deepEqual(h.state().draftPreferences, authoritative);
+    assert.deepEqual(h.state().message, savedPreferenceMessage);
+    assert.equal(h.state().generation, 1);
+    assert.equal(h.auth.readAuthToken(), "rotated");
+  } finally { h.restore(); }
+});
+
+test("B-07 fresh preference GET and same-user auth refresh apply without a mutation", async () => {
+  const h = await notificationPreferencesHarness();
+  try {
+    const current = { ...persistedPreferences, freeGameEnabled: true };
+    const getReply = h.defer(preferencePath);
+    const revision = h.auth.readAuthSessionRevision();
+    h.respond(refreshPath, sentinelSession(1, "rotated"));
+    await h.auth.ensureAuthToken({ forceRefresh: true });
+    await settle();
+    assert.equal(h.state().loadState, "loading");
+    getReply(current);
+    await settle();
+    assert.deepEqual(h.state().savedPreferences, current);
+    assert.deepEqual(h.state().draftPreferences, current);
+    assert.equal(h.state().loadState, "ready");
+    assert.equal(h.state().generation, 0);
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+  } finally { h.restore(); }
+});
+
+test("B-07 failed preference PATCH retains request ID, does not advance generation and permits pending GET reconciliation", async () => {
+  const h = await notificationPreferencesHarness();
+  try {
+    h.toggleEmail(true);
+    h.respond(preferencePath, {}, 503, "b07-save-request");
+    const mutation = h.save();
+    const getReply = h.defer(preferencePath);
+    h.retry();
+    await mutation;
+    assert.equal(h.state().generation, 0);
+    assert.equal(h.state().message.kind, "error");
+    assert.equal(h.state().message.requestId, "b07-save-request");
+    assert.deepEqual(h.state().savedPreferences, persistedPreferences);
+    assert.equal(h.state().draftPreferences.emailEnabled, true);
+    assert.equal(h.state().isSaving, false);
+    const current = { ...persistedPreferences, freeGameEnabled: true };
+    getReply(current);
+    await settle();
+    assert.deepEqual(h.state().savedPreferences, current);
+    assert.deepEqual(h.state().draftPreferences, current);
+    assert.equal(h.state().loadState, "ready");
+    assert.equal(h.state().generation, 0);
+    assert.notEqual(h.state().message?.kind, "success");
+  } finally { h.restore(); }
+});
+
+test("B-07 superseded preference GET 503 and 401 cannot erase save success or clear authentication", async () => {
+  for (const status of [503, 401]) {
+    const h = await notificationPreferencesHarness();
+    try {
+      h.toggleEmail(true);
+      const patchReply = h.defer(preferencePath);
+      const mutation = h.save();
+      const getReply = h.defer(preferencePath);
+      h.retry();
+      const authoritative = { ...persistedPreferences, emailEnabled: true };
+      patchReply(authoritative);
+      await mutation;
+      const before = structuredClone(h.state());
+      const revision = h.auth.readAuthSessionRevision();
+      // Even a terminal refresh response must not be consumed by a stale 401.
+      if (status === 401) h.respond(refreshPath, {}, 401);
+      getReply({}, status);
+      await settle();
+      assert.deepEqual(h.state(), before);
+      assert.deepEqual(h.state().message, savedPreferenceMessage);
+      assert.equal(h.state().loadState, "ready");
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.authRequired(), 0);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+    } finally { h.restore(); }
+  }
+});
+
+test("B-07 fresh preference GET failures preserve load error, request ID, recovery and current-session 401 behavior", async () => {
+  for (const consumer of preferenceConsumers) {
+    const h = await notificationPreferencesHarness(consumer);
+    try {
+      h.respond(preferencePath, {}, 503, "b07-load-request");
+      h.retry();
+      await settle();
+      assert.equal(h.state().loadState, "error");
+      assert.equal(h.state().message.kind, "error");
+      assert.equal(h.state().message.requestId, "b07-load-request");
+      assert.match(JSON.stringify(h.tree()), /Notification preferences unavailable/);
+      assert.match(JSON.stringify(h.tree()), /b07-load-request/);
+      h.respond(preferencePath, persistedPreferences);
+      h.retry();
+      await settle();
+      assert.equal(h.state().loadState, "ready");
+      assert.equal(h.state().message, null);
+      h.pauseAuthUpdates();
+      h.respond(preferencePath, {}, 401);
+      h.respond(refreshPath, sentinelSession(1, "rotated"));
+      h.respond(preferencePath, {}, 401);
+      h.retry();
+      await h.loaded();
+      assert.equal(h.authRequired(), 1, "the live consumer clears auth on current-session retry 401");
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(h.state().generation, 0);
+    } finally { h.restore(); }
+  }
+});
+
+test("B-07 current preference PATCH 401 retry and terminal GET refresh failure retain B-04 auth behavior", async () => {
+  for (const action of ["PATCH", "GET"]) {
+    const h = await notificationPreferencesHarness();
+    try {
+      h.pauseAuthUpdates();
+      if (action === "PATCH") h.toggleEmail(true);
+      h.respond(preferencePath, {}, 401);
+      h.respond(refreshPath, action === "PATCH" ? sentinelSession(1, "rotated") : {}, action === "PATCH" ? 200 : 401);
+      if (action === "PATCH") h.respond(preferencePath, {}, 401);
+      if (action === "PATCH") await h.save();
+      else { h.retry(); await h.loaded(); }
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(h.authRequired(), action === "PATCH" ? 1 : 0);
+      assert.equal(h.state().generation, 0);
+      assert.notEqual(h.state().message?.kind, "success");
+      // The GET count includes the initial successful load.
+      assert.equal(h.calls.filter(call => call.path === preferencePath && call.method === action).length, 2);
+    } finally { h.restore(); }
+  }
+});
+
+test("B-07 both preference consumers reject Account-A GET/PATCH success and failures after Account B loads", async () => {
+  for (const consumer of preferenceConsumers) {
+    for (const action of ["GET", "PATCH"]) {
+      for (const status of [200, 401, 503]) {
+        const h = await notificationPreferencesHarness(consumer);
+        try {
+          const oldReply = h.defer(preferencePath);
+          let mutation;
+          if (action === "PATCH") { h.toggleEmail(true); mutation = h.save(); }
+          else h.retry();
+          const accountB = { ...persistedPreferences, priceDropEnabled: false, freeGameEnabled: true };
+          h.respond(preferencePath, accountB);
+          h.auth.startAuthSession(sentinelSession(2, "account-b"));
+          await settle();
+          const before = structuredClone(h.state());
+          const callbacksBefore = [...h.changedTokens];
+          const revision = h.auth.readAuthSessionRevision();
+          oldReply({ ...persistedPreferences, emailEnabled: true }, status);
+          if (mutation) await mutation;
+          await settle();
+          assert.deepEqual(h.state().savedPreferences, accountB);
+          assert.deepEqual(h.state().draftPreferences, accountB);
+          assert.deepEqual(h.state().message, before.message);
+          assert.equal(h.state().loadState, "ready");
+          assert.equal(h.state().generation, 0);
+          assert.deepEqual(h.changedTokens, callbacksBefore);
+          assert.equal(h.authRequired(), 0);
+          assert.equal(h.auth.readAuthToken(), "account-b");
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+        } finally { h.restore(); }
+      }
+    }
+  }
 });
 
 test("settings uses the persisted notification preference workflow shared with wishlist", async () => {

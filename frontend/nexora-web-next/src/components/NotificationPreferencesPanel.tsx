@@ -24,6 +24,14 @@ type ItemMessage = {
 
 type NotificationPreferenceLoadState = "idle" | "loading" | "ready" | "error";
 
+// Consumers can remount during token refresh while a save is still pending.
+// Keep snapshot invalidation and successful mutation delivery across mounts.
+const preferenceDataGeneration = { current: 0 };
+const preferenceMutationListeners = new Set<(
+  preferences: NotificationPreferences,
+  sessionRevision: number,
+) => void>();
+
 const notificationPreferenceFields = [
   {
     key: "emailEnabled",
@@ -75,20 +83,47 @@ export default function NotificationPreferencesPanel({
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    const sessionRevision = readAuthSessionRevision();
+    function applyPreferenceMutation(preferences: NotificationPreferences, mutationRevision: number) {
+      if (mutationRevision !== sessionRevision || mutationRevision !== readAuthSessionRevision()) return;
+      setSavedPreferences(preferences);
+      setDraftPreferences(preferences);
+      setLoadState("ready");
+      setMessage({ kind: "success", text: "Preferences saved to your account." });
+    }
+    preferenceMutationListeners.add(applyPreferenceMutation);
+    return () => {
+      preferenceMutationListeners.delete(applyPreferenceMutation);
+    };
+  }, [authToken]);
+
+  useEffect(() => {
     let active = true;
 
     async function loadPreferences() {
       const sessionRevision = readAuthSessionRevision();
+      const dataGeneration = preferenceDataGeneration.current;
       setLoadState("loading");
       setMessage(null);
 
       try {
         const result = await withNotificationPreferenceAuthRetry(
           authToken,
-          getMyNotificationPreferences,
+          async (activeToken) => {
+            try {
+              return await getMyNotificationPreferences(activeToken);
+            } catch (error) {
+              // A superseded 401 must not trigger refresh and clear authentication.
+              if (dataGeneration !== preferenceDataGeneration.current) {
+                throw new Error("The notification preference snapshot was superseded.");
+              }
+              throw error;
+            }
+          },
         );
         if (!active) return;
         assertAuthSessionRevision(result.sessionRevision);
+        if (dataGeneration !== preferenceDataGeneration.current) return;
         onTokenChanged(result.token);
         setSavedPreferences(result.value);
         setDraftPreferences(result.value);
@@ -96,6 +131,7 @@ export default function NotificationPreferencesPanel({
       } catch (error) {
         if (!active) return;
         if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+        if (dataGeneration !== preferenceDataGeneration.current) return;
         const details = normalizeNotificationPreferenceError(error);
         if (details.status === 401) {
           onAuthenticationRequired();
@@ -137,10 +173,13 @@ export default function NotificationPreferencesPanel({
         ),
       );
       assertAuthSessionRevision(result.sessionRevision);
+      preferenceDataGeneration.current += 1;
       onTokenChanged(result.token);
       setSavedPreferences(result.value);
       setDraftPreferences(result.value);
+      setLoadState("ready");
       setMessage({ kind: "success", text: "Preferences saved to your account." });
+      preferenceMutationListeners.forEach((listener) => listener(result.value, result.sessionRevision));
     } catch (error) {
       if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = normalizeNotificationPreferenceError(error);
