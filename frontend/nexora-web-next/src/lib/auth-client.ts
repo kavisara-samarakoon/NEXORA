@@ -15,6 +15,7 @@ export const AUTH_STATE_EVENT = "nexora:auth-state-change";
 let currentAccessToken: string | null = null;
 let currentUser: AuthUser | null = null;
 let refreshPromise: Promise<string | null> | null = null;
+let logoutPromise: Promise<void> | null = null;
 let sessionBootstrapComplete = false;
 let sessionVersion = 0;
 // Unlike sessionVersion (which guards token writes), this changes only at an
@@ -187,15 +188,30 @@ export async function readCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
-export async function logout(): Promise<void> {
-  // Stop private requests immediately, including while cookie logout is pending.
-  clearAuthToken();
-  try {
-    if (refreshPromise) {
-      await refreshPromise.catch(() => null);
-    }
-    await logoutSession();
-  } finally {
-    clearAuthToken();
+// Wait for cookie expiration responses before sending replacement credentials.
+// Logout failure still releases the barrier; callers retain their own errors.
+export async function withAuthCredentialTransition<T>(request: () => Promise<T>): Promise<T> {
+  while (logoutPromise) {
+    await logoutPromise.catch(() => undefined);
   }
+  return request();
+}
+
+export function logout(): Promise<void> {
+  if (logoutPromise) return logoutPromise;
+
+  const logoutVersion = sessionVersion + 1;
+  const pendingRefresh = refreshPromise;
+  const operation = Promise.resolve().then(async () => {
+    if (pendingRefresh) await pendingRefresh.catch(() => null);
+    await logoutSession();
+  }).finally(() => {
+    if (sessionVersion === logoutVersion) clearAuthToken();
+    if (logoutPromise === operation) logoutPromise = null;
+  });
+  // Publish the barrier before invalidation emits a synchronous auth event.
+  logoutPromise = operation;
+  void operation.catch(() => undefined);
+  clearAuthToken();
+  return operation;
 }

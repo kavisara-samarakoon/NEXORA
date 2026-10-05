@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { login, normalizeAuthError, type LoginPayload } from "@/lib/auth";
-import { startAuthSession } from "@/lib/auth-client";
+import { startAuthSession, withAuthCredentialTransition } from "@/lib/auth-client";
 import AuthPasswordField from "@/components/AuthPasswordField";
 import { authFieldError } from "@/lib/auth-form";
 import styles from "./ProductFeedback.module.css";
@@ -36,7 +36,7 @@ export default function LoginForm({ returnTo }: { returnTo: string }) {
     };
 
     try {
-      const response = await login(payload);
+      const response = await withAuthCredentialTransition(() => login(payload));
       startAuthSession(response);
 
       form.reset();

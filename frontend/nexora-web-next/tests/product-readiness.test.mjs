@@ -394,9 +394,15 @@ async function sentinelChatHarness() {
     },
     defer(path) {
       let resolve;
-      const promise = new Promise(done => { resolve = done; });
+      let reject;
+      const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
       responses.push({ path, reply: () => promise });
-      return (value, status = 200) => resolve(Response.json(value, { status }));
+      const reply = (value, status = 200, requestId = null) => {
+        const headers = requestId ? { "X-NEXORA-Request-ID": requestId } : {};
+        resolve(status === 204 ? new Response(null, { status, headers }) : Response.json(value, { status, headers }));
+      };
+      reply.reject = error => reject(error);
+      return reply;
     },
     restore() {
       cells.forEach(cell => cell.cleanup?.());
@@ -779,6 +785,359 @@ test("production login/register handlers establish a new session and logout inva
       assert.ok(h.auth.readAuthSessionRevision() > revision + 1);
     } finally { h.restore(); }
   }
+});
+
+const logoutPath = "/api/auth/logout";
+
+// Run complete production auth components, including their hooks and JSX.
+async function authComponentHarness(h, name, returnTo = "/wishlist") {
+  const source = await readFile(new URL(`../src/components/${name}.tsx`, import.meta.url), "utf8");
+  const ast = ts.createSourceFile("auth-component.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const program = ast.statements.filter(node => !ts.isImportDeclaration(node))
+    .map(node => node.getText(ast)).join("\n").replace(`export default function ${name}`, `function ${name}`);
+  const output = ts.transpileModule(program, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
+  }).outputText;
+  let cursor = 0;
+  const cells = [];
+  let effects = [];
+  const changes = [];
+  const routes = [];
+  let resets = 0;
+  const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
+  const hooks = {
+    useState(initial) {
+      const index = cursor++;
+      cells[index] ??= { value: typeof initial === "function" ? initial() : initial };
+      return [cells[index].value, value => {
+        cells[index].value = typeof value === "function" ? value(cells[index].value) : value;
+        changes.push({ index, value: cells[index].value });
+      }];
+    },
+    useEffect(callback, deps) {
+      const index = cursor++;
+      if (sameDeps(cells[index]?.deps, deps)) return;
+      effects.push(() => {
+        cells[index]?.cleanup?.();
+        cells[index] = { deps, cleanup: callback() };
+      });
+    },
+  };
+  const mocks = {
+    ...hooks, ...h.auth, ...h.authApi, authFieldError,
+    useRouter: () => ({ replace: value => routes.push(value) }),
+    styles: { form: "form" }, Link: "Link", AuthPasswordField: "AuthPasswordField",
+    RequestIdSupportText: "RequestIdSupportText",
+    FormData: class { constructor(form) { this.values = form.values; } get(name) { return this.values[name]; } },
+    React: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) },
+  };
+  const Component = new Function(...Object.keys(mocks), `${output}\nreturn ${name};`)(...Object.values(mocks));
+  let tree;
+  const render = () => {
+    cursor = 0;
+    tree = Component({ returnTo: productReturnTo(returnTo) });
+    const pending = effects;
+    effects = [];
+    pending.forEach(effect => effect());
+    return tree;
+  };
+  const nodes = node => {
+    if (Array.isArray(node)) return node.flatMap(nodes);
+    if (!node || typeof node !== "object") return [];
+    return [node, ...nodes(node.props?.children)];
+  };
+  const find = predicate => nodes(render()).find(predicate);
+  render();
+  await settle();
+  render();
+  return {
+    render, changes, routes, resets: () => resets,
+    state: () => { render(); return cells[0].value; },
+    error: () => { render(); return cells[1].value; },
+    async view() { render(); await settle(); return JSON.stringify(render()); },
+    signOut() {
+      const button = find(node => node.props.className === "auth-status__logout");
+      assert.ok(button && !button.props.disabled, "production Sign out is available");
+      button.props.onClick();
+    },
+    submit(overrides = {}) {
+      const values = {
+        emailOrUsername: " player2 ", email: " player2@example.test ",
+        username: " player2 ", displayName: " Player 2 ", password: " pass1234 ", ...overrides,
+      };
+      const validation = new Map();
+      const inputs = Object.entries(values).map(([name, value]) => ({
+        name, value, setCustomValidity: message => validation.set(name, message),
+      }));
+      return find(node => node.type === "form").props.onSubmit({
+        preventDefault() {}, currentTarget: {
+          values, querySelectorAll: () => inputs,
+          reportValidity: () => [...validation.values()].every(message => !message),
+          reset: () => { resets++; },
+        },
+      });
+    },
+    dispose() { cells.forEach(cell => cell.cleanup?.()); },
+  };
+}
+
+function observeAuthNetwork() {
+  const fetch = globalThis.fetch;
+  const events = [];
+  globalThis.fetch = async (url, init) => {
+    const path = new URL(url).pathname;
+    events.push({ phase: "dispatch", path, credentials: init.credentials });
+    try {
+      const response = await fetch(url, init);
+      events.push({ phase: "settle", path, status: response.status });
+      return response;
+    } catch (error) {
+      events.push({ phase: "settle", path, failed: true });
+      throw error;
+    }
+  };
+  return events;
+}
+
+test("B-08 production Sign out -> login/register waits for logout response before dispatching replacement credentials", async () => {
+  for (const mode of ["login", "register"]) {
+    const h = await sentinelChatHarness();
+    const status = await authComponentHarness(h, "AuthStatus");
+    const form = await authComponentHarness(h, mode === "login" ? "LoginForm" : "RegisterForm");
+    try {
+      const events = observeAuthNetwork();
+      const logoutReply = h.defer(logoutPath);
+      const revision = h.auth.readAuthSessionRevision();
+      status.signOut();
+      const loggingOut = h.auth.logout(); // Joins the production button's operation.
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.ok(h.auth.readAuthSessionRevision() > revision);
+      await settle();
+      assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+      assert.match(await status.view(), /auth-status--anonymous/);
+      const credentialReply = h.defer(`/api/auth/${mode}`);
+      const submitting = form.submit();
+      await form.submit(); // Disabled/submitting guard must not duplicate credentials.
+      await settle();
+      assert.equal(form.state(), true);
+      assert.equal(h.calls.filter(call => call.path === `/api/auth/${mode}`).length, 0);
+      assert.equal(h.auth.readAuthToken(), null);
+      logoutReply(null, 204);
+      await loggingOut;
+      await settle();
+      assert.equal(h.calls.filter(call => call.path === `/api/auth/${mode}`).length, 1);
+      credentialReply(sentinelSession(2, "replacement"), mode === "register" ? 201 : 200);
+      await submitting;
+      assert.equal(h.auth.readAuthToken(), "replacement");
+      assert.deepEqual(await h.auth.readCurrentUser(), sentinelSession(2).user);
+      assert.match(await status.view(), /auth-status--authenticated/);
+      assert.equal(status.state().user.id, 2);
+      assert.deepEqual(form.routes, ["/wishlist"]);
+      assert.equal(form.resets(), 1);
+      assert.equal(form.state(), false);
+      const transitions = events.filter(event => [logoutPath, `/api/auth/${mode}`].includes(event.path));
+      assert.deepEqual(transitions.map(({ phase, path }) => [phase, path]), [
+        ["dispatch", logoutPath], ["settle", logoutPath],
+        ["dispatch", `/api/auth/${mode}`], ["settle", `/api/auth/${mode}`],
+      ]);
+      assert.ok(transitions.filter(event => event.phase === "dispatch").every(event => event.credentials === "include"));
+      assert.ok(h.storageCalls.every(([operation]) => operation === "remove"));
+    } finally { form.dispose(); status.dispose(); h.restore(); }
+  }
+});
+
+test("B-08 failed HTTP/network logout releases both credential barriers and retains caller errors", async () => {
+  for (const mode of ["login", "register"]) {
+    for (const failure of ["http", "network"]) {
+      const h = await sentinelChatHarness();
+      const form = await authComponentHarness(h, mode === "login" ? "LoginForm" : "RegisterForm");
+      try {
+        const events = observeAuthNetwork();
+        const logoutReply = h.defer(logoutPath);
+        const loggingOut = h.auth.logout();
+        const rejected = assert.rejects(loggingOut, error => {
+          const details = h.authApi.normalizeAuthError(error);
+          return failure === "http" ? details.status === 503 && details.requestId === "b08-logout-request"
+            : details.code === "service_unavailable";
+        });
+        await settle();
+        h.respond(`/api/auth/${mode}`, sentinelSession(2, "replacement"));
+        const submitting = form.submit();
+        await settle();
+        assert.equal(h.calls.filter(call => call.path === `/api/auth/${mode}`).length, 0);
+        if (failure === "http") logoutReply({}, 503, "b08-logout-request");
+        else logoutReply.reject(new TypeError("Failed to fetch"));
+        await rejected;
+        await submitting;
+        assert.equal(h.auth.readAuthToken(), "replacement");
+        assert.equal((await h.auth.readCurrentUser()).id, 2);
+        assert.equal(form.error(), null);
+        assert.deepEqual(events.filter(event => [logoutPath, `/api/auth/${mode}`].includes(event.path))
+          .map(({ phase, path }) => [phase, path]), [
+          ["dispatch", logoutPath], ["settle", logoutPath],
+          ["dispatch", `/api/auth/${mode}`], ["settle", `/api/auth/${mode}`],
+        ]);
+        // A subsequent logout is a new usable operation, not a rejected barrier.
+        h.respond(logoutPath, {});
+        await h.auth.logout();
+        assert.equal(h.auth.readAuthToken(), null);
+        assert.equal(h.calls.filter(call => call.path === logoutPath).length, 2);
+      } finally { form.dispose(); h.restore(); }
+    }
+  }
+});
+
+test("B-08 stale logout success/failure and AuthStatus completion preserve newer sessions even with identical token strings", async () => {
+  for (const userId of [1, 2]) {
+    for (const completion of ["success", "http", "network"]) {
+      const h = await sentinelChatHarness();
+      const status = await authComponentHarness(h, "AuthStatus");
+      try {
+        const events = [];
+        const onAuthChange = () => events.push(h.auth.readAuthSessionRevision());
+        window.addEventListener(h.auth.AUTH_STATE_EVENT, onAuthChange);
+        const logoutReply = h.defer(logoutPath);
+        status.signOut();
+        const loggingOut = h.auth.logout();
+        const completed = completion === "success" ? loggingOut : assert.rejects(loggingOut);
+        await settle();
+        assert.match(await status.view(), /auth-status--anonymous/);
+        const replacement = sentinelSession(userId, "initial");
+        h.auth.startAuthSession(replacement);
+        await status.view();
+        assert.equal(status.state().status, "authenticated");
+        const revision = h.auth.readAuthSessionRevision();
+        const eventCount = events.length;
+        const changeCount = status.changes.length;
+        if (completion === "network") logoutReply.reject(new TypeError("Failed to fetch"));
+        else logoutReply(completion === "success" ? null : {}, completion === "success" ? 204 : 503);
+        await completed;
+        assert.match(await status.view(), /auth-status--authenticated/);
+        assert.equal(h.auth.readAuthToken(), replacement.token);
+        assert.deepEqual(await h.auth.readCurrentUser(), replacement.user);
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal(events.length, eventCount, "stale completion emits no destructive auth event");
+        assert.equal(status.state().user.id, userId);
+        assert.ok(status.changes.slice(changeCount).filter(change => change.index === 0)
+          .every(change => change.value.status === "authenticated"));
+        window.removeEventListener(h.auth.AUTH_STATE_EVENT, onAuthChange);
+      } finally { status.dispose(); h.restore(); }
+    }
+  }
+});
+
+test("B-08 ordinary and failed production sign-out invalidate immediately and remain usable anonymous", async () => {
+  for (const completion of ["success", "http", "network"]) {
+    const h = await sentinelChatHarness();
+    const status = await authComponentHarness(h, "AuthStatus");
+    try {
+      const reply = h.defer(logoutPath);
+      const revision = h.auth.readAuthSessionRevision();
+      status.signOut();
+      const loggingOut = h.auth.logout();
+      const completed = completion === "success" ? loggingOut : assert.rejects(loggingOut);
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.ok(h.auth.readAuthSessionRevision() > revision);
+      assert.equal(h.calls.filter(call => call.path === logoutPath).length, 0, "local invalidation precedes even HTTP dispatch");
+      assert.equal(await h.auth.readCurrentUser(), null);
+      assert.match(await status.view(), /auth-status--anonymous/);
+      if (completion === "network") reply.reject(new TypeError("Failed to fetch"));
+      else reply(completion === "success" ? null : {}, completion === "success" ? 204 : 503);
+      await completed;
+      assert.match(await status.view(), /auth-status--anonymous/);
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(await h.auth.readCurrentUser(), null);
+      h.respond("/api/auth/login", sentinelSession(2, "recovered"));
+      const form = await authComponentHarness(h, "LoginForm");
+      try { await form.submit(); } finally { form.dispose(); }
+      assert.equal(h.auth.readAuthToken(), "recovered");
+      assert.match(await status.view(), /auth-status--authenticated/);
+    } finally { status.dispose(); h.restore(); }
+  }
+});
+
+test("B-08 multiple pending logout calls coalesce one request, barrier and cleanup", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const reply = h.defer(logoutPath);
+    const revision = h.auth.readAuthSessionRevision();
+    const first = h.auth.logout();
+    const invalidatedRevision = h.auth.readAuthSessionRevision();
+    const second = h.auth.logout();
+    assert.equal(first, second);
+    assert.equal(invalidatedRevision, revision + 1);
+    assert.equal(h.auth.readAuthSessionRevision(), invalidatedRevision);
+    await settle();
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+    reply(null, 204);
+    await Promise.all([first, second]);
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.equal(h.auth.readAuthSessionRevision(), invalidatedRevision + 1);
+  } finally { h.restore(); }
+});
+
+test("B-08 normal credential forms retain validation, raw password, navigation and request-ID errors without logout or refresh requests", async () => {
+  for (const mode of ["login", "register"]) {
+    const h = await sentinelChatHarness();
+    const form = await authComponentHarness(h, mode === "login" ? "LoginForm" : "RegisterForm", "https://example.com");
+    try {
+      await form.submit({ password: " " });
+      if (mode === "register") await form.submit({ username: "ab" });
+      assert.equal(h.calls.filter(call => call.path === `/api/auth/${mode}`).length, 0);
+      assert.equal(form.state(), false);
+      h.respond(`/api/auth/${mode}`, {}, mode === "login" ? 401 : 409, "b08-credential-request");
+      await form.submit();
+      assert.equal(form.error().requestId, "b08-credential-request");
+      assert.deepEqual(form.routes, []);
+      assert.equal(form.resets(), 0);
+      h.respond(`/api/auth/${mode}`, sentinelSession(2, "replacement"));
+      await form.submit();
+      const calls = h.calls.filter(call => call.path === `/api/auth/${mode}`);
+      assert.equal(calls.length, 2);
+      assert.equal(calls[1].body.password, " pass1234 ");
+      assert.equal(calls[1].body[mode === "login" ? "emailOrUsername" : "username"], "player2");
+      assert.equal(h.calls.filter(call => [logoutPath, refreshPath].includes(call.path)).length, 0);
+      assert.equal(h.auth.readAuthToken(), "replacement");
+      assert.deepEqual(form.routes, ["/wishlist"]);
+    } finally { form.dispose(); h.restore(); }
+  }
+});
+
+test("B-08 credential barrier includes an in-flight refresh and every logout CSRF retry response", async () => {
+  const h = await sentinelChatHarness();
+  const form = await authComponentHarness(h, "LoginForm");
+  try {
+    const events = observeAuthNetwork();
+    const refreshReply = h.defer(refreshPath);
+    const refreshing = h.auth.ensureAuthToken({ forceRefresh: true });
+    await settle();
+    const firstLogoutReply = h.defer(logoutPath);
+    const loggingOut = h.auth.logout();
+    h.respond("/api/auth/login", sentinelSession(2, "replacement"));
+    const submitting = form.submit();
+    await settle();
+    assert.equal(h.calls.filter(call => [logoutPath, "/api/auth/login"].includes(call.path)).length, 0);
+    refreshReply(sentinelSession(1, "late-rotation"));
+    assert.equal(await refreshing, null, "logout invalidates the old refresh token write");
+    await settle();
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+    const retryLogoutReply = h.defer(logoutPath);
+    firstLogoutReply({}, 403);
+    await settle();
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 2);
+    assert.equal(h.calls.filter(call => call.path === "/api/auth/login").length, 0);
+    retryLogoutReply(null, 204);
+    await loggingOut;
+    await submitting;
+    assert.equal(h.auth.readAuthToken(), "replacement");
+    assert.deepEqual(events.filter(event => [refreshPath, logoutPath, "/api/auth/login"].includes(event.path))
+      .map(({ phase, path }) => [phase, path]), [
+      ["dispatch", refreshPath], ["settle", refreshPath],
+      ["dispatch", logoutPath], ["settle", logoutPath],
+      ["dispatch", logoutPath], ["settle", logoutPath],
+      ["dispatch", "/api/auth/login"], ["settle", "/api/auth/login"],
+    ]);
+  } finally { form.dispose(); h.restore(); }
 });
 
 // Execute Wishlist's actual state declarations, refresh effect and mutation

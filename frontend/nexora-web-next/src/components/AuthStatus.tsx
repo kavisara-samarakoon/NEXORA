@@ -6,6 +6,7 @@ import { normalizeAuthError, type AuthUser } from "@/lib/auth";
 import {
   AUTH_STATE_EVENT,
   logout,
+  readAuthSessionRevision,
   readCurrentUser,
 } from "@/lib/auth-client";
 
@@ -29,17 +30,19 @@ function initialsFor(user: AuthUser): string {
 export default function AuthStatus() {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [authRefreshKey, setAuthRefreshKey] = useState(0);
 
   useEffect(() => {
     let active = true;
 
     async function refreshAuthState() {
+      const sessionRevision = readAuthSessionRevision();
       try {
         const user = await readCurrentUser();
-        if (!active) return;
+        if (!active || sessionRevision !== readAuthSessionRevision()) return;
         setAuthState(user ? { status: "authenticated", user } : { status: "anonymous" });
       } catch (error) {
-        if (!active) return;
+        if (!active || sessionRevision !== readAuthSessionRevision()) return;
         setAuthState({
           status: "unavailable",
           message: normalizeAuthError(error).message,
@@ -60,7 +63,7 @@ export default function AuthStatus() {
       window.removeEventListener("storage", handleAuthChange);
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
-  }, []);
+  }, [authRefreshKey]);
 
   if (authState.status === "loading") {
     return (
@@ -90,10 +93,10 @@ export default function AuthStatus() {
             setIsLoggingOut(true);
             void logout()
               .catch(() => {
-                // Local state is cleared even when the backend is unavailable.
+                // The initiating session was already invalidated locally.
               })
               .finally(() => {
-                setAuthState({ status: "anonymous" });
+                setAuthRefreshKey((current) => current + 1);
                 setIsLoggingOut(false);
               });
           }}
