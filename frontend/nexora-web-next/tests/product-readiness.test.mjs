@@ -456,6 +456,8 @@ async function accountOperationHandlers(h) {
     alertEventsRequestVersion: { current: 0 },
     preferenceDataGeneration: { current: 0 },
     preferenceMutationListeners: new Set(),
+    pendingPreferenceSaves: new Set(),
+    preferenceSaveListeners: new Set(),
     useCallback: callback => callback, displayedDealScope: "curated",
     savingDealKeys: { current: new Set() }, savedWishlistItemsRef: { current: [] },
     wishlistVersion: { current: 0 }, mounted: { current: true },
@@ -2531,13 +2533,16 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
   const program = [
     ...ast.statements.filter(node => ts.isVariableStatement(node) &&
       node.declarationList.declarations.some(item => ["notificationPreferenceFields", "preferenceDataGeneration",
-        "preferenceMutationListeners"].includes(item.name.getText(ast)))).map(node => node.getText(ast)),
+        "preferenceMutationListeners", "pendingPreferenceSaves", "preferenceSaveListeners"].includes(item.name.getText(ast)))).map(node => node.getText(ast)),
     `function NotificationPreferencesPanel({ authToken, onAuthenticationRequired, onTokenChanged }) {
       ${component.body.statements.slice(0, -1).map(node => node.getText(ast)).join("\n")
         .replace("void loadPreferences();", "pendingLoads.push(loadPreferences());")}
       return { savePreferences, retry: () => setRetryKey(current => current + 1),
+        pendingRevisions: () => [...pendingPreferenceSaves],
         state: { savedPreferences, draftPreferences, loadState, message, isSaving,
-          generation: preferenceDataGeneration.current }, tree: ${renderReturn.expression.getText(ast)} };
+          generation: preferenceDataGeneration.current,
+          pending: pendingPreferenceSaves.has(readAuthSessionRevision()),
+          pendingRevisions: [...pendingPreferenceSaves] }, tree: ${renderReturn.expression.getText(ast)} };
     }`,
   ].join("\n");
   const compile = code => ts.transpileModule(code, {
@@ -2551,8 +2556,9 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
     useState(initial) {
       const index = cursor++;
       cells[index] ??= { value: typeof initial === "function" ? initial() : initial };
-      return [cells[index].value, value => {
-        cells[index].value = typeof value === "function" ? value(cells[index].value) : value;
+      const cell = cells[index];
+      return [cell.value, value => {
+        cell.value = typeof value === "function" ? value(cell.value) : value;
       }];
     },
     useRef(initial) {
@@ -2640,7 +2646,9 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
     state: () => render().state,
     loaded: () => pendingLoads.at(-1),
     authRequired: () => authRequired,
+    pendingRevisions: () => handlers.pendingRevisions(),
     tree: () => render().tree,
+    nodes: () => nodes(render().tree),
     // Hold parent auth-event delivery while a current effect finishes its retry.
     pauseAuthUpdates: () => window.removeEventListener(h.auth.AUTH_STATE_EVENT, handleAuthChange),
     toggleEmail(value) {
@@ -2668,6 +2676,287 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
 
 const preferenceConsumers = ["SettingsCenter", "WishlistExplorer"];
 const savedPreferenceMessage = { kind: "success", text: "Preferences saved to your account." };
+
+const preferencePatches = h => h.calls.filter(call => call.path === preferencePath && call.method === "PATCH");
+function assertPreferenceSaveBusy(h, expected) {
+  assert.equal(h.state().isSaving, expected);
+  assert.equal(h.state().pending, expected);
+  const nodes = h.nodes();
+  const form = nodes.find(node => node.type === "form");
+  assert.equal(form.props["aria-busy"], expected);
+  assert.ok(nodes.filter(node => node.type === "input").every(node => node.props.disabled === expected));
+  const submit = nodes.find(node => node.type === "button" && node.props.type === "submit");
+  if (expected) {
+    assert.equal(submit.props.disabled, true);
+    assert.match(JSON.stringify(h.tree()), /Saving preferences to your account/);
+  }
+}
+
+for (const consumer of preferenceConsumers) {
+  test(`B-09 ${consumer} exact pending PATCH remount race suppresses overlap and releases after complete success`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    try {
+      assert.equal(h.state().savedPreferences.emailEnabled, false);
+      h.toggleEmail(true);
+      const patchReply = h.defer(preferencePath);
+      const mutation = h.save();
+      const revision = h.auth.readAuthSessionRevision();
+      // PATCH A has persisted true; only its HTTP response remains pending.
+      const authoritative = { ...persistedPreferences, emailEnabled: true, inAppEnabled: false, freeGameEnabled: true };
+      h.respond(preferencePath, authoritative);
+      h.remount();
+      assert.equal(h.state().isSaving, true, "the replacement inherits pending state before GET settles");
+      await h.loaded();
+      assert.deepEqual(h.state().savedPreferences, authoritative);
+      assertPreferenceSaveBusy(h, true);
+      // Invoke the production change/submit handlers even though the UI is disabled.
+      h.nodes().find(node => node.type === "input").props.onChange({ target: { checked: false } });
+      const before = structuredClone(h.state());
+      await h.save();
+      assert.deepEqual(h.state(), before, "a suppressed save has no state or generation side effects");
+      assert.notEqual(h.state().message?.kind, "success");
+      assert.equal(preferencePatches(h).length, 1);
+      assert.deepEqual(h.calls.filter(call => call.path === preferencePath).map(call => call.method), ["GET", "PATCH", "GET"]);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      patchReply(authoritative);
+      await mutation;
+      assertPreferenceSaveBusy(h, false);
+      assert.deepEqual(h.pendingRevisions(), []);
+      assert.deepEqual(h.state().savedPreferences, authoritative);
+      assert.deepEqual(h.state().draftPreferences, authoritative);
+      assert.deepEqual(h.state().message, savedPreferenceMessage);
+      assert.equal(h.state().generation, 1);
+      // After release a new save may persist false normally.
+      h.toggleEmail(false);
+      const secondReply = h.defer(preferencePath);
+      const secondSave = h.save();
+      assert.equal(preferencePatches(h).length, 2);
+      assertPreferenceSaveBusy(h, true);
+      const latest = { ...authoritative, emailEnabled: false, targetReachedEnabled: false };
+      secondReply(latest);
+      await secondSave;
+      assertPreferenceSaveBusy(h, false);
+      assert.deepEqual(h.state().savedPreferences, latest);
+      assert.deepEqual(h.state().draftPreferences, latest);
+      assert.equal(h.state().generation, 2);
+    } finally { h.restore(); }
+  });
+
+  test(`B-09 ${consumer} same-user token refresh and remount retain one pending PATCH`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    try {
+      h.toggleEmail(true);
+      const patchReply = h.defer(preferencePath);
+      const mutation = h.save();
+      const revision = h.auth.readAuthSessionRevision();
+      const authoritative = { ...persistedPreferences, emailEnabled: true };
+      h.respond(refreshPath, sentinelSession(1, "rotated"));
+      h.respond(preferencePath, authoritative);
+      await h.auth.ensureAuthToken({ forceRefresh: true });
+      await settle();
+      h.respond(preferencePath, authoritative);
+      h.remount();
+      await h.loaded();
+      assert.equal(h.auth.readAuthToken(), "rotated");
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assertPreferenceSaveBusy(h, true);
+      h.nodes().find(node => node.type === "input").props.onChange({ target: { checked: false } });
+      await h.save();
+      assert.equal(preferencePatches(h).length, 1);
+      assert.equal(h.state().generation, 0);
+      assert.notEqual(h.state().message?.kind, "success");
+      h.respond(preferencePath, authoritative);
+      patchReply(authoritative);
+      await mutation;
+      // The existing auth callback can start a fresh post-save GET on rerender.
+      assert.equal(h.state().isSaving, false);
+      await h.loaded();
+      assert.deepEqual(h.pendingRevisions(), []);
+      assert.deepEqual(h.state().savedPreferences, authoritative);
+      assert.deepEqual(h.state().draftPreferences, authoritative);
+      assert.equal(h.state().loadState, "ready");
+      assert.notEqual(h.state().message?.kind, "error");
+      assert.equal(h.state().generation, 1);
+    } finally { h.restore(); }
+  });
+
+  for (const failure of ["HTTP 503", "network"]) {
+    test(`B-09 ${consumer} ${failure} releases a remounted save, retains truthful error and permits retry`, async () => {
+      const h = await notificationPreferencesHarness(consumer);
+      try {
+        h.toggleEmail(true);
+        const patchReply = h.defer(preferencePath);
+        const mutation = h.save();
+        h.respond(preferencePath, persistedPreferences);
+        h.remount();
+        await h.loaded();
+        assertPreferenceSaveBusy(h, true);
+        await h.save();
+        assert.equal(preferencePatches(h).length, 1);
+        if (failure === "HTTP 503") patchReply({}, 503, "b09-save-request");
+        else patchReply.reject(new TypeError("Network unavailable"));
+        await mutation;
+        assertPreferenceSaveBusy(h, false);
+        assert.deepEqual(h.pendingRevisions(), []);
+        assert.equal(h.state().generation, 0);
+        assert.equal(h.state().message.kind, "error");
+        assert.equal(h.state().message.requestId, failure === "HTTP 503" ? "b09-save-request" : null);
+        assert.match(JSON.stringify(h.tree()), failure === "HTTP 503" ? /b09-save-request/ : /Cannot reach the notification preference service/);
+        assert.deepEqual(h.state().savedPreferences, persistedPreferences);
+        assert.deepEqual(h.state().draftPreferences, persistedPreferences);
+        h.toggleEmail(true);
+        const authoritative = { ...persistedPreferences, emailEnabled: true };
+        h.respond(preferencePath, authoritative);
+        await h.save();
+        assertPreferenceSaveBusy(h, false);
+        assert.equal(preferencePatches(h).length, 2);
+        assert.equal(h.state().generation, 1);
+        assert.deepEqual(h.state().savedPreferences, authoritative);
+        assert.deepEqual(h.state().message, savedPreferenceMessage);
+      } finally { h.restore(); }
+    });
+  }
+
+  for (const terminalFailure of ["refresh 401", "retry 401"]) {
+    test(`B-09 ${consumer} terminal ${terminalFailure} after remount releases the originating lock`, async () => {
+      const h = await notificationPreferencesHarness(consumer);
+      try {
+        h.toggleEmail(true);
+        const patchReply = h.defer(preferencePath);
+        const mutation = h.save();
+        h.respond(preferencePath, persistedPreferences);
+        h.remount();
+        await h.loaded();
+        assertPreferenceSaveBusy(h, true);
+        await h.save();
+        assert.equal(preferencePatches(h).length, 1);
+        const revision = h.auth.readAuthSessionRevision();
+        h.pauseAuthUpdates();
+        h.respond(refreshPath, terminalFailure === "refresh 401" ? {} : sentinelSession(1, "rotated"), terminalFailure === "refresh 401" ? 401 : 200);
+        if (terminalFailure === "retry 401") h.respond(preferencePath, {}, 401, "b09-terminal-request");
+        patchReply({}, 401);
+        await mutation;
+        assert.deepEqual(h.pendingRevisions(), []);
+        assert.equal(h.auth.readAuthToken(), null);
+        assert.ok(h.auth.readAuthSessionRevision() > revision);
+        assert.equal(h.authRequired(), terminalFailure === "refresh 401" ? 0 : 1);
+        assert.equal(h.state().generation, 0);
+        assert.notEqual(h.state().message?.kind, "success");
+        assert.equal(preferencePatches(h).length, terminalFailure === "refresh 401" ? 1 : 2);
+        // Signing in again and mounting a new panel must allow a fresh save.
+        h.auth.startAuthSession(sentinelSession(1, "signed-in-again"));
+        h.respond(preferencePath, persistedPreferences);
+        h.remount();
+        await h.loaded();
+        assertPreferenceSaveBusy(h, false);
+        h.toggleEmail(true);
+        h.respond(preferencePath, { ...persistedPreferences, emailEnabled: true });
+        await h.save();
+        assertPreferenceSaveBusy(h, false);
+        assert.equal(h.state().generation, 1);
+      } finally { h.restore(); }
+    });
+  }
+
+  test(`B-09 ${consumer} a new auth revision resets pending UI even when the token string is unchanged`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    h.toggleEmail(true);
+    const oldReply = h.defer(preferencePath);
+    const oldSave = h.save();
+    try {
+      const revisionA = h.auth.readAuthSessionRevision();
+      const accountB = { ...persistedPreferences, freeGameEnabled: true };
+      h.auth.startAuthSession(sentinelSession(2, "initial"));
+      await settle();
+      assert.notEqual(h.auth.readAuthSessionRevision(), revisionA);
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assertPreferenceSaveBusy(h, false);
+      h.toggleEmail(true);
+      const authoritativeB = { ...accountB, emailEnabled: true };
+      h.respond(preferencePath, authoritativeB);
+      await h.save();
+      assert.equal(preferencePatches(h).length, 2);
+      assert.deepEqual(h.state().savedPreferences, authoritativeB);
+      assert.deepEqual(h.state().message, savedPreferenceMessage);
+      oldReply({ ...persistedPreferences, emailEnabled: true });
+      await oldSave;
+      assert.deepEqual(h.pendingRevisions(), []);
+      assert.deepEqual(h.state().savedPreferences, authoritativeB);
+      assertPreferenceSaveBusy(h, false);
+    } finally {
+      oldReply(persistedPreferences);
+      await oldSave;
+      h.restore();
+    }
+  });
+
+  for (const oldCompletion of ["success", "HTTP 503", "401", "network"]) {
+    test(`B-09 ${consumer} account replacement permits B save and rejects old A ${oldCompletion} without releasing B lock`, async () => {
+      const h = await notificationPreferencesHarness(consumer);
+      try {
+        h.toggleEmail(true);
+        const oldReply = h.defer(preferencePath);
+        const oldSave = h.save();
+        const revisionA = h.auth.readAuthSessionRevision();
+        const accountB = { ...persistedPreferences, priceDropEnabled: false, freeGameEnabled: true };
+        h.respond(preferencePath, accountB);
+        h.auth.startAuthSession(sentinelSession(2, "account-b"));
+        await settle();
+        const revisionB = h.auth.readAuthSessionRevision();
+        assert.notEqual(revisionB, revisionA);
+        assertPreferenceSaveBusy(h, false);
+        h.toggleEmail(true);
+        const newReply = h.defer(preferencePath);
+        const newSave = h.save();
+        assertPreferenceSaveBusy(h, true);
+        assert.equal(preferencePatches(h).length, 2, "different auth revisions may each have a pending save");
+        assert.deepEqual(h.pendingRevisions(), [revisionA, revisionB]);
+        const before = structuredClone(h.state());
+        const callbacksBefore = [...h.changedTokens];
+        if (oldCompletion === "network") oldReply.reject(new TypeError("Old account network failure"));
+        else oldReply({ ...persistedPreferences, emailEnabled: true }, oldCompletion === "success" ? 200 : oldCompletion === "401" ? 401 : 503);
+        await oldSave;
+        assert.deepEqual(h.pendingRevisions(), [revisionB]);
+        assertPreferenceSaveBusy(h, true);
+        assert.deepEqual(h.state(), { ...before, pendingRevisions: [revisionB] });
+        assert.deepEqual(h.changedTokens, callbacksBefore);
+        assert.equal(h.authRequired(), 0);
+        assert.equal(h.auth.readAuthToken(), "account-b");
+        assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+        await h.save();
+        assert.equal(preferencePatches(h).length, 2);
+        const authoritativeB = { ...accountB, emailEnabled: true, inAppEnabled: false };
+        newReply(authoritativeB);
+        await newSave;
+        assertPreferenceSaveBusy(h, false);
+        assert.deepEqual(h.pendingRevisions(), []);
+        assert.deepEqual(h.state().savedPreferences, authoritativeB);
+        assert.deepEqual(h.state().draftPreferences, authoritativeB);
+        assert.deepEqual(h.state().message, savedPreferenceMessage);
+        assert.equal(h.state().generation, 1);
+      } finally { h.restore(); }
+    });
+  }
+}
+
+test("B-09 synchronous shared acquisition suppresses a second invocation of a stale production handler", async () => {
+  const h = await notificationPreferencesHarness();
+  try {
+    h.toggleEmail(true);
+    const staleSave = h.render().savePreferences; // Both calls close over isSaving=false.
+    const patchReply = h.defer(preferencePath);
+    const mutation = staleSave({ preventDefault() {} });
+    const before = structuredClone(h.state());
+    await staleSave({ preventDefault() {} });
+    assert.equal(preferencePatches(h).length, 1);
+    assert.deepEqual(h.state(), before);
+    assert.notEqual(h.state().message?.kind, "success");
+    patchReply({ ...persistedPreferences, emailEnabled: true });
+    await mutation;
+    assertPreferenceSaveBusy(h, false);
+    assert.equal(h.state().generation, 1);
+  } finally { h.restore(); }
+});
 
 test("B-07 both consumers preserve the complete successful PATCH after the exact same-user auth-refresh GET race", async () => {
   for (const consumer of preferenceConsumers) {

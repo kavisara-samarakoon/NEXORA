@@ -31,6 +31,12 @@ const preferenceMutationListeners = new Set<(
   preferences: NotificationPreferences,
   sessionRevision: number,
 ) => void>();
+const pendingPreferenceSaves = new Set<number>();
+const preferenceSaveListeners = new Set<(
+  pending: boolean,
+  sessionRevision: number,
+  failure?: ItemMessage,
+) => void>();
 
 const notificationPreferenceFields = [
   {
@@ -73,17 +79,18 @@ export default function NotificationPreferencesPanel({
   onAuthenticationRequired: () => void;
   onTokenChanged: (token: string) => void;
 }) {
+  const authSessionRevision = readAuthSessionRevision();
   const [loadState, setLoadState] = useState<NotificationPreferenceLoadState>("idle");
   const [savedPreferences, setSavedPreferences] =
     useState<NotificationPreferences | null>(null);
   const [draftPreferences, setDraftPreferences] =
     useState<NotificationPreferences | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(() => pendingPreferenceSaves.has(authSessionRevision));
   const [message, setMessage] = useState<ItemMessage | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    const sessionRevision = readAuthSessionRevision();
+    const sessionRevision = authSessionRevision;
     function applyPreferenceMutation(preferences: NotificationPreferences, mutationRevision: number) {
       if (mutationRevision !== sessionRevision || mutationRevision !== readAuthSessionRevision()) return;
       setSavedPreferences(preferences);
@@ -91,11 +98,19 @@ export default function NotificationPreferencesPanel({
       setLoadState("ready");
       setMessage({ kind: "success", text: "Preferences saved to your account." });
     }
+    function applyPreferenceSaveState(pending: boolean, saveRevision: number, failure?: ItemMessage) {
+      if (saveRevision !== sessionRevision || saveRevision !== readAuthSessionRevision()) return;
+      setIsSaving(pending);
+      if (failure) setMessage(failure);
+    }
     preferenceMutationListeners.add(applyPreferenceMutation);
+    preferenceSaveListeners.add(applyPreferenceSaveState);
+    applyPreferenceSaveState(pendingPreferenceSaves.has(sessionRevision), sessionRevision);
     return () => {
       preferenceMutationListeners.delete(applyPreferenceMutation);
+      preferenceSaveListeners.delete(applyPreferenceSaveState);
     };
-  }, [authToken]);
+  }, [authToken, authSessionRevision]);
 
   useEffect(() => {
     let active = true;
@@ -162,9 +177,15 @@ export default function NotificationPreferencesPanel({
     if (!draftPreferences || !hasChanges || isSaving) return;
 
     const sessionRevision = readAuthSessionRevision();
-    setIsSaving(true);
-    setMessage(null);
+    // Acquire synchronously before dispatch: a remount or stale handler cannot
+    // start another save in this session, including during an auth retry.
+    if (pendingPreferenceSaves.has(sessionRevision)) return;
+    pendingPreferenceSaves.add(sessionRevision);
+    let saveFailure: ItemMessage | undefined;
     try {
+      setIsSaving(true);
+      setMessage(null);
+      preferenceSaveListeners.forEach((listener) => listener(true, sessionRevision));
       const result = await withNotificationPreferenceAuthRetry(
         authToken,
         (activeToken) => updateMyNotificationPreferences(
@@ -187,13 +208,16 @@ export default function NotificationPreferencesPanel({
         onAuthenticationRequired();
         return;
       }
-      setMessage({
+      saveFailure = {
         kind: "error",
         text: details.message,
         requestId: details.requestId,
-      });
+      };
+      setMessage(saveFailure);
     } finally {
-      setIsSaving(false);
+      pendingPreferenceSaves.delete(sessionRevision);
+      if (sessionRevision === readAuthSessionRevision()) setIsSaving(false);
+      preferenceSaveListeners.forEach((listener) => listener(false, sessionRevision, saveFailure));
     }
   }
 
