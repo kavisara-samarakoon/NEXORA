@@ -4,6 +4,7 @@
 [![Frontend CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/frontend-ci.yml)
 [![Security CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/security-ci.yml)
 [![Reviewer Tooling CI](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/reviewer-tooling-ci.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/reviewer-tooling-ci.yml)
+[![Hosted Demo Readiness](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/hosted-demo-readiness.yml/badge.svg)](https://github.com/kavisara-samarakoon/NEXORA/actions/workflows/hosted-demo-readiness.yml)
 
 NEXORA is a full-stack game-deal intelligence MVP that combines discovery,
 personal price tracking, alert history, account-scoped workflows, and a bounded
