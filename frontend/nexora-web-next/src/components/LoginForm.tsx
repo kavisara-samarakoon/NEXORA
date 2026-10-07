@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { login, normalizeAuthError, type LoginPayload } from "@/lib/auth";
-import { startAuthSession, withAuthCredentialTransition } from "@/lib/auth-client";
+import {
+  commitAuthCredentialTransition,
+  isAuthSessionInvalidatedError,
+  withAuthCredentialTransition,
+} from "@/lib/auth-client";
 import AuthPasswordField from "@/components/AuthPasswordField";
 import { authFieldError } from "@/lib/auth-form";
 import styles from "./ProductFeedback.module.css";
@@ -36,12 +40,13 @@ export default function LoginForm({ returnTo }: { returnTo: string }) {
     };
 
     try {
-      const response = await withAuthCredentialTransition(() => login(payload));
-      startAuthSession(response);
-
-      form.reset();
-      router.replace(returnTo);
+      await withAuthCredentialTransition(() => login(payload), (result) => {
+        commitAuthCredentialTransition(result);
+        form.reset();
+        router.replace(returnTo);
+      });
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error)) return;
       const details = normalizeAuthError(error);
       setErrorDetails({
         message: details.message,

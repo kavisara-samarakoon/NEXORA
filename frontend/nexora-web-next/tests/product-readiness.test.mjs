@@ -302,9 +302,11 @@ async function sentinelChatHarness() {
   const originalFetch = globalThis.fetch;
   const eventTarget = new EventTarget();
   const storageCalls = [];
+  const storageValues = new Map();
   eventTarget.localStorage = {
-    removeItem: key => storageCalls.push(["remove", key]),
-    setItem: (...args) => { storageCalls.push(["set", ...args]); },
+    getItem: key => storageValues.get(key) ?? null,
+    removeItem: key => { storageCalls.push(["remove", key]); storageValues.delete(key); },
+    setItem: (key, value) => { storageCalls.push(["set", key, value]); storageValues.set(key, value); },
   };
   eventTarget.requestAnimationFrame = callback => { callback(); return 1; };
   globalThis.window = eventTarget;
@@ -376,7 +378,7 @@ async function sentinelChatHarness() {
   await settle();
   render();
   return {
-    auth, authApi: await import(authUrl), wishlist, preferences, calls, storageCalls, render,
+    auth, authApi: await import(authUrl), wishlist, preferences, calls, storageCalls, storageValues, render,
     answer: () => { render(); return find(node => node.type.name === "GatewayResponseCard")?.props.response; },
     input: () => { render(); return find(node => node.props.id === "sentinel-message").props; },
     signIn: () => { render(); return find(node => node.props.href === "/login?returnTo=%2Fsentinel"); },
@@ -389,16 +391,20 @@ async function sentinelChatHarness() {
       render();
       return find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
     },
-    respond(path, value, status = 200, requestId = null) {
-      responses.push({ path, reply: () => Response.json(value, { status, headers: requestId ? { "X-NEXORA-Request-ID": requestId } : {} }) });
+    respond(path, value, status = 200, requestId = null, refreshCookie = null) {
+      const headers = requestId ? { "X-NEXORA-Request-ID": requestId } : {};
+      if (refreshCookie) headers["Set-Cookie"] = refreshCookie;
+      responses.push({ path, reply: () => status === 204 ? new Response(null, { status, headers }) : Response.json(value, { status, headers }) });
     },
+    respondUsing: (path, reply) => responses.push({ path, reply }),
     defer(path) {
       let resolve;
       let reject;
       const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
       responses.push({ path, reply: () => promise });
-      const reply = (value, status = 200, requestId = null) => {
+      const reply = (value, status = 200, requestId = null, refreshCookie = null) => {
         const headers = requestId ? { "X-NEXORA-Request-ID": requestId } : {};
+        if (refreshCookie) headers["Set-Cookie"] = refreshCookie;
         resolve(status === 204 ? new Response(null, { status, headers }) : Response.json(value, { status, headers }));
       };
       reply.reject = error => reject(error);
@@ -883,7 +889,7 @@ async function authComponentHarness(h, name, returnTo = "/wishlist") {
   };
 }
 
-function observeAuthNetwork() {
+function observeAuthNetwork(browser = null) {
   const fetch = globalThis.fetch;
   const events = [];
   globalThis.fetch = async (url, init) => {
@@ -891,6 +897,9 @@ function observeAuthNetwork() {
     events.push({ phase: "dispatch", path, credentials: init.credentials });
     try {
       const response = await fetch(url, init);
+      const cookie = response.headers.get("Set-Cookie");
+      // Model browser cookie receipt before exposing the response to auth.ts.
+      if (browser && cookie) browser.refreshCookie = cookie.includes("Max-Age=0") ? null : cookie;
       events.push({ phase: "settle", path, status: response.status });
       return response;
     } catch (error) {
@@ -899,6 +908,918 @@ function observeAuthNetwork() {
     }
   };
   return events;
+}
+
+const credentialPath = mode => `/api/auth/${mode}`;
+const credentialFormName = mode => mode === "login" ? "LoginForm" : "RegisterForm";
+const credentialModes = ["login", "register"];
+const oldCredentialCookie = "nexora_refresh_token=old; HttpOnly; Path=/api/auth";
+const newCredentialCookie = "nexora_refresh_token=new; HttpOnly; Path=/api/auth";
+const expiredCredentialCookie = "nexora_refresh_token=; Max-Age=0; HttpOnly; Path=/api/auth";
+const credentialEvents = events => events.filter(event => credentialModes.some(mode => event.path === credentialPath(mode)));
+
+function assertCredentialSerialization(events) {
+  let pending = 0;
+  for (const event of credentialEvents(events)) {
+    pending += event.phase === "dispatch" ? 1 : -1;
+    assert.ok(pending >= 0 && pending <= 1, "at most one credential HTTP request may be in flight");
+    if (event.phase === "dispatch") assert.equal(event.credentials, "include");
+  }
+  assert.equal(pending, 0);
+}
+
+async function credentialOverlapHarness(oldMode, newMode, { autoCleanup = true } = {}) {
+  const h = await sentinelChatHarness();
+  h.auth.clearAuthToken();
+  const status = await authComponentHarness(h, "AuthStatus");
+  const oldForm = await authComponentHarness(h, credentialFormName(oldMode));
+  const browser = { refreshCookie: null };
+  const events = observeAuthNetwork(browser);
+  const revision = h.auth.readAuthSessionRevision();
+  const authEvents = [];
+  const onAuthChange = () => authEvents.push(h.auth.readAuthSessionRevision());
+  window.addEventListener(h.auth.AUTH_STATE_EVENT, onAuthChange);
+  const oldReply = h.defer(credentialPath(oldMode));
+  const oldSubmit = oldForm.submit();
+  await settle();
+  assert.deepEqual(credentialEvents(events).map(({ phase, path }) => [phase, path]), [["dispatch", credentialPath(oldMode)]]);
+  oldForm.dispose(); // Navigation unmounts the production form instance.
+  const newForm = await authComponentHarness(h, credentialFormName(newMode));
+  const newReply = h.defer(credentialPath(newMode));
+  const newSubmit = newForm.submit();
+  await settle();
+  assert.equal(credentialEvents(events).filter(event => event.phase === "dispatch").length, 1);
+  assert.equal(newForm.state(), true);
+  assert.equal(h.auth.readAuthToken(), null);
+  if (autoCleanup) h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+  return {
+    ...h, status, oldForm, newForm, browser, events, revision, authEvents,
+    oldReply, newReply, oldSubmit, newSubmit,
+    async assertOldIgnored() {
+      await oldSubmit;
+      await settle();
+      assert.equal(oldForm.resets(), 0);
+      assert.deepEqual(oldForm.routes, []);
+      assert.equal(oldForm.error(), null);
+      assert.equal(newForm.error(), null);
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(await h.auth.readCurrentUser(), null);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.deepEqual(authEvents, []);
+      assert.match(await status.view(), /auth-status--anonymous/);
+      assert.equal(credentialEvents(events).filter(event => event.phase === "dispatch").length, 2);
+    },
+    async assertNewOwnsSession(token, cleanup = true) {
+      await newSubmit;
+      assert.equal(h.auth.readAuthToken(), token);
+      assert.deepEqual(await h.auth.readCurrentUser(), sentinelSession(3).user);
+      assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+      assert.deepEqual(authEvents, [revision + 1]);
+      assert.match(await status.view(), /auth-status--authenticated/);
+      assert.equal(status.state().user.id, 3);
+      assert.deepEqual(oldForm.routes, []);
+      assert.equal(oldForm.resets(), 0);
+      assert.deepEqual(newForm.routes, ["/wishlist"]);
+      assert.equal(newForm.resets(), 1);
+      assert.equal(newForm.error(), null);
+      assert.equal(newForm.state(), false);
+      assert.equal(browser.refreshCookie, newCredentialCookie);
+      assert.deepEqual(credentialEvents(events).map(({ phase, path }) => [phase, path]), [
+        ["dispatch", credentialPath(oldMode)], ["settle", credentialPath(oldMode)],
+        ["dispatch", credentialPath(newMode)], ["settle", credentialPath(newMode)],
+      ]);
+      assert.deepEqual(events.filter(event => [logoutPath, credentialPath(oldMode), credentialPath(newMode)].includes(event.path))
+        .map(({ phase, path }) => [phase, path]), [
+        ["dispatch", credentialPath(oldMode)], ["settle", credentialPath(oldMode)],
+        ...(cleanup ? [["dispatch", logoutPath], ["settle", logoutPath]] : []),
+        ["dispatch", credentialPath(newMode)], ["settle", credentialPath(newMode)],
+      ]);
+      assertCredentialSerialization(events);
+    },
+    restore() {
+      window.removeEventListener(h.auth.AUTH_STATE_EVENT, onAuthChange);
+      oldForm.dispose(); newForm.dispose(); status.dispose(); h.restore();
+    },
+  };
+}
+
+for (const [oldMode, newMode] of [["login", "register"], ["register", "login"], ["login", "login"], ["register", "register"]]) {
+  for (const identicalTokens of [false, true]) {
+    test(`B-10 ${oldMode} -> ${newMode} navigation/remount serializes cookies and ignores obsolete success${identicalTokens ? " with identical tokens" : ""}`, async () => {
+      const h = await credentialOverlapHarness(oldMode, newMode);
+      try {
+        const oldToken = identicalTokens ? "identical-token" : "old-token";
+        const newToken = identicalTokens ? "identical-token" : "new-token";
+        h.oldReply(sentinelSession(2, oldToken), oldMode === "register" ? 201 : 200, null, oldCredentialCookie);
+        await h.assertOldIgnored();
+        assert.equal(h.browser.refreshCookie, null);
+        h.newReply(sentinelSession(3, newToken), newMode === "register" ? 201 : 200, null, newCredentialCookie);
+        await h.assertNewOwnsSession(newToken);
+      } finally { h.restore(); }
+    });
+  }
+}
+
+for (const [oldMode, newMode] of [["login", "register"], ["register", "login"]]) {
+  for (const failure of [400, 401, 409, 503, "network"]) {
+    test(`B-10 obsolete ${oldMode} ${failure} releases ${newMode} without old UI/auth side effects`, async () => {
+      const h = await credentialOverlapHarness(oldMode, newMode);
+      try {
+        if (failure === "network") h.oldReply.reject(new TypeError("Failed to fetch"));
+        else h.oldReply({}, failure, "b10-old-request");
+        await h.assertOldIgnored();
+        assert.equal(h.browser.refreshCookie, null);
+        h.newReply(sentinelSession(3, "new-token"), 200, null, newCredentialCookie);
+        await h.assertNewOwnsSession("new-token", failure === "network");
+      } finally { h.restore(); }
+    });
+  }
+
+  for (const failure of [401, 409, 503, "network"]) {
+    test(`B-10 newer ${newMode} ${failure} stays truthful, cannot revive old ${oldMode}, and permits retry`, async () => {
+      const h = await credentialOverlapHarness(oldMode, newMode);
+      try {
+        h.oldReply(sentinelSession(2, "old-token"), 200, null, oldCredentialCookie);
+        await h.assertOldIgnored();
+        if (failure === "network") h.newReply.reject(new TypeError("Failed to fetch"));
+        else h.newReply({}, failure, "b10-new-request");
+        await h.newSubmit;
+        assert.equal(h.auth.readAuthToken(), null);
+        if (failure === "network") h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+        assert.equal(await h.auth.readCurrentUser(), null);
+        assert.equal(h.auth.readAuthSessionRevision(), h.revision);
+        assert.deepEqual(h.authEvents, []);
+        assert.match(await h.status.view(), /auth-status--anonymous/);
+        assert.equal(h.oldForm.error(), null);
+        assert.equal(h.newForm.error().requestId, failure === "network" ? null : "b10-new-request");
+        assert.match(await h.newForm.view(), failure === "network" ? /Cannot reach the NEXORA authentication service/ : /b10-new-request/);
+        assert.equal(h.newForm.state(), false);
+        assert.equal(h.newForm.resets(), 0);
+        assert.deepEqual(h.newForm.routes, []);
+        assert.equal(h.browser.refreshCookie, null, "cleanup must expire the obsolete cookie before newer credentials can fail");
+        const retryReply = h.defer(credentialPath(newMode));
+        const retry = h.newForm.submit();
+        await settle();
+        assert.equal(credentialEvents(h.events).filter(event => event.phase === "dispatch").length, 3);
+        retryReply(sentinelSession(3, "retry-token"), 200, null, newCredentialCookie);
+        await retry;
+        assert.equal(h.auth.readAuthToken(), "retry-token");
+        assert.equal((await h.auth.readCurrentUser()).id, 3);
+        assert.equal(h.auth.readAuthSessionRevision(), h.revision + 1);
+        assert.deepEqual(h.newForm.routes, ["/wishlist"]);
+        assert.equal(h.newForm.resets(), 1);
+        assert.equal(h.newForm.error(), null);
+        assert.equal(h.browser.refreshCookie, newCredentialCookie);
+        assertCredentialSerialization(h.events);
+      } finally { h.restore(); }
+    });
+  }
+}
+
+for (const mode of credentialModes) {
+  test(`B-10 normal ${mode} has no queue delay and preserves production payload, reset and returnTo`, async () => {
+    const h = await sentinelChatHarness();
+    h.auth.clearAuthToken();
+    const form = await authComponentHarness(h, credentialFormName(mode), "/settings");
+    try {
+      await h.authApi.getCsrfToken();
+      const reply = h.defer(credentialPath(mode));
+      const revision = h.auth.readAuthSessionRevision();
+      const submission = form.submit();
+      // Only the pre-existing await of the cached CSRF token precedes dispatch.
+      await Promise.resolve();
+      const requests = h.calls.filter(call => call.path === credentialPath(mode));
+      assert.equal(requests.length, 1);
+      assert.equal(requests[0].body.password, " pass1234 ");
+      assert.equal(requests[0].body[mode === "login" ? "emailOrUsername" : "username"], "player2");
+      if (mode === "register") {
+        assert.equal(requests[0].body.email, "player2@example.test");
+        assert.equal(requests[0].body.displayName, "Player 2");
+      }
+      assert.equal(h.calls.filter(call => [logoutPath, refreshPath].includes(call.path)).length, 0);
+      reply(sentinelSession(2, "normal-token"));
+      await submission;
+      assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+      assert.deepEqual(form.routes, ["/settings"]);
+      assert.equal(form.resets(), 1);
+      assert.equal(form.error(), null);
+    } finally { form.dispose(); h.restore(); }
+  });
+
+  test(`B-10 explicit replacement session with an identical token invalidates pending ${mode}`, async () => {
+    const h = await sentinelChatHarness();
+    h.auth.clearAuthToken();
+    const status = await authComponentHarness(h, "AuthStatus");
+    const form = await authComponentHarness(h, credentialFormName(mode));
+    try {
+      const reply = h.defer(credentialPath(mode));
+      const submission = form.submit();
+      await settle();
+      h.auth.startAuthSession(sentinelSession(3, "identical-token"));
+      const revision = h.auth.readAuthSessionRevision();
+      assert.match(await status.view(), /auth-status--authenticated/);
+      h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      reply(sentinelSession(2, "identical-token"));
+      await submission;
+      assert.equal(h.auth.readAuthToken(), "identical-token");
+      assert.deepEqual(await h.auth.readCurrentUser(), sentinelSession(3).user);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(status.state().user.id, 3);
+      assert.deepEqual(form.routes, []);
+      assert.equal(form.resets(), 0);
+      assert.equal(form.error(), null);
+    } finally { form.dispose(); status.dispose(); h.restore(); }
+  });
+}
+
+test("B-10 logout plus two queued logical attempts dispatches only the newest credentials after logout cleanup", async () => {
+  const h = await sentinelChatHarness();
+  const status = await authComponentHarness(h, "AuthStatus");
+  const loginForm = await authComponentHarness(h, "LoginForm");
+  const registerForm = await authComponentHarness(h, "RegisterForm");
+  try {
+    const browser = { refreshCookie: null };
+    const events = observeAuthNetwork(browser);
+    const logoutReply = h.defer(logoutPath);
+    status.signOut();
+    const loggingOut = h.auth.logout();
+    await settle();
+    const first = loginForm.submit();
+    const registerReply = h.defer(credentialPath("register"));
+    const second = registerForm.submit();
+    await settle();
+    assert.equal(credentialEvents(events).length, 0);
+    assert.equal(h.auth.readAuthToken(), null);
+    logoutReply(null, 204, null, expiredCredentialCookie);
+    await loggingOut;
+    await first;
+    await settle();
+    assert.deepEqual(loginForm.routes, []);
+    assert.equal(loginForm.resets(), 0);
+    assert.equal(loginForm.error(), null);
+    assert.deepEqual(credentialEvents(events).map(({ phase, path }) => [phase, path]), [["dispatch", credentialPath("register")]]);
+    const revision = h.auth.readAuthSessionRevision();
+    registerReply(sentinelSession(3, "registered"), 201, null, newCredentialCookie);
+    await second;
+    assert.equal(h.auth.readAuthToken(), "registered");
+    assert.equal((await h.auth.readCurrentUser()).id, 3);
+    assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+    assert.equal(status.state().user.id, 3);
+    assert.deepEqual(registerForm.routes, ["/wishlist"]);
+    assert.equal(registerForm.resets(), 1);
+    assert.equal(browser.refreshCookie, newCredentialCookie);
+    assert.deepEqual(events.filter(event => [logoutPath, ...credentialModes.map(credentialPath)].includes(event.path))
+      .map(({ phase, path }) => [phase, path]), [
+      ["dispatch", logoutPath], ["settle", logoutPath],
+      ["dispatch", credentialPath("register")], ["settle", credentialPath("register")],
+    ]);
+    assertCredentialSerialization(events);
+  } finally { loginForm.dispose(); registerForm.dispose(); status.dispose(); h.restore(); }
+});
+
+test("B-10 in-flight login, pending logout and newer registration share one ordered cookie queue", async () => {
+  const h = await sentinelChatHarness();
+  h.auth.clearAuthToken();
+  const status = await authComponentHarness(h, "AuthStatus");
+  const loginForm = await authComponentHarness(h, "LoginForm");
+  const registerForm = await authComponentHarness(h, "RegisterForm");
+  try {
+    const browser = { refreshCookie: null };
+    const events = observeAuthNetwork(browser);
+    const loginReply = h.defer(credentialPath("login"));
+    const first = loginForm.submit();
+    await settle();
+    const logoutReply = h.defer(logoutPath);
+    const loggingOut = h.auth.logout();
+    const registerReply = h.defer(credentialPath("register"));
+    const second = registerForm.submit();
+    await settle();
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 0);
+    assert.equal(h.calls.filter(call => call.path === credentialPath("register")).length, 0);
+    loginReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
+    await first;
+    await settle();
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.equal(loginForm.resets(), 0);
+    assert.deepEqual(loginForm.routes, []);
+    assert.equal(browser.refreshCookie, oldCredentialCookie);
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+    assert.equal(h.calls.filter(call => call.path === credentialPath("register")).length, 0);
+    logoutReply(null, 204, null, expiredCredentialCookie);
+    await loggingOut;
+    await settle();
+    assert.equal(browser.refreshCookie, null);
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.equal(h.calls.filter(call => call.path === credentialPath("register")).length, 1);
+    registerReply(sentinelSession(3, "newest"), 201, null, newCredentialCookie);
+    await second;
+    assert.equal(h.auth.readAuthToken(), "newest");
+    assert.equal((await h.auth.readCurrentUser()).id, 3);
+    assert.equal(status.state().user.id, 3);
+    assert.deepEqual(registerForm.routes, ["/wishlist"]);
+    assert.equal(registerForm.resets(), 1);
+    assert.equal(browser.refreshCookie, newCredentialCookie);
+    assert.deepEqual(events.filter(event => [logoutPath, ...credentialModes.map(credentialPath)].includes(event.path))
+      .map(({ phase, path }) => [phase, path]), [
+      ["dispatch", credentialPath("login")], ["settle", credentialPath("login")],
+      ["dispatch", logoutPath], ["settle", logoutPath],
+      ["dispatch", credentialPath("register")], ["settle", credentialPath("register")],
+    ]);
+    assertCredentialSerialization(events);
+  } finally { loginForm.dispose(); registerForm.dispose(); status.dispose(); h.restore(); }
+});
+
+for (const mode of credentialModes) {
+  for (const completion of ["success", "http", "network"]) {
+    test(`B-10 pending ${mode} -> logout ${completion} invalidates immediately and expires cookies after credentials when possible`, async () => {
+      const h = await sentinelChatHarness();
+      h.auth.clearAuthToken();
+      const status = await authComponentHarness(h, "AuthStatus");
+      const form = await authComponentHarness(h, credentialFormName(mode));
+      try {
+        const browser = { refreshCookie: null };
+        const events = observeAuthNetwork(browser);
+        const credentialReply = h.defer(credentialPath(mode));
+        const submission = form.submit();
+        await settle();
+        const logoutReply = h.defer(logoutPath);
+        const revision = h.auth.readAuthSessionRevision();
+        const loggingOut = h.auth.logout();
+        const completed = completion === "success" ? loggingOut : assert.rejects(loggingOut);
+        assert.equal(h.auth.readAuthToken(), null);
+        assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+        assert.equal(await h.auth.readCurrentUser(), null);
+        await settle();
+        assert.equal(h.calls.filter(call => call.path === logoutPath).length, 0);
+        assert.match(await status.view(), /auth-status--anonymous/);
+        credentialReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
+        await submission;
+        await settle();
+        assert.equal(h.auth.readAuthToken(), null);
+        assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+        assert.equal(form.resets(), 0);
+        assert.deepEqual(form.routes, []);
+        assert.equal(form.error(), null);
+        assert.equal(browser.refreshCookie, oldCredentialCookie);
+        assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+        if (completion === "network") logoutReply.reject(new TypeError("Failed to fetch"));
+        else logoutReply(completion === "success" ? null : {}, completion === "success" ? 204 : 503,
+          null, completion === "success" ? expiredCredentialCookie : null);
+        await completed;
+        assert.equal(browser.refreshCookie, completion === "success" ? null : oldCredentialCookie);
+        assert.equal(h.auth.readAuthToken(), null);
+        assert.equal(h.auth.readAuthSessionRevision(), revision + 2);
+        assert.match(await status.view(), completion === "success" ? /auth-status--anonymous/ : /auth-status--unavailable/);
+        assert.deepEqual(events.filter(event => [logoutPath, credentialPath(mode)].includes(event.path))
+          .slice(0, 4).map(({ phase, path }) => [phase, path]), [
+          ["dispatch", credentialPath(mode)], ["settle", credentialPath(mode)],
+          ["dispatch", logoutPath], ["settle", logoutPath],
+        ]);
+        // Success and failure both release the queue for a fresh credential request.
+        if (completion !== "success") h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+        const retryReply = h.defer(credentialPath(mode));
+        const retry = form.submit();
+        await settle();
+        assert.equal(browser.refreshCookie, null, "failed expiry must be retried successfully before credentials dispatch");
+        retryReply(sentinelSession(3, "after-logout"), 200, null, newCredentialCookie);
+        await retry;
+        assert.equal(h.auth.readAuthToken(), "after-logout");
+        assert.equal((await h.auth.readCurrentUser()).id, 3);
+        assert.equal(form.resets(), 1);
+        assert.deepEqual(form.routes, ["/wishlist"]);
+        assert.equal(browser.refreshCookie, newCredentialCookie);
+        assertCredentialSerialization(events);
+      } finally { form.dispose(); status.dispose(); h.restore(); }
+    });
+  }
+}
+
+test("B-10 credential CSRF retry stays inside the shared barrier until its final response settles", async () => {
+  const h = await credentialOverlapHarness("login", "register");
+  try {
+    const retryReply = h.defer(credentialPath("login"));
+    h.oldReply({}, 403);
+    await settle();
+    assert.deepEqual(credentialEvents(h.events).map(({ phase, path }) => [phase, path]), [
+      ["dispatch", credentialPath("login")], ["settle", credentialPath("login")],
+      ["dispatch", credentialPath("login")],
+    ]);
+    retryReply(sentinelSession(2, "obsolete-retry"), 200, null, oldCredentialCookie);
+    await h.oldSubmit;
+    await settle();
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.equal(h.oldForm.resets(), 0);
+    assert.deepEqual(h.oldForm.routes, []);
+    assert.equal(credentialEvents(h.events).filter(event => event.path === credentialPath("register")).length, 1);
+    h.newReply(sentinelSession(3, "current"), 201, null, newCredentialCookie);
+    await h.newSubmit;
+    assert.equal((await h.auth.readCurrentUser()).id, 3);
+    assert.deepEqual(h.newForm.routes, ["/wishlist"]);
+    assertCredentialSerialization(h.events);
+  } finally { h.restore(); }
+});
+
+test("B-10 synchronous acquisition, authoritative commit and synchronous failure cannot bypass or poison the queue", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    let called = false;
+    const first = h.auth.withAuthCredentialTransition(() => { called = true; return Promise.resolve(sentinelSession(2, "first")); }, result => h.auth.commitAuthCredentialTransition(result));
+    assert.equal(called, true, "an idle coordinator invokes work synchronously");
+    const result = await first;
+    assert.equal(h.auth.readAuthToken(), "first");
+    let resolve;
+    const second = h.auth.withAuthCredentialTransition(() => new Promise(done => { resolve = done; }), current => h.auth.commitAuthCredentialTransition(current));
+    assert.throws(() => h.auth.assertAuthCredentialTransition(result), error => h.auth.isAuthSessionInvalidatedError(error));
+    resolve(sentinelSession(3, "second"));
+    await second;
+    assert.equal(h.auth.readAuthToken(), "second");
+    await assert.rejects(h.auth.withAuthCredentialTransition(() => { throw new Error("Synchronous request failure"); }, () => {}), /Synchronous request failure/);
+    h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+    const recovered = await h.auth.withAuthCredentialTransition(() => Promise.resolve(sentinelSession(4, "recovered")), current => h.auth.commitAuthCredentialTransition(current));
+    assert.equal(recovered.value.token, "recovered");
+    assert.equal(h.auth.readAuthToken(), "recovered");
+  } finally { h.restore(); }
+});
+
+let credentialBootstrapId = 0;
+async function freshCredentialModules() {
+  const apiUrl = `data:text/javascript,${encodeURIComponent(`
+    export const bootstrapId = ${++credentialBootstrapId};
+    export const buildApiUrl = path => "http://localhost:8080" + path;
+    export const readResponseRequestId = response => response.headers.get("X-NEXORA-Request-ID");
+  `)}`;
+  const authUrl = await moduleUrl("../src/lib/auth.ts", { "@/lib/api-client": apiUrl });
+  return {
+    client: await import(await moduleUrl("../src/lib/auth-client.ts", { "@/lib/auth": authUrl })),
+    authApi: await import(authUrl),
+  };
+}
+
+async function freshCredentialClient() { return (await freshCredentialModules()).client; }
+
+async function freshCredentialBootstrap(h, { cleanup = true } = {}) {
+  const client = await freshCredentialClient();
+  if (cleanup && h.storageValues.has(client.AUTH_REFRESH_COOKIE_QUARANTINE_KEY)) {
+    h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+  }
+  // A fresh runtime has no session state or cleanup latch. The server response
+  // depends on the browser's cookie, not an unconditional mocked 401.
+  h.respondUsing(refreshPath, () => h.browser.refreshCookie === oldCredentialCookie
+    ? Response.json(sentinelSession(2, "obsolete-cookie-bootstrap"))
+    : Response.json({ error: "authentication_required" }, { status: 401 }));
+  const token = await client.ensureAuthToken();
+  return { client, token };
+}
+
+const cookieTransitionEvents = events => events.filter(event => [logoutPath, ...credentialModes.map(credentialPath)].includes(event.path));
+
+test("B-10 cold AuthStatus bootstrap stays anonymous while credential cookies are unaccepted", async () => {
+  const h = await sentinelChatHarness();
+  const client = await freshCredentialClient();
+  let status;
+  try {
+    const reply = h.defer(credentialPath("login"));
+    const submission = client.withAuthCredentialTransition(() => h.authApi.login({ emailOrUsername: "player3", password: "pass1234" }), result => {
+      client.commitAuthCredentialTransition(result);
+    });
+    await settle();
+    status = await authComponentHarness({ ...h, auth: client }, "AuthStatus");
+    assert.match(await status.view(), /auth-status--anonymous/);
+    assert.equal(await client.ensureAuthToken(), null);
+    await assert.rejects(client.ensureAuthToken({ forceRefresh: true }), error => client.isAuthSessionInvalidatedError(error));
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+    reply(sentinelSession(3, "authoritative"));
+    await submission;
+    assert.equal(client.readAuthToken(), "authoritative");
+    assert.match(await status.view(), /auth-status--authenticated/);
+    assert.equal(status.state().user.id, 3);
+  } finally { status?.dispose(); h.restore(); }
+});
+
+for (const [oldMode, newMode, failure] of [
+  ["login", "register", 409], ["register", "login", 401], ["register", "login", 503],
+  ["login", "register", "network"], ["register", "login", "network"],
+]) {
+  test(`B-10 obsolete ${oldMode} cookie is expired before ${newMode} ${failure} and cannot revive on fresh bootstrap`, async () => {
+    const h = await credentialOverlapHarness(oldMode, newMode, { autoCleanup: false });
+    try {
+      const cleanupReply = h.defer(logoutPath);
+      h.oldReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
+      await settle();
+      assert.equal(h.browser.refreshCookie, oldCredentialCookie);
+      assert.equal(credentialEvents(h.events).filter(event => event.phase === "dispatch").length, 1);
+      assert.deepEqual(cookieTransitionEvents(h.events).map(({ phase, path }) => [phase, path]), [
+        ["dispatch", credentialPath(oldMode)], ["settle", credentialPath(oldMode)], ["dispatch", logoutPath],
+      ]);
+      await assert.rejects(h.auth.ensureAuthToken({ forceRefresh: true }), error => h.auth.isAuthSessionInvalidatedError(error));
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+      cleanupReply(null, 204, null, expiredCredentialCookie);
+      await h.assertOldIgnored();
+      assert.equal(h.browser.refreshCookie, null);
+      if (failure === "network") h.newReply.reject(new TypeError("Failed to fetch"));
+      else h.newReply({}, failure, "b10-new-credential-request");
+      await h.newSubmit;
+      assert.equal(h.auth.readAuthToken(), null);
+      if (failure === "network") h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      assert.equal(await h.auth.readCurrentUser(), null);
+      assert.equal(h.auth.readAuthSessionRevision(), h.revision);
+      assert.equal(h.oldForm.resets(), 0);
+      assert.deepEqual(h.oldForm.routes, []);
+      assert.equal(h.newForm.resets(), 0);
+      assert.deepEqual(h.newForm.routes, []);
+      assert.equal(h.newForm.error().requestId, failure === "network" ? null : "b10-new-credential-request");
+      assert.match(await h.newForm.view(), failure === "network" ? /Cannot reach/ : /b10-new-credential-request/);
+      assert.equal(h.browser.refreshCookie, null);
+      assert.deepEqual(cookieTransitionEvents(h.events).map(({ phase, path }) => [phase, path]), [
+        ["dispatch", credentialPath(oldMode)], ["settle", credentialPath(oldMode)],
+        ["dispatch", logoutPath], ["settle", logoutPath],
+        ["dispatch", credentialPath(newMode)], ["settle", credentialPath(newMode)],
+        ...(failure === "network" ? [["dispatch", logoutPath], ["settle", logoutPath]] : []),
+      ]);
+      const fresh = await freshCredentialBootstrap(h);
+      assert.equal(fresh.token, null);
+      assert.equal(await fresh.client.readCurrentUser(), null);
+      assert.equal(h.browser.refreshCookie, null);
+      assertCredentialSerialization(h.events);
+    } finally { h.restore(); }
+  });
+}
+
+for (const [oldMode, newMode] of [["login", "register"], ["register", "login"]]) {
+  for (const failure of ["http", "network"]) {
+    test(`B-10 ${oldMode} stale-cookie cleanup ${failure} fails ${newMode} closed, preserves request ID and permits explicit recovery`, async () => {
+      const h = await credentialOverlapHarness(oldMode, newMode, { autoCleanup: false });
+      try {
+        const cleanupReply = h.defer(logoutPath);
+        h.oldReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
+        await settle();
+        if (failure === "network") cleanupReply.reject(new TypeError("Cleanup network unavailable"));
+        else cleanupReply({}, 503, "b10-cleanup-request");
+        await Promise.all([h.oldSubmit, h.newSubmit]);
+        assert.equal(h.auth.readAuthToken(), null);
+        assert.equal(h.auth.readAuthSessionRevision(), h.revision);
+        assert.deepEqual(h.authEvents, []);
+        assert.equal(h.oldForm.error(), null);
+        assert.equal(h.oldForm.resets(), 0);
+        assert.deepEqual(h.oldForm.routes, []);
+        assert.equal(h.newForm.state(), false);
+        assert.equal(h.newForm.resets(), 0);
+        assert.deepEqual(h.newForm.routes, []);
+        assert.equal(h.newForm.error().requestId, failure === "http" ? "b10-cleanup-request" : null);
+        assert.match(await h.newForm.view(), /previous sign-in could not be safely cleared/);
+        assert.equal(h.browser.refreshCookie, oldCredentialCookie, "expiry could not be confirmed");
+        assert.equal(h.calls.filter(call => call.path === credentialPath(newMode)).length, 0);
+        if (failure === "network") h.respondUsing(logoutPath, () => { throw new TypeError("Cleanup retry unavailable"); });
+        else h.respond(logoutPath, {}, 503, "b10-cleanup-request");
+        await assert.rejects(h.auth.ensureAuthToken({ forceRefresh: true }), error => {
+          const details = h.authApi.normalizeAuthError(error);
+          return details.requestId === (failure === "http" ? "b10-cleanup-request" : null)
+            && details.status === (failure === "http" ? 503 : null);
+        });
+        assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+        // No automatic retry hid the cleanup failure. A new user submission may
+        // retry expiry, and may dispatch credentials only after confirmed success.
+        const recoveryReply = h.defer(logoutPath);
+        const recovery = h.newForm.submit();
+        await settle();
+        assert.equal(h.calls.filter(call => call.path === logoutPath).length, 3);
+        assert.equal(h.calls.filter(call => call.path === credentialPath(newMode)).length, 0);
+        recoveryReply(null, 204, null, expiredCredentialCookie);
+        await settle();
+        assert.equal(h.browser.refreshCookie, null);
+        assert.equal(h.calls.filter(call => call.path === credentialPath(newMode)).length, 1);
+        h.newReply(sentinelSession(3, "recovered"), 200, null, newCredentialCookie);
+        await recovery;
+        assert.equal(h.auth.readAuthToken(), "recovered");
+        assert.deepEqual(await h.auth.readCurrentUser(), sentinelSession(3).user);
+        assert.equal(h.newForm.error(), null);
+        assert.deepEqual(h.newForm.routes, ["/wishlist"]);
+        assert.equal(h.newForm.resets(), 1);
+        assert.equal(h.browser.refreshCookie, newCredentialCookie);
+        assertCredentialSerialization(h.events);
+      } finally { h.restore(); }
+    });
+  }
+}
+
+test("B-10 stale-cookie cleanup CSRF retry retains the slot until expiry before newer credentials dispatch", async () => {
+  const h = await credentialOverlapHarness("login", "register", { autoCleanup: false });
+  try {
+    const firstCleanup = h.defer(logoutPath);
+    h.oldReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
+    await settle();
+    const secondCleanup = h.defer(logoutPath);
+    firstCleanup({}, 403);
+    await settle();
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 2);
+    assert.equal(h.calls.filter(call => call.path === credentialPath("register")).length, 0);
+    assert.equal(h.browser.refreshCookie, oldCredentialCookie);
+    secondCleanup(null, 204, null, expiredCredentialCookie);
+    await h.assertOldIgnored();
+    assert.equal(h.browser.refreshCookie, null);
+    h.newReply({}, 409, "b10-after-csrf-request");
+    await h.newSubmit;
+    assert.equal(h.newForm.error().requestId, "b10-after-csrf-request");
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.deepEqual(cookieTransitionEvents(h.events).map(({ phase, path }) => [phase, path]), [
+      ["dispatch", credentialPath("login")], ["settle", credentialPath("login")],
+      ["dispatch", logoutPath], ["settle", logoutPath],
+      ["dispatch", logoutPath], ["settle", logoutPath],
+      ["dispatch", credentialPath("register")], ["settle", credentialPath("register")],
+    ]);
+    assert.equal((await freshCredentialBootstrap(h)).token, null);
+  } finally { h.restore(); }
+});
+
+test("B-10 an obsolete HTTP success with an invalid auth body still expires its possible credential cookie", async () => {
+  const h = await credentialOverlapHarness("login", "register");
+  try {
+    h.oldReply({}, 200, null, oldCredentialCookie);
+    await h.assertOldIgnored();
+    assert.equal(h.browser.refreshCookie, null);
+    h.newReply({}, 409, "b10-invalid-body-request");
+    await h.newSubmit;
+    assert.equal(h.newForm.error().requestId, "b10-invalid-body-request");
+    assert.equal((await freshCredentialBootstrap(h)).token, null);
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+  } finally { h.restore(); }
+});
+
+test("B-10 authoritative acceptance executes inside the cookie slot before reentrant credential work can start", async () => {
+  const h = await sentinelChatHarness();
+  h.auth.clearAuthToken();
+  try {
+    const events = observeAuthNetwork();
+    h.respond(credentialPath("login"), sentinelSession(2, "accepted"));
+    h.respond(credentialPath("register"), sentinelSession(3, "newer"));
+    let second;
+    let secondInvoked = false;
+    const first = h.auth.withAuthCredentialTransition(() => h.authApi.login({ emailOrUsername: "player2", password: "pass1234" }), result => {
+      h.auth.commitAuthCredentialTransition(result);
+      second = h.auth.withAuthCredentialTransition(() => {
+        secondInvoked = true;
+        return h.authApi.register({ email: "player3@example.test", username: "player3", displayName: "Player 3", password: "pass1234" });
+      }, current => h.auth.commitAuthCredentialTransition(current));
+      assert.equal(secondInvoked, false, "the first slot still owns its synchronous commit");
+      assert.equal(h.auth.readAuthToken(), "accepted");
+    });
+    await first;
+    await second;
+    assert.equal(h.auth.readAuthToken(), "newer");
+    assert.equal((await h.auth.readCurrentUser()).id, 3);
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 0, "an accepted session is not an obsolete cookie");
+    assertCredentialSerialization(events);
+  } finally { h.restore(); }
+});
+
+test("B-10 failed stale-cookie cleanup must prevent obsolete reauthentication in a fresh runtime", async () => {
+  const h = await credentialOverlapHarness("login", "register", { autoCleanup: false });
+  try {
+    const cleanupReply = h.defer(logoutPath);
+    h.oldReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
+    await settle();
+    cleanupReply.reject(new TypeError("Expiry request did not reach the server"));
+    await Promise.all([h.oldSubmit, h.newSubmit]);
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.equal(h.calls.filter(call => call.path === credentialPath("register")).length, 0);
+    assert.equal(h.storageValues.get(h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY), "1");
+    h.respondUsing(logoutPath, () => { throw new TypeError("Expiry retry did not reach the server"); });
+    await assert.rejects(h.auth.ensureAuthToken({ forceRefresh: true }));
+    // A new runtime reads the persisted marker and expires the cookie instead
+    // of using normal refresh, even though its memory-only latch starts empty.
+    const fresh = await freshCredentialBootstrap(h);
+    assert.equal(fresh.token, null, "a reload must not consume the obsolete credential cookie");
+    assert.equal(await fresh.client.readCurrentUser(), null);
+    assert.equal(h.browser.refreshCookie, null);
+    assert.equal(h.storageValues.has(h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY), false);
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+  } finally { h.restore(); }
+});
+
+for (const [oldMode, newMode] of [["login", "register"], ["register", "login"]]) {
+  for (const failure of ["http", "network"]) {
+    test(`B-10 ${oldMode} quarantine survives repeated ${failure} cleanup failures and reloads until confirmed expiry`, async () => {
+      const h = await credentialOverlapHarness(oldMode, newMode, { autoCleanup: false });
+      const key = h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+      let status;
+      let form;
+      let runtimeAuthApi = h.authApi;
+      try {
+        assert.equal(h.storageValues.get(key), "1", "quarantine is durable before the credential response");
+        const failCleanup = () => {
+          if (failure === "http") h.respond(logoutPath, {}, 503, "b10-reload-cleanup");
+          else h.respondUsing(logoutPath, () => { throw new TypeError("Expiry unavailable"); });
+        };
+        const assertCleanupError = error => {
+          const details = runtimeAuthApi.normalizeAuthError(error);
+          assert.equal(details.status, failure === "http" ? 503 : null);
+          assert.equal(details.requestId, failure === "http" ? "b10-reload-cleanup" : null);
+          assert.match(details.message, /previous sign-in could not be safely cleared/);
+          return true;
+        };
+        failCleanup();
+        h.oldReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
+        await Promise.all([h.oldSubmit, h.newSubmit]);
+        assert.equal(h.storageValues.get(key), "1");
+        assert.equal(h.browser.refreshCookie, oldCredentialCookie);
+        h.status.dispose();
+
+        for (let reload = 0; reload < 2; reload++) {
+          const { client, authApi } = await freshCredentialModules();
+          runtimeAuthApi = authApi;
+          const cleanupReply = h.defer(logoutPath);
+          const before = h.calls.filter(call => call.path === logoutPath).length;
+          // Concurrent bootstrap consumers must share the same cleanup slot.
+          const boots = [client.ensureAuthToken(), client.ensureAuthToken({ forceRefresh: true }), client.readCurrentUser()];
+          const rejected = boots.map(boot => assert.rejects(boot, assertCleanupError));
+          await settle();
+          assert.equal(h.calls.filter(call => call.path === logoutPath).length, before + 1);
+          assert.equal(client.readAuthToken(), null);
+          assert.equal(h.storageValues.get(key), "1");
+          assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+          if (failure === "http") cleanupReply({}, 503, "b10-reload-cleanup");
+          else cleanupReply.reject(new TypeError("Expiry unavailable after reload"));
+          await Promise.all(rejected);
+          assert.equal(h.browser.refreshCookie, oldCredentialCookie);
+          assert.equal(h.storageValues.get(key), "1");
+        }
+
+        const { client, authApi } = await freshCredentialModules();
+        runtimeAuthApi = authApi;
+        failCleanup();
+        status = await authComponentHarness({ ...h, auth: client, authApi }, "AuthStatus");
+        assert.match(await status.view(), /auth-status--unavailable/);
+        assert.doesNotMatch(await status.view(), /auth-status--authenticated/);
+        form = await authComponentHarness({ ...h, auth: client, authApi }, credentialFormName(newMode));
+        failCleanup();
+        await form.submit();
+        assert.equal(form.error().requestId, failure === "http" ? "b10-reload-cleanup" : null);
+        assert.equal(form.resets(), 0);
+        assert.deepEqual(form.routes, []);
+        assert.equal(h.calls.filter(call => call.path === credentialPath(newMode)).length, 0);
+        assert.equal(h.storageValues.get(key), "1");
+
+        const expiryReply = h.defer(logoutPath);
+        const boots = [client.ensureAuthToken(), client.readCurrentUser()];
+        await settle();
+        assert.equal(h.storageValues.get(key), "1", "a dispatched cleanup does not establish expiry");
+        assert.equal(h.browser.refreshCookie, oldCredentialCookie);
+        expiryReply(null, 204, null, expiredCredentialCookie);
+        assert.deepEqual(await Promise.all(boots), [null, null]);
+        assert.equal(h.browser.refreshCookie, null);
+        assert.equal(h.storageValues.has(key), false);
+        assert.equal(await client.ensureAuthToken(), null, "cleanup completes an anonymous bootstrap");
+        assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+
+        const submission = form.submit();
+        await settle();
+        h.newReply(sentinelSession(3, "confirmed-owner"), 200, null, newCredentialCookie);
+        await submission;
+        assert.equal(client.readAuthToken(), "confirmed-owner");
+        assert.equal((await client.readCurrentUser()).id, 3);
+        assert.equal(h.storageValues.has(key), false);
+        assert.deepEqual(form.routes, ["/wishlist"]);
+        assert.equal(form.resets(), 1);
+        // Ordinary refresh and later reload are usable for the accepted account.
+        h.respondUsing(refreshPath, () => {
+          assert.equal(h.browser.refreshCookie, newCredentialCookie);
+          return Response.json(sentinelSession(3, "confirmed-rotation"));
+        });
+        assert.equal(await client.ensureAuthToken({ forceRefresh: true }), "confirmed-rotation");
+        const reloaded = await freshCredentialClient();
+        h.respondUsing(refreshPath, () => {
+          assert.equal(h.browser.refreshCookie, newCredentialCookie);
+          return Response.json(sentinelSession(3, "confirmed-reload"));
+        });
+        assert.equal(await reloaded.ensureAuthToken(), "confirmed-reload");
+        assert.equal((await reloaded.readCurrentUser()).id, 3);
+        assert.ok(h.storageCalls.every(([operation, storedKey, value]) => operation === "remove"
+          || storedKey === key && value === "1"), "only a non-sensitive marker is persisted");
+        assertCredentialSerialization(h.events);
+      } finally { form?.dispose(); status?.dispose(); h.restore(); }
+    });
+  }
+}
+
+for (const mode of credentialModes) {
+  test(`B-10 ${mode} waits for an already dispatched refresh before accepting a replacement cookie`, async () => {
+    const h = await sentinelChatHarness();
+    const form = await authComponentHarness(h, credentialFormName(mode));
+    try {
+      const browser = { refreshCookie: oldCredentialCookie };
+      const events = observeAuthNetwork(browser);
+      const refreshReply = h.defer(refreshPath);
+      const refreshing = h.auth.ensureAuthToken({ forceRefresh: true }).catch(error => error);
+      await settle();
+      const credentialReply = h.defer(credentialPath(mode));
+      const submission = form.submit();
+      await settle();
+      const credentialsBeforeRefresh = h.calls.filter(call => call.path === credentialPath(mode)).length;
+      assert.equal(h.storageValues.get(h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY), "1");
+      refreshReply(sentinelSession(1, "old-rotation"), 200, null, oldCredentialCookie);
+      await refreshing;
+      await settle();
+      credentialReply(sentinelSession(3, "replacement"), 200, null, newCredentialCookie);
+      await submission;
+      assert.equal(credentialsBeforeRefresh, 0, "the older refresh cookie must settle before credentials dispatch");
+      assert.equal(h.auth.readAuthToken(), "replacement");
+      assert.equal(browser.refreshCookie, newCredentialCookie);
+      assert.equal(h.storageValues.has(h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY), false);
+      assert.deepEqual(events.filter(event => [refreshPath, credentialPath(mode)].includes(event.path))
+        .map(({ phase, path }) => [phase, path]), [
+        ["dispatch", refreshPath], ["settle", refreshPath],
+        ["dispatch", credentialPath(mode)], ["settle", credentialPath(mode)],
+      ]);
+    } finally { form.dispose(); h.restore(); }
+  });
+}
+
+for (const fault of ["read", "write", "unverified-write"]) {
+  test(`B-10 storage ${fault} failure blocks cookie use or credential dispatch with a truthful error`, async () => {
+    const h = await sentinelChatHarness();
+    const { client, authApi } = await freshCredentialModules();
+    const storage = window.localStorage;
+    try {
+      const key = client.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+      const unavailable = () => { throw new DOMException("Storage blocked", "SecurityError"); };
+      window.localStorage = {
+        ...storage,
+        ...(fault === "read" ? { getItem: unavailable }
+          : { setItem: fault === "write" ? unavailable : () => {} }),
+      };
+      if (fault === "read") {
+        h.storageValues.set(key, "1");
+        await assert.rejects(client.ensureAuthToken(), error => authApi.normalizeAuthError(error).code === "storage_unavailable");
+        await assert.rejects(client.readCurrentUser(), error => authApi.normalizeAuthError(error).code === "storage_unavailable");
+        assert.equal(h.storageValues.get(key), "1");
+      }
+      let invoked = false;
+      await assert.rejects(client.withAuthCredentialTransition(() => {
+        invoked = true;
+        return Promise.resolve(sentinelSession(2, "must-not-be-sent"));
+      }, result => client.commitAuthCredentialTransition(result)), error => {
+        const details = authApi.normalizeAuthError(error);
+        return details.code === "storage_unavailable" && details.status === null && details.requestId === null;
+      });
+      assert.equal(invoked, false);
+      assert.equal(client.readAuthToken(), null);
+      assert.equal(h.calls.length, 0);
+      // Once storage is available, confirmed expiry is still required for this runtime.
+      window.localStorage = storage;
+      h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      assert.equal(await client.ensureAuthToken(), null);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+    } finally { window.localStorage = storage; h.restore(); }
+  });
+}
+
+for (const fault of ["remove", "unverified-remove", "read-after-remove"]) {
+  test(`B-10 storage ${fault} failure rolls back credential acceptance and retains quarantine across reload`, async () => {
+    const h = await sentinelChatHarness();
+    h.auth.clearAuthToken();
+    const form = await authComponentHarness(h, "LoginForm");
+    const storage = window.localStorage;
+    const key = h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+    try {
+      const browser = { refreshCookie: null };
+      observeAuthNetwork(browser);
+      let failRead = false;
+      window.localStorage = {
+        ...storage,
+        getItem: storedKey => {
+          if (storedKey === key && failRead) {
+            failRead = false;
+            throw new DOMException("Trust read blocked", "SecurityError");
+          }
+          return storage.getItem(storedKey);
+        },
+        removeItem: storedKey => {
+          if (storedKey !== key) return storage.removeItem(storedKey);
+          if (fault === "remove") throw new DOMException("Trust removal blocked", "SecurityError");
+          if (fault === "unverified-remove") return;
+          storage.removeItem(storedKey);
+          failRead = true;
+        },
+      };
+      h.respond(credentialPath("login"), sentinelSession(2, "unaccepted"), 200, null, oldCredentialCookie);
+      await form.submit();
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(form.resets(), 0);
+      assert.deepEqual(form.routes, []);
+      assert.match(form.error().message, /browser storage/);
+      assert.equal(form.error().requestId, null);
+      assert.equal(browser.refreshCookie, oldCredentialCookie);
+      window.localStorage = storage;
+      assert.equal(h.storageValues.get(key), "1", "rollback must leave a durable marker even if removal preceded the failed read");
+      const client = await freshCredentialClient();
+      h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      assert.equal(await client.ensureAuthToken(), null);
+      assert.equal(await client.readCurrentUser(), null);
+      assert.equal(browser.refreshCookie, null);
+      assert.equal(h.storageValues.has(key), false);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+    } finally { window.localStorage = storage; form.dispose(); h.restore(); }
+  });
 }
 
 test("B-08 production Sign out -> login/register waits for logout response before dispatching replacement credentials", async () => {
@@ -943,7 +1864,8 @@ test("B-08 production Sign out -> login/register waits for logout response befor
         ["dispatch", `/api/auth/${mode}`], ["settle", `/api/auth/${mode}`],
       ]);
       assert.ok(transitions.filter(event => event.phase === "dispatch").every(event => event.credentials === "include"));
-      assert.ok(h.storageCalls.every(([operation]) => operation === "remove"));
+      assert.ok(h.storageCalls.every(([operation, key, value]) => operation === "remove"
+        || key === h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY && value === "1"));
     } finally { form.dispose(); status.dispose(); h.restore(); }
   }
 });
