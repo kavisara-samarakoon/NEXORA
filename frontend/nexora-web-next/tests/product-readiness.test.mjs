@@ -378,7 +378,7 @@ async function sentinelChatHarness() {
   await settle();
   render();
   return {
-    auth, authApi: await import(authUrl), wishlist, preferences, calls, storageCalls, storageValues, render,
+    auth, authApi: await import(authUrl), sentinel, wishlist, preferences, calls, storageCalls, storageValues, render,
     answer: () => { render(); return find(node => node.type.name === "GatewayResponseCard")?.props.response; },
     input: () => { render(); return find(node => node.props.id === "sentinel-message").props; },
     signIn: () => { render(); return find(node => node.props.href === "/login?returnTo=%2Fsentinel"); },
@@ -2523,6 +2523,181 @@ test("Sentinel renders normal success and a real 401 / same-user refresh / retry
       assert.ok(h.storageCalls.every(([operation]) => operation === "remove"), "tokens are never persisted");
     } finally { h.restore(); }
   }
+});
+
+for (const logoutPhase of ["pending", "completed"]) {
+  test(`FZ-01 production Sign out ${logoutPhase} rejects a late Sentinel 401 before refresh`, async () => {
+    const h = await sentinelChatHarness();
+    const status = await authComponentHarness(h, "AuthStatus");
+    try {
+      const browser = { refreshCookie: oldCredentialCookie };
+      observeAuthNetwork(browser);
+      const oldReply = h.defer(insightPath);
+      const pending = h.submit("Account A private prompt before Sign out");
+      const logoutReply = h.defer(logoutPath);
+      status.signOut();
+      const loggingOut = h.auth.logout();
+      assert.equal(h.auth.readAuthToken(), null, "Sign out invalidates local auth immediately");
+      await settle();
+      assert.equal(await h.auth.readCurrentUser(), null);
+      assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+      assert.match(await status.view(), /auth-status--anonymous/);
+      if (logoutPhase === "completed") {
+        logoutReply(null, 204, null, expiredCredentialCookie);
+        await loggingOut;
+      }
+      const revision = h.auth.readAuthSessionRevision();
+      // If the old helper refreshes, model a still-present cookie while logout
+      // is pending and an expired cookie after its successful response.
+      h.respondUsing(refreshPath, () => browser.refreshCookie
+        ? Response.json(sentinelSession(1, "obsolete-refresh"))
+        : Response.json({ error: "authentication_required" }, { status: 401 }));
+      oldReply({}, 401, "fz01-obsolete-insight");
+      try {
+        await pending;
+        await settle();
+        assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+        assert.equal(h.calls.filter(call => call.path === insightPath).length, 1);
+        assert.equal(h.auth.readAuthToken(), null);
+        assert.equal(await h.auth.readCurrentUser(), null);
+        assert.match(await status.view(), /auth-status--anonymous/);
+      } finally {
+        if (logoutPhase === "pending") {
+          logoutReply(null, 204, null, expiredCredentialCookie);
+          await loggingOut;
+        }
+      }
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+      assert.equal(h.calls.filter(call => call.path === insightPath).length, 1);
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(await h.auth.readCurrentUser(), null);
+      assert.equal(h.auth.readAuthSessionRevision(), revision + (logoutPhase === "pending" ? 1 : 0));
+      assert.equal(browser.refreshCookie, null);
+      assert.equal(h.answer(), undefined);
+      assert.doesNotMatch(h.text(), /Account A private prompt|obsolete-refresh/);
+      assert.ok(h.signIn());
+      assert.match(await status.view(), /auth-status--anonymous/);
+    } finally { status.dispose(); h.restore(); }
+  });
+}
+
+for (const identicalToken of [false, true]) {
+  test(`FZ-01 a production login replacement rejects old Sentinel 401${identicalToken ? " with an identical token" : ""}`, async () => {
+    const h = await sentinelChatHarness();
+    const status = await authComponentHarness(h, "AuthStatus");
+    const form = await authComponentHarness(h, "LoginForm");
+    try {
+      const oldReply = h.defer(insightPath);
+      const pending = h.submit("Account A obsolete prompt");
+      const originalRevision = h.auth.readAuthSessionRevision();
+      const replacement = sentinelSession(2, identicalToken ? "initial" : "account-b");
+      h.respond(credentialPath("login"), replacement, 200, null, newCredentialCookie);
+      await form.submit();
+      const replacementRevision = h.auth.readAuthSessionRevision();
+      assert.ok(replacementRevision > originalRevision);
+      assert.equal(h.auth.readAuthToken(), replacement.token);
+      assert.equal((await h.auth.readCurrentUser()).id, 2);
+      assert.deepEqual(form.routes, ["/wishlist"]);
+      // Make a forbidden refresh visibly alter B, rather than relying on an
+      // unexpected-fetch mock failure to mask an attempted refresh.
+      h.respond(refreshPath, sentinelSession(2, "unexpected-b-rotation"));
+      oldReply({}, 401, "fz01-old-account-401");
+      await pending;
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+      assert.equal(h.calls.filter(call => call.path === insightPath).length, 1);
+      assert.equal(h.auth.readAuthToken(), replacement.token);
+      assert.deepEqual(await h.auth.readCurrentUser(), replacement.user);
+      assert.equal(h.auth.readAuthSessionRevision(), replacementRevision);
+      assert.equal(h.answer(), undefined);
+      assert.doesNotMatch(h.text(), /Account A obsolete prompt|fz01-old-account-401/);
+      assert.match(await status.view(), /auth-status--authenticated/);
+      assert.equal(status.state().user.id, 2);
+    } finally { form.dispose(); status.dispose(); h.restore(); }
+  });
+}
+
+for (const boundary of ["logout", "production login"]) {
+  for (const completion of ["success", "401"]) {
+    test(`FZ-01 production Sentinel retry helper rejects stale ${completion} across ${boundary}`, async () => {
+      const h = await sentinelChatHarness();
+      let form;
+      let logoutReply;
+      let loggingOut;
+      try {
+        const oldReply = h.defer(insightPath);
+        const pending = h.sentinel.withSentinelAuthRetry("initial", token =>
+          h.sentinel.requestSentinelInsight(token, { message: "Old account prompt" }));
+        const settled = pending.then(value => ({ value }), error => ({ error }));
+        if (boundary === "logout") {
+          logoutReply = h.defer(logoutPath);
+          loggingOut = h.auth.logout();
+          await settle();
+        } else {
+          form = await authComponentHarness(h, "LoginForm");
+          h.respond(credentialPath("login"), sentinelSession(2, "account-b"));
+          await form.submit();
+        }
+        const revision = h.auth.readAuthSessionRevision();
+        // Supply real HTTP responses if the old helper incorrectly refreshes
+        // or replays the old prompt under a replacement session.
+        h.respond(refreshPath, sentinelSession(1, "obsolete-refresh"));
+        h.respond(insightPath, sentinelAnswer("Forbidden retry answer"));
+        oldReply(completion === "success" ? sentinelAnswer("Obsolete answer") : {}, completion === "success" ? 200 : 401);
+        const result = await settled;
+        if (loggingOut) {
+          logoutReply(null, 204, null, expiredCredentialCookie);
+          await loggingOut;
+        }
+        assert.ok(h.auth.isAuthSessionInvalidatedError(result.error));
+        assert.equal(result.value, undefined, "the helper cannot return obsolete success");
+        assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+        assert.equal(h.calls.filter(call => call.path === insightPath).length, 1);
+        assert.equal(h.auth.readAuthToken(), boundary === "logout" ? null : "account-b");
+        assert.equal((await h.auth.readCurrentUser())?.id ?? null, boundary === "logout" ? null : 2);
+        assert.equal(h.auth.readAuthSessionRevision(), revision + (boundary === "logout" ? 1 : 0));
+      } finally { form?.dispose(); h.restore(); }
+    });
+  }
+}
+
+test("FZ-01 production Sentinel helper preserves its public shape after legitimate same-session refresh", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const revision = h.auth.readAuthSessionRevision();
+    const answer = sentinelAnswer("Legitimate refreshed answer");
+    h.respond(insightPath, {}, 401);
+    h.respond(refreshPath, sentinelSession(1, "rotated"));
+    h.respond(insightPath, answer);
+    const result = await h.sentinel.withSentinelAuthRetry("initial", token =>
+      h.sentinel.requestSentinelInsight(token, { message: "Current session prompt" }));
+    assert.deepEqual(result, { value: answer, token: "rotated" });
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 1);
+    assert.deepEqual(h.calls.filter(call => call.path === insightPath).map(call => call.token),
+      ["Bearer initial", "Bearer rotated"]);
+  } finally { h.restore(); }
+});
+
+test("FZ-01 Sentinel reuses an already rotated token within the same session without another refresh", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const revision = h.auth.readAuthSessionRevision();
+    const oldReply = h.defer(insightPath);
+    const pending = h.submit("Current session pending prompt");
+    h.respond(refreshPath, sentinelSession(1, "already-rotated"));
+    await h.auth.ensureAuthToken({ forceRefresh: true });
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    const answer = sentinelAnswer("Already rotated token answer");
+    h.respond(insightPath, answer);
+    oldReply({}, 401);
+    await pending;
+    assert.deepEqual(h.answer(), answer);
+    assert.equal(h.auth.readAuthToken(), "already-rotated");
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 1);
+    assert.deepEqual(h.calls.filter(call => call.path === insightPath).map(call => call.token),
+      ["Bearer initial", "Bearer already-rotated"]);
+  } finally { h.restore(); }
 });
 
 test("Sentinel preserves an in-flight request and completed conversation during same-user rotation", async () => {
