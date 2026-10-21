@@ -12,6 +12,7 @@ import {
 import type { WishlistItem } from "@/data/wishlist";
 import { ProductFeedRetry } from "@/components/ProductFeedNotice";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
+import SentinelButton from "@/components/SentinelButton";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
@@ -752,16 +753,23 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       </Suspense>
       <div className={styles.overview}>
         <section className={styles.routeHero} aria-labelledby="deals-title">
-          <p className={styles.eyebrow}>
-            <span className={styles.eyebrowLine} aria-hidden="true" />
-            {isExternalReady ? "External offers · may be cached" : "Curated intelligence"}
-          </p>
-          <h1 id="deals-title" className={styles.title}>Game Deals Intelligence</h1>
-          <p className={styles.lede}>
-            Compare NEXORA&apos;s curated deal set or request current external
-            offers on demand. External results may be cached because the API does not expose
-            freshness metadata.
-          </p>
+          <div className={styles.introduction}>
+            <div className={styles.introCopy}>
+              <p className={styles.eyebrow}>
+                <span className={styles.eyebrowLine} aria-hidden="true" />
+                {isExternalReady ? "External offers · may be cached" : "Curated intelligence"}
+              </p>
+              <h1 id="deals-title" className={styles.title}>Game Deals Intelligence</h1>
+              <p className={styles.lede}>
+                Compare NEXORA&apos;s curated deal set or request current external
+                offers on demand. External results may be cached because the API does not expose
+                freshness metadata.
+              </p>
+            </div>
+            <div className={styles.sentinelPlacement}>
+              <SentinelButton />
+            </div>
+          </div>
           <div className={styles.statsRow} aria-label="Deal statistics">
             <div className={styles.stat}>
               <strong className={styles.statValue}>{visibleDeals.length}</strong>
