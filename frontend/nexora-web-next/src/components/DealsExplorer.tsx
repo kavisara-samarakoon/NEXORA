@@ -173,7 +173,10 @@ function DealCard({
 
   return (
     <article className={styles.card} aria-labelledby={titleId}>
-      <div className={styles.cardAccent} aria-hidden="true" />
+      <div className={styles.cardMedia}>
+        <div className={styles.cardMediaArt} aria-hidden="true" />
+        <span className={styles.artworkCaption}>Artwork unavailable</span>
+      </div>
       <div className={styles.cardHeader}>
         <span className={styles.store}>{deal.store}</span>
         <span className={styles.discount}>{deal.discount}</span>
@@ -182,28 +185,28 @@ function DealCard({
       <h2 className={styles.cardTitle} id={titleId}>{deal.title}</h2>
       <p className={styles.category}>{deal.category}</p>
 
-      <div
-        className={styles.rating}
-        aria-label={hasRating ? `${deal.rating} out of 5 stars` : "Rating unavailable"}
-      >
-        {hasRating ? (
-          <>
-            <span aria-hidden="true">{deal.stars}</span>
-            <span>{deal.rating}</span>
-          </>
-        ) : (
-          <span>Rating unavailable</span>
-        )}
+      <div className={styles.cardSignals}>
+        <span
+          className={styles.rating}
+          role={hasRating ? "img" : undefined}
+          aria-label={hasRating ? `${deal.rating} out of 5 stars` : undefined}
+        >
+          {hasRating ? (
+            <span aria-hidden="true">{deal.stars} <span>{deal.rating}</span></span>
+          ) : (
+            "Rating unavailable"
+          )}
+        </span>
         <span className={`${styles.status} ${STATUS_TONE_CLASS[statusClass(deal.status)]}`}>
           {deal.status}
         </span>
       </div>
 
       <div className={styles.prices}>
-        <del>{deal.priceOld}</del>
         <strong className={deal.priceNew === "FREE" ? styles.priceFree : undefined}>
           {deal.priceNew}
         </strong>
+        <del>{deal.priceOld}</del>
       </div>
 
       <div className={styles.actions}>
@@ -212,7 +215,7 @@ function DealCard({
           type="button"
           disabled={isSaving || isSaved}
           aria-busy={isSaving}
-          aria-label={isSaved ? `${deal.title} is saved to your wishlist` : isSaving ? `Saving ${deal.title} to your wishlist` : `Save ${deal.title} to your wishlist`}
+          aria-label={isSaved ? `Saved: ${deal.title} is in your wishlist` : isSaving ? `Saving… ${deal.title} to your wishlist` : `Save to Wishlist: ${deal.title}`}
           onClick={() => onSave(deal)}
         >
           <span aria-hidden="true">{isSaved ? "✓" : "♡"}</span>
@@ -224,7 +227,7 @@ function DealCard({
           disabled={isSaving}
           aria-busy={isSaving}
           aria-pressed={alertIsSet}
-          aria-label={`${alertIsSet ? "Pause" : "Enable"} wishlist alert for ${deal.title}`}
+          aria-label={isSaving ? `Updating… wishlist alert for ${deal.title}` : `${alertIsSet ? "Pause alert" : "Enable alert"} for ${deal.title}`}
           title="Enable or pause a persisted wishlist alert; manage the target price in Wishlist"
           onClick={() => onToggleAlert(deal)}
         >
@@ -237,7 +240,7 @@ function DealCard({
             href={dealUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            aria-label={`View ${deal.title} deal from ${deal.store} in a new tab`}
+            aria-label={`View Deal for ${deal.title} from ${deal.store} in a new tab`}
           >
             <span aria-hidden="true">↗</span>
             View Deal
@@ -246,12 +249,12 @@ function DealCard({
           <button
             className={`${styles.viewButton} ${styles.viewButtonActive}`}
             type="button"
-            aria-label={`Find current offers for ${deal.title}`}
+            aria-label={`Find Current Offers for ${deal.title}`}
             title="Search External Offers for this game title"
             onClick={() => onFindOffers(deal.title)}
           >
             <span aria-hidden="true">↗</span>
-            View Deal
+            Find Current Offers
           </button>
         )}
       </div>

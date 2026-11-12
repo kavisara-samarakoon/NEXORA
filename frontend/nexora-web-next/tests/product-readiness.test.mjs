@@ -3162,18 +3162,74 @@ async function dealCardControls() {
     const tree = DealCard({ deal, onFindOffers, alertIsSet: false, isSaved: false, isSaving: false });
     const find = node => {
       if (!node || typeof node !== "object") return;
-      if (["a", "button"].includes(node.type) && node.props.children.includes("View Deal")) return node;
+      if (["a", "button"].includes(node.type) && node.props.children.some(child => child === "View Deal" || child === "Find Current Offers")) return node;
       for (const child of node.props?.children ?? []) {
         const result = find(child);
         if (result) return result;
       }
     };
     const control = find(tree);
-    assert.ok(control, "card renders View Deal");
+    assert.ok(control, "card renders an offer action");
     return control;
   };
-  return { source, safeCheapSharkDealUrl, viewControl };
+  return { source, safeCheapSharkDealUrl, viewControl, renderCard: DealCard };
 }
+
+test("editorial Deals cards keep truthful media, rating, naming and account feedback", async () => {
+  const { source, renderCard } = await dealCardControls();
+  const nodes = tree => Array.isArray(tree)
+    ? tree.flatMap(nodes)
+    : tree && typeof tree === "object" ? [tree, ...nodes(tree.props?.children ?? [])] : [];
+  const text = tree => Array.isArray(tree)
+    ? tree.map(text).join("")
+    : tree && typeof tree === "object" ? text(tree.props?.children ?? []) : typeof tree === "string" || typeof tree === "number" ? String(tree) : "";
+  const deal = { ...alertDeal, title: "A very long 遊戲 title — complete edition", category: "External Deal", priceOld: "$39.99", rating: 0, stars: "", status: "Observed offer" };
+  const saveCalls = [], alertCalls = [];
+  const props = { deal, alertIsSet: false, isSaved: false, isSaving: false, onSave: value => saveCalls.push(value), onToggleAlert: value => alertCalls.push(value), onFindOffers: () => {} };
+  const tree = renderCard(props), all = nodes(tree);
+  const caption = all.filter(node => node.props.className === "artworkCaption");
+  assert.equal(caption.length, 1);
+  assert.equal(text(caption), "Artwork unavailable");
+  assert.equal(all.find(node => node.props.className === "cardMediaArt").props["aria-hidden"], "true");
+  assert.ok(!all.some(node => ["img", "Image", "picture", "video", "canvas"].includes(node.type)));
+  assert.doesNotMatch(source, /next\/image|<img\b|<Image\b|coverUrl|artworkUrl/);
+  const css = await readFile(new URL("../src/components/DealsProduct.module.css", import.meta.url), "utf8");
+  assert.doesNotMatch(css, /url\s*\(/i, "neutral media loads no artwork assets");
+  const title = all.find(node => node.type === "h2");
+  assert.equal(text(title), deal.title);
+  assert.equal(tree.props["aria-labelledby"], title.props.id);
+  assert.equal(text(all.find(node => node.props.className === "category")), "External Deal");
+  assert.equal(text(all.find(node => node.props.className === "rating")), "Rating unavailable");
+  assert.equal(text(tree).match(/Rating unavailable/g).length, 1);
+  assert.ok(!all.some(node => node.props.role === "img"), "no invented rating");
+  assert.equal(text(all.find(node => node.type === "del")), deal.priceOld);
+  assert.equal(text(all.find(node => node.type === "strong")), deal.priceNew);
+  assert.ok(all.some(node => text(node) === deal.status));
+  const buttons = all.filter(node => node.type === "button");
+  for (const button of buttons) assert.ok(button.props["aria-label"].includes(text(button.props.children.filter(child => typeof child === "string"))), "accessible name includes visible action text");
+  buttons[0].props.onClick(); buttons[1].props.onClick();
+  assert.deepEqual(saveCalls, [deal]); assert.deepEqual(alertCalls, [deal]);
+  for (const state of [{ isSaving: true }, { isSaved: true, alertIsSet: true }]) {
+    const controls = nodes(renderCard({ ...props, ...state })).filter(node => node.type === "button");
+    assert.equal(controls[0].props.disabled, true);
+    assert.equal(controls[0].props["aria-busy"], Boolean(state.isSaving));
+    assert.equal(controls[1].props.disabled, Boolean(state.isSaving));
+    assert.equal(controls[1].props["aria-busy"], Boolean(state.isSaving));
+    assert.equal(controls[1].props["aria-pressed"], Boolean(state.alertIsSet));
+    for (const control of controls) assert.ok(control.props["aria-label"].includes(text(control.props.children.filter(child => typeof child === "string"))));
+  }
+  const rated = nodes(renderCard({ ...props, deal: { ...deal, rating: 4.6, stars: "★★★★★", priceNew: "FREE" } }));
+  assert.equal(rated.find(node => node.props.role === "img").props["aria-label"], "4.6 out of 5 stars");
+  assert.equal(text(rated.find(node => node.props.className === "priceFree")), "FREE");
+  for (const tone of ["auth", "error", "success"]) {
+    const feedback = nodes(renderCard({ ...props, saveMessage: { tone, text: "Server response retained", requestId: "safe-test-request" } }));
+    const message = feedback.find(node => node.props.className?.startsWith("saveMessage "));
+    assert.equal(message.props.role, tone === "error" ? "alert" : "status");
+    assert.ok(text(message).includes("Server response retained"));
+    if (tone === "auth") assert.deepEqual(feedback.filter(node => node.type === "Link").map(node => node.props.href), ["/login?returnTo=%2Fdeals", "/register?returnTo=%2Fdeals"]);
+    if (tone !== "success") assert.equal(feedback.find(node => node.type === "RequestIdSupportText").props.requestId, "safe-test-request");
+  }
+});
 
 test("Deals provider URL validation continues to reject unsafe or unverified destinations", async () => {
   const { safeCheapSharkDealUrl } = await dealCardControls();
@@ -3203,6 +3259,8 @@ test("Deals View Deal preserves verified anchors and makes missing or unsafe URL
   assert.equal(anchor.props.href, verified);
   assert.equal(anchor.props.target, "_blank");
   assert.equal(anchor.props.rel, "noopener noreferrer sponsored");
+  assert.ok(anchor.props.children.includes("View Deal"));
+  assert.ok(anchor.props["aria-label"].includes("View Deal"));
   assert.match(anchor.props["aria-label"], /in a new tab/);
   assert.equal(anchor.props.onClick, undefined, "verified links retain native navigation");
 
@@ -3211,8 +3269,9 @@ test("Deals View Deal preserves verified anchors and makes missing or unsafe URL
     const button = viewControl({ ...alertDeal, dealUrl }, title => selectedTitles.push(title));
     assert.equal(button.type, "button");
     assert.equal(button.props.type, "button");
-    assert.ok(!button.props.disabled, "fallback View Deal is actionable");
-    assert.equal(button.props["aria-label"], `Find current offers for ${alertDeal.title}`);
+    assert.ok(!button.props.disabled, "fallback Find Current Offers is actionable");
+    assert.ok(button.props.children.includes("Find Current Offers"));
+    assert.equal(button.props["aria-label"], `Find Current Offers for ${alertDeal.title}`);
     assert.match(button.props.title, /Search External Offers/);
     assert.equal(button.props.href, undefined, "no guessed store URL");
     button.props.onClick();
