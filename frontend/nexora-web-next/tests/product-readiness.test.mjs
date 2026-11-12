@@ -910,6 +910,16 @@ function observeAuthNetwork(browser = null) {
   return events;
 }
 
+async function waitForAuthDispatch(events, path, count = 1) {
+  // Dispatch determines completion; the deadline only bounds a missing event.
+  const deadline = performance.now() + 1000;
+  while (events.filter(event => event.phase === "dispatch" && event.path === path).length < count) {
+    assert.ok(performance.now() < deadline, `Timed out waiting for ${path} dispatch ${count}`);
+    // Response body parsing and CSRF bootstrap need not finish in a fixed number of microtasks.
+    await new Promise(resolve => setImmediate(resolve));
+  }
+}
+
 const credentialPath = mode => `/api/auth/${mode}`;
 const credentialFormName = mode => mode === "login" ? "LoginForm" : "RegisterForm";
 const credentialModes = ["login", "register"];
@@ -1299,14 +1309,14 @@ test("B-10 credential CSRF retry stays inside the shared barrier until its final
   try {
     const retryReply = h.defer(credentialPath("login"));
     h.oldReply({}, 403);
-    await settle();
+    await waitForAuthDispatch(h.events, credentialPath("login"), 2);
     assert.deepEqual(credentialEvents(h.events).map(({ phase, path }) => [phase, path]), [
       ["dispatch", credentialPath("login")], ["settle", credentialPath("login")],
       ["dispatch", credentialPath("login")],
     ]);
     retryReply(sentinelSession(2, "obsolete-retry"), 200, null, oldCredentialCookie);
     await h.oldSubmit;
-    await settle();
+    await waitForAuthDispatch(h.events, credentialPath("register"));
     assert.equal(h.auth.readAuthToken(), null);
     assert.equal(h.oldForm.resets(), 0);
     assert.deepEqual(h.oldForm.routes, []);
@@ -1507,10 +1517,10 @@ test("B-10 stale-cookie cleanup CSRF retry retains the slot until expiry before 
   try {
     const firstCleanup = h.defer(logoutPath);
     h.oldReply(sentinelSession(2, "obsolete"), 200, null, oldCredentialCookie);
-    await settle();
+    await waitForAuthDispatch(h.events, logoutPath);
     const secondCleanup = h.defer(logoutPath);
     firstCleanup({}, 403);
-    await settle();
+    await waitForAuthDispatch(h.events, logoutPath, 2);
     assert.equal(h.calls.filter(call => call.path === logoutPath).length, 2);
     assert.equal(h.calls.filter(call => call.path === credentialPath("register")).length, 0);
     assert.equal(h.browser.refreshCookie, oldCredentialCookie);
@@ -2034,7 +2044,7 @@ test("B-08 credential barrier includes an in-flight refresh and every logout CSR
     const events = observeAuthNetwork();
     const refreshReply = h.defer(refreshPath);
     const refreshing = h.auth.ensureAuthToken({ forceRefresh: true });
-    await settle();
+    await waitForAuthDispatch(events, refreshPath);
     const firstLogoutReply = h.defer(logoutPath);
     const loggingOut = h.auth.logout();
     h.respond("/api/auth/login", sentinelSession(2, "replacement"));
@@ -2043,11 +2053,11 @@ test("B-08 credential barrier includes an in-flight refresh and every logout CSR
     assert.equal(h.calls.filter(call => [logoutPath, "/api/auth/login"].includes(call.path)).length, 0);
     refreshReply(sentinelSession(1, "late-rotation"));
     assert.equal(await refreshing, null, "logout invalidates the old refresh token write");
-    await settle();
+    await waitForAuthDispatch(events, logoutPath);
     assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
     const retryLogoutReply = h.defer(logoutPath);
     firstLogoutReply({}, 403);
-    await settle();
+    await waitForAuthDispatch(events, logoutPath, 2);
     assert.equal(h.calls.filter(call => call.path === logoutPath).length, 2);
     assert.equal(h.calls.filter(call => call.path === "/api/auth/login").length, 0);
     retryLogoutReply(null, 204);
