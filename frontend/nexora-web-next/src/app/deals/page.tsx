@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import CinematicTopNav from "@/components/CinematicTopNav";
 import DealsExplorer from "@/components/DealsExplorer";
 import ProductFeedNotice from "@/components/ProductFeedNotice";
-import SentinelButton from "@/components/SentinelButton";
 import { getDeals } from "@/lib/api";
 import { createPageMetadata } from "@/lib/metadata";
 import styles from "@/components/DealsProduct.module.css";
@@ -30,8 +29,6 @@ export default async function DealsPage() {
         </div>
         <DealsExplorer deals={deals} source={source} />
       </main>
-
-      <SentinelButton />
     </div>
   );
 }

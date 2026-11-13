@@ -8,6 +8,7 @@ import {
   AUTH_STATE_EVENT,
   clearAuthToken,
   ensureAuthToken,
+  readAuthSessionRevision,
   readAuthToken,
 } from "@/lib/auth-client";
 import { createSentinelRequestGuard } from "@/lib/sentinel-request-guard";
@@ -171,6 +172,7 @@ export default function SentinelChat({
   const [authState, setAuthState] = useState<GatewayAuthState>("checking");
   const composerInputRef = useRef<HTMLInputElement>(null);
   const requestGuardRef = useRef(createSentinelRequestGuard());
+  const authSessionRevisionRef = useRef(readAuthSessionRevision());
 
   const clearPrivateConversation = useCallback(() => {
     requestGuardRef.current.invalidate();
@@ -194,6 +196,7 @@ export default function SentinelChat({
     const requestGuard = requestGuardRef.current;
 
     async function refreshAuthentication() {
+      const revisionAtStart = readAuthSessionRevision();
       setAuthState("checking");
       const memoryToken = readAuthToken();
       if (memoryToken) {
@@ -206,18 +209,23 @@ export default function SentinelChat({
 
       try {
         const token = await ensureAuthToken();
-        if (!active) return;
+        if (!active || readAuthSessionRevision() !== revisionAtStart) return;
         setAuthToken(token);
         setAuthState(token ? "authenticated" : "anonymous");
       } catch {
-        if (!active) return;
+        if (!active || readAuthSessionRevision() !== revisionAtStart) return;
         setAuthToken(null);
         setAuthState("unavailable");
       }
     }
 
     function handleAuthChange() {
-      clearPrivateConversation();
+      const revision = readAuthSessionRevision();
+      if (revision !== authSessionRevisionRef.current) {
+        authSessionRevisionRef.current = revision;
+        clearPrivateConversation();
+        if (!readAuthToken()) setShowSignInHint(true);
+      }
       void refreshAuthentication();
     }
 
@@ -250,7 +258,14 @@ export default function SentinelChat({
     try {
       const result = await withSentinelAuthRetry(
         authToken,
-        (activeToken) => requestSentinelInsight(activeToken, { message, context }),
+        (activeToken) => {
+          // An auth boundary can occur while the retry helper awaits refresh.
+          // Do not send the previous session's prompt with a replacement token.
+          if (!requestGuardRef.current.isCurrent(requestVersion)) {
+            throw new Error("Sentinel request is no longer current.");
+          }
+          return requestSentinelInsight(activeToken, { message, context });
+        },
       );
       if (!requestGuardRef.current.isCurrent(requestVersion)) return;
       setAuthToken(result.token);
@@ -265,6 +280,7 @@ export default function SentinelChat({
         clearPrivateConversation();
         setAuthToken(null);
         setAuthState("anonymous");
+        setShowSignInHint(true);
       } else {
         setGatewayError({
           code: details.code,

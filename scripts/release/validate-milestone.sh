@@ -13,7 +13,7 @@ Run the common NEXORA milestone validation stack without installing
 dependencies or changing Git state.
 
 Options:
-  --skip-frontend  Skip frontend lint, build, and npm audit.
+  --skip-frontend  Skip frontend lint, tests, build, and npm audit.
   --skip-smoke     Skip the API smoke test when the backend is not running.
   -h, --help       Show this help.
 USAGE
@@ -71,6 +71,13 @@ run_frontend_lint() {
     )
 }
 
+run_frontend_tests() {
+    (
+        cd -- "${PROJECT_ROOT}/frontend/nexora-web-next"
+        npm test
+    )
+}
+
 run_frontend_build() {
     (
         cd -- "${PROJECT_ROOT}/frontend/nexora-web-next"
@@ -97,6 +104,7 @@ run_check "Backend Maven tests" run_backend_tests
 if [[ "${SKIP_FRONTEND}" == false ]]; then
     require_command npm
     run_check "Frontend lint" run_frontend_lint
+    run_check "Frontend tests" run_frontend_tests
     run_check "Frontend build" run_frontend_build
     run_check "Frontend production dependency audit" run_frontend_audit
 else

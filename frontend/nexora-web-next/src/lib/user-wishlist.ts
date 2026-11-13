@@ -8,7 +8,7 @@ import {
   type WishlistPriority,
   type WishlistStatus,
 } from "@/data/wishlist";
-import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { withAuthSessionRetry } from "@/lib/auth-client";
 import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
 const WISHLIST_REQUEST_TIMEOUT_MS = 8000;
@@ -338,25 +338,13 @@ export function normalizeUserWishlistError(error: unknown): UserWishlistError {
   };
 }
 
-export async function withWishlistAuthRetry<T>(
+export function withWishlistAuthRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
-): Promise<{ value: T; token: string }> {
-  try {
-    return { value: await request(token), token };
-  } catch (error) {
-    if (normalizeUserWishlistError(error).status !== 401) throw error;
-
-    const currentToken = readAuthToken();
-    const refreshedToken =
-      currentToken && currentToken !== token
-        ? currentToken
-        : await ensureAuthToken({ forceRefresh: true });
-    if (!refreshedToken) throw error;
-
-    return {
-      value: await request(refreshedToken),
-      token: refreshedToken,
-    };
-  }
+): Promise<{ value: T; token: string; sessionRevision: number }> {
+  return withAuthSessionRetry(
+    token,
+    request,
+    (error) => normalizeUserWishlistError(error).status === 401,
+  );
 }

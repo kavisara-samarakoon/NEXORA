@@ -1,4 +1,4 @@
-import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { withAuthSessionRetry } from "@/lib/auth-client";
 import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
 const SENTINEL_REQUEST_TIMEOUT_MS = 10000;
@@ -218,20 +218,10 @@ export async function withSentinelAuthRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
 ): Promise<{ value: T; token: string }> {
-  try {
-    return { value: await request(token), token };
-  } catch (error) {
-    if (normalizeSentinelInsightError(error).status !== 401) throw error;
-
-    const currentToken = readAuthToken();
-    const refreshedToken = currentToken && currentToken !== token
-      ? currentToken
-      : await ensureAuthToken({ forceRefresh: true });
-    if (!refreshedToken) throw error;
-
-    return {
-      value: await request(refreshedToken),
-      token: refreshedToken,
-    };
-  }
+  const result = await withAuthSessionRetry(
+    token,
+    request,
+    error => normalizeSentinelInsightError(error).status === 401,
+  );
+  return { value: result.value, token: result.token };
 }

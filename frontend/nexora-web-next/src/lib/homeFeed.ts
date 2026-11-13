@@ -40,6 +40,7 @@ export interface DiscoveryGiveaway {
   title: string;
   platform: string | null;
   worth: string | null;
+  status: string | null;
   href: string | null;
 }
 
@@ -238,6 +239,7 @@ export function mapGiveaway(raw: Rec | null): DiscoveryGiveaway | null {
     worth: formatPrice(
       readRaw(raw, ["originalPrice", "worth", "value", "retailPrice", "normalPrice"]),
     ),
+    status: readText(raw, ["status"]),
     href: readText(raw, ["url", "openGiveawayUrl", "giveawayUrl", "link", "href"]),
   };
 }

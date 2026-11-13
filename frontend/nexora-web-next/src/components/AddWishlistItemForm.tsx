@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import {
+  assertAuthSessionRevision,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
+} from "@/lib/auth-client";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import type { WishlistItem, WishlistPriority, WishlistStatus, WishlistStore } from "@/data/wishlist";
 import {
@@ -67,6 +72,7 @@ export default function AddWishlistItemForm({
       alertActive: formData.get("alertActive") === "on",
     };
 
+    const sessionRevision = readAuthSessionRevision();
     setIsSubmitting(true);
     setMessage(null);
 
@@ -75,12 +81,14 @@ export default function AddWishlistItemForm({
         token,
         (activeToken) => addMyWishlistItem(activeToken, payload),
       );
+      assertAuthSessionRevision(result.sessionRevision);
       const item = result.value;
       onTokenChanged(result.token);
       onAdded(item);
       form.reset();
       setMessage({ tone: "success", text: `${item.title} is now stored in this account’s personal wishlist.` });
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = normalizeUserWishlistError(error);
       if (details.status === 401) onAuthenticationRequired();
       setMessage({

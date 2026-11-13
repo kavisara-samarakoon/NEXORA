@@ -18,16 +18,17 @@ import {
 } from "@/data/wishlist";
 import type { WishlistResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
-import { AUTH_STATE_EVENT, clearAuthToken, ensureAuthToken } from "@/lib/auth-client";
+import {
+  AUTH_STATE_EVENT,
+  clearAuthToken,
+  ensureAuthToken,
+  assertAuthSessionRevision,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
+} from "@/lib/auth-client";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
 import { wishlistCardIdentity } from "@/lib/wishlist-card-identity";
-import {
-  getMyNotificationPreferences,
-  normalizeNotificationPreferenceError,
-  updateMyNotificationPreferences,
-  withNotificationPreferenceAuthRetry,
-  type NotificationPreferences,
-} from "@/lib/user-notification-preferences";
+import NotificationPreferencesPanel from "@/components/NotificationPreferencesPanel";
 import {
   deleteMyWishlistItem,
   getMyWishlist,
@@ -47,42 +48,9 @@ type ItemMessage = {
 };
 type PriceHistoryState = "idle" | "loading" | "loaded" | "unavailable";
 type NumericPriceHistoryPoint = WishlistPriceHistoryPoint & { priceAmount: number };
-type NotificationPreferenceLoadState = "idle" | "loading" | "ready" | "error";
 
 const PRICE_HISTORY_REQUEST_LIMIT = 15;
 const PRICE_HISTORY_TIMELINE_LIMIT = 5;
-const notificationPreferenceFields = [
-  {
-    key: "emailEnabled",
-    label: "Email alerts",
-    description: "Opt in to the future configured email channel.",
-  },
-  {
-    key: "inAppEnabled",
-    label: "In-app / log alerts",
-    description: "Keep local product-side notification signals enabled.",
-  },
-  {
-    key: "targetReachedEnabled",
-    label: "Target reached",
-    description: "Notify when a tracked price reaches its target.",
-  },
-  {
-    key: "priceDropEnabled",
-    label: "Price drops",
-    description: "Keep price-drop notification intent enabled.",
-  },
-  {
-    key: "freeGameEnabled",
-    label: "Free games",
-    description: "Keep free-game notification intent enabled.",
-  },
-] as const satisfies readonly {
-  key: keyof NotificationPreferences;
-  label: string;
-  description: string;
-}[];
-
 function protectedWishlistError(error: unknown) {
   const wishlistError = normalizeUserWishlistError(error);
   if (wishlistError.code !== "unknown_error") return wishlistError;
@@ -412,6 +380,7 @@ function WishlistCard({
   const settingsMessageId = `wishlist-settings-message-${item.id}`;
 
   async function loadPriceHistory() {
+    const sessionRevision = readAuthSessionRevision();
     if (!authToken || priceHistoryState === "loading") return;
     setPriceHistoryState("loading");
 
@@ -424,10 +393,12 @@ function WishlistCard({
           PRICE_HISTORY_REQUEST_LIMIT,
         ),
       );
+      assertAuthSessionRevision(result.sessionRevision);
       onTokenChanged(result.token);
       setPriceHistory(result.value);
       setPriceHistoryState("loaded");
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         onAuthenticationRequired();
@@ -546,16 +517,27 @@ function WishlistCard({
       )}
 
       <div className="wl-card__actions">
-        <button
+        <Link
           className={`wl-card__view wl-card__view--${storeClass}`}
-          type="button"
-          disabled
-          aria-label={`View deal for ${item.title} unavailable in this preview`}
-          title="Store redirects are planned for a later migration"
+          style={{
+            display: "inline-flex",
+            minHeight: 44,
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            border: "1px solid var(--nx-glass-border-strong)",
+            borderRadius: 999,
+            font: "inherit",
+            fontWeight: 700,
+          }}
+          href={`/deals?title=${encodeURIComponent(item.title)}#deal-search`}
+          aria-label={`Find current deals for ${item.title}`}
+          title={`Search current external offers for ${item.title}`}
         >
           <span aria-hidden="true">↗</span>
           View Deal
-        </button>
+        </Link>
         {canManage && (
           <button
             className={alertIsActive ? "wl-card__edit wl-card__edit--active" : "wl-card__edit"}
@@ -791,197 +773,6 @@ function WishlistAlertPanel({
   );
 }
 
-function NotificationPreferencesPanel({
-  authToken,
-  onAuthenticationRequired,
-  onTokenChanged,
-}: {
-  authToken: string;
-  onAuthenticationRequired: () => void;
-  onTokenChanged: (token: string) => void;
-}) {
-  const [loadState, setLoadState] = useState<NotificationPreferenceLoadState>("idle");
-  const [savedPreferences, setSavedPreferences] =
-    useState<NotificationPreferences | null>(null);
-  const [draftPreferences, setDraftPreferences] =
-    useState<NotificationPreferences | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<ItemMessage | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadPreferences() {
-      setLoadState("loading");
-      setMessage(null);
-
-      try {
-        const result = await withNotificationPreferenceAuthRetry(
-          authToken,
-          getMyNotificationPreferences,
-        );
-        if (!active) return;
-        onTokenChanged(result.token);
-        setSavedPreferences(result.value);
-        setDraftPreferences(result.value);
-        setLoadState("ready");
-      } catch (error) {
-        if (!active) return;
-        const details = normalizeNotificationPreferenceError(error);
-        if (details.status === 401) {
-          onAuthenticationRequired();
-          return;
-        }
-        setLoadState("error");
-        setMessage({
-          kind: "error",
-          text: details.message,
-          requestId: details.requestId,
-        });
-      }
-    }
-
-    void loadPreferences();
-    return () => {
-      active = false;
-    };
-  }, [authToken, onAuthenticationRequired, onTokenChanged, retryKey]);
-
-  const hasChanges = Boolean(draftPreferences && savedPreferences
-    && notificationPreferenceFields.some(
-      (field) => draftPreferences[field.key] !== savedPreferences[field.key],
-    ));
-
-  async function savePreferences(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!draftPreferences || !hasChanges || isSaving) return;
-
-    setIsSaving(true);
-    setMessage(null);
-    try {
-      const result = await withNotificationPreferenceAuthRetry(
-        authToken,
-        (activeToken) => updateMyNotificationPreferences(
-          activeToken,
-          draftPreferences,
-        ),
-      );
-      onTokenChanged(result.token);
-      setSavedPreferences(result.value);
-      setDraftPreferences(result.value);
-      setMessage({ kind: "success", text: "Preferences saved to your account." });
-    } catch (error) {
-      const details = normalizeNotificationPreferenceError(error);
-      if (details.status === 401) {
-        onAuthenticationRequired();
-        return;
-      }
-      setMessage({
-        kind: "error",
-        text: details.message,
-        requestId: details.requestId,
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  return (
-    <section className="wl-notification-preferences" id="notification-preferences" aria-labelledby="wishlist-notification-preferences-title">
-      <div className="wl-notification-preferences__header">
-        <div>
-          <span>Account controls</span>
-          <strong id="wishlist-notification-preferences-title">Notification preferences</strong>
-        </div>
-        <span className="wl-notification-preferences__badge">Account</span>
-      </div>
-
-      {loadState === "loading" && (
-        <UxStatePanel
-          className="ux-state--compact wl-notification-preferences__state"
-          description={<>Waiting for notification preferences stored with this account.<UxSkeleton lines={3} /></>}
-          role="status"
-          title="Loading notification preferences"
-          tone="loading"
-        />
-      )}
-
-      {loadState === "error" && (
-        <UxStatePanel
-          className="ux-state--compact wl-notification-preferences__error"
-          description={(
-            <>
-              {message?.text || "The account preference route could not be reached."} Wishlist items and alert settings remain available. Retry preferences starts one manual request.
-              <RequestIdSupportText requestId={message?.requestId} />
-            </>
-          )}
-          role="alert"
-          title="Notification preferences unavailable"
-          tone="unavailable"
-        >
-          <button className="ux-state__action" type="button" onClick={() => setRetryKey((current) => current + 1)}>
-            Retry preferences
-          </button>
-        </UxStatePanel>
-      )}
-
-      {loadState === "ready" && draftPreferences && (
-        <form aria-busy={isSaving} onSubmit={savePreferences}>
-          <div className="wl-notification-preferences__rows">
-            {notificationPreferenceFields.map((field) => (
-              <label key={field.key}>
-                <span className="wl-notification-preferences__copy">
-                  <strong>{field.label}</strong>
-                  <small>{field.description}</small>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={draftPreferences[field.key]}
-                  disabled={isSaving}
-                  onChange={(event) => {
-                    setDraftPreferences((current) => current
-                      ? { ...current, [field.key]: event.target.checked }
-                      : current);
-                    setMessage(null);
-                  }}
-                />
-                <span className="wl-notification-preferences__toggle" aria-hidden="true">
-                  <span />
-                </span>
-              </label>
-            ))}
-          </div>
-
-          <p className="wl-notification-preferences__notice">
-            These controls save notification intent only. Email delivery is unavailable
-            until local SMTP and a recipient workflow are configured; durable retries are not implemented.
-          </p>
-
-          <div className="wl-notification-preferences__actions">
-            <span
-              className={message?.kind === "error"
-                ? "wl-notification-preferences__message wl-notification-preferences__message--error"
-                : message?.kind === "success"
-                  ? "wl-notification-preferences__message wl-notification-preferences__message--success"
-                  : "wl-notification-preferences__message"}
-              role={message?.kind === "error" ? "alert" : isSaving || message ? "status" : undefined}
-            >
-              {isSaving ? "Saving preferences to your account…" : message?.text || "Changes are saved only when you use Save."}
-              {message?.kind === "error" ? (
-                <RequestIdSupportText requestId={message.requestId} />
-              ) : null}
-            </span>
-            <button type="submit" disabled={!hasChanges || isSaving}>
-              {isSaving ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </form>
-      )}
-    </section>
-  );
-}
-
 export default function WishlistExplorer({ wishlistItems, source }: WishlistResult) {
   const [activeFilter, setActiveFilter] = useState<WishlistFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -1000,6 +791,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [refreshKey, setRefreshKey] = useState(0);
   const [personalWishlistRevision, setPersonalWishlistRevision] = useState(0);
   const alertEventsRequestVersion = useRef(0);
+  // Successful mutations invalidate snapshots captured before their completion.
+  const wishlistDataGeneration = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -1049,12 +842,26 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       setAlertEventsLoading(true);
       setView("checking");
 
+      const sessionRevision = readAuthSessionRevision();
+      const dataGeneration = wishlistDataGeneration.current;
       const eventRequestVersion = ++alertEventsRequestVersion.current;
       const [wishlistResult, alertEventsResult] = await Promise.allSettled([
         withWishlistAuthRetry(token, getMyWishlist),
         withWishlistAuthRetry(token, getMyWishlistAlertEvents),
       ]);
       if (!active || currentVersion !== requestVersion) return;
+
+      if (sessionRevision !== readAuthSessionRevision()) return;
+      if ([wishlistResult, alertEventsResult].some((result) =>
+        result.status === "rejected" && isAuthSessionInvalidatedError(result.reason))) return;
+
+      if (dataGeneration !== wishlistDataGeneration.current) {
+        if (eventRequestVersion === alertEventsRequestVersion.current) {
+          setAlertEventsLoading(false);
+        }
+        setView("personal");
+        return;
+      }
 
       if (wishlistResult.status === "rejected") {
         const details = protectedWishlistError(wishlistResult.reason);
@@ -1169,6 +976,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }, [wishlistItems]);
 
   async function refreshAlertEvents(token: string) {
+    const sessionRevision = readAuthSessionRevision();
     const requestVersion = ++alertEventsRequestVersion.current;
     setAlertEventsLoading(true);
     setAlertEventsMessage(null);
@@ -1176,10 +984,12 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     try {
       const result = await withWishlistAuthRetry(token, getMyWishlistAlertEvents);
       if (requestVersion !== alertEventsRequestVersion.current) return;
+      assertAuthSessionRevision(result.sessionRevision);
       setAuthToken(result.token);
       setAlertEvents(result.value);
     } catch (error) {
       if (requestVersion !== alertEventsRequestVersion.current) return;
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1196,8 +1006,18 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }
 
   function handleItemAdded(item: WishlistItem) {
-    setPersonalItems((current) => [item, ...current]);
+    wishlistDataGeneration.current += 1;
+    setPersonalItems((current) => {
+      const existingIndex = current.findIndex((candidate) => candidate.id === item.id);
+      if (existingIndex === -1) return [item, ...current];
+
+      return current.flatMap((candidate, index) => {
+        if (candidate.id !== item.id) return [candidate];
+        return index === existingIndex ? [item] : [];
+      });
+    });
     setAlerts((current) => ({ ...current, [item.id]: item.alertActive }));
+    setView("personal");
     setOperationMessage(null);
     setItemMessages((current) => {
       const next = { ...current };
@@ -1213,6 +1033,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     payload: UpdateWishlistAlertPayload,
     successMessage: string,
   ) {
+    const sessionRevision = readAuthSessionRevision();
     if (view !== "personal" || !authToken || updatingIds.has(item.id)) return;
 
     setUpdatingIds((current) => new Set(current).add(item.id));
@@ -1227,17 +1048,21 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         authToken,
         (activeToken) => updateMyWishlistAlert(activeToken, item.id, payload),
       );
+      assertAuthSessionRevision(result.sessionRevision);
       const updatedItem = result.value;
+      wishlistDataGeneration.current += 1;
       setAuthToken(result.token);
       setPersonalItems((current) => current.map((candidate) =>
         candidate.id === updatedItem.id ? updatedItem : candidate));
       setAlerts((current) => ({ ...current, [updatedItem.id]: updatedItem.alertActive }));
+      setView("personal");
       setItemMessages((current) => ({
         ...current,
         [updatedItem.id]: { kind: "success", text: successMessage },
       }));
       void refreshAlertEvents(result.token);
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1261,6 +1086,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }
 
   async function handleDelete(item: WishlistItem) {
+    const sessionRevision = readAuthSessionRevision();
     if (view !== "personal" || !authToken || deletingIds.has(item.id)) return;
 
     setDeletingIds((current) => new Set(current).add(item.id));
@@ -1271,8 +1097,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         authToken,
         (activeToken) => deleteMyWishlistItem(activeToken, item.id),
       );
+      assertAuthSessionRevision(result.sessionRevision);
+      wishlistDataGeneration.current += 1;
       setAuthToken(result.token);
       setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
+      setView("personal");
       setAlerts((current) => {
         const next = { ...current };
         delete next[item.id];
@@ -1285,6 +1114,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       });
       setOperationMessage({ kind: "success", text: `${item.title} was removed from your personal wishlist.` });
     } catch (error) {
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   dealFilters,
   type DealFilter,
@@ -11,12 +12,16 @@ import {
 import type { WishlistItem } from "@/data/wishlist";
 import { ProductFeedRetry } from "@/components/ProductFeedNotice";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
+import SentinelButton from "@/components/SentinelButton";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
 import { getExternalDeals, type DealsResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
 import { hasAvailableDealRating } from "@/lib/deal-rating";
 import {
   AUTH_STATE_EVENT,
+  assertAuthSessionRevision,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
   clearAuthToken,
   ensureAuthToken,
   readAuthToken,
@@ -25,6 +30,7 @@ import {
   addMyWishlistItem,
   getMyWishlist,
   normalizeUserWishlistError,
+  updateMyWishlistAlert,
   withWishlistAuthRetry,
   type AddWishlistItemPayload,
 } from "@/lib/user-wishlist";
@@ -106,6 +112,13 @@ function findMatchingWishlistItem(
   ) ?? identityMatches[0];
 }
 
+function wishlistOperationKey(deal: GameDeal) {
+  return JSON.stringify([
+    normalizedWishlistValue(deal.title),
+    normalizedWishlistValue(deal.store),
+  ]);
+}
+
 function wishlistPayloadFor(deal: GameDeal): AddWishlistItemPayload {
   const isFree = deal.priceNew === "FREE" || deal.priceValue === 0;
 
@@ -143,6 +156,7 @@ function DealCard({
   saveMessage,
   onSave,
   onToggleAlert,
+  onFindOffers,
 }: {
   deal: GameDeal;
   alertIsSet: boolean;
@@ -150,7 +164,8 @@ function DealCard({
   isSaving: boolean;
   saveMessage?: SaveMessage;
   onSave: (deal: GameDeal) => void;
-  onToggleAlert: (dealId: number) => void;
+  onToggleAlert: (deal: GameDeal) => void;
+  onFindOffers: (title: string) => void;
 }) {
   const dealUrl = safeCheapSharkDealUrl(deal.dealUrl);
   const hasRating = hasAvailableDealRating(deal.rating, deal.stars);
@@ -158,7 +173,10 @@ function DealCard({
 
   return (
     <article className={styles.card} aria-labelledby={titleId}>
-      <div className={styles.cardAccent} aria-hidden="true" />
+      <div className={styles.cardMedia}>
+        <div className={styles.cardMediaArt} aria-hidden="true" />
+        <span className={styles.artworkCaption}>Artwork unavailable</span>
+      </div>
       <div className={styles.cardHeader}>
         <span className={styles.store}>{deal.store}</span>
         <span className={styles.discount}>{deal.discount}</span>
@@ -167,28 +185,28 @@ function DealCard({
       <h2 className={styles.cardTitle} id={titleId}>{deal.title}</h2>
       <p className={styles.category}>{deal.category}</p>
 
-      <div
-        className={styles.rating}
-        aria-label={hasRating ? `${deal.rating} out of 5 stars` : "Rating unavailable"}
-      >
-        {hasRating ? (
-          <>
-            <span aria-hidden="true">{deal.stars}</span>
-            <span>{deal.rating}</span>
-          </>
-        ) : (
-          <span>Rating unavailable</span>
-        )}
+      <div className={styles.cardSignals}>
+        <span
+          className={styles.rating}
+          role={hasRating ? "img" : undefined}
+          aria-label={hasRating ? `${deal.rating} out of 5 stars` : undefined}
+        >
+          {hasRating ? (
+            <span aria-hidden="true">{deal.stars} <span>{deal.rating}</span></span>
+          ) : (
+            "Rating unavailable"
+          )}
+        </span>
         <span className={`${styles.status} ${STATUS_TONE_CLASS[statusClass(deal.status)]}`}>
           {deal.status}
         </span>
       </div>
 
       <div className={styles.prices}>
-        <del>{deal.priceOld}</del>
         <strong className={deal.priceNew === "FREE" ? styles.priceFree : undefined}>
           {deal.priceNew}
         </strong>
+        <del>{deal.priceOld}</del>
       </div>
 
       <div className={styles.actions}>
@@ -197,7 +215,7 @@ function DealCard({
           type="button"
           disabled={isSaving || isSaved}
           aria-busy={isSaving}
-          aria-label={isSaved ? `${deal.title} is saved to your wishlist` : isSaving ? `Saving ${deal.title} to your wishlist` : `Save ${deal.title} to your wishlist`}
+          aria-label={isSaved ? `Saved: ${deal.title} is in your wishlist` : isSaving ? `Saving… ${deal.title} to your wishlist` : `Save to Wishlist: ${deal.title}`}
           onClick={() => onSave(deal)}
         >
           <span aria-hidden="true">{isSaved ? "✓" : "♡"}</span>
@@ -206,13 +224,15 @@ function DealCard({
         <button
           className={alertIsSet ? `${styles.alertButton} ${styles.alertButtonActive}` : styles.alertButton}
           type="button"
+          disabled={isSaving}
+          aria-busy={isSaving}
           aria-pressed={alertIsSet}
-          aria-label={`${alertIsSet ? "Remove" : "Mark"} page-only alert preview for ${deal.title}`}
-          title="Page-only preview; no alert is saved and no notification will be sent"
-          onClick={() => onToggleAlert(deal.id)}
+          aria-label={isSaving ? `Updating… wishlist alert for ${deal.title}` : `${alertIsSet ? "Pause alert" : "Enable alert"} for ${deal.title}`}
+          title="Enable or pause a persisted wishlist alert; manage the target price in Wishlist"
+          onClick={() => onToggleAlert(deal)}
         >
           <span aria-hidden="true">🔔</span>
-          {alertIsSet ? "Marked on page" : "Preview alert"}
+          {isSaving ? "Updating…" : alertIsSet ? "Pause alert" : "Enable alert"}
         </button>
         {dealUrl ? (
           <a
@@ -220,21 +240,21 @@ function DealCard({
             href={dealUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            aria-label={`View ${deal.title} deal from ${deal.store} in a new tab`}
+            aria-label={`View Deal for ${deal.title} from ${deal.store} in a new tab`}
           >
             <span aria-hidden="true">↗</span>
             View Deal
           </a>
         ) : (
           <button
-            className={styles.viewButton}
+            className={`${styles.viewButton} ${styles.viewButtonActive}`}
             type="button"
-            disabled
-            aria-label={`View deal for ${deal.title} unavailable for this curated preview`}
-            title="Store redirects are planned for curated deals"
+            aria-label={`Find Current Offers for ${deal.title}`}
+            title="Search External Offers for this game title"
+            onClick={() => onFindOffers(deal.title)}
           >
             <span aria-hidden="true">↗</span>
-            View Deal
+            Find Current Offers
           </button>
         )}
       </div>
@@ -248,7 +268,7 @@ function DealCard({
           </span>
           <span className={styles.saveMessageCopy}>
             <strong>
-              {saveMessage.tone === "success" ? "Wishlist updated" : saveMessage.tone === "auth" ? "Sign in required" : "Deal not saved"}
+              {saveMessage.tone === "success" ? "Wishlist updated" : saveMessage.tone === "auth" ? "Sign in required" : "Wishlist update failed"}
             </strong>
             <small>{saveMessage.text}</small>
             {saveMessage.tone !== "success" ? (
@@ -313,9 +333,9 @@ function DealNetworkStatus({
       badge: isExternalLive ? "May be cached" : "Sample",
     },
     {
-      label: "Alert control",
-      value: "Page-only preview · no notification",
-      badge: "Preview",
+      label: "Wishlist alerts",
+      value: "Persisted account settings · delivery depends on notification configuration",
+      badge: "Wishlist",
     },
   ] as const;
 
@@ -349,6 +369,26 @@ function DealNetworkStatus({
   );
 }
 
+function DealSearchQuery({ onSearch }: { onSearch: (title: string) => void }) {
+  const searchParams = useSearchParams();
+  const requestedTitle = (searchParams.get("title") ?? "").trim().slice(0, 80);
+
+  useEffect(() => {
+    if (!requestedTitle) return;
+
+    let active = true;
+    // Let Strict Mode's setup/cleanup replay finish before starting a request.
+    queueMicrotask(() => {
+      if (active) onSearch(requestedTitle);
+    });
+    return () => {
+      active = false;
+    };
+  }, [onSearch, requestedTitle]);
+
+  return null;
+}
+
 export default function DealsExplorer({ deals, source }: DealsResult) {
   const [mode, setMode] = useState<DealsMode>("curated");
   const [externalStatus, setExternalStatus] = useState<ExternalDealsStatus>("idle");
@@ -357,29 +397,45 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   const [activeExternalTitle, setActiveExternalTitle] = useState("");
   const [activeFilter, setActiveFilter] = useState<DealFilter>("All Stores");
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    if (window.location.hash !== "#deal-search") return;
-
-    const input = document.getElementById("deal-search");
-    if (!(input instanceof HTMLInputElement)) return;
-
-    window.requestAnimationFrame(() => {
-      input.scrollIntoView({ behavior: "smooth", block: "center" });
-      input.focus({ preventScroll: true });
-    });
-  }, []);
-  const [alerts, setAlerts] = useState<Set<string>>(() => new Set());
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [savingDeals, setSavingDeals] = useState<Set<string>>(() => new Set());
-  const [savedDeals, setSavedDeals] = useState<Set<string>>(() => new Set());
   const [savedWishlistItems, setSavedWishlistItems] = useState<readonly WishlistItem[]>([]);
   const [wishlistSyncWarning, setWishlistSyncWarning] = useState<RequestSupportMessage | null>(null);
   const [saveMessages, setSaveMessages] = useState<Record<string, SaveMessage>>({});
   const savingDealKeys = useRef(new Set<string>());
+  const savedWishlistItemsRef = useRef<readonly WishlistItem[]>([]);
+  const wishlistVersion = useRef(0);
+  const [wishlistSyncRevision, setWishlistSyncRevision] = useState(0);
+
+  const storeWishlistItems = useCallback((items: readonly WishlistItem[]) => {
+    savedWishlistItemsRef.current = items;
+    setSavedWishlistItems(items);
+  }, []);
   const previousAuthToken = useRef<string | null>(null);
   const requestVersion = useRef(0);
+  const mounted = useRef(false);
+  const sourcePanelRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    mounted.current = true;
+    let focusFrame: number | undefined;
+
+    if (window.location.hash === "#deal-search") {
+      const input = document.getElementById("deal-search");
+      if (input instanceof HTMLInputElement) {
+        focusFrame = window.requestAnimationFrame(() => {
+          input.scrollIntoView({ behavior: "smooth", block: "center" });
+          input.focus({ preventScroll: true });
+        });
+      }
+    }
+
+    return () => {
+      mounted.current = false;
+      if (focusFrame !== undefined) window.cancelAnimationFrame(focusFrame);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -403,8 +459,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       if (!active) return;
       if (previousAuthToken.current !== token) {
         previousAuthToken.current = token;
-        setSavedDeals(new Set());
-        setSavedWishlistItems([]);
+        wishlistVersion.current += 1;
+        storeWishlistItems([]);
         setSaveMessages({});
         setWishlistSyncWarning(null);
       }
@@ -425,28 +481,33 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       window.removeEventListener("storage", handleAuthChange);
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
-  }, []);
+  }, [storeWishlistItems]);
 
   useEffect(() => {
     if (!authChecked || !authToken) return;
 
     let active = true;
     const token = authToken;
+    const version = wishlistVersion.current;
+    const sessionRevision = readAuthSessionRevision();
 
     async function syncSavedWishlist() {
       setWishlistSyncWarning(null);
       try {
         const result = await withWishlistAuthRetry(token, getMyWishlist);
-        if (!active) return;
+        if (!active || version !== wishlistVersion.current || savingDealKeys.current.size > 0) return;
+        assertAuthSessionRevision(result.sessionRevision);
         setAuthToken(result.token);
-        setSavedWishlistItems(result.value);
+        storeWishlistItems(result.value);
       } catch (error) {
         if (!active) return;
+        if (version !== wishlistVersion.current || savingDealKeys.current.size > 0) return;
+        if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
         const details = protectedWishlistError(error);
         if (details.status === 401) {
           clearAuthToken();
           setAuthToken(null);
-          setSavedWishlistItems([]);
+          storeWishlistItems([]);
           setWishlistSyncWarning({
             text: "Please sign in again to sync saved deals.",
             requestId: details.requestId,
@@ -464,21 +525,13 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     return () => {
       active = false;
     };
-  }, [authChecked, authToken, externalDeals, externalStatus, mode]);
+  }, [authChecked, authToken, externalDeals, externalStatus, mode, storeWishlistItems, wishlistSyncRevision]);
 
   const visibleDeals = mode === "external" && externalStatus === "ready" ? externalDeals : deals;
   const isExternalReady = mode === "external" && externalStatus === "ready";
   const isExternalLoading = mode === "external" && externalStatus === "loading";
   const isExternalFallback = mode === "external" && externalStatus === "fallback";
   const displayedDealScope = isExternalReady ? "external" : "curated";
-  const syncedSavedDealKeys = useMemo(
-    () => new Set(
-      visibleDeals
-        .filter((deal) => findMatchingWishlistItem(deal, savedWishlistItems))
-        .map((deal) => dealStateKey(displayedDealScope, deal)),
-    ),
-    [displayedDealScope, savedWishlistItems, visibleDeals],
-  );
   const filteredDeals = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -498,7 +551,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     });
   }, [activeFilter, searchQuery, visibleDeals]);
 
-  async function loadExternalDeals(title: string) {
+  const loadExternalDeals = useCallback(async (title: string) => {
     const currentRequest = ++requestVersion.current;
     const normalizedTitle = title.trim();
     setExternalStatus("loading");
@@ -510,7 +563,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       pageSize: 12,
       title: normalizedTitle || undefined,
     });
-    if (currentRequest !== requestVersion.current) return;
+    if (!mounted.current || currentRequest !== requestVersion.current) return;
 
     if (result.source === "external-api") {
       setExternalDeals(result.deals);
@@ -519,6 +572,19 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
       setExternalDeals([]);
       setExternalStatus("fallback");
     }
+  }, []);
+
+  const searchExternalTitle = useCallback((title: string) => {
+    setMode("external");
+    setExternalTitle(title);
+    void loadExternalDeals(title);
+  }, [loadExternalDeals]);
+
+  function findCurrentOffers(title: string) {
+    searchExternalTitle(title);
+    // The source panel exists in both modes, including while its input is disabled.
+    sourcePanelRef.current?.scrollIntoView({ block: "center" });
+    sourcePanelRef.current?.focus({ preventScroll: true });
   }
 
   function selectMode(nextMode: DealsMode) {
@@ -544,58 +610,21 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     void loadExternalDeals("");
   }
 
-  function toggleAlert(dealId: number) {
-    const scope = mode === "external" && externalStatus === "ready" ? "external" : "curated";
-    const key = `${scope}:${dealId}`;
-    setAlerts((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  function toggleDealAlert(deal: GameDeal) {
+    return saveDeal(deal, true);
   }
 
-  async function saveDeal(deal: GameDeal) {
+  async function saveDeal(deal: GameDeal, changeAlert = false) {
     const key = dealStateKey(displayedDealScope, deal);
-    if (
-      savingDealKeys.current.has(key) ||
-      savedDeals.has(key) ||
-      syncedSavedDealKeys.has(key)
-    ) return;
+    const operationKey = wishlistOperationKey(deal);
+    if (savingDealKeys.current.has(operationKey)) return;
+    if (!changeAlert && findMatchingWishlistItem(deal, savedWishlistItemsRef.current)) return;
 
-    let token: string | null;
-    try {
-      token = await ensureAuthToken();
-    } catch (error) {
-      const details = normalizeAuthError(error);
-      setAuthChecked(true);
-      setSaveMessages((current) => ({
-        ...current,
-        [key]: {
-          tone: "error",
-          text: details.message,
-          requestId: details.requestId,
-        },
-      }));
-      return;
-    }
-
-    if (!token) {
-      setAuthToken(null);
-      setAuthChecked(true);
-      setSaveMessages((current) => ({
-        ...current,
-        [key]: {
-          tone: "auth",
-          text: "Sign in, then use Save to Wishlist again for this deal.",
-        },
-      }));
-      return;
-    }
-
-    setAuthToken(token);
-    savingDealKeys.current.add(key);
-    setSavingDeals((current) => new Set(current).add(key));
+    const sessionRevision = readAuthSessionRevision();
+    // Save and Alert share a lock across feed scopes, acquired before auth awaits.
+    savingDealKeys.current.add(operationKey);
+    wishlistVersion.current += 1;
+    setSavingDeals((current) => new Set(current).add(operationKey));
     setSaveMessages((current) => {
       const next = { ...current };
       delete next[key];
@@ -603,59 +632,105 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     });
 
     try {
-      const result = await withWishlistAuthRetry(
-        token,
-        (activeToken) => addMyWishlistItem(activeToken, wishlistPayloadFor(deal)),
-      );
-      const savedItem = result.value;
-      setAuthToken(result.token);
-      setSavedDeals((current) => new Set(current).add(key));
-      setSavedWishlistItems((current) =>
-        current.some((item) => item.id === savedItem.id)
-          ? current
-          : [...current, savedItem],
-      );
-      setSaveMessages((current) => ({
-        ...current,
-        [key]: {
-          tone: "success",
-          text: `${savedItem.title} was saved to your personal wishlist.`,
-        },
-      }));
-    } catch (error) {
-      const details = protectedWishlistError(error);
-      if (details.status === 409) {
-        setSavedDeals((current) => new Set(current).add(key));
+      const token = await ensureAuthToken();
+      assertAuthSessionRevision(sessionRevision);
+      if (!mounted.current) return;
+      setAuthChecked(true);
+      if (!token) {
+        setAuthToken(null);
+        storeWishlistItems([]);
         setSaveMessages((current) => ({
           ...current,
           [key]: {
-            tone: "success",
-            text: `${deal.title} is already in your personal wishlist.`,
+            tone: "auth",
+            text: "Sign in, then retry saving this deal or enabling its wishlist alert.",
           },
         }));
         return;
       }
+
+      setAuthToken(token);
+      const existingItem = findMatchingWishlistItem(deal, savedWishlistItemsRef.current);
+      let postedItem: WishlistItem | undefined;
+      const result = await withWishlistAuthRetry(token, async (activeToken) => {
+        if (existingItem) {
+          return changeAlert
+            ? updateMyWishlistAlert(activeToken, existingItem.id, {
+              alertActive: !existingItem.alertActive,
+            })
+            : existingItem;
+        }
+
+        try {
+          // A successful idempotent POST may return an existing paused item.
+          // Keep it across auth retry so a PATCH 401 does not repeat the POST.
+          const item = postedItem ?? await addMyWishlistItem(activeToken, wishlistPayloadFor(deal));
+          assertAuthSessionRevision(sessionRevision);
+          postedItem = item;
+          return changeAlert && !item.alertActive
+            ? updateMyWishlistAlert(activeToken, item.id, { alertActive: true })
+            : item;
+        } catch (error) {
+          assertAuthSessionRevision(sessionRevision);
+          if (protectedWishlistError(error).status !== 409) throw error;
+          // Another tab or a not-yet-completed sync may already have saved it.
+          const items = await getMyWishlist(activeToken);
+          assertAuthSessionRevision(sessionRevision);
+          const item = findMatchingWishlistItem(deal, items);
+          if (!item) throw error;
+          return changeAlert && !item.alertActive
+            ? updateMyWishlistAlert(activeToken, item.id, { alertActive: true })
+            : item;
+        }
+      });
+      if (!mounted.current || readAuthToken() !== result.token) return;
+      assertAuthSessionRevision(result.sessionRevision);
+      const savedItem = result.value;
+      setAuthToken(result.token);
+      // Invalidate any GET started before this mutation completed.
+      wishlistVersion.current += 1;
+      const current = savedWishlistItemsRef.current;
+      storeWishlistItems(current.some((item) => item.id === savedItem.id)
+        ? current.map((item) => item.id === savedItem.id ? savedItem : item)
+        : [...current, savedItem]);
+      setSaveMessages((current) => ({
+        ...current,
+        [key]: {
+          tone: "success",
+          text: `${savedItem.title} is in your personal wishlist. Its wishlist alert is ${savedItem.alertActive ? "enabled" : "paused"}.`,
+        },
+      }));
+    } catch (error) {
+      if (!mounted.current) return;
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+      setAuthChecked(true);
+      const details = protectedWishlistError(error);
       if (details.status === 401) {
         clearAuthToken();
         setAuthToken(null);
+        storeWishlistItems([]);
       }
       setSaveMessages((current) => ({
         ...current,
         [key]: {
           tone: details.status === 401 ? "auth" : "error",
           text: details.status === 401
-            ? "Your session ended. Sign in again, then retry this save."
+            ? "Your session ended. Sign in again, then retry this wishlist update."
             : `${details.message} You can retry from this card.`,
           requestId: details.requestId,
         },
       }));
     } finally {
-      savingDealKeys.current.delete(key);
-      setSavingDeals((current) => {
-        const next = new Set(current);
-        next.delete(key);
-        return next;
-      });
+      savingDealKeys.current.delete(operationKey);
+      if (mounted.current) {
+        setSavingDeals((current) => {
+          const next = new Set(current);
+          next.delete(operationKey);
+          return next;
+        });
+        // Reconcile after any sync suppressed during the operation or token retry.
+        setWishlistSyncRevision((current) => current + 1);
+      }
     }
   }
 
@@ -676,18 +751,28 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <DealSearchQuery onSearch={searchExternalTitle} />
+      </Suspense>
       <div className={styles.overview}>
         <section className={styles.routeHero} aria-labelledby="deals-title">
-          <p className={styles.eyebrow}>
-            <span className={styles.eyebrowLine} aria-hidden="true" />
-            {isExternalReady ? "External offers · may be cached" : "Curated intelligence"}
-          </p>
-          <h1 id="deals-title" className={styles.title}>Game Deals Intelligence</h1>
-          <p className={styles.lede}>
-            Compare NEXORA&apos;s curated deal set or request current external
-            offers on demand. External results may be cached because the API does not expose
-            freshness metadata.
-          </p>
+          <div className={styles.introduction}>
+            <div className={styles.introCopy}>
+              <p className={styles.eyebrow}>
+                <span className={styles.eyebrowLine} aria-hidden="true" />
+                {isExternalReady ? "External offers · may be cached" : "Curated intelligence"}
+              </p>
+              <h1 id="deals-title" className={styles.title}>Game Deals Intelligence</h1>
+              <p className={styles.lede}>
+                Compare NEXORA&apos;s curated deal set or request current external
+                offers on demand. External results may be cached because the API does not expose
+                freshness metadata.
+              </p>
+            </div>
+            <div className={styles.sentinelPlacement}>
+              <SentinelButton />
+            </div>
+          </div>
           <div className={styles.statsRow} aria-label="Deal statistics">
             <div className={styles.stat}>
               <strong className={styles.statValue}>{visibleDeals.length}</strong>
@@ -705,6 +790,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         </section>
 
         <section
+          ref={sourcePanelRef}
+          tabIndex={-1}
           className={isExternalFallback ? `${styles.sourcePanel} ${styles.sourcePanelWarning}` : styles.sourcePanel}
           aria-label="Deal source selection"
         >
@@ -817,8 +904,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         {authChecked && !authToken && (
           <UxStatePanel
             className="ux-state--compact deals-auth-notice"
-            description="Browsing and page-only alert previews remain available without an account. Sign in to save a deal and manage real price-alert settings from Wishlist."
-            title="Sign in to save deals"
+            description="Browse deals without an account. Sign in to save deals and enable or pause persisted wishlist alerts. Manage target prices in Wishlist."
+            title="Sign in to save deals and manage alerts"
             tone="auth"
           >
             <Link className="ux-state__action" href="/login?returnTo=%2Fdeals">Sign in</Link>
@@ -830,7 +917,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
             className="ux-state--compact deals-wishlist-sync-warning"
             description={(
               <>
-                {wishlistSyncWarning.text} Deal browsing still works; saved markers describe only the last successful account sync and may be incomplete until a later sync succeeds.
+                {wishlistSyncWarning.text} Deal browsing still works; saved markers and alert settings describe only the last successful account sync and may be incomplete until a later sync succeeds.
                 <RequestIdSupportText requestId={wishlistSyncWarning.requestId} />
               </>
             )}
@@ -856,16 +943,14 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           {filteredDeals.map((deal) => (
             <DealCard
               deal={deal}
-              alertIsSet={alerts.has(`${displayedDealScope}:${deal.id}`)}
-              isSaved={
-                savedDeals.has(dealStateKey(displayedDealScope, deal)) ||
-                syncedSavedDealKeys.has(dealStateKey(displayedDealScope, deal))
-              }
-              isSaving={savingDeals.has(dealStateKey(displayedDealScope, deal))}
+              alertIsSet={findMatchingWishlistItem(deal, savedWishlistItems)?.alertActive ?? false}
+              isSaved={Boolean(findMatchingWishlistItem(deal, savedWishlistItems))}
+              isSaving={savingDeals.has(wishlistOperationKey(deal))}
               key={dealStateKey(displayedDealScope, deal)}
               saveMessage={saveMessages[dealStateKey(displayedDealScope, deal)]}
               onSave={saveDeal}
-              onToggleAlert={toggleAlert}
+              onToggleAlert={toggleDealAlert}
+              onFindOffers={findCurrentOffers}
             />
           ))}
           {isExternalReady && externalDeals.length === 0 && (
