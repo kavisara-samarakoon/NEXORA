@@ -436,6 +436,7 @@ async function accountOperationHandlers(h) {
     message: null, isSubmitting: false, isSaving: false,
     savedPreferences: { ...persistedPreferences, emailEnabled: true },
     draftPreferences: { ...persistedPreferences, emailEnabled: true },
+    preferenceSessionRevision: h.auth.readAuthSessionRevision(),
     personalItems: [{ ...alertItem, title: "Account B item" }],
     alerts: { [alertItem.id]: false }, itemMessages: {}, operationMessage: null,
     updatingIds: new Set(), deletingIds: new Set(),
@@ -453,6 +454,7 @@ async function accountOperationHandlers(h) {
     token: "initial", authToken: "initial", view: "personal",
     updatingIds: new Set(), deletingIds: new Set(),
     draftPreferences: persistedPreferences, hasChanges: true, isSaving: false,
+    preferenceSessionRevision: state.preferenceSessionRevision,
     onAdded: item => state.added.push(item),
     onTokenChanged: token => state.changedTokens.push(token),
     onAuthenticationRequired: () => { state.authRequired++; h.auth.clearAuthToken(); },
@@ -495,7 +497,7 @@ async function accountOperationHandlers(h) {
   return {
     state,
     ...await extract("AddWishlistItemForm.tsx", "AddWishlistItemForm", ["handleSubmit"], ["readRequiredText"]),
-    ...await extract("NotificationPreferencesPanel.tsx", "NotificationPreferencesPanel", ["savePreferences", "loadPreferences"]),
+    ...await extract("NotificationPreferencesPanel.tsx", "NotificationPreferencesPanel", ["authSessionRevision", "savePreferences", "loadPreferences"]),
     ...await extract("WishlistExplorer.tsx", "WishlistExplorer", ["handleAlertUpdate", "handleDelete", "refreshAlertEvents"]),
     ...await extract("WishlistExplorer.tsx", "WishlistCard", ["loadPriceHistory"]),
     ...await extract("DealsExplorer.tsx", "DealsExplorer", ["saveDeal", "storeWishlistItems"],
@@ -3809,6 +3811,9 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
   };
   return {
     ...h, render, changedTokens,
+    // The committed render before effect-triggered state changes rerender it.
+    lastRender: () => handlers,
+    deliverAuthChange: handleAuthChange,
     state: () => render().state,
     loaded: () => pendingLoads.at(-1),
     authRequired: () => authRequired,
@@ -3856,6 +3861,207 @@ function assertPreferenceSaveBusy(h, expected) {
     assert.equal(submit.props.disabled, true);
     assert.match(JSON.stringify(h.tree()), /Saving preferences to your account/);
   }
+}
+
+for (const consumer of preferenceConsumers) {
+  for (const replacementToken of ["account-b", "initial"]) {
+    test(`F1 ${consumer} fresh transition callbacks cannot submit another account's draft (${replacementToken})`, async () => {
+      const h = await notificationPreferencesHarness(consumer);
+      let reply;
+      try {
+        await h.loaded();
+        h.toggleEmail(true);
+        const old = h.render();
+        const oldCheckbox = h.nodes().find(node => node.type === "input");
+        reply = h.defer(preferencePath);
+        h.auth.startAuthSession(sentinelSession(2, replacementToken));
+        const transition = h.lastRender();
+        const loading = h.render();
+        const callsBefore = h.calls.length;
+        for (const callback of [old.savePreferences, transition.savePreferences, loading.savePreferences]) {
+          await callback({ preventDefault() {} });
+          assert.equal(preferencePatches(h).length, 0, "neither old nor fresh callbacks may transmit A's draft");
+          assert.deepEqual(h.pendingRevisions(), [], "rejected callbacks must not take B's save lock");
+        }
+        assert.equal(h.calls.length, callsBefore, "no save, refresh or retry while B's data is unavailable");
+        assert.doesNotMatch(JSON.stringify(transition.tree), /"type":"(?:form|input)"/, "the first B render must hide A's form before effects rerender");
+        assert.match(JSON.stringify(transition.tree), /Loading notification preferences/);
+        assert.equal(h.nodes().some(node => node.type === "form"), false);
+
+        const accountB = { ...persistedPreferences, inAppEnabled: false, targetReachedEnabled: false, freeGameEnabled: true };
+        reply(accountB);
+        await h.loaded();
+        assert.deepEqual(h.state().savedPreferences, accountB);
+        assert.deepEqual(h.state().draftPreferences, accountB);
+        const before = structuredClone(h.state());
+        // Even after B loads, a fresh transition closure still owns A's data.
+        await transition.savePreferences({ preventDefault() {} });
+        oldCheckbox.props.onChange({ target: { checked: true } });
+        assert.equal(preferencePatches(h).length, 0);
+        assert.deepEqual(h.state(), before, "retained edits and submissions must leave B's data unchanged");
+
+        h.toggleEmail(true);
+        const savedB = { ...accountB, emailEnabled: true };
+        h.respond(preferencePath, savedB);
+        await h.save();
+        assert.deepEqual(preferencePatches(h), [{ path: preferencePath, method: "PATCH", token: `Bearer ${replacementToken}`, body: savedB }]);
+        assert.deepEqual(h.state().draftPreferences, savedB);
+        assertPreferenceSaveBusy(h, false);
+        assert.equal(h.authRequired(), 0);
+      } finally { reply?.(persistedPreferences); h.restore(); }
+    });
+
+    test(`F1 ${consumer} hides A's form before the parent delivers B's token (${replacementToken})`, async () => {
+      const h = await notificationPreferencesHarness(consumer);
+      let reply;
+      try {
+        await h.loaded();
+        h.toggleEmail(true);
+        h.pauseAuthUpdates();
+        reply = h.defer(preferencePath);
+        const getsBefore = h.calls.filter(call => call.path === preferencePath).length;
+        h.auth.startAuthSession(sentinelSession(2, replacementToken));
+        const transition = h.render(); // New revision, potentially obsolete token prop.
+        assert.doesNotMatch(JSON.stringify(transition.tree), /"type":"(?:form|input)"/);
+        assert.match(JSON.stringify(transition.tree), /Loading notification preferences/);
+        await transition.savePreferences({ preventDefault() {} });
+        assert.equal(preferencePatches(h).length, 0);
+        if (replacementToken !== "initial") {
+          assert.equal(h.calls.filter(call => call.path === preferencePath).length, getsBefore, "never load B's revision with A's token prop");
+        }
+        h.deliverAuthChange();
+        const latestGet = h.calls.filter(call => call.path === preferencePath && call.method === "GET").at(-1);
+        assert.equal(latestGet.token, `Bearer ${replacementToken}`);
+        const accountB = { ...persistedPreferences, priceDropEnabled: false, freeGameEnabled: true };
+        reply(accountB);
+        await h.loaded();
+        assert.deepEqual(h.state().draftPreferences, accountB);
+        assert.equal(h.nodes().filter(node => node.type === "input").length, 5);
+      } finally { reply?.(persistedPreferences); h.restore(); }
+    });
+
+    for (const staleStatus of [200, 401, 503]) {
+      test(`F1 ${consumer} late A GET ${staleStatus} cannot restore its data ownership (${replacementToken})`, async () => {
+        const h = await notificationPreferencesHarness(consumer);
+        let oldReply;
+        let newReply;
+        let oldLoad;
+        try {
+          await h.loaded();
+          h.toggleEmail(true);
+          oldReply = h.defer(preferencePath);
+          h.retry();
+          oldLoad = h.loaded();
+          newReply = h.defer(preferencePath);
+          h.auth.startAuthSession(sentinelSession(2, replacementToken));
+          const accountB = { ...persistedPreferences, inAppEnabled: false, freeGameEnabled: true };
+          newReply(accountB);
+          await h.loaded();
+          h.toggleEmail(true);
+          const before = structuredClone(h.state());
+          const callsBefore = h.calls.length;
+          oldReply(persistedPreferences, staleStatus);
+          await oldLoad;
+          assert.deepEqual(h.state(), before, "late A completion must preserve B's saved preferences and unsaved draft");
+          assert.equal(h.calls.length, callsBefore, "stale 401 must not refresh");
+          assert.equal(h.authRequired(), 0);
+          const savedB = { ...accountB, emailEnabled: true };
+          h.respond(preferencePath, savedB);
+          await h.save();
+          assert.deepEqual(preferencePatches(h).map(call => [call.token, call.body]), [[`Bearer ${replacementToken}`, savedB]]);
+          assert.deepEqual(h.state().savedPreferences, savedB);
+        } finally {
+          oldReply?.(persistedPreferences);
+          newReply?.(persistedPreferences);
+          if (oldLoad) await oldLoad;
+          h.restore();
+        }
+      });
+    }
+  }
+
+  for (const [boundary, replacement] of [
+    ["other account", sentinelSession(2, "account-b")],
+    ["other account with identical token", sentinelSession(2, "initial")],
+    ["new login with identical token", sentinelSession(1, "initial")],
+  ]) {
+    test(`F1 ${consumer} rejects a retained submit after ${boundary} before locking or dispatch`, async () => {
+      const h = await notificationPreferencesHarness(consumer);
+      let reply;
+      let staleOperation;
+      try {
+        await h.loaded();
+        h.toggleEmail(true);
+        const retainedSubmit = h.render().savePreferences;
+        const originalRevision = h.auth.readAuthSessionRevision();
+        const replacementPreferences = { ...persistedPreferences, inAppEnabled: false, freeGameEnabled: true };
+        h.respond(preferencePath, replacementPreferences);
+        h.auth.startAuthSession(replacement);
+        await h.loaded();
+        assert.notEqual(h.auth.readAuthSessionRevision(), originalRevision);
+        assert.deepEqual(h.state().savedPreferences, replacementPreferences);
+        assert.deepEqual(h.state().draftPreferences, replacementPreferences);
+        const before = structuredClone(h.state());
+        const callsBefore = h.calls.length;
+        const callbacksBefore = [...h.changedTokens];
+        reply = h.defer(preferencePath);
+        staleOperation = retainedSubmit({ preventDefault() {} });
+        assert.deepEqual(h.pendingRevisions(), [], "stale callback must not acquire the replacement session's lock");
+        assert.equal(h.calls.length, callsBefore, "stale callback must issue no request, refresh or retry");
+        await staleOperation;
+        assert.deepEqual(h.state(), before, "replacement draft, saved state and messages must remain unchanged");
+        assert.deepEqual(h.changedTokens, callbacksBefore);
+        assert.equal(h.authRequired(), 0);
+        assert.equal(h.auth.readAuthToken(), replacement.token);
+        assert.equal(preferencePatches(h).length, 0, "the old draft must never be transmitted");
+        assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+
+        h.toggleEmail(true);
+        const saved = { ...replacementPreferences, emailEnabled: true };
+        const saving = h.save();
+        assertPreferenceSaveBusy(h, true);
+        assert.equal(preferencePatches(h).length, 1);
+        assert.equal(preferencePatches(h)[0].token, `Bearer ${replacement.token}`);
+        assert.deepEqual(preferencePatches(h)[0].body, saved, "only the replacement account's current draft is submitted");
+        reply(saved);
+        await saving;
+        assert.deepEqual(h.state().savedPreferences, saved);
+        assert.deepEqual(h.state().draftPreferences, saved);
+        assert.deepEqual(h.state().message, savedPreferenceMessage);
+        assertPreferenceSaveBusy(h, false);
+      } finally {
+        reply?.(persistedPreferences);
+        if (staleOperation) await staleOperation;
+        h.restore();
+      }
+    });
+  }
+
+  test(`F1 ${consumer} retains a same-session submit across same-user token rotation`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    try {
+      await h.loaded();
+      h.toggleEmail(true);
+      const retainedSubmit = h.render().savePreferences;
+      const revision = h.auth.readAuthSessionRevision();
+      h.respond(refreshPath, sentinelSession(1, "rotated"));
+      h.respond(preferencePath, persistedPreferences);
+      await h.auth.ensureAuthToken({ forceRefresh: true });
+      await h.loaded();
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      const refreshesBefore = h.calls.filter(call => call.path === refreshPath).length;
+      const saved = { ...persistedPreferences, emailEnabled: true };
+      h.respond(preferencePath, {}, 401);
+      h.respond(preferencePath, saved);
+      await retainedSubmit({ preventDefault() {} });
+      assert.deepEqual(preferencePatches(h).map(call => call.token), ["Bearer initial", "Bearer rotated"]);
+      assert.ok(preferencePatches(h).every(call => JSON.stringify(call.body) === JSON.stringify(saved)));
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, refreshesBefore);
+      assert.deepEqual(h.state().savedPreferences, saved);
+      assert.deepEqual(h.state().message, savedPreferenceMessage);
+      assertPreferenceSaveBusy(h, false);
+    } finally { h.restore(); }
+  });
 }
 
 for (const consumer of preferenceConsumers) {
@@ -4032,8 +4238,9 @@ for (const consumer of preferenceConsumers) {
     try {
       const revisionA = h.auth.readAuthSessionRevision();
       const accountB = { ...persistedPreferences, freeGameEnabled: true };
+      h.respond(preferencePath, accountB);
       h.auth.startAuthSession(sentinelSession(2, "initial"));
-      await settle();
+      await h.loaded();
       assert.notEqual(h.auth.readAuthSessionRevision(), revisionA);
       assert.equal(h.auth.readAuthToken(), "initial");
       assertPreferenceSaveBusy(h, false);

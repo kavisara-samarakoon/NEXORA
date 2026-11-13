@@ -5,6 +5,7 @@ import {
   assertAuthSessionRevision,
   isAuthSessionInvalidatedError,
   readAuthSessionRevision,
+  readAuthToken,
 } from "@/lib/auth-client";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel, { UxSkeleton } from "@/components/UxStatePanel";
@@ -88,6 +89,10 @@ export default function NotificationPreferencesPanel({
   const [isSaving, setIsSaving] = useState(() => pendingPreferenceSaves.has(authSessionRevision));
   const [message, setMessage] = useState<ItemMessage | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  // Data ownership survives renders; a new callback alone does not make an old
+  // account's saved preferences or draft belong to the replacement session.
+  const [preferenceSessionRevision, setPreferenceSessionRevision] = useState<number | null>(null);
+  const ownsPreferenceData = preferenceSessionRevision === authSessionRevision;
 
   useEffect(() => {
     const sessionRevision = authSessionRevision;
@@ -95,6 +100,7 @@ export default function NotificationPreferencesPanel({
       if (mutationRevision !== sessionRevision || mutationRevision !== readAuthSessionRevision()) return;
       setSavedPreferences(preferences);
       setDraftPreferences(preferences);
+      setPreferenceSessionRevision(mutationRevision);
       setLoadState("ready");
       setMessage({ kind: "success", text: "Preferences saved to your account." });
     }
@@ -116,6 +122,8 @@ export default function NotificationPreferencesPanel({
     let active = true;
 
     async function loadPreferences() {
+      // A boundary can rerender the panel before its parent replaces the token prop.
+      if (authToken !== readAuthToken()) return;
       const sessionRevision = readAuthSessionRevision();
       const dataGeneration = preferenceDataGeneration.current;
       setLoadState("loading");
@@ -142,6 +150,7 @@ export default function NotificationPreferencesPanel({
         onTokenChanged(result.token);
         setSavedPreferences(result.value);
         setDraftPreferences(result.value);
+        setPreferenceSessionRevision(result.sessionRevision);
         setLoadState("ready");
       } catch (error) {
         if (!active) return;
@@ -165,9 +174,9 @@ export default function NotificationPreferencesPanel({
     return () => {
       active = false;
     };
-  }, [authToken, onAuthenticationRequired, onTokenChanged, retryKey]);
+  }, [authToken, authSessionRevision, onAuthenticationRequired, onTokenChanged, retryKey]);
 
-  const hasChanges = Boolean(draftPreferences && savedPreferences
+  const hasChanges = Boolean(ownsPreferenceData && draftPreferences && savedPreferences
     && notificationPreferenceFields.some(
       (field) => draftPreferences[field.key] !== savedPreferences[field.key],
     ));
@@ -177,6 +186,9 @@ export default function NotificationPreferencesPanel({
     if (!draftPreferences || !hasChanges || isSaving) return;
 
     const sessionRevision = readAuthSessionRevision();
+    // A retained callback still belongs to the session in which it rendered.
+    if (sessionRevision !== authSessionRevision) return;
+    if (sessionRevision !== preferenceSessionRevision) return;
     // Acquire synchronously before dispatch: a remount or stale handler cannot
     // start another save in this session, including during an auth retry.
     if (pendingPreferenceSaves.has(sessionRevision)) return;
@@ -198,6 +210,7 @@ export default function NotificationPreferencesPanel({
       onTokenChanged(result.token);
       setSavedPreferences(result.value);
       setDraftPreferences(result.value);
+      setPreferenceSessionRevision(result.sessionRevision);
       setLoadState("ready");
       setMessage({ kind: "success", text: "Preferences saved to your account." });
       preferenceMutationListeners.forEach((listener) => listener(result.value, result.sessionRevision));
@@ -231,7 +244,7 @@ export default function NotificationPreferencesPanel({
         <span className="wl-notification-preferences__badge">Account</span>
       </div>
 
-      {loadState === "loading" && (
+      {(loadState === "loading" || (loadState === "ready" && !ownsPreferenceData)) && (
         <UxStatePanel
           className="ux-state--compact wl-notification-preferences__state"
           description={<>Waiting for notification preferences stored with this account.<UxSkeleton lines={3} /></>}
@@ -260,7 +273,7 @@ export default function NotificationPreferencesPanel({
         </UxStatePanel>
       )}
 
-      {loadState === "ready" && draftPreferences && (
+      {ownsPreferenceData && loadState === "ready" && draftPreferences && (
         <form aria-busy={isSaving} onSubmit={savePreferences}>
           <div className="wl-notification-preferences__rows">
             {notificationPreferenceFields.map((field) => (
@@ -274,6 +287,7 @@ export default function NotificationPreferencesPanel({
                   checked={draftPreferences[field.key]}
                   disabled={isSaving}
                   onChange={(event) => {
+                    if (!ownsPreferenceData || authSessionRevision !== readAuthSessionRevision()) return;
                     setDraftPreferences((current) => current
                       ? { ...current, [field.key]: event.target.checked }
                       : current);
