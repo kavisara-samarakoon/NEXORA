@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import RequestIdSupportText from "@/components/RequestIdSupportText";
 import { useEffect, useState } from "react";
 import { normalizeAuthError, type AuthUser } from "@/lib/auth";
 import {
@@ -31,6 +32,29 @@ export default function AuthStatus() {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [authRefreshKey, setAuthRefreshKey] = useState(0);
+  const [logoutFailure, setLogoutFailure] = useState<{
+    message: string;
+    requestId: string | null;
+    sessionRevision: number;
+  } | null>(null);
+
+  function handleLogout() {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setLogoutFailure(null);
+    void logout().then(() => {
+      setAuthRefreshKey((current) => current + 1);
+    }, (error) => {
+      const details = normalizeAuthError(error);
+      setLogoutFailure({
+        message: details.code === "storage_unavailable"
+          ? "Signed out locally. Browser storage is unavailable; retry sign out before reloading."
+          : "Signed out locally. Server sign-out could not be confirmed.",
+        requestId: details.requestId,
+        sessionRevision: readAuthSessionRevision(),
+      });
+    }).finally(() => setIsLoggingOut(false));
+  }
 
   useEffect(() => {
     let active = true;
@@ -65,6 +89,19 @@ export default function AuthStatus() {
     };
   }, [authRefreshKey]);
 
+  if (logoutFailure && logoutFailure.sessionRevision === readAuthSessionRevision()
+    && authState.status !== "authenticated") {
+    return (
+      <div className="auth-status auth-status--unavailable" role="alert" style={{ maxWidth: 280, minWidth: 0, flexWrap: "wrap", whiteSpace: "normal" }}>
+        <div style={{ flexBasis: "100%" }}>{logoutFailure.message}<RequestIdSupportText requestId={logoutFailure.requestId} /></div>
+        <button className="auth-status__logout" type="button" disabled={isLoggingOut} onClick={handleLogout}>
+          {isLoggingOut ? "Signing out…" : "Retry sign out"}
+        </button>
+        <Link href="/login">Sign in</Link>
+      </div>
+    );
+  }
+
   if (authState.status === "loading") {
     return (
       <div className="auth-status auth-status--loading" role="status" aria-busy="true" aria-label="Checking local account session">
@@ -89,17 +126,7 @@ export default function AuthStatus() {
           className="auth-status__logout"
           type="button"
           disabled={isLoggingOut}
-          onClick={() => {
-            setIsLoggingOut(true);
-            void logout()
-              .catch(() => {
-                // The initiating session was already invalidated locally.
-              })
-              .finally(() => {
-                setAuthRefreshKey((current) => current + 1);
-                setIsLoggingOut(false);
-              });
-          }}
+          onClick={handleLogout}
         >
           {isLoggingOut ? "Signing out…" : "Sign out"}
         </button>

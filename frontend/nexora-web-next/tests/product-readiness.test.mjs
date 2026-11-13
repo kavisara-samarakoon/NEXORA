@@ -1281,7 +1281,8 @@ for (const mode of credentialModes) {
         assert.equal(browser.refreshCookie, completion === "success" ? null : oldCredentialCookie);
         assert.equal(h.auth.readAuthToken(), null);
         assert.equal(h.auth.readAuthSessionRevision(), revision + 2);
-        assert.match(await status.view(), completion === "success" ? /auth-status--anonymous/ : /auth-status--unavailable/);
+        // The API caller receives the failure; auth-event reads do not retry expiry.
+        assert.match(await status.view(), /auth-status--anonymous/);
         assert.deepEqual(events.filter(event => [logoutPath, credentialPath(mode)].includes(event.path))
           .slice(0, 4).map(({ phase, path }) => [phase, path]), [
           ["dispatch", credentialPath(mode)], ["settle", credentialPath(mode)],
@@ -1834,6 +1835,325 @@ for (const fault of ["remove", "unverified-remove", "read-after-remove"]) {
   });
 }
 
+for (const failure of ["http", "network", "authentication", "csrf"]) {
+  test(`F2 ordinary ${failure} logout failure quarantines surviving cookies across reload and permits safe recovery`, async () => {
+    const h = await sentinelChatHarness();
+    const status = await authComponentHarness(h, "AuthStatus");
+    const browser = { refreshCookie: oldCredentialCookie };
+    const events = observeAuthNetwork(browser);
+    let reply;
+    let loggingOut;
+    try {
+      const key = h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+      const revision = h.auth.readAuthSessionRevision();
+      reply = h.defer(logoutPath);
+      if (failure === "csrf") h.respond(logoutPath, {}, 403, "f2-logout-request");
+      status.signOut();
+      loggingOut = h.auth.logout();
+      const rejected = assert.rejects(loggingOut, error => {
+        const details = h.authApi.normalizeAuthError(error);
+        assert.equal(details.status, failure === "http" ? 503 : failure === "authentication" ? 401 : failure === "csrf" ? 403 : null);
+        assert.equal(details.requestId, failure === "network" ? null : "f2-logout-request");
+        return true;
+      });
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.ok(h.auth.readAuthSessionRevision() > revision);
+      assert.equal(h.storageValues.get(key), "1", "logout intent must be durable before any response or auth-event bootstrap");
+      if (failure === "network") reply.reject(new TypeError("Logout never reached cookie expiry"));
+      else reply({}, failure === "http" ? 503 : failure === "authentication" ? 401 : 403, "f2-logout-request");
+      await rejected;
+      const view = await status.view();
+      assert.match(view, /"role":"alert"/);
+      assert.match(view, /Signed out locally/);
+      assert.match(view, /Retry sign out/);
+      if (failure !== "network") assert.match(view, /f2-logout-request/);
+      assert.equal(browser.refreshCookie, oldCredentialCookie);
+      assert.equal(h.storageValues.get(key), "1");
+      assert.equal(h.calls.filter(call => call.path === logoutPath).length, failure === "csrf" ? 2 : 1, "failure feedback must not silently retry logout");
+      status.dispose();
+
+      // The cookie is still valid: a refresh would restore A if dispatched.
+      h.respondUsing(refreshPath, () => browser.refreshCookie === oldCredentialCookie
+        ? Response.json(sentinelSession(1, "must-not-revive-A"))
+        : Response.json(sentinelSession(2, "B-rotated")));
+      const { client, authApi } = await freshCredentialModules();
+      const cleanupReply = h.defer(logoutPath);
+      const boots = [client.ensureAuthToken(), client.ensureAuthToken({ forceRefresh: true }), client.readCurrentUser()];
+      const rejectedBoots = boots.map(boot => assert.rejects(boot, error => authApi.normalizeAuthError(error).status === 503));
+      await settle();
+      assert.equal(client.readAuthToken(), null);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+      assert.equal(h.calls.filter(call => call.path === logoutPath).length, (failure === "csrf" ? 2 : 1) + 1, "fresh consumers share one cleanup");
+      cleanupReply({}, 503, "f2-reload-cleanup");
+      await Promise.all(rejectedBoots);
+      assert.equal(browser.refreshCookie, oldCredentialCookie);
+      assert.equal(h.storageValues.get(key), "1");
+
+      const recovered = await freshCredentialModules();
+      h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      assert.equal(await recovered.client.ensureAuthToken(), null);
+      assert.equal(await recovered.client.readCurrentUser(), null);
+      assert.equal(browser.refreshCookie, null);
+      assert.equal(h.storageValues.has(key), false);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+      h.respond(credentialPath("login"), sentinelSession(2, "B-explicit"), 200, null, newCredentialCookie);
+      const form = await authComponentHarness({ ...h, auth: recovered.client, authApi: recovered.authApi }, "LoginForm");
+      try { await form.submit(); assert.equal(form.error(), null); } finally { form.dispose(); }
+      assert.equal(recovered.client.readAuthToken(), "B-explicit");
+      assert.equal((await recovered.client.readCurrentUser()).id, 2);
+      assert.equal(await recovered.client.ensureAuthToken({ forceRefresh: true }), "B-rotated");
+      const reloaded = await freshCredentialClient();
+      h.respond(refreshPath, sentinelSession(2, "B-after-reload"));
+      assert.equal(await reloaded.ensureAuthToken(), "B-after-reload");
+      assert.equal((await reloaded.readCurrentUser()).id, 2);
+      assertCredentialSerialization(events);
+    } finally {
+      reply?.({}, 503, "f2-logout-request");
+      if (loggingOut) await loggingOut.catch(() => undefined);
+      status.dispose(); h.restore();
+    }
+  });
+}
+
+test("F2 successful logout coalesces bootstrap and repeated clicks, clears quarantine only after expiry", async () => {
+  const h = await sentinelChatHarness();
+  const browser = { refreshCookie: oldCredentialCookie };
+  const events = observeAuthNetwork(browser);
+  let reply;
+  let loggingOut;
+  try {
+    reply = h.defer(logoutPath);
+    loggingOut = h.auth.logout();
+    assert.equal(h.auth.logout(), loggingOut);
+    const key = h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+    assert.equal(h.storageValues.get(key), "1");
+    const boot = h.auth.readCurrentUser();
+    await settle();
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 1);
+    assert.equal(browser.refreshCookie, oldCredentialCookie);
+    reply(null, 204, null, expiredCredentialCookie);
+    await loggingOut;
+    assert.equal(await boot, null);
+    assert.equal(browser.refreshCookie, null);
+    assert.equal(h.storageValues.has(key), false);
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+    const client = await freshCredentialClient();
+    h.respondUsing(refreshPath, () => {
+      assert.equal(browser.refreshCookie, null);
+      return Response.json({}, { status: 401 });
+    });
+    assert.equal(await client.ensureAuthToken(), null);
+    assert.equal(await client.readCurrentUser(), null);
+    assert.equal(events.filter(event => event.phase === "dispatch" && event.path === logoutPath).length, 1);
+  } finally { reply?.(null, 204); if (loggingOut) await loggingOut; h.restore(); }
+});
+
+test("F2 failed logout retry feedback remains actionable without automatic retries or a poisoned queue", async () => {
+  const h = await sentinelChatHarness();
+  const status = await authComponentHarness(h, "AuthStatus");
+  try {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const reply = h.defer(logoutPath);
+      status.signOut();
+      const operation = h.auth.logout();
+      const completion = attempt < 3 ? assert.rejects(operation) : operation;
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(h.storageValues.get(h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY), "1");
+      await settle();
+      assert.equal(h.calls.filter(call => call.path === logoutPath).length, attempt);
+      reply(attempt < 3 ? {} : null, attempt < 3 ? 503 : 204, `retry-${attempt}`);
+      await completion;
+      const view = await status.view();
+      if (attempt < 3) {
+        assert.match(view, /"role":"alert"/);
+        assert.match(view, /Retry sign out/);
+        assert.match(view, new RegExp(`retry-${attempt}`));
+      } else {
+        assert.match(view, /auth-status--anonymous/);
+        assert.doesNotMatch(view, /Signed out locally|Retry sign out/);
+        assert.equal(h.storageValues.has(h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY), false);
+      }
+    }
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+  } finally { status.dispose(); h.restore(); }
+});
+
+for (const fault of ["read", "write", "unverified-write"]) {
+  test(`F2 failed logout with storage ${fault} failure invalidates locally, reports storage failure and recovers safely`, async () => {
+    const h = await sentinelChatHarness();
+    const status = await authComponentHarness(h, "AuthStatus");
+    const storage = window.localStorage;
+    const key = h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+    try {
+      const blocked = () => { throw new DOMException("Storage blocked", "SecurityError"); };
+      window.localStorage = { ...storage, ...(fault === "read" ? { getItem: blocked }
+        : { setItem: fault === "write" ? blocked : () => {} }) };
+      h.respond(logoutPath, {}, 503);
+      status.signOut();
+      await assert.rejects(h.auth.logout(), error => h.authApi.normalizeAuthError(error).code === "storage_unavailable");
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.match(await status.view(), /browser storage|Browser storage/);
+      assert.match(await status.view(), /retry sign out before reloading/);
+      if (fault === "read") {
+        const fresh = await freshCredentialModules();
+        await assert.rejects(fresh.client.ensureAuthToken(), error => fresh.authApi.normalizeAuthError(error).code === "storage_unavailable");
+      }
+      window.localStorage = storage;
+      h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      assert.equal(await h.auth.ensureAuthToken(), null, "the memory quarantine requires expiry when storage becomes usable");
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+      assert.equal(h.storageValues.has(key), false);
+    } finally { window.localStorage = storage; status.dispose(); h.restore(); }
+  });
+}
+
+for (const fault of ["remove", "unverified-remove", "read-after-remove"]) {
+  test(`F2 confirmed server logout with storage ${fault} failure retains quarantine and permits recovery after reload`, async () => {
+    const h = await sentinelChatHarness();
+    const storage = window.localStorage;
+    const key = h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+    try {
+      let failRead = false;
+      window.localStorage = {
+        ...storage,
+        getItem: storedKey => {
+          if (storedKey === key && failRead) { failRead = false; throw new DOMException("Read blocked", "SecurityError"); }
+          return storage.getItem(storedKey);
+        },
+        removeItem: storedKey => {
+          if (storedKey !== key) return storage.removeItem(storedKey);
+          if (fault === "remove") throw new DOMException("Removal blocked", "SecurityError");
+          if (fault === "unverified-remove") return;
+          storage.removeItem(storedKey); failRead = true;
+        },
+      };
+      h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      await assert.rejects(h.auth.logout(), error => h.authApi.normalizeAuthError(error).code === "storage_unavailable");
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(h.storageValues.get(key), "1");
+      window.localStorage = storage;
+      const client = await freshCredentialClient();
+      h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+      assert.equal(await client.ensureAuthToken(), null);
+      assert.equal(await client.readCurrentUser(), null);
+      assert.equal(h.storageValues.has(key), false);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+    } finally { window.localStorage = storage; h.restore(); }
+  });
+}
+
+for (const fault of ["write", "unverified-write"]) {
+  test(`F2 storage ${fault} failure uses a verified non-sensitive cookie quarantine across reload and explicit sign-in`, async () => {
+    const h = await sentinelChatHarness();
+    const storage = window.localStorage;
+    const originalDocument = globalThis.document;
+    const cookieWrites = [];
+    let cookie = "";
+    globalThis.document = {
+      get cookie() { return cookie; },
+      set cookie(value) {
+        cookieWrites.push(value);
+        cookie = value.includes("Max-Age=0") ? "" : value.split(";")[0];
+      },
+    };
+    try {
+      const key = h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY;
+      window.localStorage = { ...storage, setItem() {
+        if (fault === "write") throw new DOMException("Storage full", "QuotaExceededError");
+      } };
+      h.respond(logoutPath, {}, 503);
+      await assert.rejects(h.auth.logout(), error => h.authApi.normalizeAuthError(error).status === 503);
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(h.storageValues.has(key), false);
+      assert.equal(cookie, `${key}=1`);
+      const { client, authApi } = await freshCredentialModules();
+      h.respond(logoutPath, {}, 503);
+      await assert.rejects(client.ensureAuthToken(), error => authApi.normalizeAuthError(error).status === 503);
+      assert.equal(client.readAuthToken(), null);
+      assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+      h.respond(logoutPath, null, 204);
+      assert.equal(await client.ensureAuthToken(), null);
+      assert.equal(cookie, "", "only verified cleanup removes the fallback");
+
+      h.respond(credentialPath("login"), sentinelSession(2, "B-after-storage-failure"));
+      await client.withAuthCredentialTransition(() => h.authApi.login({ emailOrUsername: "player2", password: "pass1234" }), result => client.commitAuthCredentialTransition(result));
+      assert.equal(client.readAuthToken(), "B-after-storage-failure");
+      assert.equal((await client.readCurrentUser()).id, 2);
+      assert.equal(cookie, "");
+      const reloaded = await freshCredentialClient();
+      h.respond(refreshPath, sentinelSession(2, "B-cookie-reload"));
+      assert.equal(await reloaded.ensureAuthToken(), "B-cookie-reload");
+      assert.ok(cookieWrites.every(value => value.startsWith(`${key}=`)
+        && value.includes("Path=/; SameSite=Strict; Max-Age=")), "fallback contains only a scoped non-sensitive marker");
+      assert.doesNotMatch(cookieWrites.join(" "), /B-after-storage-failure|pass1234/);
+    } finally {
+      window.localStorage = storage;
+      if (originalDocument === undefined) delete globalThis.document;
+      else globalThis.document = originalDocument;
+      h.restore();
+    }
+  });
+}
+
+test("F2 failure to verify either durable quarantine reports storage failure and stays locally invalidated", async () => {
+  const h = await sentinelChatHarness();
+  const storage = window.localStorage;
+  const originalDocument = globalThis.document;
+  globalThis.document = { get cookie() { return ""; }, set cookie(_value) {} };
+  try {
+    window.localStorage = { ...storage, setItem() {} };
+    h.respond(logoutPath, {}, 503);
+    await assert.rejects(h.auth.logout(), error => h.authApi.normalizeAuthError(error).code === "storage_unavailable");
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 0);
+    window.localStorage = storage;
+    h.respond(logoutPath, null, 204);
+    assert.equal(await h.auth.ensureAuthToken(), null);
+  } finally {
+    window.localStorage = storage;
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+    h.restore();
+  }
+});
+
+test("F2 logout waits for a late refresh cookie, rejects its token write and quarantines it if server expiry fails", async () => {
+  const h = await sentinelChatHarness();
+  const browser = { refreshCookie: oldCredentialCookie };
+  const events = observeAuthNetwork(browser);
+  let refreshReply;
+  let logoutReply;
+  let refreshing;
+  let loggingOut;
+  try {
+    refreshReply = h.defer(refreshPath);
+    refreshing = h.auth.ensureAuthToken({ forceRefresh: true });
+    await waitForAuthDispatch(events, refreshPath);
+    logoutReply = h.defer(logoutPath);
+    loggingOut = h.auth.logout();
+    const rejected = assert.rejects(loggingOut);
+    assert.equal(await h.auth.ensureAuthToken({ forceRefresh: true }), null);
+    assert.equal(h.calls.filter(call => call.path === logoutPath).length, 0);
+    refreshReply(sentinelSession(1, "late-A"), 200, null, oldCredentialCookie);
+    assert.equal(await refreshing, null, "the late refresh settles before logout and cannot reauthenticate A");
+    await waitForAuthDispatch(events, logoutPath);
+    logoutReply({}, 503);
+    await rejected;
+    assert.equal(h.auth.readAuthToken(), null);
+    assert.equal(h.storageValues.get(h.auth.AUTH_REFRESH_COOKIE_QUARANTINE_KEY), "1");
+    const client = await freshCredentialClient();
+    h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+    assert.equal(await client.ensureAuthToken(), null);
+    assert.equal(browser.refreshCookie, null);
+    assert.equal(h.calls.filter(call => call.path === refreshPath).length, 1);
+  } finally {
+    refreshReply?.(sentinelSession()); logoutReply?.(null, 204);
+    if (refreshing) await refreshing.catch(() => undefined);
+    if (loggingOut) await loggingOut.catch(() => undefined);
+    h.restore();
+  }
+});
+
 test("B-08 production Sign out -> login/register waits for logout response before dispatching replacement credentials", async () => {
   for (const mode of ["login", "register"]) {
     const h = await sentinelChatHarness();
@@ -1882,7 +2202,7 @@ test("B-08 production Sign out -> login/register waits for logout response befor
   }
 });
 
-test("B-08 failed HTTP/network logout releases both credential barriers and retains caller errors", async () => {
+test("B-08 failed HTTP/network logout releases barriers but requires cookie cleanup before explicit credential recovery", async () => {
   for (const mode of ["login", "register"]) {
     for (const failure of ["http", "network"]) {
       const h = await sentinelChatHarness();
@@ -1905,11 +2225,17 @@ test("B-08 failed HTTP/network logout releases both credential barriers and reta
         else logoutReply.reject(new TypeError("Failed to fetch"));
         await rejected;
         await submitting;
+        assert.equal(h.auth.readAuthToken(), null, "credentials queued behind a failed logout must not bypass quarantine");
+        assert.ok(form.error(), "the queued attempt reports the cleanup failure");
+        assert.equal(h.calls.filter(call => call.path === `/api/auth/${mode}`).length, 0);
+        h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
+        await form.submit();
         assert.equal(h.auth.readAuthToken(), "replacement");
         assert.equal((await h.auth.readCurrentUser()).id, 2);
         assert.equal(form.error(), null);
         assert.deepEqual(events.filter(event => [logoutPath, `/api/auth/${mode}`].includes(event.path))
           .map(({ phase, path }) => [phase, path]), [
+          ["dispatch", logoutPath], ["settle", logoutPath],
           ["dispatch", logoutPath], ["settle", logoutPath],
           ["dispatch", `/api/auth/${mode}`], ["settle", `/api/auth/${mode}`],
         ]);
@@ -1917,7 +2243,7 @@ test("B-08 failed HTTP/network logout releases both credential barriers and reta
         h.respond(logoutPath, {});
         await h.auth.logout();
         assert.equal(h.auth.readAuthToken(), null);
-        assert.equal(h.calls.filter(call => call.path === logoutPath).length, 2);
+        assert.equal(h.calls.filter(call => call.path === logoutPath).length, 3);
       } finally { form.dispose(); h.restore(); }
     }
   }
@@ -1980,8 +2306,9 @@ test("B-08 ordinary and failed production sign-out invalidate immediately and re
       if (completion === "network") reply.reject(new TypeError("Failed to fetch"));
       else reply(completion === "success" ? null : {}, completion === "success" ? 204 : 503);
       await completed;
-      assert.match(await status.view(), /auth-status--anonymous/);
+      assert.match(await status.view(), completion === "success" ? /auth-status--anonymous/ : /Signed out locally/);
       assert.equal(h.auth.readAuthToken(), null);
+      if (completion !== "success") h.respond(logoutPath, null, 204, null, expiredCredentialCookie);
       assert.equal(await h.auth.readCurrentUser(), null);
       h.respond("/api/auth/login", sentinelSession(2, "recovered"));
       const form = await authComponentHarness(h, "LoginForm");

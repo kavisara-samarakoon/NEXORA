@@ -55,12 +55,31 @@ function cookieTrustStorageError(): AuthRequestError {
   });
 }
 
+function hasCookieQuarantineFallback(): boolean {
+  if (typeof document === "undefined") return false;
+  try {
+    return document.cookie.split(";")
+      .some((cookie) => cookie.trim() === `${AUTH_REFRESH_COOKIE_QUARANTINE_KEY}=1`);
+  } catch {
+    throw cookieTrustStorageError();
+  }
+}
+
+function writeCookieQuarantineFallback(pending: boolean): void {
+  if (typeof document === "undefined") throw cookieTrustStorageError();
+  const secure = typeof location !== "undefined" && location.protocol === "https:" ? "; Secure" : "";
+  // This contains logout intent only, never a credential. It also survives a
+  // reload when localStorage is full or rejects writes but still allows reads.
+  document.cookie = `${AUTH_REFRESH_COOKIE_QUARANTINE_KEY}=${pending ? "1" : ""}; Path=/; SameSite=Strict; Max-Age=${pending ? 31536000 : 0}${secure}`;
+  if (hasCookieQuarantineFallback() !== pending) throw cookieTrustStorageError();
+}
+
 function retainCookieQuarantine(): void {
   obsoleteCredentialCookiePending = true;
   try {
     if (typeof window !== "undefined") window.localStorage.setItem(AUTH_REFRESH_COOKIE_QUARANTINE_KEY, "1");
   } catch {
-    // Storage remains unavailable; this runtime continues to fail closed.
+    try { writeCookieQuarantineFallback(true); } catch { /* This runtime still fails closed. */ }
   }
 }
 
@@ -68,9 +87,11 @@ function readCookieQuarantine(): boolean {
   if (typeof window === "undefined") return obsoleteCredentialCookiePending;
   try {
     return window.localStorage.getItem(AUTH_REFRESH_COOKIE_QUARANTINE_KEY) !== null
+      || hasCookieQuarantineFallback()
       || obsoleteCredentialCookiePending;
   } catch {
     retainCookieQuarantine();
+    if (hasCookieQuarantineFallback()) return true;
     throw cookieTrustStorageError();
   }
 }
@@ -83,7 +104,12 @@ function markCookieQuarantine(): void {
     if (window.localStorage.getItem(AUTH_REFRESH_COOKIE_QUARANTINE_KEY) !== "1") throw cookieTrustStorageError();
     quarantineOriginRevision = readAuthSessionRevision();
   } catch {
-    throw cookieTrustStorageError();
+    try {
+      writeCookieQuarantineFallback(true);
+      quarantineOriginRevision = readAuthSessionRevision();
+    } catch {
+      throw cookieTrustStorageError();
+    }
   }
 }
 
@@ -92,6 +118,7 @@ function clearCookieQuarantine(): void {
     if (typeof window === "undefined") throw cookieTrustStorageError();
     window.localStorage.removeItem(AUTH_REFRESH_COOKIE_QUARANTINE_KEY);
     if (window.localStorage.getItem(AUTH_REFRESH_COOKIE_QUARANTINE_KEY) !== null) throw cookieTrustStorageError();
+    if (hasCookieQuarantineFallback()) writeCookieQuarantineFallback(false);
     obsoleteCredentialCookiePending = false;
     credentialCookieCleanupFailure = null;
     quarantineOriginRevision = null;
@@ -101,6 +128,11 @@ function clearCookieQuarantine(): void {
     retainCookieQuarantine();
     throw cookieTrustStorageError();
   }
+}
+
+function hasNewerLocalSession(): boolean {
+  return currentAccessToken !== null && quarantineOriginRevision !== null
+    && authSessionRevision > quarantineOriginRevision;
 }
 
 function applyAuthSession(response: AuthResponse, preserveSession: boolean, committed?: () => void): void {
@@ -250,6 +282,8 @@ export async function ensureAuthToken(
     invalidateQuarantinedLocalSession();
     throw error;
   }
+  if (quarantined && !options.forceRefresh && hasNewerLocalSession()) return currentAccessToken;
+  if (logoutPromise) return null;
   if (quarantined && !credentialRequestInFlight) {
     await recoverCookieQuarantine();
     return null;
@@ -281,6 +315,7 @@ export async function ensureAuthToken(
       throw storageError;
     }
     if (quarantinedNow && !credentialRequestInFlight) {
+      if (logoutPromise) return null;
       await recoverCookieQuarantine();
       return null;
     }
@@ -296,6 +331,8 @@ export async function readCurrentUser(): Promise<AuthUser | null> {
     invalidateQuarantinedLocalSession();
     throw error;
   }
+  if (quarantined && currentUser && hasNewerLocalSession()) return currentUser;
+  if (logoutPromise) return null;
   if (quarantined && !credentialRequestInFlight) await recoverCookieQuarantine();
   if (currentAccessToken && currentUser) return currentUser;
 
@@ -382,6 +419,9 @@ function invalidateQuarantinedLocalSession(): void {
 }
 
 function recoverCookieQuarantine(): Promise<void> {
+  // Auth events emitted by logout join its expiry attempt instead of queuing
+  // another cleanup (or retrying a failed logout without a user action).
+  if (logoutPromise) return logoutPromise;
   if (quarantineRecoveryPromise) return quarantineRecoveryPromise;
   const operation = queueAuthCookieTransition(async () => {
     if (readCookieQuarantine()) await clearObsoleteCredentialCookie();
@@ -480,6 +520,14 @@ export function withAuthCredentialTransition<T>(
 export function logout(): Promise<void> {
   if (logoutPromise) return logoutPromise;
 
+  // Persist logout intent before local invalidation or any cookie response.
+  // Still attempt server expiry if storage fails; memory remains quarantined.
+  let quarantineFailure: unknown;
+  try {
+    markCookieQuarantine();
+  } catch (error) {
+    quarantineFailure = error;
+  }
   const logoutVersion = sessionVersion + 1;
   const pendingRefresh = refreshPromise;
   const operation = queueAuthCookieTransition(async () => {
@@ -488,8 +536,9 @@ export function logout(): Promise<void> {
       await logoutSession();
       clearCookieQuarantine();
     } catch (error) {
-      if (obsoleteCredentialCookiePending) recordCredentialCookieCleanupFailure(error);
-      throw error;
+      const failure = quarantineFailure ?? error;
+      if (obsoleteCredentialCookiePending) recordCredentialCookieCleanupFailure(failure);
+      throw failure;
     } finally {
       // Cleanup belongs to this logout, not a new logical boundary: credentials
       // submitted after its initial invalidation may proceed once it settles.
