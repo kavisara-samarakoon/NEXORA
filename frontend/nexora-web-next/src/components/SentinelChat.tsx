@@ -8,6 +8,7 @@ import {
   AUTH_STATE_EVENT,
   clearAuthToken,
   ensureAuthToken,
+  isAuthSessionInvalidatedError,
   readAuthSessionRevision,
   readAuthToken,
 } from "@/lib/auth-client";
@@ -157,6 +158,8 @@ export default function SentinelChat({
   messages: readonly ChatMessage[];
   suggestions: readonly string[];
 }) {
+  const renderSessionRevision = readAuthSessionRevision();
+  const requestLifetime = useRef<object | null>(null);
   const [draft, setDraft] = useState("");
   const [context, setContext] = useState<SentinelInsightContext>("general");
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
@@ -186,6 +189,7 @@ export default function SentinelChat({
   }, []);
 
   function returnMessageToComposer(message: string) {
+    if (!requestLifetime.current || renderSessionRevision !== readAuthSessionRevision()) return;
     setDraft(message);
     setGatewayError(null);
     window.requestAnimationFrame(() => composerInputRef.current?.focus());
@@ -194,6 +198,7 @@ export default function SentinelChat({
   useEffect(() => {
     let active = true;
     const requestGuard = requestGuardRef.current;
+    requestLifetime.current = {};
 
     async function refreshAuthentication() {
       const revisionAtStart = readAuthSessionRevision();
@@ -233,6 +238,7 @@ export default function SentinelChat({
     window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
     return () => {
       active = false;
+      requestLifetime.current = null;
       requestGuard.invalidate();
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
@@ -240,9 +246,15 @@ export default function SentinelChat({
 
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const lifetime = requestLifetime.current;
+    if (!lifetime || renderSessionRevision !== readAuthSessionRevision()
+      || renderSessionRevision !== authSessionRevisionRef.current) return;
     const message = draft.trim();
     if (!message || isSubmitting || authState === "checking") return;
-    const requestVersion = requestGuardRef.current.begin();
+    const requestGuard = requestGuardRef.current;
+    const requestVersion = requestGuard.begin();
+    const isCurrent = () => requestLifetime.current === lifetime && requestGuard.isCurrent(requestVersion)
+      && renderSessionRevision === readAuthSessionRevision();
 
     setSubmittedMessage(message);
     setGatewayResponse(null);
@@ -258,22 +270,16 @@ export default function SentinelChat({
     try {
       const result = await withSentinelAuthRetry(
         authToken,
-        (activeToken) => {
-          // An auth boundary can occur while the retry helper awaits refresh.
-          // Do not send the previous session's prompt with a replacement token.
-          if (!requestGuardRef.current.isCurrent(requestVersion)) {
-            throw new Error("Sentinel request is no longer current.");
-          }
-          return requestSentinelInsight(activeToken, { message, context });
-        },
+        (activeToken) => requestSentinelInsight(activeToken, { message, context }),
+        { sessionRevision: renderSessionRevision, isCurrent },
       );
-      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
+      if (!isCurrent()) return;
       setAuthToken(result.token);
       setAuthState("authenticated");
       setGatewayResponse(result.value);
       setDraft("");
     } catch (error) {
-      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
+      if (!isCurrent() || isAuthSessionInvalidatedError(error)) return;
       const details = normalizeSentinelInsightError(error);
       if (details.status === 401) {
         clearAuthToken();
@@ -289,7 +295,7 @@ export default function SentinelChat({
         });
       }
     } finally {
-      if (requestGuardRef.current.isCurrent(requestVersion)) {
+      if (isCurrent()) {
         setIsSubmitting(false);
       }
     }

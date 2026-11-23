@@ -1,4 +1,4 @@
-import { withAuthSessionRetry } from "@/lib/auth-client";
+import { withAuthSessionRetry, type AuthOperationValidity } from "@/lib/auth-client";
 import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
 const SENTINEL_REQUEST_TIMEOUT_MS = 10000;
@@ -217,11 +217,13 @@ export function normalizeSentinelInsightError(error: unknown): SentinelInsightEr
 export async function withSentinelAuthRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
+  operation?: AuthOperationValidity,
 ): Promise<{ value: T; token: string }> {
   const result = await withAuthSessionRetry(
     token,
     request,
     error => normalizeSentinelInsightError(error).status === 401,
+    operation,
   );
   return { value: result.value, token: result.token };
 }

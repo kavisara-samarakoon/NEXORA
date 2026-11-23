@@ -164,7 +164,7 @@ async function dealsWishlistHarness(initialItems = []) {
   };
   const clientSource = await readFile(new URL("../src/lib/auth-client.ts", import.meta.url), "utf8");
   const clientAst = ts.createSourceFile("auth-client.ts", clientSource, ts.ScriptTarget.Latest, true);
-  const sharedNames = ["AuthSessionInvalidatedError", "isAuthSessionInvalidatedError", "assertAuthSessionRevision", "withAuthSessionRetry"];
+  const sharedNames = ["AuthSessionInvalidatedError", "isAuthSessionInvalidatedError", "assertAuthSessionRevision", "assertAuthOperation", "withAuthSessionRetry"];
   const sharedSource = clientAst.statements.filter(node => sharedNames.includes(node.name?.text))
     .map(node => node.getText(clientAst)).join("\n");
   const sharedRuntime = ts.transpileModule(sharedSource, {
@@ -207,6 +207,7 @@ async function dealsWishlistHarness(initialItems = []) {
   };
   const mocks = {
     ...setters, ...refs, ...auth, ...wishlist, displayedDealScope: "curated",
+    wishlistLifetime: { current: {} }, renderSessionRevision: auth.readAuthSessionRevision(),
     useCallback: callback => callback,
     normalizeAuthError: error => error.authDetails ?? { code: "unknown_error" },
   };
@@ -384,13 +385,16 @@ async function sentinelChatHarness() {
     signIn: () => { render(); return find(node => node.props.href === "/login?returnTo=%2Fsentinel"); },
     errorId: () => { render(); return find(node => node.type === "RequestIdSupportText")?.props.requestId; },
     text: () => { render(); return JSON.stringify(tree); },
-    submit(message) {
+    prepareSubmit(message) {
       render();
       const input = find(node => node.props.id === "sentinel-message").props;
       if (!input.disabled) input.onChange({ target: { value: message } });
       render();
-      return find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+      const submit = find(node => node.type === "form").props.onSubmit;
+      return () => submit({ preventDefault() {} });
     },
+    submit(message) { return this.prepareSubmit(message)(); },
+    dispose() { cells.forEach(cell => cell.cleanup?.()); },
     respond(path, value, status = 200, requestId = null, refreshCookie = null) {
       const headers = requestId ? { "X-NEXORA-Request-ID": requestId } : {};
       if (refreshCookie) headers["Set-Cookie"] = refreshCookie;
@@ -452,6 +456,10 @@ async function accountOperationHandlers(h) {
   const mocks = {
     ...h.auth, ...h.wishlist, ...h.preferences, ...setters,
     token: "initial", authToken: "initial", view: "personal",
+    lifetime: { current: { active: true, generation: 0 } }, pendingSubmission: { current: false },
+    renderSessionRevision: h.auth.readAuthSessionRevision(),
+    historyOwner: { current: { active: true, item: alertItem, sessionRevision: h.auth.readAuthSessionRevision() } },
+    historyRequestVersion: { current: 0 },
     updatingIds: new Set(), deletingIds: new Set(),
     draftPreferences: persistedPreferences, hasChanges: true, isSaving: false,
     preferenceSessionRevision: state.preferenceSessionRevision,
@@ -460,15 +468,18 @@ async function accountOperationHandlers(h) {
     onAuthenticationRequired: () => { state.authRequired++; h.auth.clearAuthToken(); },
     handleAuthenticationRequired: () => { state.authRequired++; h.auth.clearAuthToken(); },
     refreshAlertEvents: () => {},
-    active: true, item: alertItem, priceHistoryState: "idle", PRICE_HISTORY_REQUEST_LIMIT: 12,
+    active: true, requestVersion: 0, item: alertItem, priceHistoryState: "idle", PRICE_HISTORY_REQUEST_LIMIT: 12,
     alertEventsRequestVersion: { current: 0 },
+    wishlistDataGeneration: { current: 0 }, mutationOwners: { current: new Map() },
+    consumerLifetime: { active: true }, consumerSessionRevision: h.auth.readAuthSessionRevision(),
+    readAuthSessionRevision: h.auth.readAuthSessionRevision,
     preferenceDataGeneration: { current: 0 },
     preferenceMutationListeners: new Set(),
     pendingPreferenceSaves: new Set(),
     preferenceSaveListeners: new Set(),
     useCallback: callback => callback, displayedDealScope: "curated",
     savingDealKeys: { current: new Set() }, savedWishlistItemsRef: { current: [] },
-    wishlistVersion: { current: 0 }, mounted: { current: true },
+    wishlistVersion: { current: 0 }, mounted: { current: true }, wishlistLifetime: { current: {} },
     normalizeAuthError: h.authApi.normalizeAuthError,
     protectedWishlistError: h.wishlist.normalizeUserWishlistError,
     normalizeTargetPriceInput: value => value,
@@ -498,7 +509,7 @@ async function accountOperationHandlers(h) {
     state,
     ...await extract("AddWishlistItemForm.tsx", "AddWishlistItemForm", ["handleSubmit"], ["readRequiredText"]),
     ...await extract("NotificationPreferencesPanel.tsx", "NotificationPreferencesPanel", ["authSessionRevision", "savePreferences", "loadPreferences"]),
-    ...await extract("WishlistExplorer.tsx", "WishlistExplorer", ["handleAlertUpdate", "handleDelete", "refreshAlertEvents"]),
+    ...await extract("WishlistExplorer.tsx", "WishlistExplorer", ["handleAlertUpdate", "handleDelete", "refreshAlertEvents"], ["requestCurrentWishlistSnapshot"]),
     ...await extract("WishlistExplorer.tsx", "WishlistCard", ["loadPriceHistory"]),
     ...await extract("DealsExplorer.tsx", "DealsExplorer", ["saveDeal", "storeWishlistItems"],
       ["protectedWishlistError", "normalizedWishlistValue", "findMatchingWishlistItem", "dealStateKey", "wishlistOperationKey", "wishlistPayloadFor"]),
@@ -2405,7 +2416,7 @@ test("B-08 credential barrier includes an in-flight refresh and every logout CSR
 
 // Execute Wishlist's actual state declarations, refresh effect and mutation
 // handlers with stable hook cells and the production auth/HTTP/retry clients.
-async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous = false, loadStatus = 200 } = {}) {
+async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous = false, loadStatus = 200, beforeAuthRecoveryDecision } = {}) {
   const h = await sentinelChatHarness();
   const source = await readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8");
   const ast = ts.createSourceFile("wishlist.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -2414,13 +2425,14 @@ async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous =
     node.declarationList.declarations.some(item => item.name.getText(ast) === "priceDropCount"));
   assert.ok(end > 0);
   const program = [
-    ...ast.statements.filter(node => ["alertsFor", "protectedWishlistError"].includes(node.name?.text)),
+    ...ast.statements.filter(node => ["alertsFor", "protectedWishlistError", "requestCurrentWishlistSnapshot"].includes(node.name?.text)),
     ...component.body.statements.slice(0, end),
-  ].map(node => node.getText(ast)).join("\n");
+  ].map(node => node.getText(ast)).join("\n").replaceAll("void refreshWishlist();", "pendingWishlistLoads.push(refreshWishlist());");
   const output = ts.transpileModule(program, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   let cursor = 0;
   const cells = [];
   let effects = [];
+  const changes = [];
   const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
   const hooks = {
     useState(initial) {
@@ -2428,6 +2440,7 @@ async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous =
       cells[index] ??= { value: typeof initial === "function" ? initial() : initial };
       return [cells[index].value, value => {
         cells[index].value = typeof value === "function" ? value(cells[index].value) : value;
+        changes.push(index);
       }];
     },
     useRef(initial) {
@@ -2446,12 +2459,19 @@ async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous =
       });
     },
   };
+  const pendingWishlistLoads = [];
   const mocks = {
     ...hooks, ...h.auth, ...h.wishlist, normalizeAuthError: h.authApi.normalizeAuthError,
-    wishlistItems: [], source: "api",
+    wishlistItems: [], source: "api", pendingWishlistLoads,
+    ...(beforeAuthRecoveryDecision ? {
+      withAuthSessionRetry: (token, request, isAuthenticationError, operation) => h.auth.withAuthSessionRetry(token, request, error => {
+        beforeAuthRecoveryDecision();
+        return isAuthenticationError(error);
+      }, operation),
+    } : {}),
   };
   const renderState = new Function(...Object.keys(mocks), `${output}\nreturn {
-    handleAlertUpdate, handleDelete, handleItemAdded,
+    handleAlertUpdate, handleDelete, handleItemAdded, refreshAlertEvents, handleAuthenticationRequired,
     retry: () => setRefreshKey(current => current + 1),
     state: { personalItems, alerts, view, authToken, serviceMessage, operationMessage,
       itemMessages, alertEvents, alertEventsLoading, alertEventsMessage,
@@ -2474,37 +2494,307 @@ async function wishlistExplorerHarness(initialItems = [alertItem], { anonymous =
   render();
   await settle();
   render();
-  const formSource = await readFile(new URL("../src/components/AddWishlistItemForm.tsx", import.meta.url), "utf8");
-  const formAst = ts.createSourceFile("add.tsx", formSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const form = formAst.statements.find(node => node.name?.text === "AddWishlistItemForm");
-  const declarations = [
-    formAst.statements.find(node => node.name?.text === "readRequiredText"),
-    form.body.statements.find(node => node.name?.text === "handleSubmit"),
-  ].map(node => node.getText(formAst)).join("\n");
-  const compiled = ts.transpileModule(declarations, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   const addFormState = { message: null, isSubmitting: false, resets: 0, addedCalls: 0 };
+  const forms = [];
+  let addForm;
+  async function createForm() {
+    addForm = await wishlistConsumerHarness(h, "AddWishlistItemForm");
+    forms.push(addForm);
+  }
+  await createForm();
   return {
-    ...h, render, addFormState,
+    ...h, render, addFormState, changes,
+    loaded: () => pendingWishlistLoads.at(-1),
+    refreshEvents: token => render().refreshAlertEvents(token),
+    authEvent: () => window.dispatchEvent(new Event(h.auth.AUTH_STATE_EVENT)),
+    dispose: () => { forms.forEach(form => form.dispose()); cells.forEach(cell => cell.cleanup?.()); },
+    remount() {
+      cells.forEach(cell => cell.cleanup?.());
+      cells.length = 0;
+      effects = [];
+      render();
+    },
     state: () => render().state,
     update: (item, payload) => render().handleAlertUpdate(item, payload, "Persisted wishlist settings updated."),
     remove: item => render().handleDelete(item),
     added: item => render().handleItemAdded(item),
     retry: () => { render().retry(); render(); },
-    add(item) {
-      const callbacks = {
-        ...h.auth, ...h.wishlist, token: h.auth.readAuthToken(),
-        normalizeTargetPriceInput: value => value,
-        setIsSubmitting: value => { addFormState.isSubmitting = value; },
-        setMessage: value => { addFormState.message = value; }, onTokenChanged() {},
-        onAdded: saved => { addFormState.addedCalls++; render().handleItemAdded(saved); },
-        onAuthenticationRequired: () => h.auth.clearAuthToken(),
-        FormData: class { get(name) { return name === "alertActive" ? (item.alertActive ? "on" : null) : item[name]; } },
-      };
-      const submit = new Function(...Object.keys(callbacks), `${compiled}\nreturn handleSubmit;`)(...Object.values(callbacks));
-      return submit({ preventDefault() {}, currentTarget: { reset() { addFormState.resets++; } } });
+    async add(item) {
+      const parent = render();
+      if (!addForm) await createForm();
+      const form = addForm;
+      const handlers = form.render({
+        token: h.auth.readAuthToken(),
+        onAdded: saved => { addFormState.addedCalls++; parent.handleItemAdded(saved); },
+        onAuthenticationRequired: parent.handleAuthenticationRequired,
+      });
+      await form.submit(item, handlers.handleSubmit);
+      const state = form.render().state;
+      addFormState.message = state.message;
+      addFormState.isSubmitting = state.isSubmitting;
+      addFormState.resets = form.callbacks.filter(([kind]) => kind === "reset").length;
     },
-    restore() { cells.forEach(cell => cell.cleanup?.()); h.restore(); },
+    restore() { forms.forEach(form => form.dispose()); cells.forEach(cell => cell.cleanup?.()); h.restore(); },
   };
+}
+
+const f3EventPath = `${wishlistPath}/alert-events`;
+const f3Event = {
+  id: 901, wishlistItemId: 42, itemTitle: "Current personal game", store: "Steam",
+  currentPrice: "$10.00", targetPrice: "$2.00", evaluationState: "watching",
+  targetReached: false, message: "Latest authorized alert history", createdAt: "2026-11-14T00:00:00Z",
+};
+const f3Refreshes = h => h.calls.filter(call => call.path === refreshPath);
+function assertF3Preserved(h, before, revision) {
+  assert.equal(f3Refreshes(h).length, 0, "obsolete work must not initiate authentication refresh");
+  assert.equal(h.auth.readAuthToken(), "initial");
+  assert.equal(h.auth.readAuthSessionRevision(), revision, "obsolete work must not invalidate the session");
+  assert.deepEqual(h.state(), before, "latest personal items, alerts, messages and loading state must remain authoritative");
+}
+
+for (const target of ["wishlist", "alert-events"]) {
+  for (const action of ["add", "edit", "delete"]) {
+    for (const status of [200, 401, 500]) {
+      test(`F3 obsolete ${target} ${status} after authorized ${action} cannot affect authentication or current state`, async () => {
+        const h = await wishlistExplorerHarness();
+        let oldReply, mutationReply, freshEventsReply, oldLoad, mutation;
+        try {
+          await h.loaded();
+          const revision = h.auth.readAuthSessionRevision();
+          const saved = { ...alertItem, id: action === "add" ? 99 : 42, title: "Latest personal game", alertActive: true };
+          mutationReply = h.defer(action === "add" ? wishlistPath : action === "edit" ? `${wishlistPath}/42/alert` : `${wishlistPath}/42`);
+          mutation = action === "add" ? h.add(saved) : action === "edit" ? h.update(alertItem, { alertActive: true }) : h.remove(alertItem);
+          if (target === "wishlist") { oldReply = h.defer(wishlistPath); h.respond(f3EventPath, []); }
+          else { h.respond(wishlistPath, [alertItem]); oldReply = h.defer(f3EventPath); }
+          h.retry(); oldLoad = h.loaded(); await settle();
+          if (action !== "delete") freshEventsReply = h.defer(f3EventPath);
+          mutationReply(saved); await mutation;
+          const before = structuredClone(h.state());
+          assert.equal(before.generation, 1);
+          assert.equal(before.view, "personal");
+          assert.deepEqual(before.personalItems, action === "delete" ? [] : action === "add" ? [saved, alertItem] : [saved]);
+          // An unnecessary refresh would expire the session, exposing the bug.
+          h.respond(refreshPath, {}, 401);
+          oldReply(status === 200 ? target === "wishlist" ? [alertItem] : [] : {}, status);
+          await oldLoad; await settle();
+          assertF3Preserved(h, before, revision);
+          if (freshEventsReply) {
+            freshEventsReply([f3Event]); await settle();
+            assert.deepEqual(h.state().alertEvents, [f3Event]);
+            assert.equal(h.state().alertEventsLoading, false);
+          } else assert.equal(h.state().alertEventsLoading, false);
+        } finally {
+          mutationReply?.(alertItem); oldReply?.([]); freshEventsReply?.([]);
+          if (mutation) await mutation;
+          if (oldLoad) await oldLoad;
+          await settle(); h.restore();
+        }
+      });
+    }
+  }
+
+  for (const status of [200, 401, 500]) {
+    test(`F3 competing ${target} ${status} cannot supersede a newer GET in the same effect`, async () => {
+      const h = await wishlistExplorerHarness();
+      let reply, oldLoad;
+      try {
+        await h.loaded();
+        if (target === "wishlist") { reply = h.defer(wishlistPath); h.respond(f3EventPath, []); }
+        else { h.respond(wishlistPath, [alertItem]); reply = h.defer(f3EventPath); }
+        h.authEvent(); oldLoad = h.loaded(); await settle();
+        const latest = { ...alertItem, title: "Newer GET authority", alertActive: true };
+        h.respond(wishlistPath, [latest]); h.respond(f3EventPath, [f3Event]);
+        h.authEvent(); await h.loaded();
+        const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+        assert.equal(before.generation, 0, "request ordering is independent of mutation generation");
+        h.respond(refreshPath, {}, 401);
+        reply(status === 200 ? target === "wishlist" ? [alertItem] : [] : {}, status);
+        await oldLoad; await settle();
+        assertF3Preserved(h, before, revision);
+      } finally { reply?.([]); if (oldLoad) await oldLoad; await settle(); h.restore(); }
+    });
+  }
+
+  for (const outcome of ["recovered", "unrecoverable"]) {
+    test(`F3 current ${target} 401 keeps legitimate ${outcome} authentication behavior`, async () => {
+      const h = await wishlistExplorerHarness();
+      try {
+        await h.loaded();
+        const revision = h.auth.readAuthSessionRevision();
+        h.respond(wishlistPath, target === "wishlist" ? {} : [alertItem], target === "wishlist" ? 401 : 200);
+        h.respond(f3EventPath, target === "alert-events" ? {} : [], target === "alert-events" ? 401 : 200);
+        const latest = { ...alertItem, title: "Recovered current request" };
+        if (outcome === "recovered") {
+          h.respond(refreshPath, sentinelSession(1, "rotated"));
+          h.respond(wishlistPath, [latest]); h.respond(f3EventPath, [f3Event]);
+        } else h.respond(refreshPath, {}, 401);
+        h.retry(); await h.loaded(); await h.loaded(); await settle();
+        assert.equal(f3Refreshes(h).length, 1, "a genuine current 401 may initiate one recovery");
+        if (outcome === "recovered") {
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          assert.equal(h.auth.readAuthToken(), "rotated");
+          assert.equal(h.state().view, "personal");
+          assert.deepEqual(h.state().personalItems, [latest]);
+          assert.deepEqual(h.state().alertEvents, [f3Event]);
+          assert.equal(h.state().authToken, "rotated");
+        } else {
+          assert.ok(h.auth.readAuthSessionRevision() > revision);
+          assert.equal(h.auth.readAuthToken(), null);
+          assert.equal(h.state().view, "public");
+          assert.deepEqual(h.state().personalItems, []);
+        }
+      } finally { h.restore(); }
+    });
+  }
+
+  for (const token of ["account-b", "initial"]) {
+    test(`F3 obsolete ${target} 401 cannot affect a replacement account with token ${token}`, async () => {
+      const h = await wishlistExplorerHarness();
+      let reply, oldLoad;
+      try {
+        await h.loaded();
+        if (target === "wishlist") { reply = h.defer(wishlistPath); h.respond(f3EventPath, []); }
+        else { h.respond(wishlistPath, [alertItem]); reply = h.defer(f3EventPath); }
+        h.authEvent(); oldLoad = h.loaded(); await settle();
+        const replacement = { ...alertItem, title: "Account B authoritative item" };
+        h.respond(wishlistPath, [replacement]); h.respond(f3EventPath, [f3Event]);
+        h.auth.startAuthSession(sentinelSession(2, token)); await h.loaded();
+        const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+        reply({}, 401); await oldLoad;
+        assert.deepEqual(h.state(), before);
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal(h.auth.readAuthToken(), token);
+        assert.equal(f3Refreshes(h).length, 0);
+      } finally { reply?.([]); if (oldLoad) await oldLoad; h.restore(); }
+    });
+  }
+
+  test(`F3 disposed ${target} GET cannot trigger recovery after unmount`, async () => {
+    const h = await wishlistExplorerHarness();
+    let reply, load;
+    try {
+      await h.loaded();
+      if (target === "wishlist") { reply = h.defer(wishlistPath); h.respond(f3EventPath, []); }
+      else { h.respond(wishlistPath, [alertItem]); reply = h.defer(f3EventPath); }
+      h.authEvent(); load = h.loaded(); await settle();
+      const revision = h.auth.readAuthSessionRevision(), before = structuredClone(h.state());
+      h.dispose(); h.respond(refreshPath, {}, 401);
+      reply({}, 401); await load;
+      assertF3Preserved(h, before, revision);
+    } finally { reply?.([]); if (load) await load; h.restore(); }
+  });
+
+  test(`F3 ${target} becoming obsolete during legitimate auth recovery cannot dispatch its retry`, async () => {
+    const h = await wishlistExplorerHarness();
+    let patchReply, refreshReply, eventsReply, saving, oldLoad;
+    try {
+      await h.loaded();
+      const revision = h.auth.readAuthSessionRevision();
+      patchReply = h.defer(`${wishlistPath}/42/alert`);
+      saving = h.update(alertItem, { alertActive: true });
+      h.respond(wishlistPath, target === "wishlist" ? {} : [alertItem], target === "wishlist" ? 401 : 200);
+      h.respond(f3EventPath, target === "alert-events" ? {} : [], target === "alert-events" ? 401 : 200);
+      refreshReply = h.defer(refreshPath);
+      h.retry(); oldLoad = h.loaded();
+      const deadline = performance.now() + 1000;
+      while (f3Refreshes(h).length === 0) {
+        assert.ok(performance.now() < deadline, "the current 401 must start legitimate recovery");
+        await new Promise(resolve => setImmediate(resolve));
+      }
+      eventsReply = h.defer(f3EventPath);
+      const saved = { ...alertItem, alertActive: true, title: "Authorized mutation during refresh" };
+      patchReply(saved); await saving;
+      assert.equal(h.state().generation, 1);
+      h.respond(wishlistPath, [saved]); h.respond(f3EventPath, [f3Event]);
+      refreshReply(sentinelSession(1, "rotated"));
+      await oldLoad; await h.loaded();
+      const before = structuredClone(h.state());
+      eventsReply({}, 401); await settle();
+      assert.equal(f3Refreshes(h).length, 1, "the newly obsolete history load cannot start a second refresh");
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.auth.readAuthToken(), "rotated");
+      assert.deepEqual(h.state(), before);
+      assert.deepEqual(h.state().personalItems, [saved]);
+      for (const path of [wishlistPath, f3EventPath]) {
+        assert.equal(h.calls.filter(call => call.path === path && call.token === "Bearer rotated").length, 1, "only the current auth-event GET may use the rotated token");
+      }
+    } finally {
+      patchReply?.(alertItem); refreshReply?.(sentinelSession(1, "rotated")); eventsReply?.([]);
+      if (saving) await saving;
+      if (oldLoad) await oldLoad;
+      await settle(); h.restore();
+    }
+  });
+}
+
+test("F3 disposed independent alert-events request cannot refresh or change state", async () => {
+  const h = await wishlistExplorerHarness();
+  let reply, load;
+  try {
+    await h.loaded();
+    reply = h.defer(f3EventPath); load = h.refreshEvents("initial");
+    const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+    h.dispose(); h.respond(refreshPath, {}, 401);
+    reply({}, 401); await load;
+    assertF3Preserved(h, before, revision);
+  } finally { reply?.([]); if (load) await load; h.restore(); }
+});
+
+for (const status of [200, 401, 500]) {
+  test(`F3 superseded independent alert-events ${status} preserves newer loading and history`, async () => {
+    const h = await wishlistExplorerHarness();
+    let oldReply, newReply, oldLoad, newLoad;
+    try {
+      await h.loaded();
+      oldReply = h.defer(f3EventPath); oldLoad = h.refreshEvents("initial");
+      newReply = h.defer(f3EventPath); newLoad = h.refreshEvents("initial");
+      const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+      assert.equal(before.alertEventsLoading, true);
+      h.respond(refreshPath, {}, 401);
+      oldReply(status === 200 ? [] : {}, status); await oldLoad;
+      assertF3Preserved(h, before, revision);
+      newReply([f3Event]); await newLoad;
+      assert.deepEqual(h.state().alertEvents, [f3Event]);
+      assert.equal(h.state().alertEventsLoading, false);
+    } finally { oldReply?.([]); newReply?.([]); await Promise.all([oldLoad, newLoad]); h.restore(); }
+  });
+
+  test(`F3 delete retires an independent alert-events ${status} without a stale loading or auth completion`, async () => {
+    const h = await wishlistExplorerHarness();
+    let reply, load;
+    try {
+      await h.loaded();
+      reply = h.defer(f3EventPath); load = h.refreshEvents("initial");
+      h.respond(`${wishlistPath}/42`, null, 204); await h.remove(alertItem);
+      const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+      assert.equal(before.alertEventsLoading, false, "the authoritative deletion retires its obsolete history load");
+      h.respond(refreshPath, {}, 401);
+      reply(status === 200 ? [] : {}, status); await load;
+      assertF3Preserved(h, before, revision);
+    } finally { reply?.([]); if (load) await load; h.restore(); }
+  });
+
+  test(`F3 initial alert-events ${status} cannot erase a newer independent history response`, async () => {
+    const h = await wishlistExplorerHarness();
+    let reply, load;
+    try {
+      await h.loaded();
+      h.respond(wishlistPath, [alertItem]); reply = h.defer(f3EventPath);
+      h.authEvent(); load = h.loaded(); await settle();
+      h.respond(f3EventPath, [f3Event]); await h.refreshEvents("initial");
+      const revision = h.auth.readAuthSessionRevision();
+      h.respond(refreshPath, {}, 401);
+      reply(status === 200 ? [] : {}, status); await load; await settle();
+      assert.equal(f3Refreshes(h).length, 0);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assert.equal(h.state().view, "personal");
+      assert.deepEqual(h.state().personalItems, [alertItem]);
+      assert.deepEqual(h.state().alertEvents, [f3Event]);
+      assert.equal(h.state().alertEventsMessage, null);
+      assert.equal(h.state().alertEventsLoading, false);
+    } finally { reply?.([]); if (load) await load; h.restore(); }
+  });
 }
 
 test("Wishlist idempotent add replaces the complete returned item in place without increasing visible count", async () => {
@@ -4018,7 +4308,7 @@ test("homepage summary distinguishes incomplete and unavailable responses", () =
 // Run the panel's production hooks, load/save handlers and JSX with controlled
 // network completions. Obtain its props and auth-required callback from each
 // consumer's actual source rather than duplicating preference state logic.
-async function notificationPreferencesHarness(consumer = "SettingsCenter") {
+async function notificationPreferencesHarness(consumer = "SettingsCenter", { beforeAuthRecoveryDecision } = {}) {
   const h = await sentinelChatHarness();
   const source = await readFile(new URL("../src/components/NotificationPreferencesPanel.tsx", import.meta.url), "utf8");
   const ast = ts.createSourceFile("preferences.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -4031,7 +4321,7 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
         "preferenceMutationListeners", "pendingPreferenceSaves", "preferenceSaveListeners"].includes(item.name.getText(ast)))).map(node => node.getText(ast)),
     `function NotificationPreferencesPanel({ authToken, onAuthenticationRequired, onTokenChanged }) {
       ${component.body.statements.slice(0, -1).map(node => node.getText(ast)).join("\n")
-        .replace("void loadPreferences();", "pendingLoads.push(loadPreferences());")}
+        .replace("void loadPreferences();", "loadCallbacks.push(loadPreferences); pendingLoads.push(loadPreferences());")}
       return { savePreferences, retry: () => setRetryKey(current => current + 1),
         pendingRevisions: () => [...pendingPreferenceSaves],
         state: { savedPreferences, draftPreferences, loadState, message, isSaving,
@@ -4045,6 +4335,7 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
   }).outputText;
   let cursor = 0;
   const cells = [];
+  const stateWrites = [];
   let effects = [];
   const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
   const hooks = {
@@ -4054,6 +4345,7 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
       const cell = cells[index];
       return [cell.value, value => {
         cell.value = typeof value === "function" ? value(cell.value) : value;
+        stateWrites.push(index);
       }];
     },
     useRef(initial) {
@@ -4072,8 +4364,16 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
   };
   const react = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) };
   const pendingLoads = [];
+  const loadCallbacks = [];
   const mocks = {
-    ...hooks, ...h.auth, ...h.preferences, React: react, pendingLoads,
+    ...hooks, ...h.auth, ...h.preferences, React: react, pendingLoads, loadCallbacks,
+    ...(beforeAuthRecoveryDecision ? {
+      withNotificationPreferenceAuthRetry: (token, request, operation) => h.auth.withAuthSessionRetry(
+        token, request, error => {
+          beforeAuthRecoveryDecision();
+          return h.preferences.normalizeNotificationPreferenceError(error).status === 401;
+        }, operation),
+    } : {}),
     UxStatePanel: "UxStatePanel", UxSkeleton: "UxSkeleton", RequestIdSupportText: "RequestIdSupportText",
   };
   const Panel = new Function(...Object.keys(mocks), `${compile(program)}\nreturn NotificationPreferencesPanel;`)(...Object.values(mocks));
@@ -4097,6 +4397,8 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
   const callbackMocks = {
     clearAuthToken: () => { authRequired++; h.auth.clearAuthToken(); }, setAuthToken,
     useCallback: callback => callback, alertEventsRequestVersion: { current: 0 },
+    consumerLifetime: { active: true }, consumerSessionRevision: h.auth.readAuthSessionRevision(),
+    readAuthSessionRevision: h.auth.readAuthSessionRevision,
     wishlistItems: [], alertsFor: () => ({}),
     ...Object.fromEntries(["AuthState", "PersonalItems", "AlertEvents", "AlertEventsLoading",
       "AlertEventsMessage", "Alerts", "UpdatingIds", "ItemMessages", "ServiceMessage", "View"].map(name => [`set${name}`, () => {}])),
@@ -4137,7 +4439,8 @@ async function notificationPreferencesHarness(consumer = "SettingsCenter") {
     return [node, ...nodes(node.props?.children)];
   };
   return {
-    ...h, render, changedTokens,
+    ...h, render, changedTokens, loadCallbacks, stateWrites,
+    dispose() { window.removeEventListener(h.auth.AUTH_STATE_EVENT, handleAuthChange); cells.forEach(cell => cell.cleanup?.()); },
     // The committed render before effect-triggered state changes rerender it.
     lastRender: () => handlers,
     deliverAuthChange: handleAuthChange,
@@ -4959,4 +5262,1056 @@ test("anonymous bootstrap is coalesced, real auth failures remain visible, and r
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+for (const target of ["wishlist", "initial-events", "independent-events"]) {
+  test(`F3-R01 authority changes at final authentication classification for ${target}`, async () => {
+    let h, armed = false, decisions = 0;
+    const saved = { ...alertItem, id: 99, title: "Authoritative write at recovery boundary", alertActive: true };
+    h = await wishlistExplorerHarness(undefined, { beforeAuthRecoveryDecision() {
+      if (!armed) return;
+      armed = false;
+      decisions++;
+      h.respond(f3EventPath, [f3Event]);
+      h.added(saved); // The production commit callback runs immediately before classification.
+    } });
+    try {
+      await h.loaded();
+      const revision = h.auth.readAuthSessionRevision();
+      h.respond(refreshPath, {}, 401);
+      let load;
+      armed = true;
+      if (target === "independent-events") {
+        h.respond(f3EventPath, {}, 401);
+        load = h.refreshEvents("initial");
+      } else {
+        h.respond(wishlistPath, target === "wishlist" ? {} : [alertItem], target === "wishlist" ? 401 : 200);
+        h.respond(f3EventPath, target === "initial-events" ? {} : [], target === "initial-events" ? 401 : 200);
+        h.authEvent(); load = h.loaded();
+      }
+      await load; await new Promise(resolve => setImmediate(resolve)); await settle();
+      assert.equal(decisions, 1, "freshness must participate in the retry helper's final classification");
+      assert.equal(f3Refreshes(h).length, 0);
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.state().view, "personal");
+      assert.deepEqual(h.state().personalItems, [saved, alertItem]);
+      assert.deepEqual(h.state().alertEvents, [f3Event]);
+    } finally { h.restore(); }
+  });
+}
+
+for (const action of ["add", "edit", "delete"]) {
+  for (const nextConsumer of ["unmounted", "same-session-remount", "replacement-account"]) {
+    for (const completion of ["success", "service-failure"]) {
+      test(`F3-R02 late ${action} ${completion} cannot affect ${nextConsumer}`, async () => {
+        const h = await wishlistExplorerHarness();
+        let reply, saving;
+        try {
+          await h.loaded();
+          const path = action === "add" ? wishlistPath : action === "edit" ? `${wishlistPath}/42/alert` : `${wishlistPath}/42`;
+          reply = h.defer(path);
+          const saved = { ...alertItem, id: action === "add" ? 99 : 42, title: "Persisted after navigation", alertActive: true };
+          saving = action === "add" ? h.add(saved) : action === "edit" ? h.update(alertItem, { alertActive: true }) : h.remove(alertItem);
+          await settle();
+          h.dispose();
+          if (nextConsumer !== "unmounted") {
+            h.respond(wishlistPath, [{ ...alertItem, title: "New consumer authority" }]);
+            h.respond(f3EventPath, [f3Event]);
+            if (nextConsumer === "replacement-account") h.auth.startAuthSession(sentinelSession(2, "account-b"));
+            h.remount(); await h.loaded();
+          }
+          const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+          const token = h.auth.readAuthToken(), callsBefore = h.calls.length, writesBefore = h.changes.length;
+          h.respond(f3EventPath, {}, 401); h.respond(refreshPath, {}, 401);
+          reply(completion === "success" ? saved : {}, completion === "success" ? 200 : 500);
+          await saving; await new Promise(resolve => setImmediate(resolve)); await settle();
+          assert.equal(h.calls.length, callsBefore, "a retired completion cannot create follow-up traffic");
+          assert.equal(h.changes.length, writesBefore, "a retired completion cannot write consumer state");
+          assert.equal(f3Refreshes(h).length, 0);
+          assert.equal(h.auth.readAuthToken(), token);
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          assert.deepEqual(h.state(), before);
+        } finally { reply?.(alertItem); if (saving) await saving; await settle(); h.restore(); }
+      });
+    }
+  }
+}
+
+// F3 targeted follow-up: preserve the auditor's schedules and assertions.
+
+
+// Auditor-authored cases. Production source and the existing assertions remain unchanged.
+for(const target of ['wishlist','initial-events','independent-events']) {
+ test(`F3-R audit original defect ${target} stale 401 after committed mutation`, async()=>{
+  const h=await wishlistExplorerHarness(); let held,saving,patch,load;
+  try {
+   await h.loaded(); const revision=h.auth.readAuthSessionRevision();
+   if(target==='independent-events') {
+    held=h.defer(f3EventPath); load=h.refreshEvents('initial');
+    h.respond(`${wishlistPath}/42/alert`,{...alertItem,alertActive:true});
+    h.respond(f3EventPath,[f3Event]); await h.update(alertItem,{alertActive:true});
+   } else {
+    patch=h.defer(`${wishlistPath}/42/alert`); saving=h.update(alertItem,{alertActive:true});
+    if(target==='wishlist') {held=h.defer(wishlistPath);h.respond(f3EventPath,[]);}
+    else {h.respond(wishlistPath,[alertItem]);held=h.defer(f3EventPath);}
+    h.authEvent();load=h.loaded(); await settle();
+    h.respond(f3EventPath,[f3Event]);patch({...alertItem,alertActive:true});await saving;await settle();
+   }
+   await new Promise(resolve=>setImmediate(resolve)); await settle();
+   const before=structuredClone(h.state()); h.respond(refreshPath,{},401);held({},401);
+   await load; await new Promise(resolve=>setImmediate(resolve));await settle();
+   console.log('F3-R audit defect',JSON.stringify({target,before,after:h.state(),revisionBefore:revision,revisionAfter:h.auth.readAuthSessionRevision(),token:h.auth.readAuthToken(),refreshes:f3Refreshes(h).length,calls:h.calls}));
+   assert.equal(f3Refreshes(h).length,0);assert.equal(h.auth.readAuthSessionRevision(),revision);assert.deepEqual(h.state(),before);
+  } finally {patch?.(alertItem);held?.([]);if(saving)await saving;if(load)await load;await settle();h.restore();}
+ });
+}
+
+for(const mutation of ['PATCH','POST']) {
+ test(`F3-R audit unmount before successful ${mutation} must not start new history recovery`,async()=>{
+  const h=await wishlistExplorerHarness();let reply,saving;
+  try {
+   await h.loaded();const revision=h.auth.readAuthSessionRevision();
+   reply=h.defer(mutation==='PATCH'?`${wishlistPath}/42/alert`:wishlistPath);
+   saving=mutation==='PATCH'?h.update(alertItem,{alertActive:true}):h.add({...alertItem,id:99,alertActive:true});
+   await settle();h.dispose();
+   h.respond(f3EventPath,{},401);h.respond(refreshPath,{},401);
+   reply({...alertItem,id:mutation==='POST'?99:42,alertActive:true});await saving;
+   await new Promise(resolve=>setImmediate(resolve));await settle();
+   console.log('F3-R audit unmount',JSON.stringify({mutation,revisionBefore:revision,revisionAfter:h.auth.readAuthSessionRevision(),token:h.auth.readAuthToken(),refreshes:f3Refreshes(h).length,calls:h.calls}));
+   assert.equal(f3Refreshes(h).length,0,'unmounted consumer must not start history auth recovery');
+   assert.equal(h.auth.readAuthSessionRevision(),revision);assert.equal(h.auth.readAuthToken(),'initial');
+  }finally{reply?.(alertItem);if(saving)await saving;await settle();h.restore();}
+ });
+}
+
+for(const target of ['wishlist','initial-events','independent-events']) for(const gap of [0,4,5,6,10]) {
+ test(`F3-R audit rejection propagation ${target} microtask gap ${gap}`,async()=>{
+  const h=await wishlistExplorerHarness();let patch,held,history,saving,load;
+  try {
+   await h.loaded();const revision=h.auth.readAuthSessionRevision();
+   patch=h.defer(`${wishlistPath}/42/alert`);saving=h.update(alertItem,{alertActive:true});
+   if(target==='independent-events') {held=h.defer(f3EventPath);load=h.refreshEvents('initial');}
+   else {
+    if(target==='wishlist'){held=h.defer(wishlistPath);h.respond(f3EventPath,[]);}
+    else {h.respond(wishlistPath,[alertItem]);held=h.defer(f3EventPath);}
+    h.authEvent();load=h.loaded();
+   }
+   await settle(); history=h.defer(f3EventPath);h.respond(refreshPath,{},401);
+   const fetchBeforeProbe=globalThis.fetch,recoveries=[];
+   // Observe the first CSRF dispatch: it is synchronous with entering refreshSession,
+   // before the later await that dispatches /refresh. No production instrumentation.
+   globalThis.fetch=(url,init)=>{
+    const path=new URL(url).pathname;
+    if(path==='/api/auth/csrf'||path===refreshPath)recoveries.push({path,generation:h.state().generation});
+    return fetchBeforeProbe(url,init);
+   };
+   patch({...alertItem,alertActive:true});
+   for(let i=0;i<gap;i++)await Promise.resolve();
+   held({},401);await saving;await load;await new Promise(resolve=>setImmediate(resolve));await settle();
+   console.log('F3-R audit propagation',JSON.stringify({target,gap,recoveries,revisionBefore:revision,revisionAfter:h.auth.readAuthSessionRevision(),token:h.auth.readAuthToken(),state:h.state(),calls:h.calls}));
+   assert.notEqual(recoveries[0]?.generation,1,'recovery must not begin for a now-obsolete snapshot');
+   if(recoveries.length===0){assert.equal(h.auth.readAuthSessionRevision(),revision);assert.equal(h.auth.readAuthToken(),'initial');assert.equal(h.state().view,'personal');}
+  }finally{patch?.(alertItem);held?.([]);history?.([]);if(saving)await saving;if(load)await load;await settle();h.restore();}
+ });
+}
+
+for(const target of ['wishlist','initial-events','independent-events']) for(const gap of [8,9]) {
+ test(`F3-R01 Node20 audit rejection propagation ${target} microtask gap ${gap}`,async()=>{
+  const h=await wishlistExplorerHarness();let patch,held,history,saving,load;
+  try {
+   await h.loaded();const revision=h.auth.readAuthSessionRevision();
+   patch=h.defer(`${wishlistPath}/42/alert`);saving=h.update(alertItem,{alertActive:true});
+   if(target==='independent-events') {held=h.defer(f3EventPath);load=h.refreshEvents('initial');}
+   else {
+    if(target==='wishlist'){held=h.defer(wishlistPath);h.respond(f3EventPath,[]);}
+    else {h.respond(wishlistPath,[alertItem]);held=h.defer(f3EventPath);}
+    h.authEvent();load=h.loaded();
+   }
+   await settle(); history=h.defer(f3EventPath);h.respond(refreshPath,{},401);
+   const fetchBeforeProbe=globalThis.fetch,recoveries=[];
+   // Observe the first CSRF dispatch: it is synchronous with entering refreshSession,
+   // before the later await that dispatches /refresh. No production instrumentation.
+   globalThis.fetch=(url,init)=>{
+    const path=new URL(url).pathname;
+    if(path==='/api/auth/csrf'||path===refreshPath)recoveries.push({path,generation:h.state().generation});
+    return fetchBeforeProbe(url,init);
+   };
+   patch({...alertItem,alertActive:true});
+   for(let i=0;i<gap;i++)await Promise.resolve();
+   held({},401);await saving;await load;await new Promise(resolve=>setImmediate(resolve));await settle();
+   console.log('F3-R01 Node20 audit propagation',JSON.stringify({target,gap,recoveries,revisionBefore:revision,revisionAfter:h.auth.readAuthSessionRevision(),token:h.auth.readAuthToken(),state:h.state(),calls:h.calls}));
+   assert.notEqual(recoveries[0]?.generation,1,'recovery must not begin for a now-obsolete snapshot');
+   if(recoveries.length===0){assert.equal(h.auth.readAuthSessionRevision(),revision);assert.equal(h.auth.readAuthToken(),'initial');assert.equal(h.state().view,'personal');}
+  }finally{patch?.(alertItem);held?.([]);history?.([]);if(saving)await saving;if(load)await load;await settle();h.restore();}
+ });
+}
+
+
+// F3 lifecycle reconstruction: production handlers, auth clients and HTTP parsers;
+// responses are released explicitly, never by elapsed-time scheduling.
+for (const action of ["add", "update", "delete"]) {
+  for (const transition of ["navigate-settings", "same-session-remount"]) {
+    test(`F3-R03 reconstructed ${action} delayed 401 after ${transition}`, async () => {
+      const h = await wishlistExplorerHarness();
+      let reply, operation;
+      try {
+        await h.loaded();
+        const path = action === "add" ? wishlistPath : action === "update" ? `${wishlistPath}/42/alert` : `${wishlistPath}/42`;
+        reply = h.defer(path);
+        const saved = { ...alertItem, id: action === "add" ? 99 : 42 };
+        operation = action === "add" ? h.add(saved) : action === "update" ? h.update(alertItem, { alertActive: false }) : h.remove(alertItem);
+        await settle();
+        h.dispose();
+        if (transition === "same-session-remount") {
+          h.respond(wishlistPath, [alertItem]); h.respond(f3EventPath, []);
+          h.remount(); await h.loaded();
+        }
+        const revision = h.auth.readAuthSessionRevision(), count = h.calls.length;
+        h.respond(refreshPath, {}, 401);
+        reply({}, 401); await operation; await settle();
+        console.log("F3-R03 reconstructed", JSON.stringify({ action, transition,
+          refreshes: f3Refreshes(h).length, revisionBefore: revision,
+          revisionAfter: h.auth.readAuthSessionRevision(), token: h.auth.readAuthToken(),
+          afterRetirement: h.calls.slice(count) }));
+        assert.equal(f3Refreshes(h).length, 0, "retired mutation cannot initiate authentication refresh");
+        assert.equal(h.auth.readAuthToken(), "initial");
+        assert.equal((await h.auth.readCurrentUser()).id, 1);
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal(h.calls.length, count, "no mutation replay or history GET after retirement");
+      } finally { reply?.({}, 401); if (operation) await operation; h.restore(); }
+    });
+  }
+}
+
+// Run complete hook/handler declarations so effect cleanup is production code.
+async function wishlistConsumerHarness(h, name, initialProps = {}) {
+  const source = await readFile(new URL(`../src/components/${name === "WishlistCard" ? "WishlistExplorer" : name}.tsx`, import.meta.url), "utf8");
+  const ast = ts.createSourceFile("consumer.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const component = ast.statements.find(node => node.name?.text === name);
+  const finalReturn = component.body.statements.at(-1);
+  const returns = name === "WishlistCard"
+    ? "return { loadPriceHistory, state: { priceHistory, priceHistoryState } };"
+    : "return { handleSubmit, state: { message, isSubmitting } };";
+  const code = component.getText(ast).replace(/^export default /, "").replace(finalReturn.getText(ast), returns);
+  const helpers = ast.statements.filter(node => ts.isFunctionDeclaration(node) && !["WishlistExplorer", "WishlistCard", "AddWishlistItemForm"].includes(node.name?.text)).map(node => node.getText(ast)).join("\n");
+  const output = ts.transpileModule(`${helpers}\n${code}`, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
+  let cursor = 0, effects = [], props;
+  const cells = [], writes = [], callbacks = [];
+  const same = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
+  const hooks = {
+    useState(initial) {
+      const i = cursor++; cells[i] ??= { value: typeof initial === "function" ? initial() : initial };
+      const cell = cells[i];
+      return [cell.value, value => { cell.value = typeof value === "function" ? value(cell.value) : value; writes.push(i); }];
+    },
+    useRef(value) { const i = cursor++; cells[i] ??= { current: value }; return cells[i]; },
+    useMemo(fn, deps) { const i = cursor++; if (!same(cells[i]?.deps, deps)) cells[i] = { value: fn(), deps }; return cells[i].value; },
+    useEffect(fn, deps) { const i = cursor++; if (!same(cells[i]?.deps, deps)) effects.push(() => { cells[i]?.cleanup?.(); cells[i] = { deps, cleanup: fn() }; }); },
+  };
+  const mocks = { ...hooks, ...h.auth, ...h.wishlist, normalizeAuthError: h.authApi.normalizeAuthError,
+    normalizeTargetPriceInput: value => value, PRICE_HISTORY_REQUEST_LIMIT: 15,
+    FormData: class { constructor(form) { this.values = form.values; } get(key) { return this.values[key]; } },
+  };
+  const Component = new Function(...Object.keys(mocks), `${output}\nreturn ${name};`)(...Object.values(mocks));
+  const render = (next = {}) => {
+    props = { ...props, ...next }; cursor = 0;
+    const result = Component(props); const pending = effects; effects = []; pending.forEach(fn => fn()); return result;
+  };
+  const defaults = {
+    token: h.auth.readAuthToken(), authToken: h.auth.readAuthToken(), item: alertItem,
+    onAdded: value => callbacks.push(["added", value]), onTokenChanged: value => callbacks.push(["token", value]),
+    onAuthenticationRequired: () => { callbacks.push(["auth"]); h.auth.clearAuthToken(); },
+  };
+  render({ ...defaults, ...initialProps });
+  return {
+    render, writes, callbacks,
+    dispose: () => cells.forEach(cell => cell.cleanup?.()),
+    submit(item = alertItem, handler = render().handleSubmit) {
+      return handler({ preventDefault() {}, currentTarget: { values: { ...item, alertActive: item.alertActive ? "on" : null }, reset() { callbacks.push(["reset"]); } } });
+    },
+    load: (handler = render().loadPriceHistory) => handler(),
+  };
+}
+
+for (const name of ["AddWishlistItemForm", "WishlistCard"]) {
+  for (const transition of ["retirement", "replacement-account", "same-token-new-session"]) {
+    test(`F3-R03 retained ${name} callback rejects ${transition}`, async () => {
+      const h = await sentinelChatHarness();
+      const consumer = await wishlistConsumerHarness(h, name);
+      try {
+        const handler = name === "WishlistCard" ? consumer.render().loadPriceHistory : consumer.render().handleSubmit;
+        if (transition === "retirement") consumer.dispose();
+        else h.auth.startAuthSession(sentinelSession(2, transition === "same-token-new-session" ? "initial" : "account-b"));
+        const before = h.calls.length, revision = h.auth.readAuthSessionRevision(), token = h.auth.readAuthToken();
+        if (name === "WishlistCard") await consumer.load(handler); else await consumer.submit(alertItem, handler);
+        assert.equal(h.calls.length, before, "a retained handler must not adopt current account credentials");
+        assert.equal(h.auth.readAuthToken(), token);
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.deepEqual(consumer.callbacks, []);
+      } finally { consumer.dispose(); h.restore(); }
+    });
+  }
+  for (const status of [200, 401, 503]) {
+    test(`F3-R03 ${name} delayed ${status} cannot apply after retirement`, async () => {
+      const h = await sentinelChatHarness();
+      const consumer = await wishlistConsumerHarness(h, name);
+      let reply, pending;
+      try {
+        const path = name === "WishlistCard" ? `${wishlistPath}/42/price-history` : wishlistPath;
+        reply = h.defer(path);
+        pending = name === "WishlistCard" ? consumer.load() : consumer.submit();
+        consumer.dispose(); const writes = consumer.writes.length, revision = h.auth.readAuthSessionRevision();
+        h.respond(refreshPath, {}, 401);
+        reply(name === "WishlistCard" ? [] : alertItem, status); await pending;
+        assert.equal(f3Refreshes(h).length, 0);
+        assert.equal(h.auth.readAuthToken(), "initial");
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal(consumer.writes.length, writes);
+        assert.deepEqual(consumer.callbacks, []);
+        assert.equal(h.calls.filter(c => c.path === path).length, 1);
+      } finally { reply?.({}, 401); if (pending) await pending; consumer.dispose(); h.restore(); }
+    });
+  }
+}
+
+for (const supersession of ["item-replacement", "newer-request"]) {
+  test(`F3-R03 price history ${supersession} retires stale 401 at recovery boundary`, async () => {
+    const h = await sentinelChatHarness();
+    const card = await wishlistConsumerHarness(h, "WishlistCard");
+    try {
+      const oldHandler = card.render().loadPriceHistory;
+      const reply = h.defer(`${wishlistPath}/42/price-history`);
+      const pending = card.load(oldHandler);
+      if (supersession === "item-replacement") card.render({ item: { ...alertItem, title: "Replacement item" } });
+      else {
+        h.respond(`${wishlistPath}/42/price-history`, []);
+        await card.load(oldHandler);
+      }
+      const state = structuredClone(card.render().state), revision = h.auth.readAuthSessionRevision();
+      h.respond(refreshPath, {}, 401); reply({}, 401); await pending;
+      assert.equal(f3Refreshes(h).length, 0);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assert.deepEqual(card.render().state, state);
+    } finally { card.dispose(); h.restore(); }
+  });
+}
+
+test("F3-R03 final synchronous classification cannot recover a newly retired request", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    let current = true;
+    const revision = h.auth.readAuthSessionRevision();
+    h.respond(wishlistPath, {}, 401); h.respond(refreshPath, {}, 401);
+    await assert.rejects(h.auth.withAuthSessionRetry("initial", h.wishlist.getMyWishlist,
+      error => { current = false; return h.wishlist.normalizeUserWishlistError(error).status === 401; },
+      { sessionRevision: revision, isCurrent: () => current }), h.auth.isAuthSessionInvalidatedError);
+    assert.equal(f3Refreshes(h).length, 0);
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.equal((await h.auth.readCurrentUser()).id, 1);
+  } finally { h.restore(); }
+});
+
+for (const outcome of ["rotation", "rejection", "transient", "replacement-account"]) {
+  for (const participants of ["all-retired", "mixed", "unscoped"]) {
+    test(`F3-R03 dispatched refresh ${outcome} with ${participants} participants`, async () => {
+      const h = await sentinelChatHarness();
+      try {
+        const events = observeAuthNetwork();
+        let current = true;
+        const revision = h.auth.readAuthSessionRevision();
+        const scope = { sessionRevision: revision, isCurrent: () => current };
+        h.respond(wishlistPath, {}, 401);
+        const reply = h.defer(refreshPath);
+        const retired = h.wishlist.withWishlistAuthRetry("initial", h.wishlist.getMyWishlist, scope).catch(error => error);
+        await waitForAuthDispatch(events, refreshPath);
+        let survivor;
+        if (participants !== "all-retired") {
+          h.respond(wishlistPath, {}, 401);
+          survivor = h.wishlist.withWishlistAuthRetry("initial", h.wishlist.getMyWishlist,
+            participants === "unscoped" ? undefined : { sessionRevision: revision, isCurrent: () => true }).catch(error => error);
+          await settle();
+        }
+        current = false;
+        if (outcome === "replacement-account") h.auth.startAuthSession(sentinelSession(2, "account-b"));
+        h.respond(wishlistPath, [alertItem]);
+        if (outcome === "transient") reply({}, 503, "f3-transient");
+        else if (outcome === "rejection") reply({}, 401);
+        else reply(sentinelSession(1, "rotation"));
+        const stale = await retired, active = survivor ? await survivor : null;
+        assert.ok(h.auth.isAuthSessionInvalidatedError(stale), "retired participant never retries");
+        assert.equal(f3Refreshes(h).length, 1, "recovery remains coalesced");
+        const initialRequests = participants === "all-retired" ? 1 : 2;
+        assert.equal(h.calls.filter(c => c.path === wishlistPath).length,
+          initialRequests + (outcome === "rotation" && survivor ? 1 : 0));
+        if (outcome === "rotation") {
+          assert.equal(h.auth.readAuthToken(), "rotation", "reconcile successful server rotation even if every participant retired");
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          assert.equal((await h.auth.readCurrentUser()).id, 1);
+          if (survivor) assert.deepEqual(active.value, [alertItem]);
+        } else if (outcome === "rejection") {
+          assert.equal(h.auth.readAuthToken(), null, "definitively rejected credentials cannot survive consumer retirement");
+          assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+          if (survivor) assert.ok(h.auth.isAuthSessionInvalidatedError(active));
+        } else if (outcome === "transient") {
+          assert.equal(h.auth.readAuthToken(), "initial");
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          if (survivor) assert.equal(h.authApi.normalizeAuthError(active).status, 503);
+        } else {
+          assert.equal(h.auth.readAuthToken(), "account-b");
+          assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+          assert.equal((await h.auth.readCurrentUser()).id, 2);
+          if (survivor) assert.ok(h.auth.isAuthSessionInvalidatedError(active));
+        }
+      } finally { h.restore(); }
+    });
+  }
+}
+
+for (const name of ["AddWishlistItemForm", "WishlistCard"]) {
+  for (const retire of [false, true]) {
+    test(`F3-R03 ${name} ${retire ? "retired" : "mounted"} during successful refresh`, async () => {
+      const h = await sentinelChatHarness();
+      const consumer = await wishlistConsumerHarness(h, name);
+      try {
+        const events = observeAuthNetwork(), revision = h.auth.readAuthSessionRevision();
+        const path = name === "WishlistCard" ? `${wishlistPath}/42/price-history` : wishlistPath;
+        h.respond(path, {}, 401); const reply = h.defer(refreshPath);
+        const pending = name === "WishlistCard" ? consumer.load() : consumer.submit();
+        await waitForAuthDispatch(events, refreshPath);
+        if (retire) consumer.dispose();
+        const writes = consumer.writes.length;
+        h.respond(path, name === "WishlistCard" ? [] : alertItem);
+        reply(sentinelSession(1, "rotation")); await pending;
+        assert.equal(f3Refreshes(h).length, 1);
+        assert.equal(h.auth.readAuthToken(), "rotation");
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal(h.calls.filter(c => c.path === path).length, retire ? 1 : 2);
+        if (retire) { assert.equal(consumer.writes.length, writes); assert.deepEqual(consumer.callbacks, []); }
+        else assert.ok(consumer.callbacks.some(([type]) => type === "token"));
+      } finally { consumer.dispose(); h.restore(); }
+    });
+  }
+}
+
+for (const action of ["update", "delete"]) {
+  for (const transition of ["retirement", "replacement-account", "same-token-new-session"]) {
+    test(`F3-R03 retained ${action} rejects ${transition} before dispatch`, async () => {
+      const h = await wishlistExplorerHarness();
+      try {
+        await h.loaded();
+        const parent = h.render();
+        if (transition === "retirement") h.dispose();
+        else {
+          h.respond(wishlistPath, [alertItem]); h.respond(f3EventPath, []);
+          h.auth.startAuthSession(sentinelSession(2, transition === "same-token-new-session" ? "initial" : "account-b"));
+          await h.loaded();
+        }
+        const count = h.calls.length, revision = h.auth.readAuthSessionRevision(), token = h.auth.readAuthToken();
+        await (action === "update" ? parent.handleAlertUpdate(alertItem, { alertActive: true }, "Saved") : parent.handleDelete(alertItem));
+        assert.equal(h.calls.length, count);
+        assert.equal(h.auth.readAuthToken(), token);
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+      } finally { h.restore(); }
+    });
+  }
+  for (const retire of [false, true]) {
+    for (const outcome of ["rotation", "rejection", "transient"]) {
+      test(`F3-R03 ${action} ${retire ? "retired" : "mounted"} during dispatched ${outcome}`, async () => {
+        const h = await wishlistExplorerHarness();
+        try {
+          await h.loaded();
+          const events = observeAuthNetwork(), revision = h.auth.readAuthSessionRevision();
+          const path = action === "update" ? `${wishlistPath}/42/alert` : `${wishlistPath}/42`;
+          h.respond(path, {}, 401); const reply = h.defer(refreshPath);
+          const pending = action === "update" ? h.update(alertItem, { alertActive: true }) : h.remove(alertItem);
+          await waitForAuthDispatch(events, refreshPath);
+          if (retire) h.dispose();
+          const saved = { ...alertItem, alertActive: true };
+          if (!retire) { h.respond(wishlistPath, [alertItem]); h.respond(f3EventPath, []); }
+          h.respond(path, saved); h.respond(f3EventPath, []);
+          const writes = h.changes.length;
+          if (outcome === "rotation") reply(sentinelSession(1, "rotation"));
+          else reply({}, outcome === "rejection" ? 401 : 503);
+          await pending; await h.loaded(); await settle();
+          assert.equal(f3Refreshes(h).length, 1);
+          assert.equal(h.calls.filter(c => c.path === path).length, !retire && outcome === "rotation" ? 2 : 1);
+          assert.equal(h.auth.readAuthToken(), outcome === "rotation" ? "rotation" : outcome === "rejection" ? null : "initial");
+          assert.equal(h.auth.readAuthSessionRevision(), revision + (outcome === "rejection" ? 1 : 0));
+          if (retire) assert.equal(h.changes.length, writes);
+          else if (outcome === "rotation") {
+            assert.deepEqual(h.state().personalItems, action === "delete" ? [] : [saved]);
+            assert.equal(h.state().view, "personal");
+          } else if (outcome === "transient") {
+            const message = action === "update" ? h.state().itemMessages[42] : h.state().operationMessage;
+            assert.equal(message.kind, "error");
+          }
+        } finally { h.restore(); }
+      });
+    }
+  }
+}
+
+for (const name of ["AddWishlistItemForm", "WishlistCard"]) {
+  test(`F3-R03 ${name} reuses same-session rotated token without a second refresh`, async () => {
+    const h = await sentinelChatHarness();
+    const consumer = await wishlistConsumerHarness(h, name);
+    try {
+      const path = name === "WishlistCard" ? `${wishlistPath}/42/price-history` : wishlistPath;
+      const revision = h.auth.readAuthSessionRevision(), reply = h.defer(path);
+      const pending = name === "WishlistCard" ? consumer.load() : consumer.submit();
+      h.respond(refreshPath, sentinelSession(1, "rotation"));
+      await h.auth.ensureAuthToken({ forceRefresh: true });
+      h.respond(path, name === "WishlistCard" ? [] : alertItem);
+      reply({}, 401); await pending;
+      assert.equal(f3Refreshes(h).length, 1);
+      assert.deepEqual(h.calls.filter(c => c.path === path).map(c => c.token), ["Bearer initial", "Bearer rotation"]);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal((await h.auth.readCurrentUser()).id, 1);
+    } finally { consumer.dispose(); h.restore(); }
+  });
+  for (const status of [401, 503]) {
+    test(`F3-R03 mounted ${name} preserves current recovery ${status} semantics`, async () => {
+      const h = await sentinelChatHarness();
+      const consumer = await wishlistConsumerHarness(h, name);
+      try {
+        const path = name === "WishlistCard" ? `${wishlistPath}/42/price-history` : wishlistPath;
+        const revision = h.auth.readAuthSessionRevision();
+        h.respond(path, {}, 401); h.respond(refreshPath, {}, status);
+        await (name === "WishlistCard" ? consumer.load() : consumer.submit());
+        assert.equal(f3Refreshes(h).length, 1);
+        assert.equal(h.calls.filter(c => c.path === path).length, 1);
+        assert.equal(h.auth.readAuthToken(), status === 401 ? null : "initial");
+        assert.equal(h.auth.readAuthSessionRevision(), revision + (status === 401 ? 1 : 0));
+        if (status === 503) assert.equal(consumer.render().state[name === "WishlistCard" ? "priceHistoryState" : "isSubmitting"], name === "WishlistCard" ? "unavailable" : false);
+      } finally { consumer.dispose(); h.restore(); }
+    });
+  }
+}
+
+test("F3-R03 scoped operation is rejected before initial dispatch and recovery join", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const scope = { sessionRevision: h.auth.readAuthSessionRevision(), isCurrent: () => false };
+    await assert.rejects(h.wishlist.withWishlistAuthRetry("initial", h.wishlist.getMyWishlist, scope), h.auth.isAuthSessionInvalidatedError);
+    await assert.rejects(h.auth.ensureAuthToken({ forceRefresh: true, operation: scope }), h.auth.isAuthSessionInvalidatedError);
+    assert.deepEqual(h.calls, []);
+    assert.equal((await h.auth.readCurrentUser()).id, 1);
+  } finally { h.restore(); }
+});
+
+
+test("F3-R04 saved retired Wishlist preference load must not recover", async () => {
+ const h = await notificationPreferencesHarness("WishlistExplorer");
+ try {
+  await h.loaded();
+  const reply = h.defer(preferencePath);h.retry();const pending=h.loaded();
+  h.dispose(); const revision=h.auth.readAuthSessionRevision();
+  h.respond(refreshPath,{},401);reply({},401);await pending;
+  console.log("PREFERENCE INVESTIGATION",JSON.stringify({refreshes:f3Refreshes(h).length,
+    revisionBefore:revision,revisionAfter:h.auth.readAuthSessionRevision(),token:h.auth.readAuthToken(),calls:h.calls}));
+  assert.equal(f3Refreshes(h).length,0,"retired preference load still triggers recovery: F3-R04 lifecycle correction");
+ } finally {h.restore();}
+});
+
+for (const consumer of preferenceConsumers) {
+  for (const completion of [200, 401, 503]) {
+    for (const transition of ["unmount", "same-session-remount", "newer-effect"]) {
+      test(`F3-R04 ${consumer} delayed ${completion} after ${transition} preserves current ownership`, async () => {
+        const h = await notificationPreferencesHarness(consumer);
+        let reply, pending;
+        try {
+          await h.loaded(); reply = h.defer(preferencePath); h.retry(); pending = h.loaded();
+          if (transition === "unmount") h.dispose();
+          else {
+            h.respond(preferencePath, { ...persistedPreferences, freeGameEnabled: true });
+            if (transition === "same-session-remount") h.remount(); else h.retry();
+            await h.loaded();
+          }
+          const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision(), writes = h.stateWrites.length;
+          const count = h.calls.length;
+          h.respond(refreshPath, {}, 401); reply(completion === 200 ? persistedPreferences : {}, completion); await pending;
+          assert.equal(f3Refreshes(h).length, 0, "obsolete preference 401 cannot initiate recovery");
+          assert.equal(h.calls.length, count, "no obsolete retry");
+          assert.equal((await h.auth.readCurrentUser()).id, 1);
+          assert.equal(h.auth.readAuthToken(), "initial");
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          assert.equal(h.authRequired(), 0);
+          assert.equal(h.stateWrites.length, writes, "obsolete completion cannot write loading/error/data state");
+          assert.deepEqual(h.state(), before);
+        } finally { reply?.(persistedPreferences); if (pending) await pending; h.restore(); }
+      });
+    }
+  }
+  for (const transition of ["retirement", "different-token", "identical-token-new-revision"]) {
+    test(`F3-R04 retained ${consumer} load callback rejects ${transition} before dispatch`, async () => {
+      const h = await notificationPreferencesHarness(consumer);
+      try {
+        const callback = h.loadCallbacks.at(-1);
+        if (transition === "retirement") h.dispose();
+        else {
+          h.respond(preferencePath, { ...persistedPreferences, freeGameEnabled: true });
+          h.auth.startAuthSession(sentinelSession(2, transition === "different-token" ? "account-b" : "initial"));
+          await h.loaded();
+        }
+        const before = structuredClone(h.state()), count = h.calls.length, revision = h.auth.readAuthSessionRevision(), token = h.auth.readAuthToken();
+        // A forbidden baseline dispatch still receives a valid HTTP response;
+        // the regression fails on ownership assertions, not fixture exhaustion.
+        h.respond(preferencePath, persistedPreferences);
+        await callback();
+        assert.equal(h.calls.length, count, "retained load must not adopt a replacement account");
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal(h.auth.readAuthToken(), token);
+        assert.equal((await h.auth.readCurrentUser()).id, transition === "retirement" ? 1 : 2);
+        assert.equal(h.authRequired(), 0);
+        assert.deepEqual(h.state(), before);
+      } finally { h.restore(); }
+    });
+  }
+  test(`F3-R04 ${consumer} retirement at final authentication classification blocks recovery`, async () => {
+    let h, armed = false, decisions = 0;
+    h = await notificationPreferencesHarness(consumer, { beforeAuthRecoveryDecision() {
+      if (!armed) return;
+      armed = false; decisions++; h.dispose();
+    } });
+    try {
+      const revision = h.auth.readAuthSessionRevision();
+      h.respond(preferencePath, {}, 401); h.respond(refreshPath, {}, 401); armed = true;
+      h.retry(); await h.loaded();
+      assert.equal(decisions, 1);
+      assert.equal(f3Refreshes(h).length, 0);
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.authRequired(), 0);
+    } finally { h.restore(); }
+  });
+  test(`F3-R04 ${consumer} successful save retires outstanding load before recovery`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    let reply, pending;
+    try {
+      h.toggleEmail(true);
+      reply = h.defer(preferencePath); h.retry(); pending = h.loaded();
+      h.respond(preferencePath, { ...persistedPreferences, emailEnabled: true, freeGameEnabled: true });
+      await h.save();
+      const authoritative = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+      h.respond(refreshPath, {}, 401); reply({}, 401); await pending;
+      assert.equal(f3Refreshes(h).length, 0);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assert.equal(h.authRequired(), 0);
+      assert.deepEqual(h.state(), authoritative);
+      assert.equal(h.state().message.kind, "success");
+    } finally { reply?.(persistedPreferences); if (pending) await pending; h.restore(); }
+  });
+}
+
+for (const outcome of ["rotation", "rejection", "transient", "replacement-account"]) {
+  for (const participants of ["all-retired", "mixed-scoped", "unscoped-current"]) {
+    test(`F3-R04 preference shared refresh ${outcome} with ${participants}`, async () => {
+      const h = await sentinelChatHarness();
+      try {
+        const events = observeAuthNetwork(), revision = h.auth.readAuthSessionRevision();
+        let current = true;
+        h.respond(preferencePath, {}, 401); const reply = h.defer(refreshPath);
+        const stale = h.preferences.withNotificationPreferenceAuthRetry("initial", h.preferences.getMyNotificationPreferences,
+          { sessionRevision: revision, isCurrent: () => current }).catch(error => error);
+        await waitForAuthDispatch(events, refreshPath);
+        let survivor;
+        if (participants !== "all-retired") {
+          h.respond(preferencePath, {}, 401);
+          survivor = h.preferences.withNotificationPreferenceAuthRetry("initial", h.preferences.getMyNotificationPreferences,
+            participants === "unscoped-current" ? undefined : { sessionRevision: revision, isCurrent: () => true }).catch(error => error);
+          await settle();
+        }
+        current = false;
+        if (outcome === "replacement-account") h.auth.startAuthSession(sentinelSession(2, "account-b"));
+        // Both possible baseline retries have real valid responses; failures must
+        // come from security assertions, never an exhausted response fixture.
+        h.respond(preferencePath, persistedPreferences); h.respond(preferencePath, persistedPreferences);
+        reply(outcome === "rotation" || outcome === "replacement-account" ? sentinelSession(1, "rotation") : {},
+          outcome === "rejection" ? 401 : outcome === "transient" ? 503 : 200);
+        const retired = await stale, active = survivor ? await survivor : null;
+        assert.ok(h.auth.isAuthSessionInvalidatedError(retired), "retired load cannot retry or surface a recovery completion");
+        assert.equal(f3Refreshes(h).length, 1);
+        assert.equal(h.calls.filter(c => c.path === preferencePath).length,
+          (survivor ? 2 : 1) + (survivor && outcome === "rotation" ? 1 : 0));
+        if (outcome === "rotation") {
+          assert.equal(h.auth.readAuthToken(), "rotation");
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          assert.equal((await h.auth.readCurrentUser()).id, 1);
+          if (survivor) assert.deepEqual(active.value, persistedPreferences);
+        } else if (outcome === "rejection") {
+          assert.equal(h.auth.readAuthToken(), null);
+          assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+          if (survivor) assert.ok(h.auth.isAuthSessionInvalidatedError(active));
+        } else if (outcome === "transient") {
+          assert.equal(h.auth.readAuthToken(), "initial");
+          assert.equal(h.auth.readAuthSessionRevision(), revision);
+          assert.equal((await h.auth.readCurrentUser()).id, 1);
+          if (survivor) assert.equal(h.authApi.normalizeAuthError(active).status, 503);
+        } else {
+          assert.equal(h.auth.readAuthToken(), "account-b");
+          assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+          assert.equal((await h.auth.readCurrentUser()).id, 2);
+          if (survivor) assert.ok(h.auth.isAuthSessionInvalidatedError(active));
+        }
+      } finally { h.restore(); }
+    });
+  }
+}
+
+for (const consumer of preferenceConsumers) {
+  for (const retire of [false, true]) {
+    for (const outcome of ["rotation", "rejection", "transient"]) {
+      test(`F3-R04 ${consumer} ${retire ? "retired" : "mounted"} during dispatched ${outcome}`, async () => {
+        const h = await notificationPreferencesHarness(consumer);
+        try {
+          h.pauseAuthUpdates();
+          const revision = h.auth.readAuthSessionRevision(), events = observeAuthNetwork();
+          const count = h.calls.filter(c => c.path === preferencePath).length;
+          h.respond(preferencePath, {}, 401); const reply = h.defer(refreshPath);
+          h.retry(); const pending = h.loaded();
+          await waitForAuthDispatch(events, refreshPath);
+          if (retire) h.dispose();
+          const before = structuredClone(h.state()), writes = h.stateWrites.length;
+          const current = { ...persistedPreferences, freeGameEnabled: true };
+          h.respond(preferencePath, current); h.respond(preferencePath, current);
+          reply(outcome === "rotation" ? sentinelSession(1, "rotation") : {}, outcome === "rotation" ? 200 : outcome === "rejection" ? 401 : 503);
+          await pending;
+          assert.equal(f3Refreshes(h).length, 1);
+          assert.equal(h.calls.filter(c => c.path === preferencePath).length - count, !retire && outcome === "rotation" ? 2 : 1);
+          assert.equal(h.auth.readAuthToken(), outcome === "rotation" ? "rotation" : outcome === "rejection" ? null : "initial");
+          assert.equal(h.auth.readAuthSessionRevision(), revision + (outcome === "rejection" ? 1 : 0));
+          assert.equal(h.authRequired(), 0, "global terminal invalidation does not call a retired consumer callback");
+          if (retire) {
+            assert.equal(h.stateWrites.length, writes);
+            assert.deepEqual(h.state(), before);
+            assert.deepEqual(h.changedTokens, ["initial"]);
+          } else if (outcome === "rotation") {
+            assert.deepEqual(h.state().savedPreferences, current); await h.loaded();
+            assert.deepEqual(h.state().draftPreferences, current);
+            assert.equal(h.state().loadState, "ready");
+          } else if (outcome === "transient") {
+            assert.equal(h.state().loadState, "error");
+            assert.equal(h.state().message.kind, "error");
+          }
+        } finally { h.restore(); }
+      });
+    }
+  }
+  test(`F3-R04 ${consumer} same-session rotation reuses current token without redundant recovery`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    let reply, pending;
+    try {
+      h.pauseAuthUpdates(); const revision = h.auth.readAuthSessionRevision();
+      reply = h.defer(preferencePath); h.retry(); pending = h.loaded();
+      h.respond(refreshPath, sentinelSession(1, "rotation")); await h.auth.ensureAuthToken({ forceRefresh: true });
+      h.respond(preferencePath, persistedPreferences); h.respond(preferencePath, persistedPreferences);
+      reply({}, 401); await pending;
+      assert.equal(f3Refreshes(h).length, 1);
+      assert.deepEqual(h.calls.filter(c => c.path === preferencePath).map(c => c.token), ["Bearer initial", "Bearer initial", "Bearer rotation"]);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal((await h.auth.readCurrentUser()).id, 1);
+      assert.deepEqual(h.state().savedPreferences, persistedPreferences); await h.loaded();
+      assert.equal(h.authRequired(), 0);
+    } finally { reply?.(persistedPreferences); if (pending) await pending; h.restore(); }
+  });
+  test(`F3-R04 ${consumer} current retry rejection still invokes authentication-required callback`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    try {
+      h.pauseAuthUpdates(); const revision = h.auth.readAuthSessionRevision();
+      h.respond(preferencePath, {}, 401); h.respond(refreshPath, sentinelSession(1, "rotation")); h.respond(preferencePath, {}, 401);
+      h.retry(); await h.loaded();
+      assert.equal(f3Refreshes(h).length, 1);
+      assert.equal(h.authRequired(), 1);
+      assert.equal(h.auth.readAuthToken(), null);
+      assert.equal(h.auth.readAuthSessionRevision(), revision + 1);
+      assert.equal(h.calls.filter(c => c.path === preferencePath).length, 3);
+    } finally { h.restore(); }
+  });
+  test(`F3-R04 ${consumer} same-effect newer request supersedes old rejection`, async () => {
+    const h = await notificationPreferencesHarness(consumer);
+    let reply, pending;
+    try {
+      const callback = h.loadCallbacks.at(-1);
+      reply = h.defer(preferencePath); pending = callback();
+      const current = { ...persistedPreferences, freeGameEnabled: true };
+      h.respond(preferencePath, current); await callback();
+      const before = structuredClone(h.state()), revision = h.auth.readAuthSessionRevision();
+      h.respond(refreshPath, {}, 401); reply({}, 401); await pending;
+      assert.equal(f3Refreshes(h).length, 0);
+      assert.equal(h.auth.readAuthSessionRevision(), revision);
+      assert.equal(h.auth.readAuthToken(), "initial");
+      assert.deepEqual(h.state(), before);
+      assert.equal(h.authRequired(), 0);
+    } finally { reply?.(persistedPreferences); if (pending) await pending; h.restore(); }
+  });
+}
+
+test("F3-R04 optional preference validity rejects before initial dispatch while unscoped calls remain supported", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const revision = h.auth.readAuthSessionRevision();
+    h.respond(preferencePath, persistedPreferences);
+    await assert.rejects(h.preferences.withNotificationPreferenceAuthRetry("initial", h.preferences.getMyNotificationPreferences,
+      { sessionRevision: revision, isCurrent: () => false }), h.auth.isAuthSessionInvalidatedError);
+    assert.equal(h.calls.length, 0);
+    const result = await h.preferences.withNotificationPreferenceAuthRetry("initial", h.preferences.getMyNotificationPreferences);
+    assert.deepEqual(result.value, persistedPreferences);
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+  } finally { h.restore(); }
+});
+
+// Run the Deals component's production hooks, effects and handlers against the
+// same real auth and HTTP modules used for the Sentinel lifecycle tests.
+async function dealsLifecycleHarness(h) {
+  const source = await readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("deals.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const component = ast.statements.find(node => node.name?.text === "DealsExplorer");
+  const helpers = new Set(["protectedWishlistError", "normalizedWishlistValue", "findMatchingWishlistItem",
+    "dealStateKey", "wishlistOperationKey", "wishlistPayloadFor"]);
+  const program = [
+    ...ast.statements.filter(node => helpers.has(node.name?.text)).map(node => node.getText(ast)),
+    `function DealsExplorer({ deals }) {
+      ${component.body.statements.slice(0, -1).map(node => node.getText(ast)).join("\n")
+        .replace("void syncSavedWishlist();", "loads.push(syncSavedWishlist());")}
+      return { saveDeal, toggleDealAlert, refresh: () => setWishlistSyncRevision(value => value + 1),
+        state: { authToken, authChecked, savedWishlistItems, savingDeals, saveMessages, wishlistSyncWarning } };
+    }`,
+  ].join("\n");
+  const compiled = ts.transpileModule(program, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  let cursor = 0, effects = [], cells = [];
+  const loads = [];
+  const remember = (callback, deps, effect = false) => {
+    const index = cursor++, existing = cells[index];
+    if (existing?.deps.length === deps.length && deps.every((dep, i) => Object.is(dep, existing.deps[i]))) return existing.value;
+    if (effect) effects.push(() => { existing?.cleanup?.(); cells[index] = { deps, cleanup: callback() }; });
+    else cells[index] = { deps, value: callback() };
+    return cells[index]?.value;
+  };
+  const mocks = {
+    ...h.auth, ...h.wishlist, normalizeAuthError: h.authApi.normalizeAuthError, loads,
+    window: Object.assign(window, { location: { hash: "" } }),
+    useRef(value) { return cells[cursor++] ??= { current: value }; },
+    useState(initial) {
+      const cell = cells[cursor++] ??= { value: typeof initial === "function" ? initial() : initial };
+      return [cell.value, value => { cell.value = typeof value === "function" ? value(cell.value) : value; }];
+    },
+    useEffect: (callback, deps) => remember(callback, deps, true),
+    useCallback: (callback, deps) => remember(() => callback, deps),
+    useMemo: remember,
+  };
+  const renderComponent = new Function(...Object.keys(mocks), `${compiled}\nreturn DealsExplorer;`)(...Object.values(mocks));
+  const render = () => {
+    cursor = 0;
+    const result = renderComponent({ deals: [alertDeal] });
+    const pending = effects;
+    effects = [];
+    pending.forEach(effect => effect());
+    return result;
+  };
+  const dispose = () => { cells.forEach(cell => cell.cleanup?.()); cells = []; };
+  return { render, dispose, loaded: () => loads.at(-1), mount() { render(); return render(); } };
+}
+
+test("F3-R05 retired Deals sync after navigation cannot refresh", async () => {
+  const h = await sentinelChatHarness();
+  const deals = await dealsLifecycleHarness(h);
+  try {
+    const reply = h.defer(wishlistPath);
+    deals.mount();
+    const pending = deals.loaded(), revision = h.auth.readAuthSessionRevision();
+    assert.equal(h.calls.filter(c => c.path === wishlistPath).length, 1);
+    deals.dispose();
+    h.respond(refreshPath, {}, 401);
+    reply({}, 401);
+    await pending;
+    assert.equal(f3Refreshes(h).length, 0);
+    assert.equal(h.calls.filter(c => c.path === wishlistPath).length, 1);
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.equal((await h.auth.readCurrentUser()).id, 1);
+  } finally { deals.dispose(); h.restore(); }
+});
+
+for (const action of ["save", "alert"]) {
+  for (const schedule of ["retired-before-401", "retired-during-refresh", "current"]) {
+    test(`F3-R05 Deals ${action} ${schedule} owns recovery and mutation replay`, async () => {
+      const h = await sentinelChatHarness();
+      const deals = await dealsLifecycleHarness(h);
+      try {
+        const events = observeAuthNetwork(), revision = h.auth.readAuthSessionRevision();
+        h.respond(wishlistPath, action === "alert" ? [alertItem] : []);
+        deals.mount(); await deals.loaded();
+        const handles = deals.render(), path = action === "alert" ? `${wishlistPath}/42/alert` : wishlistPath;
+        const reply = h.defer(path);
+        const pending = action === "alert" ? handles.toggleDealAlert(alertDeal) : handles.saveDeal(alertDeal);
+        await waitForAuthDispatch(events, path, action === "save" ? 2 : 1);
+        const rotated = { ...alertItem, alertActive: true };
+        const completeRefresh = h.defer(refreshPath);
+        h.respond(path, rotated);
+        if (schedule === "retired-before-401") {
+          deals.dispose();
+          completeRefresh(sentinelSession(1, "rotation"));
+          reply({}, 401);
+        } else {
+          reply({}, 401);
+          await waitForAuthDispatch(events, refreshPath);
+          if (schedule === "retired-during-refresh") deals.dispose();
+          completeRefresh(sentinelSession(1, "rotation"));
+        }
+        await pending;
+        const mutations = h.calls.filter(c => c.path === path && c.method !== "GET");
+        assert.deepEqual(mutations.map(c => c.token), schedule === "current"
+          ? ["Bearer initial", "Bearer rotation"] : ["Bearer initial"]);
+        assert.equal(f3Refreshes(h).length, schedule === "retired-before-401" ? 0 : 1);
+        assert.equal(h.auth.readAuthSessionRevision(), revision);
+        assert.equal((await h.auth.readCurrentUser()).id, 1);
+        if (schedule === "current") {
+          h.respond(wishlistPath, [rotated]);
+          const { state } = deals.render(); await deals.loaded();
+          assert.deepEqual(state.savedWishlistItems, [rotated]);
+          assert.equal(Object.values(state.saveMessages)[0].tone, "success");
+        }
+      } finally { deals.dispose(); h.restore(); }
+    });
+  }
+}
+
+test("F3-R05 a retired compound alert operation cannot patch after its successful POST", async () => {
+  const h = await sentinelChatHarness();
+  const deals = await dealsLifecycleHarness(h);
+  try {
+    h.respond(wishlistPath, []); deals.mount(); await deals.loaded();
+    const create = h.defer(wishlistPath);
+    const pending = deals.render().toggleDealAlert(alertDeal);
+    await settle();
+    deals.dispose();
+    h.respond(`${wishlistPath}/42/alert`, { ...alertItem, alertActive: true });
+    create({ ...alertItem, alertActive: false }); await pending;
+    assert.deepEqual(h.calls.map(c => c.method), ["GET", "POST"]);
+    assert.equal(f3Refreshes(h).length, 0);
+  } finally { deals.dispose(); h.restore(); }
+});
+
+for (const transition of ["superseded-effect", "same-session-remount", "replacement", "equal-token-replacement"]) {
+  test(`F3-R05 Deals ${transition} preserves current account and wishlist state`, async () => {
+    const h = await sentinelChatHarness();
+    const deals = await dealsLifecycleHarness(h);
+    try {
+      const old = h.defer(wishlistPath);
+      deals.mount();
+      const pending = deals.loaded(), handles = deals.render(), revision = h.auth.readAuthSessionRevision();
+      const replacement = transition.includes("replacement");
+      const latest = { ...alertItem, title: "Current wishlist item" };
+      h.respond(wishlistPath, [latest]);
+      if (transition === "same-session-remount") { deals.dispose(); deals.mount(); }
+      else if (replacement) {
+        h.auth.startAuthSession(sentinelSession(2, transition === "replacement" ? "account-b" : "initial"));
+        // Equal-token replacement may not trigger the starting implementation's GET.
+        deals.render();
+      } else { handles.refresh(); deals.render(); }
+      const newer = deals.loaded();
+      if (newer !== pending) await newer;
+      h.respond(refreshPath, {}, 401);
+      old({}, 401); await pending;
+      h.respond(wishlistPath, alertItem);
+      if (replacement || transition === "same-session-remount") await handles.saveDeal(alertDeal);
+      assert.equal(f3Refreshes(h).length, 0);
+      assert.equal(h.calls.filter(c => c.method === "POST").length, 0);
+      assert.equal(h.auth.readAuthSessionRevision(), revision + Number(replacement));
+      assert.equal((await h.auth.readCurrentUser()).id, replacement ? 2 : 1);
+      assert.deepEqual(deals.render().state.savedWishlistItems, [latest]);
+    } finally { deals.dispose(); h.restore(); }
+  });
+}
+
+test("F3-R06 retired Sentinel 401 cannot start refresh", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const reply = h.defer(insightPath), pending = h.submit("Retired fixture prompt");
+    const revision = h.auth.readAuthSessionRevision();
+    h.dispose(); h.respond(refreshPath, {}, 401);
+    reply({}, 401); await pending;
+    assert.equal(f3Refreshes(h).length, 0);
+    assert.equal(h.calls.filter(c => c.path === insightPath).length, 1);
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.equal((await h.auth.readCurrentUser()).id, 1);
+    assert.equal(h.answer(), undefined);
+  } finally { h.restore(); }
+});
+
+test("F3-R06 superseded Sentinel 401 leaves the current answer and session intact", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const submit = h.prepareSubmit("Fixture prompt");
+    const reply = h.defer(insightPath), pending = submit();
+    h.respond(insightPath, sentinelAnswer("Current answer")); await submit();
+    const revision = h.auth.readAuthSessionRevision();
+    h.respond(refreshPath, {}, 401); reply({}, 401); await pending;
+    assert.equal(f3Refreshes(h).length, 0);
+    assert.deepEqual(h.answer(), sentinelAnswer("Current answer"));
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+  } finally { h.restore(); }
+});
+
+for (const token of ["initial", "account-b"]) {
+  test(`F3-R06 retained Sentinel prompt cannot adopt replacement session with token ${token}`, async () => {
+    const h = await sentinelChatHarness();
+    try {
+      const old = h.prepareSubmit("Account A fixture prompt");
+      h.auth.startAuthSession(sentinelSession(2, token));
+      h.respond(insightPath, sentinelAnswer("Old prompt sent"));
+      await old();
+      assert.equal(h.calls.length, 0);
+      assert.equal((await h.auth.readCurrentUser()).id, 2);
+      assert.equal(h.answer(), undefined);
+      assert.equal(h.input().value, "");
+    } finally { h.restore(); }
+  });
+}
+
+for (const status of [200, 401, 503]) {
+  test(`F3-R06 retiring during dispatched refresh preserves shared HTTP ${status} outcome`, async () => {
+    const h = await sentinelChatHarness();
+    try {
+      const events = observeAuthNetwork(), revision = h.auth.readAuthSessionRevision();
+      h.respond(insightPath, {}, 401); const reply = h.defer(refreshPath);
+      const pending = h.submit("Fixture prompt");
+      await waitForAuthDispatch(events, refreshPath);
+      h.dispose(); h.respond(insightPath, sentinelAnswer());
+      reply(status === 200 ? sentinelSession(1, "rotation") : {}, status);
+      await pending;
+      assert.equal(f3Refreshes(h).length, 1);
+      assert.equal(h.calls.filter(c => c.path === insightPath).length, 1);
+      assert.equal(h.auth.readAuthSessionRevision(), revision + Number(status === 401));
+      assert.equal(h.auth.readAuthToken(), status === 401 ? null : status === 200 ? "rotation" : "initial");
+      assert.equal(h.answer(), undefined);
+    } finally { h.restore(); }
+  });
+}
+
+test("F3-R05/R06 retired Deals and current Sentinel can share one legitimate refresh", async () => {
+  const h = await sentinelChatHarness();
+  const deals = await dealsLifecycleHarness(h);
+  try {
+    const events = observeAuthNetwork(), revision = h.auth.readAuthSessionRevision();
+    h.respond(wishlistPath, [], 401); const reply = h.defer(refreshPath);
+    deals.mount(); const loading = deals.loaded();
+    await waitForAuthDispatch(events, refreshPath);
+    h.respond(insightPath, {}, 401);
+    const pending = h.submit("Current fixture prompt");
+    await settle(); deals.dispose();
+    h.respond(wishlistPath, []);
+    h.respond(insightPath, sentinelAnswer("Recovered answer"));
+    reply(sentinelSession(1, "rotation"));
+    await Promise.all([loading, pending]);
+    assert.equal(f3Refreshes(h).length, 1);
+    assert.equal(h.calls.filter(c => c.path === wishlistPath).length, 1);
+    assert.deepEqual(h.calls.filter(c => c.path === insightPath).map(c => c.token), ["Bearer initial", "Bearer rotation"]);
+    assert.equal(h.auth.readAuthSessionRevision(), revision);
+    assert.equal((await h.auth.readCurrentUser()).id, 1);
+    assert.deepEqual(h.answer(), sentinelAnswer("Recovered answer"));
+  } finally { deals.dispose(); h.restore(); }
 });

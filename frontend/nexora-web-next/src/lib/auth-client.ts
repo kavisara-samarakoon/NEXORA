@@ -179,37 +179,59 @@ export function assertAuthSessionRevision(revision: number): void {
   if (revision !== readAuthSessionRevision()) throw new AuthSessionInvalidatedError();
 }
 
+// Optional consumer ownership; unscoped callers retain application-wide recovery.
+export type AuthOperationValidity = {
+  sessionRevision: number;
+  isCurrent: () => boolean;
+};
+
+function assertAuthOperation(operation?: AuthOperationValidity): void {
+  if (!operation) return;
+  assertAuthSessionRevision(operation.sessionRevision);
+  if (!operation.isCurrent()) throw new AuthSessionInvalidatedError();
+  assertAuthSessionRevision(operation.sessionRevision);
+}
+
 // Bind both attempts and their completions to the originating client session.
 // Consumers also check the returned revision immediately before applying state.
 export async function withAuthSessionRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
   isAuthenticationError: (error: unknown) => boolean,
+  operation?: AuthOperationValidity,
 ): Promise<{ value: T; token: string; sessionRevision: number }> {
-  const sessionRevision = readAuthSessionRevision();
+  const sessionRevision = operation?.sessionRevision ?? readAuthSessionRevision();
+  function assertCurrent() {
+    assertAuthSessionRevision(sessionRevision);
+    assertAuthOperation(operation);
+  }
   async function attempt(activeToken: string) {
-    assertAuthSessionRevision(sessionRevision);
+    assertCurrent();
     const value = await request(activeToken);
-    assertAuthSessionRevision(sessionRevision);
+    assertCurrent();
     return { value, token: activeToken, sessionRevision };
   }
 
   try {
     return await attempt(token);
   } catch (error) {
-    assertAuthSessionRevision(sessionRevision);
-    if (!isAuthenticationError(error)) throw error;
+    assertCurrent();
+    const authenticationError = isAuthenticationError(error);
+    // Classification can itself retire ownership. This is the last synchronous
+    // decision before reusing a rotated token or starting/joining recovery.
+    assertCurrent();
+    if (!authenticationError) throw error;
 
     try {
       const currentToken = readAuthToken();
       const refreshedToken = currentToken && currentToken !== token
         ? currentToken
-        : await ensureAuthToken({ forceRefresh: true });
-      assertAuthSessionRevision(sessionRevision);
+        : await ensureAuthToken({ forceRefresh: true, operation });
+      assertCurrent();
       if (!refreshedToken) throw error;
       return await attempt(refreshedToken);
     } catch (retryError) {
-      assertAuthSessionRevision(sessionRevision);
+      assertCurrent();
       throw retryError;
     }
   }
@@ -262,18 +284,24 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 
   if (!response) {
+    // This is a definitive server rejection, even if every UI consumer retired
+    // during dispatch. Never retain rejected credentials. Transient failures
+    // throw above without clearing; newer sessions are protected by version.
     clearAuthToken();
     return null;
   }
 
+  // The server may already have rotated its cookie. Reconcile a valid response
+  // even when its initiating view retired; ownership only suppresses its retry.
   const sameUser = currentAccessToken !== null && currentUser?.id === response.user.id;
   applyAuthSession(response, sameUser);
   return response.token;
 }
 
 export async function ensureAuthToken(
-  options: { forceRefresh?: boolean } = {},
+  options: { forceRefresh?: boolean; operation?: AuthOperationValidity } = {},
 ): Promise<string | null> {
+  assertAuthOperation(options.operation);
   removeLegacyStoredToken();
   let quarantined: boolean;
   try {
@@ -298,6 +326,7 @@ export async function ensureAuthToken(
     throw credentialCookieCleanupFailure?.error ?? new AuthSessionInvalidatedError();
   }
 
+  assertAuthOperation(options.operation);
   if (!refreshPromise) {
     refreshPromise = refreshAccessToken().finally(() => {
       refreshPromise = null;
@@ -305,8 +334,11 @@ export async function ensureAuthToken(
   }
 
   try {
-    return await refreshPromise;
+    const token = await refreshPromise;
+    assertAuthOperation(options.operation);
+    return token;
   } catch (error) {
+    assertAuthOperation(options.operation);
     let quarantinedNow: boolean;
     try {
       quarantinedNow = readCookieQuarantine();

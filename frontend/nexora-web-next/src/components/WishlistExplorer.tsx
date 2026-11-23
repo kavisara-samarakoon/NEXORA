@@ -25,6 +25,8 @@ import {
   assertAuthSessionRevision,
   isAuthSessionInvalidatedError,
   readAuthSessionRevision,
+  readAuthToken,
+  withAuthSessionRetry,
 } from "@/lib/auth-client";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
 import { wishlistCardIdentity } from "@/lib/wishlist-card-identity";
@@ -57,6 +59,25 @@ function protectedWishlistError(error: unknown) {
 
   const authError = normalizeAuthError(error);
   return authError.code === "unknown_error" ? wishlistError : authError;
+}
+
+async function requestCurrentWishlistSnapshot<T>(
+  token: string,
+  request: (activeToken: string) => Promise<T>,
+  isCurrent: () => boolean,
+): Promise<{ value: T; token: string; sessionRevision: number }> {
+  // The synchronous classifier checks freshness at the final recovery decision,
+  // after rejection has propagated beyond the inner request guard.
+  return withAuthSessionRetry(token, async (activeToken) => {
+    if (!isCurrent()) throw new Error("The wishlist snapshot was superseded.");
+    try {
+      return await request(activeToken);
+    } catch (error) {
+      if (!isCurrent()) throw new Error("The wishlist snapshot was superseded.");
+      throw error;
+    }
+  }, (error) => normalizeUserWishlistError(error).status === 401 && isCurrent(),
+  { sessionRevision: readAuthSessionRevision(), isCurrent });
 }
 
 const wishlistPriorities: readonly WishlistPriority[] = ["high", "medium", "low"];
@@ -371,17 +392,42 @@ function WishlistCard({
   const status = statusDetails(item.status);
   const alertEvaluation = alertEvaluationFor(item);
   const storeClass = wishlistStoreClass(item.store);
+  const renderSessionRevision = readAuthSessionRevision();
+  const historyOwner = useRef<{ active: boolean; item: WishlistItem; sessionRevision: number } | null>(null);
+  const historyRequestVersion = useRef(0);
   const [targetPrice, setTargetPrice] = useState(item.targetPrice);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
-  const [priceHistory, setPriceHistory] = useState<WishlistPriceHistoryPoint[]>([]);
-  const [priceHistoryState, setPriceHistoryState] = useState<PriceHistoryState>("idle");
+  const [historySnapshot, setHistorySnapshot] = useState<{
+    item: WishlistItem; sessionRevision: number; points: WishlistPriceHistoryPoint[]; state: PriceHistoryState;
+  } | null>(null);
+  const ownsHistory = historySnapshot?.item === item && historySnapshot.sessionRevision === renderSessionRevision;
+  const priceHistory = ownsHistory ? historySnapshot.points : [];
+  const priceHistoryState = ownsHistory ? historySnapshot.state : "idle";
+  function setPriceHistory(points: WishlistPriceHistoryPoint[]) {
+    setHistorySnapshot({ item, sessionRevision: renderSessionRevision, points, state: "loaded" });
+  }
+  function setPriceHistoryState(state: PriceHistoryState) {
+    setHistorySnapshot((current) => ({ item, sessionRevision: renderSessionRevision, state,
+      points: current?.item === item && current.sessionRevision === renderSessionRevision ? current.points : [] }));
+  }
+  useEffect(() => {
+    const owner = { active: true, item, sessionRevision: renderSessionRevision };
+    historyOwner.current = owner;
+    return () => { owner.active = false; };
+  }, [item, renderSessionRevision]);
   const titleId = `wishlist-item-title-${item.id}`;
   const targetHelpId = `wishlist-target-price-help-${item.id}`;
   const settingsMessageId = `wishlist-settings-message-${item.id}`;
 
   async function loadPriceHistory() {
-    const sessionRevision = readAuthSessionRevision();
-    if (!authToken || priceHistoryState === "loading") return;
+    const sessionRevision = renderSessionRevision;
+    const owner = historyOwner.current;
+    if (!owner?.active || owner.item !== item || owner.sessionRevision !== sessionRevision
+      || sessionRevision !== readAuthSessionRevision()
+      || !authToken || priceHistoryState === "loading") return;
+    const requestVersion = ++historyRequestVersion.current;
+    const isCurrent = () => owner.active && owner === historyOwner.current
+      && requestVersion === historyRequestVersion.current && sessionRevision === readAuthSessionRevision();
     setPriceHistoryState("loading");
 
     try {
@@ -392,13 +438,15 @@ function WishlistCard({
           item.id,
           PRICE_HISTORY_REQUEST_LIMIT,
         ),
+        { sessionRevision, isCurrent },
       );
+      if (!isCurrent()) return;
       assertAuthSessionRevision(result.sessionRevision);
       onTokenChanged(result.token);
       setPriceHistory(result.value);
       setPriceHistoryState("loaded");
     } catch (error) {
-      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+      if (!isCurrent() || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         onAuthenticationRequired();
@@ -774,6 +822,7 @@ function WishlistAlertPanel({
 }
 
 export default function WishlistExplorer({ wishlistItems, source }: WishlistResult) {
+  const consumerSessionRevision = readAuthSessionRevision();
   const [activeFilter, setActiveFilter] = useState<WishlistFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<WishlistView>("checking");
@@ -791,8 +840,17 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [refreshKey, setRefreshKey] = useState(0);
   const [personalWishlistRevision, setPersonalWishlistRevision] = useState(0);
   const alertEventsRequestVersion = useRef(0);
+  const mutationOwners = useRef(new Map<string, object>());
   // Successful mutations invalidate snapshots captured before their completion.
   const wishlistDataGeneration = useRef(0);
+  const consumerLifetimeRef = useRef({ active: false });
+  const consumerLifetime = consumerLifetimeRef.current;
+
+  useEffect(() => {
+    const lifetime = { active: true };
+    consumerLifetimeRef.current = lifetime;
+    return () => { lifetime.active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -845,15 +903,21 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       const sessionRevision = readAuthSessionRevision();
       const dataGeneration = wishlistDataGeneration.current;
       const eventRequestVersion = ++alertEventsRequestVersion.current;
+      const isCurrentSnapshot = () => active && currentVersion === requestVersion
+        && dataGeneration === wishlistDataGeneration.current;
       const [wishlistResult, alertEventsResult] = await Promise.allSettled([
-        withWishlistAuthRetry(token, getMyWishlist),
-        withWishlistAuthRetry(token, getMyWishlistAlertEvents),
+        requestCurrentWishlistSnapshot(token, getMyWishlist, isCurrentSnapshot),
+        requestCurrentWishlistSnapshot(
+          token, getMyWishlistAlertEvents,
+          () => isCurrentSnapshot() && eventRequestVersion === alertEventsRequestVersion.current,
+        ),
       ]);
       if (!active || currentVersion !== requestVersion) return;
 
       if (sessionRevision !== readAuthSessionRevision()) return;
-      if ([wishlistResult, alertEventsResult].some((result) =>
-        result.status === "rejected" && isAuthSessionInvalidatedError(result.reason))) return;
+      if (isCurrentSnapshot() && [wishlistResult,
+        ...(eventRequestVersion === alertEventsRequestVersion.current ? [alertEventsResult] : []),
+      ].some((result) => result.status === "rejected" && isAuthSessionInvalidatedError(result.reason))) return;
 
       if (dataGeneration !== wishlistDataGeneration.current) {
         if (eventRequestVersion === alertEventsRequestVersion.current) {
@@ -883,7 +947,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         return;
       }
 
-      if (alertEventsResult.status === "rejected") {
+      if (eventRequestVersion === alertEventsRequestVersion.current && alertEventsResult.status === "rejected") {
         const details = protectedWishlistError(alertEventsResult.reason);
 
         if (details.status === 401) {
@@ -901,7 +965,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         setAlertEventsMessage(
           "Alert history could not be loaded. Your wishlist is still available.",
         );
-      } else if (eventRequestVersion === alertEventsRequestVersion.current) {
+      } else if (alertEventsResult.status === "fulfilled" && eventRequestVersion === alertEventsRequestVersion.current) {
         setAlertEvents(alertEventsResult.value.value);
         setAlertEventsMessage(null);
       }
@@ -931,6 +995,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
 
     return () => {
       active = false;
+      alertEventsRequestVersion.current += 1;
       window.removeEventListener("storage", handleAuthChange);
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
@@ -961,6 +1026,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }
 
   const handleAuthenticationRequired = useCallback(() => {
+    if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
     alertEventsRequestVersion.current += 1;
     clearAuthToken();
     setAuthToken(null);
@@ -973,22 +1039,27 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setItemMessages({});
     setServiceMessage("Please sign in again.");
     setView("public");
-  }, [wishlistItems]);
+  }, [consumerLifetime, consumerSessionRevision, wishlistItems]);
 
   async function refreshAlertEvents(token: string) {
+    if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
     const sessionRevision = readAuthSessionRevision();
     const requestVersion = ++alertEventsRequestVersion.current;
+    const dataGeneration = wishlistDataGeneration.current;
+    const isCurrentSnapshot = () => consumerLifetime.active
+      && sessionRevision === readAuthSessionRevision() && requestVersion === alertEventsRequestVersion.current
+      && dataGeneration === wishlistDataGeneration.current;
     setAlertEventsLoading(true);
     setAlertEventsMessage(null);
 
     try {
-      const result = await withWishlistAuthRetry(token, getMyWishlistAlertEvents);
-      if (requestVersion !== alertEventsRequestVersion.current) return;
+      const result = await requestCurrentWishlistSnapshot(token, getMyWishlistAlertEvents, isCurrentSnapshot);
+      if (!isCurrentSnapshot()) return;
       assertAuthSessionRevision(result.sessionRevision);
       setAuthToken(result.token);
       setAlertEvents(result.value);
     } catch (error) {
-      if (requestVersion !== alertEventsRequestVersion.current) return;
+      if (!isCurrentSnapshot()) return;
       if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
@@ -999,13 +1070,14 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         );
       }
     } finally {
-      if (requestVersion === alertEventsRequestVersion.current) {
+      if (isCurrentSnapshot()) {
         setAlertEventsLoading(false);
       }
     }
   }
 
   function handleItemAdded(item: WishlistItem) {
+    if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
     wishlistDataGeneration.current += 1;
     setPersonalItems((current) => {
       const existingIndex = current.findIndex((candidate) => candidate.id === item.id);
@@ -1025,7 +1097,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       return next;
     });
     resetFilters();
-    if (authToken) void refreshAlertEvents(authToken);
+    const activeToken = readAuthToken();
+    if (activeToken) void refreshAlertEvents(activeToken);
   }
 
   async function handleAlertUpdate(
@@ -1033,9 +1106,16 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     payload: UpdateWishlistAlertPayload,
     successMessage: string,
   ) {
-    const sessionRevision = readAuthSessionRevision();
+    const sessionRevision = consumerSessionRevision;
+    const operationKey = `${sessionRevision}:update:${item.id}`;
+    if (!consumerLifetime.active || sessionRevision !== readAuthSessionRevision()
+      || mutationOwners.current.has(operationKey)) return;
+    const owner = {};
+    const isCurrent = () => consumerLifetime.active && sessionRevision === readAuthSessionRevision()
+      && mutationOwners.current.get(operationKey) === owner;
     if (view !== "personal" || !authToken || updatingIds.has(item.id)) return;
 
+    mutationOwners.current.set(operationKey, owner);
     setUpdatingIds((current) => new Set(current).add(item.id));
     setItemMessages((current) => {
       const next = { ...current };
@@ -1047,8 +1127,10 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       const result = await withWishlistAuthRetry(
         authToken,
         (activeToken) => updateMyWishlistAlert(activeToken, item.id, payload),
+        { sessionRevision, isCurrent },
       );
       assertAuthSessionRevision(result.sessionRevision);
+      if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
       const updatedItem = result.value;
       wishlistDataGeneration.current += 1;
       setAuthToken(result.token);
@@ -1062,7 +1144,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       }));
       void refreshAlertEvents(result.token);
     } catch (error) {
-      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+      if (!consumerLifetime.active || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1077,18 +1159,28 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         }));
       }
     } finally {
-      setUpdatingIds((current) => {
-        const next = new Set(current);
-        next.delete(item.id);
-        return next;
-      });
+      if (isCurrent()) {
+        setUpdatingIds((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+      }
+      if (mutationOwners.current.get(operationKey) === owner) mutationOwners.current.delete(operationKey);
     }
   }
 
   async function handleDelete(item: WishlistItem) {
-    const sessionRevision = readAuthSessionRevision();
+    const sessionRevision = consumerSessionRevision;
+    const operationKey = `${sessionRevision}:delete:${item.id}`;
+    if (!consumerLifetime.active || sessionRevision !== readAuthSessionRevision()
+      || mutationOwners.current.has(operationKey)) return;
+    const owner = {};
+    const isCurrent = () => consumerLifetime.active && sessionRevision === readAuthSessionRevision()
+      && mutationOwners.current.get(operationKey) === owner;
     if (view !== "personal" || !authToken || deletingIds.has(item.id)) return;
 
+    mutationOwners.current.set(operationKey, owner);
     setDeletingIds((current) => new Set(current).add(item.id));
     setOperationMessage(null);
 
@@ -1096,9 +1188,14 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       const result = await withWishlistAuthRetry(
         authToken,
         (activeToken) => deleteMyWishlistItem(activeToken, item.id),
+        { sessionRevision, isCurrent },
       );
       assertAuthSessionRevision(result.sessionRevision);
+      if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
       wishlistDataGeneration.current += 1;
+      // Deletion retires pending history without starting another request.
+      alertEventsRequestVersion.current += 1;
+      setAlertEventsLoading(false);
       setAuthToken(result.token);
       setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
       setView("personal");
@@ -1114,7 +1211,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       });
       setOperationMessage({ kind: "success", text: `${item.title} was removed from your personal wishlist.` });
     } catch (error) {
-      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+      if (!consumerLifetime.active || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1126,11 +1223,14 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         });
       }
     } finally {
-      setDeletingIds((current) => {
-        const next = new Set(current);
-        next.delete(item.id);
-        return next;
-      });
+      if (isCurrent()) {
+        setDeletingIds((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+      }
+      if (mutationOwners.current.get(operationKey) === owner) mutationOwners.current.delete(operationKey);
     }
   }
 
@@ -1203,7 +1303,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           token={authToken}
           onAdded={handleItemAdded}
           onAuthenticationRequired={handleAuthenticationRequired}
-          onTokenChanged={setAuthToken}
+          onTokenChanged={(token) => { if (consumerLifetime.active && consumerSessionRevision === readAuthSessionRevision()) setAuthToken(token); }}
         />
       )}
 

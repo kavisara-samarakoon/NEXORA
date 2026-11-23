@@ -120,12 +120,19 @@ export default function NotificationPreferencesPanel({
 
   useEffect(() => {
     let active = true;
+    let requestVersion = 0;
 
     async function loadPreferences() {
-      // A boundary can rerender the panel before its parent replaces the token prop.
-      if (authToken !== readAuthToken()) return;
-      const sessionRevision = readAuthSessionRevision();
+      // Retained callbacks belong to this effect and render's session, even if
+      // a replacement account happens to use the same token string.
+      if (!active || authSessionRevision !== readAuthSessionRevision()
+        || authToken !== readAuthToken()) return;
+      const sessionRevision = authSessionRevision;
+      const currentVersion = ++requestVersion;
       const dataGeneration = preferenceDataGeneration.current;
+      const isCurrent = () => active && currentVersion === requestVersion
+        && sessionRevision === readAuthSessionRevision()
+        && dataGeneration === preferenceDataGeneration.current;
       setLoadState("loading");
       setMessage(null);
 
@@ -143,8 +150,9 @@ export default function NotificationPreferencesPanel({
               throw error;
             }
           },
+          { sessionRevision, isCurrent },
         );
-        if (!active) return;
+        if (!isCurrent()) return;
         assertAuthSessionRevision(result.sessionRevision);
         if (dataGeneration !== preferenceDataGeneration.current) return;
         onTokenChanged(result.token);
@@ -153,7 +161,7 @@ export default function NotificationPreferencesPanel({
         setPreferenceSessionRevision(result.sessionRevision);
         setLoadState("ready");
       } catch (error) {
-        if (!active) return;
+        if (!isCurrent()) return;
         if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
         if (dataGeneration !== preferenceDataGeneration.current) return;
         const details = normalizeNotificationPreferenceError(error);

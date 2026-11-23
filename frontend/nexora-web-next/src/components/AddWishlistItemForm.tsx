@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   assertAuthSessionRevision,
   isAuthSessionInvalidatedError,
@@ -33,6 +33,15 @@ export default function AddWishlistItemForm({
   onAuthenticationRequired,
   onTokenChanged,
 }: AddWishlistItemFormProps) {
+  const renderSessionRevision = readAuthSessionRevision();
+  const lifetime = useRef({ active: true, generation: 0 });
+  const pendingSubmission = useRef(false);
+  useEffect(() => {
+    const owner = lifetime.current;
+    owner.active = true;
+    owner.generation += 1;
+    return () => { owner.active = false; owner.generation += 1; };
+  }, [lifetime]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{
     tone: "error" | "success";
@@ -42,6 +51,10 @@ export default function AddWishlistItemForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const generation = lifetime.current.generation;
+    const isCurrent = () => lifetime.current.active && generation === lifetime.current.generation
+      && renderSessionRevision === readAuthSessionRevision();
+    if (!isCurrent() || pendingSubmission.current) return;
     const form = event.currentTarget;
     const formData = new FormData(form);
     const title = readRequiredText(formData, "title");
@@ -72,7 +85,8 @@ export default function AddWishlistItemForm({
       alertActive: formData.get("alertActive") === "on",
     };
 
-    const sessionRevision = readAuthSessionRevision();
+    const sessionRevision = renderSessionRevision;
+    pendingSubmission.current = true;
     setIsSubmitting(true);
     setMessage(null);
 
@@ -80,7 +94,9 @@ export default function AddWishlistItemForm({
       const result = await withWishlistAuthRetry(
         token,
         (activeToken) => addMyWishlistItem(activeToken, payload),
+        { sessionRevision, isCurrent },
       );
+      if (!isCurrent()) return;
       assertAuthSessionRevision(result.sessionRevision);
       const item = result.value;
       onTokenChanged(result.token);
@@ -88,7 +104,7 @@ export default function AddWishlistItemForm({
       form.reset();
       setMessage({ tone: "success", text: `${item.title} is now stored in this account’s personal wishlist.` });
     } catch (error) {
-      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+      if (!isCurrent() || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = normalizeUserWishlistError(error);
       if (details.status === 401) onAuthenticationRequired();
       setMessage({
@@ -97,7 +113,8 @@ export default function AddWishlistItemForm({
         requestId: details.requestId,
       });
     } finally {
-      setIsSubmitting(false);
+      pendingSubmission.current = false;
+      if (isCurrent()) setIsSubmitting(false);
     }
   }
 

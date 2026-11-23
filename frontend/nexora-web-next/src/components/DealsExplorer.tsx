@@ -19,6 +19,7 @@ import { normalizeAuthError } from "@/lib/auth";
 import { hasAvailableDealRating } from "@/lib/deal-rating";
 import {
   AUTH_STATE_EVENT,
+  AuthSessionInvalidatedError,
   assertAuthSessionRevision,
   isAuthSessionInvalidatedError,
   readAuthSessionRevision,
@@ -390,6 +391,7 @@ function DealSearchQuery({ onSearch }: { onSearch: (title: string) => void }) {
 }
 
 export default function DealsExplorer({ deals, source }: DealsResult) {
+  const renderSessionRevision = readAuthSessionRevision();
   const [mode, setMode] = useState<DealsMode>("curated");
   const [externalStatus, setExternalStatus] = useState<ExternalDealsStatus>("idle");
   const [externalDeals, setExternalDeals] = useState<readonly GameDeal[]>([]);
@@ -412,6 +414,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     savedWishlistItemsRef.current = items;
     setSavedWishlistItems(items);
   }, []);
+  const previousAuthRevision = useRef(renderSessionRevision);
+  const wishlistLifetime = useRef<object | null>(null);
   const previousAuthToken = useRef<string | null>(null);
   const requestVersion = useRef(0);
   const mounted = useRef(false);
@@ -438,14 +442,24 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   }, []);
 
   useEffect(() => {
+    wishlistLifetime.current = {};
+    savingDealKeys.current = new Set();
+    return () => {
+      wishlistLifetime.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
+    let version = 0;
 
     async function refreshToken() {
+      const request = ++version;
       let token = readAuthToken();
       try {
         token = token ?? await ensureAuthToken();
       } catch (error) {
-        if (!active) return;
+        if (!active || request !== version) return;
         const details = normalizeAuthError(error);
         setAuthToken(null);
         setAuthChecked(true);
@@ -456,8 +470,15 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         return;
       }
 
-      if (!active) return;
-      if (previousAuthToken.current !== token) {
+      if (!active || request !== version) return;
+      const revision = readAuthSessionRevision();
+      const sessionChanged = previousAuthRevision.current !== revision;
+      if (sessionChanged) {
+        previousAuthRevision.current = revision;
+        savingDealKeys.current = new Set();
+        setSavingDeals(new Set());
+      }
+      if (sessionChanged || previousAuthToken.current !== token) {
         previousAuthToken.current = token;
         wishlistVersion.current += 1;
         storeWishlistItems([]);
@@ -489,20 +510,21 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     let active = true;
     const token = authToken;
     const version = wishlistVersion.current;
-    const sessionRevision = readAuthSessionRevision();
+    const sessionRevision = renderSessionRevision;
+    const isCurrent = () => active && sessionRevision === readAuthSessionRevision()
+      && version === wishlistVersion.current && savingDealKeys.current.size === 0;
 
     async function syncSavedWishlist() {
+      if (!isCurrent()) return;
       setWishlistSyncWarning(null);
       try {
-        const result = await withWishlistAuthRetry(token, getMyWishlist);
-        if (!active || version !== wishlistVersion.current || savingDealKeys.current.size > 0) return;
+        const result = await withWishlistAuthRetry(token, getMyWishlist, { sessionRevision, isCurrent });
+        if (!isCurrent()) return;
         assertAuthSessionRevision(result.sessionRevision);
         setAuthToken(result.token);
         storeWishlistItems(result.value);
       } catch (error) {
-        if (!active) return;
-        if (version !== wishlistVersion.current || savingDealKeys.current.size > 0) return;
-        if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+        if (!isCurrent() || isAuthSessionInvalidatedError(error)) return;
         const details = protectedWishlistError(error);
         if (details.status === 401) {
           clearAuthToken();
@@ -525,7 +547,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     return () => {
       active = false;
     };
-  }, [authChecked, authToken, externalDeals, externalStatus, mode, storeWishlistItems, wishlistSyncRevision]);
+  }, [authChecked, authToken, externalDeals, externalStatus, mode, renderSessionRevision, storeWishlistItems, wishlistSyncRevision]);
 
   const visibleDeals = mode === "external" && externalStatus === "ready" ? externalDeals : deals;
   const isExternalReady = mode === "external" && externalStatus === "ready";
@@ -617,12 +639,18 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
   async function saveDeal(deal: GameDeal, changeAlert = false) {
     const key = dealStateKey(displayedDealScope, deal);
     const operationKey = wishlistOperationKey(deal);
-    if (savingDealKeys.current.has(operationKey)) return;
+    const lifetime = wishlistLifetime.current;
+    const locks = savingDealKeys.current;
+    const sessionRevision = renderSessionRevision;
+    if (!lifetime || !mounted.current || sessionRevision !== readAuthSessionRevision()) return;
+    if (locks.has(operationKey)) return;
     if (!changeAlert && findMatchingWishlistItem(deal, savedWishlistItemsRef.current)) return;
 
-    const sessionRevision = readAuthSessionRevision();
     // Save and Alert share a lock across feed scopes, acquired before auth awaits.
-    savingDealKeys.current.add(operationKey);
+    locks.add(operationKey);
+    const ownsLock = () => mounted.current && wishlistLifetime.current === lifetime
+      && savingDealKeys.current === locks && locks.has(operationKey);
+    const isCurrent = () => ownsLock() && sessionRevision === readAuthSessionRevision();
     wishlistVersion.current += 1;
     setSavingDeals((current) => new Set(current).add(operationKey));
     setSaveMessages((current) => {
@@ -632,9 +660,8 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
     });
 
     try {
-      const token = await ensureAuthToken();
-      assertAuthSessionRevision(sessionRevision);
-      if (!mounted.current) return;
+      const token = await ensureAuthToken({ operation: { sessionRevision, isCurrent } });
+      if (!isCurrent()) return;
       setAuthChecked(true);
       if (!token) {
         setAuthToken(null);
@@ -665,28 +692,29 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
           // A successful idempotent POST may return an existing paused item.
           // Keep it across auth retry so a PATCH 401 does not repeat the POST.
           const item = postedItem ?? await addMyWishlistItem(activeToken, wishlistPayloadFor(deal));
-          assertAuthSessionRevision(sessionRevision);
+          if (!isCurrent()) throw new AuthSessionInvalidatedError();
           postedItem = item;
           return changeAlert && !item.alertActive
             ? updateMyWishlistAlert(activeToken, item.id, { alertActive: true })
             : item;
         } catch (error) {
-          assertAuthSessionRevision(sessionRevision);
+          if (!isCurrent()) throw new AuthSessionInvalidatedError();
           if (protectedWishlistError(error).status !== 409) throw error;
           // Another tab or a not-yet-completed sync may already have saved it.
           const items = await getMyWishlist(activeToken);
-          assertAuthSessionRevision(sessionRevision);
+          if (!isCurrent()) throw new AuthSessionInvalidatedError();
           const item = findMatchingWishlistItem(deal, items);
           if (!item) throw error;
           return changeAlert && !item.alertActive
             ? updateMyWishlistAlert(activeToken, item.id, { alertActive: true })
             : item;
         }
-      });
-      if (!mounted.current || readAuthToken() !== result.token) return;
+      }, { sessionRevision, isCurrent });
+      const currentToken = readAuthToken();
+      if (!isCurrent() || !currentToken) return;
       assertAuthSessionRevision(result.sessionRevision);
       const savedItem = result.value;
-      setAuthToken(result.token);
+      setAuthToken(currentToken);
       // Invalidate any GET started before this mutation completed.
       wishlistVersion.current += 1;
       const current = savedWishlistItemsRef.current;
@@ -701,8 +729,7 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         },
       }));
     } catch (error) {
-      if (!mounted.current) return;
-      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
+      if (!isCurrent() || isAuthSessionInvalidatedError(error)) return;
       setAuthChecked(true);
       const details = protectedWishlistError(error);
       if (details.status === 401) {
@@ -721,8 +748,9 @@ export default function DealsExplorer({ deals, source }: DealsResult) {
         },
       }));
     } finally {
-      savingDealKeys.current.delete(operationKey);
-      if (mounted.current) {
+      const releaseUI = ownsLock();
+      locks.delete(operationKey);
+      if (releaseUI) {
         setSavingDeals((current) => {
           const next = new Set(current);
           next.delete(operationKey);

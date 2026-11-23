@@ -8,7 +8,7 @@ import {
   type WishlistPriority,
   type WishlistStatus,
 } from "@/data/wishlist";
-import { withAuthSessionRetry } from "@/lib/auth-client";
+import { withAuthSessionRetry, type AuthOperationValidity } from "@/lib/auth-client";
 import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
 const WISHLIST_REQUEST_TIMEOUT_MS = 8000;
@@ -341,10 +341,12 @@ export function normalizeUserWishlistError(error: unknown): UserWishlistError {
 export function withWishlistAuthRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
+  operation?: AuthOperationValidity,
 ): Promise<{ value: T; token: string; sessionRevision: number }> {
   return withAuthSessionRetry(
     token,
     request,
     (error) => normalizeUserWishlistError(error).status === 401,
+    operation,
   );
 }
