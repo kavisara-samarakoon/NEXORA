@@ -112,7 +112,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
         <p className="sn-gateway-response__answer">{response.answer}</p>
 
         {recommendations.length > 0 ? (
-          <div className="sn-gateway-response__chips" aria-label="Top recommendations">
+          <div className="sn-gateway-response__chips" role="group" aria-label="Top recommendations">
             {recommendations.map((item) => (
               <span key={item}>{item}</span>
             ))}
@@ -120,7 +120,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
         ) : null}
 
         {nextActions.length > 0 ? (
-          <div className="sn-gateway-response__actions" aria-label="Suggested next actions">
+          <div className="sn-gateway-response__actions" role="group" aria-label="Suggested next actions">
             {nextActions.map((item) => (
               <span key={item}>{item}</span>
             ))}

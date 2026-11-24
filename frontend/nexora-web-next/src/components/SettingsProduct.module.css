@@ -464,7 +464,7 @@
 }
 
 .scene :global(.st-overview__label span) {
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;

@@ -6376,3 +6376,45 @@ test("F4-C01 compact menu scopes Escape and preserves outside dismissal", async 
   cleanup();
   assert.equal(listeners.size, 0);
 });
+
+test("F4-C02B invalid target price focuses its field only while the submit handler owns the session", async () => {
+  const h = await sentinelChatHarness();
+  const form = await wishlistConsumerHarness(h, "AddWishlistItemForm");
+  let focusCount = 0;
+  const event = {
+    preventDefault() {},
+    currentTarget: {
+      values: { ...alertItem, targetPrice: "" },
+      querySelector(selector) {
+        assert.equal(selector, "#wl-add-target-price");
+        return { focus() { focusCount++; } };
+      },
+    },
+  };
+  try {
+    const submit = form.render().handleSubmit;
+    await submit(event);
+    assert.equal(focusCount, 1);
+    assert.equal(form.render().state.message.invalidField, "targetPrice");
+    h.auth.startAuthSession(sentinelSession(2, "replacement"));
+    await submit(event);
+    form.dispose();
+    await submit(event);
+    assert.equal(focusCount, 1);
+    assert.equal(h.calls.length, 0);
+  } finally { form.dispose(); h.restore(); }
+});
+
+test("F4-C02B Sentinel exposes named groups with their response text", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    h.respond(insightPath, sentinelAnswer("Fixture answer", { recommendations: ["Fixture pick"], nextActions: ["Fixture action"] }));
+    await h.submit("Fixture prompt");
+    const answer = h.answer();
+    assert.deepEqual(answer.recommendations, ["Fixture pick"]);
+    assert.deepEqual(answer.nextActions, ["Fixture action"]);
+    const file = await readFile(new URL("../src/components/SentinelChat.tsx", import.meta.url), "utf8");
+    assert.match(file, /role="group" aria-label="Top recommendations"/);
+    assert.match(file, /role="group" aria-label="Suggested next actions"/);
+  } finally { h.restore(); }
+});

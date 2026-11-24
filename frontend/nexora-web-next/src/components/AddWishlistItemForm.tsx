@@ -47,6 +47,7 @@ export default function AddWishlistItemForm({
     tone: "error" | "success";
     text: string;
     requestId?: string | null;
+    invalidField?: "targetPrice";
   } | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -67,7 +68,12 @@ export default function AddWishlistItemForm({
     }
 
     if (!targetPrice) {
-      setMessage({ tone: "error", text: "Enter a target price in a supported format, such as $15.00 or FREE." });
+      setMessage({
+        tone: "error",
+        text: "Enter a target price in a supported format, such as $15.00 or FREE.",
+        invalidField: "targetPrice",
+      });
+      form.querySelector<HTMLInputElement>("#wl-add-target-price")?.focus();
       return;
     }
 
@@ -118,6 +124,8 @@ export default function AddWishlistItemForm({
     }
   }
 
+  const targetPriceInvalid = message?.invalidField === "targetPrice";
+
   return (
     <section className="wl-add-panel" id="add-personal-wishlist-item" aria-labelledby="wl-add-title">
       <div className="wl-add-panel__heading">
@@ -153,7 +161,20 @@ export default function AddWishlistItemForm({
         </label>
         <label className="wl-add-form__field" htmlFor="wl-add-target-price">
           <span>Target price</span>
-          <input id="wl-add-target-price" name="targetPrice" type="text" required maxLength={40} placeholder="$24.99" disabled={isSubmitting} aria-describedby="wl-add-target-help" />
+          <input
+            id="wl-add-target-price"
+            name="targetPrice"
+            type="text"
+            required
+            maxLength={40}
+            placeholder="$24.99"
+            disabled={isSubmitting}
+            aria-invalid={targetPriceInvalid || undefined}
+            aria-describedby={targetPriceInvalid ? "wl-add-target-help wl-add-message" : "wl-add-target-help"}
+            onChange={(event) => {
+              if (targetPriceInvalid && normalizeTargetPriceInput(event.currentTarget.value.trim())) setMessage(null);
+            }}
+          />
           <small id="wl-add-target-help">Use a value such as $15.00 or FREE.</small>
         </label>
         <label className="wl-add-form__field" htmlFor="wl-add-lowest-ever">

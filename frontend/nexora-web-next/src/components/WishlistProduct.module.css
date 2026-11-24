@@ -177,7 +177,7 @@
 .scene :global(.wl-hero__stats span) {
   display: block;
   margin-top: 6px;
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -286,7 +286,7 @@
 .scene :global(.wl-add-panel__heading span),
 .scene :global(.wl-network__header span),
 .scene :global(.wl-network__section-label span) {
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -554,7 +554,7 @@
 
 .scene :global(.wl-card__prices span) {
   display: block;
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -658,7 +658,7 @@
 }
 
 .scene :global(.wl-card__history-stats dt) {
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.65rem;
   text-transform: uppercase;
 }
@@ -1027,7 +1027,7 @@
 }
 
 .scene :global(.wl-alert-history__meta) {
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.72rem;
 }
 

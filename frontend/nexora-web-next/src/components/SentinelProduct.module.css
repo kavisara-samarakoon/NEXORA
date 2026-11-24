@@ -299,7 +299,7 @@
 }
 
 .scene :global(.sn-status__section-label span) {
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -948,7 +948,7 @@
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
-  color: var(--nx-faint);
+  color: var(--nx-muted);
   font-size: 0.72rem;
 }
 

@@ -108,7 +108,7 @@ function PreferenceRows({
                 <span aria-hidden="true" />
               </button>
             ) : (
-              <span className="st-setting-pill" aria-label={`${item.label}: ${item.statusLabel ?? "Preview"}`}>
+              <span className="st-setting-pill">
                 <span>{item.statusLabel ?? "Preview"}</span>
               </span>
             )}
