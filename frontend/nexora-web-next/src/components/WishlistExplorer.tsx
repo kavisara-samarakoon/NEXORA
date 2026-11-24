@@ -380,7 +380,7 @@ function WishlistCard({
   isUpdating: boolean;
   item: WishlistItem;
   message?: ItemMessage;
-  onDelete: (item: WishlistItem) => void;
+  onDelete: (item: WishlistItem, button: HTMLButtonElement) => void;
   onAuthenticationRequired: () => void;
   onTokenChanged: (token: string) => void;
   onUpdateAlert: (
@@ -607,10 +607,11 @@ function WishlistCard({
         <button
           className="wl-card__remove"
           type="button"
-          disabled={!canManage || isDeleting || isUpdating}
+          disabled={!canManage || isUpdating}
+          aria-disabled={isDeleting || undefined}
           aria-label={`Remove ${item.title}`}
           title={canManage ? `Remove ${item.title} from your personal wishlist` : "Sign in to manage personal wishlist items"}
-          onClick={() => onDelete(item)}
+          onClick={(event) => onDelete(item, event.currentTarget)}
         >
           <span aria-hidden="true">{isDeleting ? "…" : "✕"}</span>
         </button>
@@ -840,6 +841,13 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [refreshKey, setRefreshKey] = useState(0);
   const [personalWishlistRevision, setPersonalWishlistRevision] = useState(0);
   const alertEventsRequestVersion = useRef(0);
+  const wishlistGridRef = useRef<HTMLDivElement>(null);
+  const pendingDeleteFocus = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    const restore = pendingDeleteFocus.current;
+    pendingDeleteFocus.current = null;
+    restore?.();
+  });
   const mutationOwners = useRef(new Map<string, object>());
   // Successful mutations invalidate snapshots captured before their completion.
   const wishlistDataGeneration = useRef(0);
@@ -849,7 +857,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   useEffect(() => {
     const lifetime = { active: true };
     consumerLifetimeRef.current = lifetime;
-    return () => { lifetime.active = false; };
+    return () => {
+      lifetime.active = false;
+      pendingDeleteFocus.current?.();
+      pendingDeleteFocus.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -1170,7 +1182,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     }
   }
 
-  async function handleDelete(item: WishlistItem) {
+  async function handleDelete(item: WishlistItem, button?: HTMLButtonElement) {
     const sessionRevision = consumerSessionRevision;
     const operationKey = `${sessionRevision}:delete:${item.id}`;
     if (!consumerLifetime.active || sessionRevision !== readAuthSessionRevision()
@@ -1179,6 +1191,16 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     const isCurrent = () => consumerLifetime.active && sessionRevision === readAuthSessionRevision()
       && mutationOwners.current.get(operationKey) === owner;
     if (view !== "personal" || !authToken || deletingIds.has(item.id)) return;
+
+    const focusedButton = button && document.activeElement === button ? button : null;
+    const visibleButtons = Array.from(wishlistGridRef.current?.querySelectorAll<HTMLButtonElement>(".wl-card__remove") ?? []);
+    const focusIndex = focusedButton ? visibleButtons.indexOf(focusedButton) : -1;
+    let focusMoved = false;
+    let focusQueued = false;
+    const trackFocus = (event: FocusEvent) => {
+      if (event.target !== focusedButton) focusMoved = true;
+    };
+    if (focusedButton) document.addEventListener("focusin", trackFocus);
 
     mutationOwners.current.set(operationKey, owner);
     setDeletingIds((current) => new Set(current).add(item.id));
@@ -1192,6 +1214,20 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       );
       assertAuthSessionRevision(result.sessionRevision);
       if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
+      if (focusedButton) {
+        focusQueued = true;
+        pendingDeleteFocus.current = () => {
+          document.removeEventListener("focusin", trackFocus);
+          if (focusMoved || !consumerLifetime.active || sessionRevision !== readAuthSessionRevision()
+            || (document.activeElement !== document.body && document.activeElement !== focusedButton)) return;
+          const candidates = Array.from(wishlistGridRef.current?.querySelectorAll<HTMLButtonElement>(".wl-card__remove") ?? [])
+            .filter((candidate) => !candidate.disabled && candidate.getAttribute("aria-disabled") !== "true" && candidate.checkVisibility({ visibilityProperty: true }));
+          const adjacent = candidates[Math.min(Math.max(focusIndex, 0), candidates.length - 1)];
+          const fallback = document.querySelector<HTMLButtonElement>("#add-personal-wishlist-item button[type=submit]");
+          const target = adjacent ?? fallback;
+          if (target?.isConnected && !target.disabled && target.checkVisibility({ visibilityProperty: true })) target.focus();
+        };
+      }
       wishlistDataGeneration.current += 1;
       // Deletion retires pending history without starting another request.
       alertEventsRequestVersion.current += 1;
@@ -1223,6 +1259,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         });
       }
     } finally {
+      if (focusedButton && !focusQueued) document.removeEventListener("focusin", trackFocus);
       if (isCurrent()) {
         setDeletingIds((current) => {
           const next = new Set(current);
@@ -1362,7 +1399,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
             <span><strong>{filteredItems.length}</strong> tracked games</span>
             <span>{isPersonal ? "Personal account feed" : source === "api" ? "Public backend preview" : "Static fallback preview"}</span>
           </div>
-          <div className="wl-grid">
+          <div className="wl-grid" ref={wishlistGridRef}>
             {filteredItems.map((item) => (
               <WishlistCard
                 alertIsActive={alerts[item.id] ?? item.alertActive}
@@ -1381,7 +1418,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
                   item,
                 )}
                 onAuthenticationRequired={handleAuthenticationRequired}
-                onDelete={(candidate) => void handleDelete(candidate)}
+                onDelete={(candidate, button) => void handleDelete(candidate, button)}
                 onTokenChanged={setAuthToken}
                 onUpdateAlert={handleAlertUpdate}
               />

@@ -28,6 +28,8 @@ const PRIMARY_LINKS = [
 export default function CinematicTopNav({ className }: { className?: string }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLUListElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
   const isActiveRoute = (href: string) => {
@@ -59,7 +61,12 @@ export default function CinematicTopNav({ className }: { className?: string }) {
     if (!menuOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key !== "Escape") return;
+      const focusedMenu = menuPanelRef.current?.contains(document.activeElement);
+      const focusedToggle = document.activeElement === menuToggleRef.current;
+      if (!focusedMenu && !focusedToggle) return;
+      setMenuOpen(false);
+      if (focusedMenu) menuToggleRef.current?.focus();
     };
     const onPointerDown = (event: PointerEvent) => {
       if (navRef.current && !navRef.current.contains(event.target as Node)) {
@@ -139,6 +146,7 @@ export default function CinematicTopNav({ className }: { className?: string }) {
 
           <button
             type="button"
+            ref={menuToggleRef}
             className={styles.menuButton}
             aria-expanded={menuOpen}
             aria-controls="nexora-compact-menu"
@@ -158,7 +166,7 @@ export default function CinematicTopNav({ className }: { className?: string }) {
         </div>
 
         {menuOpen ? (
-          <ul id="nexora-compact-menu" className={styles.menuPanel}>
+          <ul ref={menuPanelRef} id="nexora-compact-menu" className={styles.menuPanel}>
             {PRIMARY_LINKS.map((link) => {
               const isActive = isActiveRoute(link.href);
 

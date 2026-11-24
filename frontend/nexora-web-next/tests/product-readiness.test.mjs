@@ -470,6 +470,7 @@ async function accountOperationHandlers(h) {
     refreshAlertEvents: () => {},
     active: true, requestVersion: 0, item: alertItem, priceHistoryState: "idle", PRICE_HISTORY_REQUEST_LIMIT: 12,
     alertEventsRequestVersion: { current: 0 },
+    wishlistGridRef: { current: null }, pendingDeleteFocus: { current: null },
     wishlistDataGeneration: { current: 0 }, mutationOwners: { current: new Map() },
     consumerLifetime: { active: true }, consumerSessionRevision: h.auth.readAuthSessionRevision(),
     readAuthSessionRevision: h.auth.readAuthSessionRevision,
@@ -4194,8 +4195,10 @@ async function discoveryWindowHarness(scene, initialTab = "giveaways") {
     compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
   }).outputText;
   let activeTab = initialTab;
+  const tabRefs = { current: {} };
   const mocks = {
     React, isExternalHref,
+    useRef: () => tabRefs,
     Link: ({ children, ...props }) => React.createElement("a", props, children),
     useState: () => [activeTab, value => { activeTab = typeof value === "function" ? value(activeTab) : value; }],
     useHomeScene: () => scene,
@@ -6314,4 +6317,62 @@ test("F3-R05/R06 retired Deals and current Sentinel can share one legitimate ref
     assert.equal((await h.auth.readCurrentUser()).id, 1);
     assert.deepEqual(h.answer(), sentinelAnswer("Recovered answer"));
   } finally { deals.dispose(); h.restore(); }
+});
+
+for (const key of ["ArrowRight", "ArrowLeft"]) {
+  test(`F4-C01 Discovery ${key} moves focus with roving selection repeatedly`, async () => {
+    const h = await discoveryWindowHarness(giveawayDiscoveryScene(null), "deals");
+    let focused = "deals";
+    for (const name of ["Deals", "Giveaways"]) {
+      const tab = h.find(node => node.props?.role === "tab" && node.props.children === name);
+      tab.props.ref?.({ focus() { focused = name.toLowerCase(); } });
+    }
+    for (let i = 0; i < 4; i++) {
+      const selected = h.find(node => node.props?.role === "tab" && node.props["aria-selected"]);
+      let prevented = false;
+      selected.props.onKeyDown({ key, preventDefault() { prevented = true; } });
+      const next = h.find(node => node.props?.role === "tab" && node.props["aria-selected"]);
+      assert.equal(prevented, true);
+      assert.equal(next.props.id, "discovery-tab-" + focused);
+      assert.equal(next.props.tabIndex, 0);
+      assert.equal(h.find(node => node.props?.role === "tab" && !node.props["aria-selected"]).props.tabIndex, -1);
+    }
+  });
+}
+
+test("F4-C01 Discovery mouse selection retains panel ownership", async () => {
+  const h = await discoveryWindowHarness(giveawayDiscoveryScene(null), "deals");
+  h.find(node => node.props?.role === "tab" && node.props.children === "Giveaways").props.onClick();
+  assert.equal(h.find(node => node.props?.role === "tab" && node.props["aria-selected"]).props.id, "discovery-tab-giveaways");
+  assert.match(h.html(), /aria-labelledby="discovery-tab-giveaways"/);
+});
+
+test("F4-C01 compact menu scopes Escape and preserves outside dismissal", async () => {
+  const source = await readFile(new URL("../src/components/CinematicTopNav.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("nav.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const component = ast.statements.find(node => node.name?.text === "CinematicTopNav");
+  const effect = component.body.statements.find(node => ts.isExpressionStatement(node) && node.getText(ast).includes('document.addEventListener("keydown"'));
+  const output = ts.transpileModule(effect.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const listeners = new Map(), states = [];
+  const link = {}, background = {}, toggle = { focus() { document.activeElement = toggle; } };
+  const document = { activeElement: link, addEventListener: (type, handler) => listeners.set(type, handler), removeEventListener: type => listeners.delete(type) };
+  let cleanup;
+  const mocks = {
+    useEffect: fn => { cleanup = fn(); }, menuOpen: true, document,
+    setMenuOpen: value => states.push(value),
+    menuToggleRef: { current: toggle }, menuPanelRef: { current: { contains: node => node === link } },
+    navRef: { current: { contains: node => node === link || node === toggle } },
+  };
+  new Function(...Object.keys(mocks), output)(...Object.values(mocks));
+  listeners.get("keydown")({ key: "Escape" });
+  assert.deepEqual(states, [false]);
+  assert.equal(document.activeElement, toggle);
+  document.activeElement = background;
+  listeners.get("keydown")({ key: "Escape" });
+  assert.deepEqual(states, [false]);
+  assert.equal(document.activeElement, background);
+  listeners.get("pointerdown")({ target: background });
+  assert.deepEqual(states, [false, false]);
+  cleanup();
+  assert.equal(listeners.size, 0);
 });
