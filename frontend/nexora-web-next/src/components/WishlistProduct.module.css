@@ -350,9 +350,9 @@
   padding: 0 14px;
 }
 
-.scene :global(.wl-add-form input::placeholder),
-.scene :global(.wl-search input::placeholder) {
-  color: var(--nx-faint);
+.scene :global(.wl-add-form) input::placeholder,
+.scene :global(.wl-search) input::placeholder {
+  color: var(--nx-muted);
 }
 
 .scene :global(.wl-add-form__check) {
