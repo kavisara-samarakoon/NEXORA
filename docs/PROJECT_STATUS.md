@@ -411,7 +411,7 @@ recorded at the top of this document.
   processes.
 - Local PostgreSQL 16 Docker Compose setup with safe example values, health
   checks, and persistent named-volume storage.
-- Optional local devcontainer foundation with Java 17, Maven, Node.js 20, npm,
+- Optional local devcontainer foundation with Java 17, Maven, Node.js 24, npm,
   Git, Docker CLI access, forwarded development ports, and no automatic service
   startup. Host-native development and the PostgreSQL-only Compose setup remain
   supported.

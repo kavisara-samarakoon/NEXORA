@@ -154,16 +154,16 @@ check_optional_frontend_tools() {
         output="$(node --version 2>&1)"
         version="${output%%$'\n'*}"
         if major="$(version_major "${version}")"; then
-            if ((major >= 20)); then
-                pass "Node.js version ${version#v} satisfies the recommended 20+"
+            if ((major == 24)); then
+                pass "Node.js version ${version#v} satisfies the recommended 24.x"
             else
-                warn "Node.js ${version#v} is below the recommended 20+ for frontend review"
+                warn "Node.js ${version#v} differs from the recommended 24.x for frontend review"
             fi
         else
-            warn "Node.js is available, but its version could not be parsed; Node.js 20+ is recommended"
+            warn "Node.js is available, but its version could not be parsed; Node.js 24.x is recommended"
         fi
     else
-        warn "Node.js was not found; frontend review requires Node.js 20+"
+        warn "Node.js was not found; frontend review requires Node.js 24.x"
     fi
 
     if command_exists npm; then

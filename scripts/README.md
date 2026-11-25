@@ -18,7 +18,7 @@ another directory.
 
 The script checks required Git, Java 17+, Maven, curl, Python 3, and Bash
 availability plus the backend/frontend directories, reviewer documentation,
-contracts, and executable reviewer scripts. Node.js 20+ and npm are optional
+contracts, and executable reviewer scripts. Node.js 24.x and npm are optional
 for backend/API-only review: missing or outdated frontend tools produce warnings
 because they are needed when reviewing the frontend.
 
