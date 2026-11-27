@@ -72,7 +72,9 @@ class GeminiSentinelClientTests {
                         request.headers().firstValue("x-goog-api-key").orElseThrow()),
                 () -> assertFalse(request.uri().toString().contains("test-only-placeholder")),
                 () -> assertFalse(body.contains("test-only-placeholder")),
-                () -> assertFalse(json.path("store").booleanValue()),
+                () -> assertFalse(json.has("store")),
+                () -> assertEquals("user", json.path("contents").get(0).path("role").stringValue()),
+                () -> assertTrue(json.path("systemInstruction").path("role").isMissingNode()),
                 () -> assertEquals(
                         333,
                         json.path("generationConfig").path("maxOutputTokens").intValue()),
@@ -109,8 +111,40 @@ class GeminiSentinelClientTests {
         SentinelGatewayInput input = new SentinelGatewayInput(
                 7L, "Question", SentinelInsightContext.GENERAL);
 
+        assertReason(input, clientReturning(401, "unauthorized"),
+                SentinelProviderFallbackReason.GEMINI_AUTH_FAILED);
+        assertReason(input, clientReturning(403, "forbidden"),
+                SentinelProviderFallbackReason.GEMINI_AUTH_FAILED);
+        assertReason(input, clientReturning(404, "model missing"),
+                SentinelProviderFallbackReason.GEMINI_MODEL_UNAVAILABLE);
         assertReason(input, clientReturning(429, "rate limited"),
+                SentinelProviderFallbackReason.GEMINI_RATE_LIMITED);
+        assertReason(input, clientReturning(503, "service unavailable"),
+                SentinelProviderFallbackReason.GEMINI_UNAVAILABLE);
+        assertReason(input, clientReturning(400, "bad request"),
                 SentinelProviderFallbackReason.GEMINI_NON_SUCCESS_RESPONSE);
+    }
+
+    @Test
+    void transientFailureRetriesOnceAndSucceedsWhenSecondAttemptPasses() {
+        java.util.concurrent.atomic.AtomicInteger attempts = new java.util.concurrent.atomic.AtomicInteger();
+        GeminiSentinelClient client = new GeminiSentinelClient(
+                properties(),
+                objectMapper,
+                request -> {
+                    if (attempts.incrementAndGet() == 1) {
+                        throw new IOException("temporary timeout");
+                    }
+                    return new GeminiSentinelClient.GeminiHttpResponse(
+                            200,
+                            "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Recovered after retry.\"}]}}]}");
+                });
+
+        String answer = client.generateText(new SentinelGatewayInput(
+                7L, "Question", SentinelInsightContext.GENERAL));
+
+        assertEquals(2, attempts.get());
+        assertEquals("Recovered after retry.", answer);
     }
 
     @Test

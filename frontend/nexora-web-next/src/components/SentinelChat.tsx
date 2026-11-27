@@ -42,6 +42,9 @@ function SentinelAvatar() {
 
 const fallbackReasonCopy: Record<SentinelProviderFallbackReason, string> = {
   gemini_not_configured: "External AI is not configured for this local session.",
+  gemini_auth_failed: "The external provider rejected authentication.",
+  gemini_model_unavailable: "The configured external AI model could not be found.",
+  gemini_rate_limited: "The external provider is temporarily rate-limited.",
   gemini_non_success_response: "The external provider returned a non-success response.",
   gemini_invalid_response: "The external provider returned an unusable response.",
   gemini_timeout_or_network: "The external provider could not be reached in time.",

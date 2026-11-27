@@ -6419,6 +6419,46 @@ test("F4-C02B Sentinel exposes named groups with their response text", async () 
   } finally { h.restore(); }
 });
 
+test("F6 frontend covers live deals, live giveaways, wishlist refresh, Sentinel fallback reasons, and functional settings", async () => {
+  const dealsExplorer = await readFile(new URL("../src/components/DealsExplorer.tsx", import.meta.url), "utf8");
+  const giveawaysExplorer = await readFile(new URL("../src/components/GiveawaysExplorer.tsx", import.meta.url), "utf8");
+  const wishlistExplorer = await readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8");
+  const userWishlist = await readFile(new URL("../src/lib/user-wishlist.ts", import.meta.url), "utf8");
+  const userSentinel = await readFile(new URL("../src/lib/user-sentinel.ts", import.meta.url), "utf8");
+  const settingsCenter = await readFile(new URL("../src/components/SettingsCenter.tsx", import.meta.url), "utf8");
+  const devicePrefsSource = await readFile(new URL("../src/lib/device-preferences.ts", import.meta.url), "utf8");
+  const authClient = await readFile(new URL("../src/lib/auth.ts", import.meta.url), "utf8");
+
+  assert.match(dealsExplorer, /getLiveDeals/);
+  assert.match(dealsExplorer, /DealDetailModal/);
+  assert.match(dealsExplorer, /DealArtwork/);
+  assert.match(dealsExplorer, /availableStores/);
+
+  assert.match(giveawaysExplorer, /getLiveGiveaways/);
+  assert.match(giveawaysExplorer, /GamerPower\.com/);
+  assert.match(giveawaysExplorer, /Open Giveaway/);
+
+  assert.match(userWishlist, /refreshMyWishlistPrices/);
+  assert.match(userWishlist, /\/api\/me\/wishlist\/refresh/);
+  assert.match(wishlistExplorer, /Check live prices/);
+  assert.match(wishlistExplorer, /Check next batch/);
+  assert.match(wishlistExplorer, /hasMixedCurrencies/);
+  assert.match(wishlistExplorer, /Target configured/);
+  assert.match(wishlistExplorer, /Not sent \(persisted alert event only\)/);
+
+  assert.match(userSentinel, /gemini_auth_failed/);
+  assert.match(userSentinel, /gemini_model_unavailable/);
+  assert.match(userSentinel, /gemini_rate_limited/);
+
+  assert.match(authClient, /PATCH/);
+  assert.match(authClient, /updateDisplayName/);
+  assert.match(devicePrefsSource, /nexora\.ui\.compact-mode/);
+  assert.match(devicePrefsSource, /nexora\.ui\.glass-effects/);
+  assert.match(settingsCenter, /device-preferences/);
+  assert.match(settingsCenter, /Edit Display Name/);
+  assert.doesNotMatch(settingsCenter, /demo build/);
+});
+
 test("R03: auth-client cache update and SettingsCenter handleDisplayNameSubmit enforce session revision, identity, and component ownership", async () => {
   const h = await sentinelChatHarness();
   try {

@@ -12,6 +12,9 @@ export type SentinelInsightRequest = {
 
 export type SentinelProviderFallbackReason =
   | "gemini_not_configured"
+  | "gemini_auth_failed"
+  | "gemini_model_unavailable"
+  | "gemini_rate_limited"
   | "gemini_non_success_response"
   | "gemini_invalid_response"
   | "gemini_timeout_or_network"
@@ -77,6 +80,9 @@ function isSentinelProviderFallbackReason(
   value: unknown,
 ): value is SentinelProviderFallbackReason {
   return value === "gemini_not_configured" ||
+    value === "gemini_auth_failed" ||
+    value === "gemini_model_unavailable" ||
+    value === "gemini_rate_limited" ||
     value === "gemini_non_success_response" ||
     value === "gemini_invalid_response" ||
     value === "gemini_timeout_or_network" ||
