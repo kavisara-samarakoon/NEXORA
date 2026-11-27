@@ -44,6 +44,12 @@ public class WishlistPriceHistoryEntry {
     @Column(nullable = false, length = 64)
     private String source;
 
+    @Column(name = "external_game_id", length = 64)
+    private String externalGameId;
+
+    @Column(name = "external_deal_id", length = 128)
+    private String externalDealId;
+
     @Column(name = "observed_at", nullable = false, updatable = false)
     private LocalDateTime observedAt;
 
@@ -65,6 +71,24 @@ public class WishlistPriceHistoryEntry {
             String source,
             LocalDateTime observedAt,
             LocalDateTime createdAt) {
+        this(id, userId, wishlistItemId, itemTitle, store, priceLabel,
+                priceAmount, currency, source, null, null, observedAt, createdAt);
+    }
+
+    public WishlistPriceHistoryEntry(
+            Long id,
+            long userId,
+            long wishlistItemId,
+            String itemTitle,
+            String store,
+            String priceLabel,
+            BigDecimal priceAmount,
+            String currency,
+            String source,
+            String externalGameId,
+            String externalDealId,
+            LocalDateTime observedAt,
+            LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.wishlistItemId = wishlistItemId;
@@ -74,6 +98,8 @@ public class WishlistPriceHistoryEntry {
         this.priceAmount = priceAmount;
         this.currency = currency;
         this.source = source;
+        this.externalGameId = externalGameId;
+        this.externalDealId = externalDealId;
         this.observedAt = observedAt;
         this.createdAt = createdAt;
     }
@@ -123,6 +149,14 @@ public class WishlistPriceHistoryEntry {
 
     public String getSource() {
         return source;
+    }
+
+    public String getExternalGameId() {
+        return externalGameId;
+    }
+
+    public String getExternalDealId() {
+        return externalDealId;
     }
 
     public LocalDateTime getObservedAt() {

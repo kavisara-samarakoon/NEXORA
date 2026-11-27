@@ -8,7 +8,10 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Service
 @Profile("dev")
@@ -39,6 +42,9 @@ public class WishlistPriceRefreshService {
         int refreshedItems = 0;
         int targetReachedEventsCreated = 0;
         int skippedItems = 0;
+        String source = null;
+        boolean sourceLoaded = false;
+        LocalDateTime checkedAt = LocalDateTime.now(ZoneOffset.UTC);
 
         for (WishlistItem item : wishlistItemRepository.findActiveUserAlertItemsForRefresh()) {
             scannedItems++;
@@ -51,38 +57,64 @@ public class WishlistPriceRefreshService {
                 continue;
             }
 
+            if (!sourceLoaded) {
+                source = priceSnapshotProvider.priceHistorySource();
+                sourceLoaded = true;
+            }
+            boolean verified = WishlistRefreshSupport.SCHEDULED_SOURCE.equals(source);
+            boolean wasVerified = WishlistRefreshSupport.isVerifiedProviderSource(item.getPriceSource());
+            if ((verified && !WishlistRefreshSupport.isUsdEligible(item.getCurrency()))
+                    || (!verified && wasVerified && !"stored-provider".equals(source))) {
+                skippedItems++;
+                continue;
+            }
+
             WishlistAlertEvaluation previousEvaluation = evaluate(item);
-            Optional<String> providedPrice;
-            try {
-                providedPrice = priceSnapshotProvider.findCurrentPrice(item);
-            } catch (RuntimeException exception) {
-                LOGGER.warn(
-                        "Wishlist price provider failed for item {}; skipping it ({})",
-                        item.getId(),
-                        exception.getMessage()
-                );
-                skippedItems++;
+            if (verified) {
+                Optional<CheapSharkWishlistLiveLookup.ObservedOffer> observed = lookup(item,
+                        () -> priceSnapshotProvider.findVerifiedOffer(item));
+                if (observed.isEmpty() || !WishlistRefreshSupport.canApplyOffer(
+                        item.getExternalGameId(), observed.get())) {
+                    skippedItems++;
+                    continue;
+                }
+
+                item.markChecked(checkedAt);
+                if (WishlistRefreshSupport.applyVerifiedOffer(item, observed.get(), source)) {
+                    wishlistItemRepository.save(item);
+                    refreshedItems++;
+                }
+                priceHistoryService.recordSnapshot(item.getUserId(), item, source);
+                WishlistAlertEvaluation current = evaluate(item);
+                if ((!wasVerified || !previousEvaluation.targetReached()) && current.targetReached()
+                        && alertEventRecorder.recordTargetReachedEvent(item.getUserId(), item, current, source)) {
+                    targetReachedEventsCreated++;
+                }
                 continue;
             }
-            if (providedPrice == null || providedPrice.isEmpty()
-                    || providedPrice.get() == null || providedPrice.get().isBlank()) {
+
+            Optional<String> providedPrice = lookup(item, () -> priceSnapshotProvider.findCurrentPrice(item))
+                    .filter(price -> !price.isBlank()).map(String::trim);
+            if (providedPrice.isEmpty()) {
                 skippedItems++;
                 continue;
             }
 
-            String latestPrice = providedPrice.get().trim();
-            if (!latestPrice.equals(item.getCurrentPrice())) {
-                item.updateCurrentPrice(latestPrice);
-                wishlistItemRepository.save(item);
-                priceHistoryService.recordSnapshot(
-                        item.getUserId(), item, priceSnapshotProvider.priceHistorySource());
-                refreshedItems++;
+            item.markChecked(checkedAt);
+            if ("stored-provider".equals(source) || providedPrice.get().equals(item.getCurrentPrice())) {
+                continue;
             }
 
-            WishlistAlertEvaluation newEvaluation = evaluate(item);
-            if (!previousEvaluation.targetReached() && newEvaluation.targetReached()) {
-                alertEventRecorder.recordTargetReachedEvent(
-                        item.getUserId(), item, newEvaluation);
+            // Legacy or custom string-only providers cannot establish verified price provenance.
+            String unverifiedSource = "price-refresh";
+            item.updateCurrentPrice(providedPrice.get());
+            wishlistItemRepository.save(item);
+            priceHistoryService.recordSnapshot(item.getUserId(), item, unverifiedSource);
+            refreshedItems++;
+
+            WishlistAlertEvaluation current = evaluate(item);
+            if (!previousEvaluation.targetReached() && current.targetReached()
+                    && alertEventRecorder.recordTargetReachedEvent(item.getUserId(), item, current, unverifiedSource)) {
                 targetReachedEventsCreated++;
             }
         }
@@ -95,11 +127,25 @@ public class WishlistPriceRefreshService {
         );
     }
 
+    private static <T> Optional<T> lookup(WishlistItem item, Supplier<Optional<T>> query) {
+        try {
+            Optional<T> result = query.get();
+            return result == null ? Optional.empty() : result;
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Wishlist price provider failed for item {}; skipping it ({})",
+                    item.getId(), exception.getMessage());
+            return Optional.empty();
+        }
+    }
+
     private static WishlistAlertEvaluation evaluate(WishlistItem item) {
+        String currency = WishlistPriceParser.establishStoredCurrency(
+                item.getCurrentPrice(), item.getTargetPrice(), item.getCurrency());
         return WishlistAlertEvaluator.evaluate(
                 item.getCurrentPrice(),
                 item.getTargetPrice(),
-                item.isAlertActive()
+                item.isAlertActive(),
+                currency
         );
     }
 }

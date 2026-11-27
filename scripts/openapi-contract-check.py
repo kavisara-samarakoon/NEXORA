@@ -8,8 +8,8 @@ import sys
 
 DEFAULT_CONTRACT = Path("docs/api/openapi.yaml")
 EXPECTED_INFO_VERSION = "0.38.0"
-EXPECTED_PATH_COUNT = 25
-EXPECTED_OPERATION_COUNT = 28
+EXPECTED_PATH_COUNT = 26
+EXPECTED_OPERATION_COUNT = 29
 
 EXPECTED_PATHS = {
     "/api",
@@ -31,6 +31,7 @@ EXPECTED_PATHS = {
     "/api/auth/logout",
     "/api/auth/me",
     "/api/me/wishlist",
+    "/api/me/wishlist/refresh",
     "/api/me/wishlist/alert-events",
     "/api/me/wishlist/{id}/price-history",
     "/api/me/wishlist/{id}/alert",
@@ -61,6 +62,7 @@ EXPECTED_OPERATION_IDS = {
     "updateCurrentAccount",
     "listCurrentUserWishlist",
     "addCurrentUserWishlistItem",
+    "refreshCurrentUserWishlistPrices",
     "listCurrentUserWishlistAlertEvents",
     "listCurrentUserWishlistPriceHistory",
     "updateCurrentUserWishlistAlert",
@@ -92,6 +94,7 @@ REQUIRED_SCHEMAS = {
     "AddWishlistItemRequest",
     "UpdateWishlistAlertRequest",
     "WishlistItem",
+    "UserWishlistRefreshResponse",
     "WishlistAlertEventResponse",
     "WishlistPriceHistoryPoint",
     "NotificationPreferenceResponse",

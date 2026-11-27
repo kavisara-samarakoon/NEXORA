@@ -125,7 +125,7 @@ class CheapSharkWishlistPriceSnapshotProviderTests {
     }
 
     @Test
-    void storeLookupFailureFallsBackToSafeTitleMatch() {
+    void storeLookupFailureRejectsEvenASafeTitleMatch() {
         CheapSharkDealClient client = mock(CheapSharkDealClient.class);
         when(client.getDeals(8, "Ghost of Tsushima: Director's Cut", null))
                 .thenReturn(List.of(
@@ -137,7 +137,7 @@ class CheapSharkWishlistPriceSnapshotProviderTests {
         Optional<String> price = provider(client).findCurrentPrice(
                 item("Ghost of Tsushima: Director's Cut", "Steam"));
 
-        assertEquals(Optional.of("$29.99"), price);
+        assertEquals(Optional.empty(), price);
     }
 
     @Test

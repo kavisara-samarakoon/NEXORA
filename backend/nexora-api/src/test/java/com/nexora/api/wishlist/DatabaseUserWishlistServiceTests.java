@@ -162,7 +162,7 @@ class DatabaseUserWishlistServiceTests {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
-        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
+        when(repository.findForUpdateByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
 
         service(repository, eventRepository)
                 .deleteWishlistItem(7L, 42L);
@@ -178,7 +178,7 @@ class DatabaseUserWishlistServiceTests {
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
-        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
+        when(repository.findForUpdateByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
         WishlistItem response = service(repository, eventRepository, historyService)
@@ -201,7 +201,7 @@ class DatabaseUserWishlistServiceTests {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(42L, 7L, true);
-        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
+        when(repository.findForUpdateByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
         WishlistItem response = service(repository, eventRepository)
@@ -225,7 +225,7 @@ class DatabaseUserWishlistServiceTests {
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
         com.nexora.api.wishlist.persistence.WishlistItem item = databaseItem(
                 42L, 7L, true, "$8.88", "$9.99", true);
-        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
+        when(repository.findForUpdateByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.of(item));
         when(repository.saveAndFlush(item)).thenReturn(item);
 
         WishlistItem response = service(repository, eventRepository)
@@ -241,7 +241,7 @@ class DatabaseUserWishlistServiceTests {
     void rejectsAlertUpdateWhenOwnedActiveItemIsMissing() {
         WishlistItemRepository repository = mock(WishlistItemRepository.class);
         WishlistAlertEventRepository eventRepository = mock(WishlistAlertEventRepository.class);
-        when(repository.findByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.empty());
+        when(repository.findForUpdateByIdAndUserIdAndActiveTrue(42L, 7L)).thenReturn(Optional.empty());
 
         assertThrows(WishlistItemNotFoundException.class, () ->
                 service(repository, eventRepository).updateWishlistAlert(

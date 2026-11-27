@@ -84,7 +84,7 @@ export default function AddWishlistItemForm({
       store: formData.get("store") as WishlistStore,
       currentPrice,
       targetPrice,
-      lowestEver: lowestEver || currentPrice,
+      lowestEver: lowestEver || "Not established",
       discount: discount || null,
       priority: formData.get("priority") as WishlistPriority,
       status: formData.get("status") as WishlistStatus,
@@ -179,7 +179,7 @@ export default function AddWishlistItemForm({
         </label>
         <label className="wl-add-form__field" htmlFor="wl-add-lowest-ever">
           <span>Lowest ever <small>optional</small></span>
-          <input id="wl-add-lowest-ever" name="lowestEver" type="text" maxLength={40} placeholder="Defaults to current" disabled={isSubmitting} />
+          <input id="wl-add-lowest-ever" name="lowestEver" type="text" maxLength={40} placeholder="Not established unless set" disabled={isSubmitting} />
         </label>
         <label className="wl-add-form__field" htmlFor="wl-add-discount">
           <span>Discount <small>optional</small></span>

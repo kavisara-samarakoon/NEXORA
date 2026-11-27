@@ -37,6 +37,7 @@ import {
   getMyWishlistAlertEvents,
   getMyWishlistPriceHistory,
   normalizeUserWishlistError,
+  refreshMyWishlistPrices,
   updateMyWishlistAlert,
   withWishlistAuthRetry,
   type UpdateWishlistAlertPayload,
@@ -142,10 +143,13 @@ function formatAlertEventTime(createdAt: string) {
 
 function priceHistorySourceLabel(source: string) {
   const knownSources: Record<string, string> = {
-    "wishlist-create": "Added to wishlist",
-    "price-refresh": "Price refresh",
-    "stored-provider": "Stored provider",
-    "cheapshark-provider": "CheapShark",
+    "wishlist-create": "User-entered (unverified)",
+    "alert-update": "Alert update (unverified)",
+    "price-refresh": "Price refresh (unverified)",
+    "stored-provider": "Stored snapshot (unverified)",
+    "cheapshark-provider": "Earlier CheapShark refresh (unverified)",
+    "cheapshark-refresh": "CheapShark",
+    "cheapshark-scheduled": "CheapShark scheduled check",
   };
   if (knownSources[source]) return knownSources[source];
 
@@ -156,10 +160,14 @@ function priceHistorySourceLabel(source: string) {
 }
 
 function priceHistorySourceTone(source: string) {
-  if (source === "wishlist-create") return "added";
-  if (source === "cheapshark-provider") return "external";
+  if (source === "wishlist-create" || source === "alert-update") return "added";
+  if (isVerifiedObservationSource(source)) return "external";
   if (source === "stored-provider") return "stored";
   return "refresh";
+}
+
+function isVerifiedObservationSource(source?: string | null): boolean {
+  return source === "cheapshark-refresh" || source === "cheapshark-scheduled";
 }
 
 function numericPriceHistory(
@@ -223,17 +231,31 @@ function PriceHistoryPanel({
   state: PriceHistoryState;
 }) {
   const headingId = `wishlist-price-history-${itemId}`;
-  const numericPoints = numericPriceHistory(points);
-  const latestPoint = points.at(-1);
-  const lowestPoint = numericPoints.reduce<NumericPriceHistoryPoint | null>(
+  const verifiedPoints = points.filter((point) => isVerifiedObservationSource(point.source));
+  const numericPoints = numericPriceHistory(verifiedPoints);
+  const currencies = Array.from(
+    new Set(
+      numericPoints
+        .map((point) => point.currency?.trim().toUpperCase())
+        .filter((currency): currency is string => Boolean(currency)),
+    ),
+  );
+  const hasMixedCurrencies = currencies.length > 1;
+  const comparableNumericPoints = hasMixedCurrencies ? [] : numericPoints;
+  const latestPoint = verifiedPoints.at(-1) ?? points.at(-1);
+  const lowestPoint = comparableNumericPoints.reduce<NumericPriceHistoryPoint | null>(
     (lowest, point) => !lowest || point.priceAmount < lowest.priceAmount ? point : lowest,
     null,
   );
-  const highestPoint = numericPoints.reduce<NumericPriceHistoryPoint | null>(
+  const highestPoint = comparableNumericPoints.reduce<NumericPriceHistoryPoint | null>(
     (highest, point) => !highest || point.priceAmount > highest.priceAmount ? point : highest,
     null,
   );
-  const trend = priceHistoryTrend(numericPoints, points.length);
+  const trend = verifiedPoints.length === 0
+    ? ({ label: "Unverified only", tone: "neutral" } as const)
+    : hasMixedCurrencies
+      ? ({ label: "Mixed currencies", tone: "neutral" } as const)
+      : priceHistoryTrend(comparableNumericPoints, verifiedPoints.length);
   const timelinePoints = points.slice(-PRICE_HISTORY_TIMELINE_LIMIT).reverse();
   const lowestAmount = lowestPoint?.priceAmount ?? 0;
   const highestAmount = highestPoint?.priceAmount ?? 0;
@@ -292,7 +314,7 @@ function PriceHistoryPanel({
             <div><dt>Highest</dt><dd>{highestPoint?.priceLabel ?? "—"}</dd></div>
             <div><dt>Snapshots</dt><dd>{points.length}</dd></div>
             <div>
-              <dt>Last observed</dt>
+              <dt>{verifiedPoints.length ? "Last observed" : "Last recorded"}</dt>
               <dd><time dateTime={latestPoint.observedAt}>{formatAlertEventTime(latestPoint.observedAt)}</time></dd>
             </div>
           </dl>
@@ -302,33 +324,46 @@ function PriceHistoryPanel({
               <span>Observed trend</span>
               <strong>{trend.label}</strong>
             </div>
-            {numericPoints.length === 0 ? (
+            {verifiedPoints.length === 0 ? (
+              <p>History contains unverified prices. Verified provider observations will appear here.</p>
+            ) : hasMixedCurrencies ? (
+              <p>
+                Stored observations use multiple currencies ({currencies.join(", ")}), so incompatible offers are not combined into one numeric trend.
+              </p>
+            ) : comparableNumericPoints.length === 0 ? (
               <p>These snapshots use labels such as TBA, so a numeric trend is not available.</p>
             ) : (
-              <div
-                className={numericPoints.length === 1
-                  ? "wl-card__history-bars wl-card__history-bars--single"
-                  : "wl-card__history-bars"}
-                role="img"
-                aria-label={numericPoints.length === 1
-                  ? `One numeric price snapshot: ${numericPoints[0].priceLabel}`
-                  : `${numericPoints.length} numeric price snapshots, trending ${trend.label.toLowerCase()}`}
-              >
-                {numericPoints.map((point) => (
-                  <span
-                    aria-hidden="true"
-                    key={point.id}
-                    style={{
-                      height: `${priceHistoryBarHeight(
-                        point.priceAmount,
-                        lowestAmount,
-                        highestAmount,
-                      )}%`,
-                    }}
-                    title={`${point.priceLabel} · ${formatAlertEventTime(point.observedAt)}`}
-                  />
-                ))}
-              </div>
+              <>
+                <div
+                  className={comparableNumericPoints.length === 1
+                    ? "wl-card__history-bars wl-card__history-bars--single"
+                    : "wl-card__history-bars"}
+                  role="img"
+                  aria-label={comparableNumericPoints.length === 1
+                    ? `One numeric price snapshot: ${comparableNumericPoints[0].priceLabel}`
+                    : `${comparableNumericPoints.length} numeric price snapshots, trending ${trend.label.toLowerCase()}`}
+                >
+                  {comparableNumericPoints.map((point) => (
+                    <span
+                      aria-hidden="true"
+                      key={point.id}
+                      style={{
+                        height: `${priceHistoryBarHeight(
+                          point.priceAmount,
+                          lowestAmount,
+                          highestAmount,
+                        )}%`,
+                      }}
+                      title={`${point.priceLabel} · ${formatAlertEventTime(point.observedAt)}`}
+                    />
+                  ))}
+                </div>
+                {comparableNumericPoints.length < 2 && (
+                  <p className="wl-card__history-insufficient">
+                    Insufficient history: one price observation has been recorded so far.
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -499,9 +534,15 @@ function WishlistCard({
       {item.discount && <span className="wl-card__discount">{item.discount}</span>}
 
       <div className="wl-card__prices" aria-label={`${item.title} price information`}>
-        <div><span>Current</span><strong className={item.currentPrice === "FREE" ? "wl-card__price--free" : undefined}>{item.currentPrice}</strong></div>
+        <div>
+          <span>Current{canManage && !isVerifiedObservationSource(item.priceSource) ? " (unverified)" : ""}</span>
+          <strong className={item.currentPrice === "FREE" ? "wl-card__price--free" : undefined}>{item.currentPrice}</strong>
+        </div>
         <div><span>Target</span><strong className="wl-card__price--target">{item.targetPrice}</strong></div>
-        <div><span>Lowest</span><strong>{item.lowestEver}</strong></div>
+        <div>
+          <span>Lowest{canManage && !isVerifiedObservationSource(item.lowestEverSource) ? " (unverified)" : ""}</span>
+          <strong>{item.lowestEver}</strong>
+        </div>
       </div>
 
       <div
@@ -509,7 +550,8 @@ function WishlistCard({
         aria-label={`Alert evaluation: ${alertEvaluation.message}`}
       >
         <span aria-hidden="true">{evaluationIcon(alertEvaluation.state)}</span>
-        <strong>{alertEvaluation.message}</strong>
+        <strong>{alertEvaluation.message}{alertEvaluation.targetReached && canManage
+          && !isVerifiedObservationSource(item.priceSource) ? " (unverified price)" : ""}</strong>
       </div>
 
       {canManage && (
@@ -794,8 +836,20 @@ function WishlistAlertPanel({
                 </div>
                 <p>{event.message}</p>
                 <div className="wl-alert-history__prices">
-                  <span>Current <strong>{event.currentPrice}</strong></span>
-                  <span>Target <strong>{event.targetPrice}</strong></span>
+                  <span>Target configured <strong>{event.targetPrice}</strong></span>
+                  <span>
+                    {isVerifiedObservationSource(event.observationSource) ? "Observed" : "Price at evaluation"}{" "}
+                    <strong>{event.currentPrice}</strong>
+                    {event.observationSource ? ` (${priceHistorySourceLabel(event.observationSource)})` : " (unverified)"}
+                  </span>
+                </div>
+                <div className="wl-alert-history__lifecycle">
+                  <span>Event persisted #{event.id}</span>
+                  <span>
+                    {event.deliveryStatus && event.deliveryStatus !== "not-delivered"
+                      ? `Delivery: ${event.deliveryStatus}`
+                      : "Delivery: Not sent (persisted alert event only)"}
+                  </span>
                 </div>
                 <time className="wl-alert-history__meta" dateTime={event.createdAt}>
                   {formatAlertEventTime(event.createdAt)}
@@ -840,6 +894,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [itemMessages, setItemMessages] = useState<Record<number, ItemMessage>>({});
   const [refreshKey, setRefreshKey] = useState(0);
   const [personalWishlistRevision, setPersonalWishlistRevision] = useState(0);
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
+  const [refreshNextCursor, setRefreshNextCursor] = useState<number | null>(null);
   const alertEventsRequestVersion = useRef(0);
   const wishlistGridRef = useRef<HTMLDivElement>(null);
   const pendingDeleteFocus = useRef<(() => void) | null>(null);
@@ -849,6 +905,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     restore?.();
   });
   const mutationOwners = useRef(new Map<string, object>());
+  const refreshOwnerRef = useRef<object | null>(null);
   // Successful mutations invalidate snapshots captured before their completion.
   const wishlistDataGeneration = useRef(0);
   const consumerLifetimeRef = useRef({ active: false });
@@ -859,6 +916,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     consumerLifetimeRef.current = lifetime;
     return () => {
       lifetime.active = false;
+      refreshOwnerRef.current = null;
       pendingDeleteFocus.current?.();
       pendingDeleteFocus.current = null;
     };
@@ -900,6 +958,9 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         setServiceMessage(null);
         setOperationMessage(null);
         setItemMessages({});
+        setRefreshNextCursor(null);
+        refreshOwnerRef.current = null;
+        setIsRefreshingPrices(false);
         setView("public");
         return;
       }
@@ -993,11 +1054,15 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       setAlerts(alertsFor(wishlistResult.value.value));
       setOperationMessage(null);
       setItemMessages({});
+      setRefreshNextCursor(null);
       setPersonalWishlistRevision((current) => current + 1);
       setView("personal");
     }
 
     function handleAuthChange() {
+      refreshOwnerRef.current = null;
+      setIsRefreshingPrices(false);
+      setRefreshNextCursor(null);
       void refreshWishlist();
     }
 
@@ -1271,6 +1336,118 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     }
   }
 
+  async function handleRefreshPrices(cursorOverride?: number | null) {
+    const lifetime = consumerLifetimeRef.current;
+    const sessionRevision = consumerSessionRevision;
+    if (
+      !lifetime.active ||
+      sessionRevision !== readAuthSessionRevision() ||
+      !authToken ||
+      view !== "personal" ||
+      isRefreshingPrices
+    ) {
+      return;
+    }
+
+    const opOwner = {};
+    refreshOwnerRef.current = opOwner;
+    const dataGenerationAtStart = wishlistDataGeneration.current;
+    const activeCursor = cursorOverride !== undefined ? cursorOverride : refreshNextCursor;
+    const isCurrent = () =>
+      lifetime.active &&
+      refreshOwnerRef.current === opOwner &&
+      sessionRevision === readAuthSessionRevision();
+    const isCurrentDataset = () =>
+      isCurrent() && dataGenerationAtStart === wishlistDataGeneration.current;
+
+    setIsRefreshingPrices(true);
+    setOperationMessage(null);
+    try {
+      const result = await withWishlistAuthRetry(
+        authToken,
+        (activeToken) => refreshMyWishlistPrices(activeToken, activeCursor),
+        { sessionRevision, isCurrent: isCurrentDataset },
+      );
+      if (!isCurrentDataset()) return;
+      wishlistDataGeneration.current += 1;
+      setAuthToken(result.token);
+      setPersonalItems(result.value.items);
+      setAlerts(alertsFor(result.value.items));
+      setPersonalWishlistRevision((current) => current + 1);
+      setRefreshNextCursor(
+        result.value.hasMore && result.value.nextCursor
+          ? result.value.nextCursor
+          : null,
+      );
+      setView("personal");
+
+      if (result.value.targetReachedEventsCreated > 0) {
+        const eventRequestVersion = ++alertEventsRequestVersion.current;
+        try {
+          const eventsResult = await withWishlistAuthRetry(
+            result.token,
+            (activeToken) => getMyWishlistAlertEvents(activeToken),
+            {
+              sessionRevision,
+              isCurrent: () =>
+                isCurrent() && eventRequestVersion === alertEventsRequestVersion.current,
+            },
+          );
+          if (isCurrent() && eventRequestVersion === alertEventsRequestVersion.current) {
+            setAuthToken(eventsResult.token);
+            setAlertEvents(eventsResult.value);
+            setAlertEventsMessage(null);
+          }
+        } catch {
+          // Personal items already refreshed; alert event reload stays non-fatal.
+        }
+      }
+
+      const summary = result.value;
+      const parts = [
+        `${summary.scannedItems} scanned`,
+        `${summary.matchedItems} matched`,
+        `${summary.observationsRecorded} price observation${summary.observationsRecorded === 1 ? "" : "s"} recorded`,
+        `${summary.targetReachedEventsCreated} new alert event${summary.targetReachedEventsCreated === 1 ? "" : "s"}`,
+      ];
+      if (summary.unavailableItems > 0) {
+        parts.push(`${summary.unavailableItems} unavailable`);
+      }
+      if (summary.hasMore && summary.nextCursor) {
+        parts.push("more items available in next batch");
+      }
+      setOperationMessage({
+        kind: summary.provider === "disabled" ? "error" : "success",
+        text: `Live price check (${summary.provider}, ${summary.currency}): ${parts.join(", ")}.`,
+      });
+    } catch (error) {
+      if (
+        !isCurrentDataset() ||
+        isAuthSessionInvalidatedError(error) ||
+        sessionRevision !== readAuthSessionRevision()
+      ) {
+        return;
+      }
+      const details = protectedWishlistError(error);
+      if (details.status === 401) {
+        handleAuthenticationRequired();
+      } else {
+        setOperationMessage({
+          kind: "error",
+          text: details.message,
+          requestId: details.requestId,
+        });
+      }
+    } finally {
+      if (refreshOwnerRef.current === opOwner) {
+        refreshOwnerRef.current = null;
+      }
+      if (lifetime.active && sessionRevision === readAuthSessionRevision()) {
+        setIsRefreshingPrices(false);
+      }
+    }
+  }
+
   const priceDropCount = displayedItems.filter((item) => item.status === "price-drop").length;
   const freeCount = displayedItems.filter((item) => item.status === "free-now").length;
   const isPersonal = view === "personal";
@@ -1397,7 +1574,23 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         <section aria-label={isPersonal ? "Personal wishlist games" : "Public wishlist preview games"}>
           <div className="wl-results-bar">
             <span><strong>{filteredItems.length}</strong> tracked games</span>
-            <span>{isPersonal ? "Personal account feed" : source === "api" ? "Public backend preview" : "Static fallback preview"}</span>
+            <div className="wl-results-bar__actions">
+              {isPersonal && authToken && (
+                <button
+                  className="wl-refresh-button"
+                  type="button"
+                  disabled={isRefreshingPrices}
+                  onClick={() => void handleRefreshPrices()}
+                >
+                  {isRefreshingPrices
+                    ? "Checking live prices…"
+                    : refreshNextCursor !== null
+                      ? "Check next batch"
+                      : "Check live prices"}
+                </button>
+              )}
+              <span>{isPersonal ? "Personal account feed" : source === "api" ? "Public backend preview" : "Static fallback preview"}</span>
+            </div>
           </div>
           <div className="wl-grid" ref={wishlistGridRef}>
             {filteredItems.map((item) => (
@@ -1419,7 +1612,11 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
                 )}
                 onAuthenticationRequired={handleAuthenticationRequired}
                 onDelete={(candidate, button) => void handleDelete(candidate, button)}
-                onTokenChanged={setAuthToken}
+                onTokenChanged={(nextToken) => {
+                  if (consumerLifetimeRef.current.active && consumerSessionRevision === readAuthSessionRevision()) {
+                    setAuthToken(nextToken);
+                  }
+                }}
                 onUpdateAlert={handleAlertUpdate}
               />
             ))}

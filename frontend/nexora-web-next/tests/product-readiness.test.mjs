@@ -6506,6 +6506,126 @@ test("R03: auth-client cache update and SettingsCenter handleDisplayNameSubmit e
   }
 });
 
+test("R03: WishlistExplorer handleRefreshPrices guards against concurrent mutations, session changes, and supports cursor continuation", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const startRev = h.auth.readAuthSessionRevision();
+    const wishlistSource = await readFile(new URL("../src/components/WishlistExplorer.tsx", import.meta.url), "utf8");
+    const ast = ts.createSourceFile("WishlistExplorer.tsx", wishlistSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const component = ast.statements.find((node) => node.name?.text === "WishlistExplorer");
+    let refreshDecl;
+    ts.forEachChild(component, function visit(node) {
+      if (ts.isFunctionDeclaration(node) && node.name?.text === "handleRefreshPrices") refreshDecl = node;
+      else ts.forEachChild(node, visit);
+    });
+    assert.ok(refreshDecl);
+    const compiled = ts.transpileModule(refreshDecl.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+
+    const runScenario = (nextRefreshImpl) => {
+      const state = {
+        authToken: "tok-1",
+        view: "personal",
+        isRefreshingPrices: false,
+        refreshNextCursor: null,
+        personalItems: [{ id: 1, title: "Initial" }],
+        alerts: {},
+        personalWishlistRevision: 0,
+        alertEvents: [],
+        alertEventsMessage: null,
+        operationMessage: null,
+      };
+      const lifetimeRef = { current: { active: true } };
+      const refreshOwnerRef = { current: null };
+      const dataGenRef = { current: 0 };
+      const alertVerRef = { current: 0 };
+      const mocks = {
+        ...h.auth,
+        ...h.wishlist,
+        consumerLifetimeRef: lifetimeRef,
+        consumerSessionRevision: h.auth.readAuthSessionRevision(),
+        refreshOwnerRef,
+        wishlistDataGeneration: dataGenRef,
+        alertEventsRequestVersion: alertVerRef,
+        authToken: state.authToken,
+        view: state.view,
+        get isRefreshingPrices() { return state.isRefreshingPrices; },
+        get refreshNextCursor() { return state.refreshNextCursor; },
+        withWishlistAuthRetry: h.wishlist.withWishlistAuthRetry,
+        refreshMyWishlistPrices: nextRefreshImpl,
+        getMyWishlistAlertEvents: () => Promise.resolve([]),
+        protectedWishlistError: h.wishlist.normalizeUserWishlistError,
+        isAuthSessionInvalidatedError: h.auth.isAuthSessionInvalidatedError,
+        alertsFor: (items) => Object.fromEntries(items.map((it) => [it.id, Boolean(it.alertActive)])),
+        handleAuthenticationRequired: () => {},
+        setIsRefreshingPrices: (v) => { state.isRefreshingPrices = v; },
+        setOperationMessage: (v) => { state.operationMessage = v; },
+        setAuthToken: (v) => { state.authToken = v; },
+        setPersonalItems: (v) => { state.personalItems = v; },
+        setAlerts: (v) => { state.alerts = v; },
+        setPersonalWishlistRevision: (fn) => { state.personalWishlistRevision = fn(state.personalWishlistRevision); },
+        setRefreshNextCursor: (v) => { state.refreshNextCursor = v; },
+        setView: (v) => { state.view = v; },
+        setAlertEvents: (v) => { state.alertEvents = v; },
+        setAlertEventsMessage: (v) => { state.alertEventsMessage = v; },
+      };
+      const renderHandler = () => {
+        const snapshot = {
+          ...mocks,
+          authToken: state.authToken,
+          view: state.view,
+          isRefreshingPrices: state.isRefreshingPrices,
+          refreshNextCursor: state.refreshNextCursor,
+        };
+        return new Function(...Object.keys(snapshot), `${compiled}\nreturn { handleRefreshPrices };`)(...Object.values(snapshot)).handleRefreshPrices;
+      };
+      return { state, dataGenRef, lifetimeRef, handleRefreshPrices: (...args) => renderHandler()(...args) };
+    };
+
+    // Case 1: Concurrent delete bumps wishlistDataGeneration -> delayed refresh MUST NOT overwrite newer items.
+    const deferredMutate = {};
+    deferredMutate.promise = new Promise((resolve) => { deferredMutate.resolve = resolve; });
+    const s1 = runScenario(() => deferredMutate.promise);
+    const p1 = s1.handleRefreshPrices();
+    s1.dataGenRef.current += 1;
+    s1.state.personalItems = []; // e.g., user deleted item while refresh was in-flight
+    deferredMutate.resolve({
+      scannedItems: 1, matchedItems: 1, updatedItems: 1, observationsRecorded: 1,
+      targetReachedEventsCreated: 0, unavailableItems: 0, hasMore: false, nextCursor: null,
+      provider: "cheapshark", currency: "USD", refreshedAtUtc: "2026-11-26T00:00:00Z",
+      items: [{ ...alertItem, id: 1, title: "Deleted Game Should Not Come Back" }],
+    });
+    await p1;
+    assert.deepEqual(s1.state.personalItems, []);
+    assert.equal(s1.state.operationMessage, null);
+
+    // Case 2: Paginated continuation sets refreshNextCursor and passes cursor on second pass.
+    const seenCursors = [];
+    const s2 = runScenario((_tok, cursor) => {
+      seenCursors.push(cursor ?? null);
+      if (!cursor) {
+        return Promise.resolve({
+          scannedItems: 10, matchedItems: 10, updatedItems: 1, observationsRecorded: 1,
+          targetReachedEventsCreated: 0, unavailableItems: 0, hasMore: true, nextCursor: 10,
+          provider: "cheapshark", currency: "USD", refreshedAtUtc: "2026-11-26T00:00:00Z", items: [alertItem],
+        });
+      }
+      return Promise.resolve({
+        scannedItems: 1, matchedItems: 1, updatedItems: 1, observationsRecorded: 1,
+        targetReachedEventsCreated: 0, unavailableItems: 0, hasMore: false, nextCursor: null,
+        provider: "cheapshark", currency: "USD", refreshedAtUtc: "2026-11-26T00:00:00Z", items: [alertItem],
+      });
+    });
+    await s2.handleRefreshPrices();
+    assert.equal(s2.state.refreshNextCursor, 10);
+    await s2.handleRefreshPrices();
+    assert.equal(s2.state.refreshNextCursor, null);
+    assert.deepEqual(seenCursors, [null, 10]);
+    assert.equal(h.auth.readAuthSessionRevision(), startRev);
+  } finally {
+    h.restore();
+  }
+});
+
 test("R04: device-preferences persists and restores attributes across reloads, preserves unset homepage defaults, and reports storage failure honestly", async () => {
   const origWindow = globalThis.window;
   const origDocument = globalThis.document;

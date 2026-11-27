@@ -149,6 +149,10 @@ function wishlistPayloadFor(deal: GameDeal): AddWishlistItemPayload {
     status: isFree ? "free-now" : deal.discountValue >= 50 ? "price-drop" : "tracking",
     priority: deal.discountValue >= 80 ? "high" : deal.discountValue >= 50 ? "medium" : "low",
     alertActive: true,
+    ...(deal.gameId ? { externalGameId: deal.gameId } : {}),
+    ...(deal.externalDealId ? { externalDealId: deal.externalDealId } : {}),
+    ...(deal.currency ? { currency: deal.currency } : {}),
+    ...(deal.thumbUrl ? { thumbUrl: deal.thumbUrl } : {}),
   };
 }
 

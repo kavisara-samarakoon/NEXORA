@@ -38,7 +38,9 @@ public class InMemoryWishlistPriceHistoryStore implements WishlistPriceHistorySt
                         entry.priceAmount(),
                         entry.currency(),
                         entry.source(),
-                        entry.observedAt())));
+                        entry.observedAt(),
+                        entry.externalGameId(),
+                        entry.externalDealId())));
     }
 
     @Override

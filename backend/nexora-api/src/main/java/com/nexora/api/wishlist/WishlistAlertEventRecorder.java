@@ -32,12 +32,29 @@ public class WishlistAlertEventRecorder {
         this.notificationPreferenceService = notificationPreferenceService;
     }
 
-    public void recordTargetReachedEvent(
+    public boolean recordTargetReachedEvent(
             long userId,
             WishlistItem item,
             WishlistAlertEvaluation evaluation) {
+        return recordTargetReachedEvent(userId, item, evaluation, null);
+    }
+
+    public boolean recordTargetReachedEvent(
+            long userId,
+            WishlistItem item,
+            WishlistAlertEvaluation evaluation,
+            String observationSource) {
         if (!evaluation.targetReached()) {
-            return;
+            return false;
+        }
+
+        boolean verified = WishlistRefreshSupport.isVerifiedProviderSource(observationSource);
+        if (verified && (!observationSource.equals(item.getPriceSource())
+                || !WishlistRefreshSupport.isUsdEligible(item.getCurrency())
+                || !WishlistAlertEvaluator.evaluate(
+                        item.getCurrentPrice(), item.getTargetPrice(), item.isAlertActive(), item.getCurrency()
+                ).targetReached())) {
+            return false;
         }
 
         WishlistAlertEvent savedEvent = wishlistAlertEventRepository.saveAndFlush(
@@ -52,14 +69,20 @@ public class WishlistAlertEventRecorder {
                         evaluation.state(),
                         true,
                         evaluation.message(),
+                        "not-delivered",
+                        observationSource,
                         null
                 ));
+
+        if (!verified) {
+            return true;
+        }
 
         try {
             NotificationPreferenceResponse preferences =
                     notificationPreferenceService.getPreferences(savedEvent.getUserId());
             if (!preferences.emailEnabled() || !preferences.targetReachedEnabled()) {
-                return;
+                return true;
             }
 
             AlertNotificationRequest notificationRequest = new AlertNotificationRequest(
@@ -80,5 +103,6 @@ public class WishlistAlertEventRecorder {
                     savedEvent.getWishlistItemId()
             );
         }
+        return true;
     }
 }

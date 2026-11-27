@@ -7,6 +7,8 @@ final class WishlistItemMapper {
 
     static WishlistItem toResponse(
             com.nexora.api.wishlist.persistence.WishlistItem item) {
+        String currency = WishlistPriceParser.establishStoredCurrency(
+                item.getCurrentPrice(), item.getTargetPrice(), item.getCurrency());
         return new WishlistItem(
                 item.getId(),
                 item.getTitle(),
@@ -21,8 +23,15 @@ final class WishlistItemMapper {
                 WishlistAlertEvaluator.evaluate(
                         item.getCurrentPrice(),
                         item.getTargetPrice(),
-                        item.isAlertActive()
-                )
+                        item.isAlertActive(),
+                        currency
+                ),
+                item.getExternalGameId(),
+                item.getExternalDealId(),
+                currency,
+                item.getThumbUrl(),
+                item.getPriceSource(),
+                item.getLowestEverSource()
         );
     }
 
@@ -41,8 +50,15 @@ final class WishlistItemMapper {
                 WishlistAlertEvaluator.evaluate(
                         values.currentPrice(),
                         values.targetPrice(),
-                        values.alertActive()
-                )
+                        values.alertActive(),
+                        values.currency()
+                ),
+                values.externalGameId(),
+                values.externalDealId(),
+                values.currency(),
+                values.thumbUrl(),
+                values.priceSource(),
+                values.lowestEverSource()
         );
     }
 }

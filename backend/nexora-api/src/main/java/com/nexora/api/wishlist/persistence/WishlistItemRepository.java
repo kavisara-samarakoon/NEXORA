@@ -1,7 +1,9 @@
 package com.nexora.api.wishlist.persistence;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -19,6 +21,7 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
             """)
     List<WishlistItem> findActiveWishlistItems();
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select item
             from WishlistItem item
@@ -37,4 +40,6 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
             String store);
 
     Optional<WishlistItem> findByIdAndUserIdAndActiveTrue(long id, long userId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<WishlistItem> findForUpdateByIdAndUserIdAndActiveTrue(long id, long userId);
 }

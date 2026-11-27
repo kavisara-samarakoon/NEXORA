@@ -4,11 +4,14 @@ import com.nexora.api.wishlist.persistence.WishlistItem;
 import com.nexora.api.wishlist.persistence.WishlistItemRepository;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -71,8 +74,13 @@ class WishlistPriceRefreshServiceTests {
         WishlistPriceHistoryService historyService = mock(WishlistPriceHistoryService.class);
         WishlistItem item = item(1L, 7L, true, true, "$30.00", "$20.00");
         when(repository.findActiveUserAlertItemsForRefresh()).thenReturn(List.of(item));
-        when(provider.findCurrentPrice(item)).thenReturn(Optional.of("  $20.00  "));
-        when(provider.priceHistorySource()).thenReturn("cheapshark-provider");
+        when(provider.findVerifiedOffer(item)).thenReturn(Optional.of(
+                new CheapSharkWishlistLiveLookup.ObservedOffer("$20.00", new BigDecimal("20.00"),
+                        "USD", null, "123", "scheduled-deal", null)));
+        when(provider.priceHistorySource()).thenReturn("cheapshark-scheduled");
+        when(recorder.recordTargetReachedEvent(eq(7L),
+                eq(item), any(),
+                eq("cheapshark-scheduled"))).thenReturn(true);
 
         WishlistPriceRefreshSummary summary = service(repository, provider, recorder, historyService)
                 .refreshActiveWishlistAlerts();
@@ -82,12 +90,15 @@ class WishlistPriceRefreshServiceTests {
                 () -> assertEquals(new WishlistPriceRefreshSummary(1, 1, 1, 0), summary)
         );
         verify(repository).save(item);
-        verify(historyService).recordSnapshot(7L, item, "cheapshark-provider");
+        assertEquals("cheapshark-scheduled", item.getPriceSource());
+        assertEquals("scheduled-deal", item.getExternalDealId());
+        assertEquals("123", item.getExternalGameId());
+        verify(historyService).recordSnapshot(7L, item, "cheapshark-scheduled");
         verify(recorder).recordTargetReachedEvent(
                 7L,
                 item,
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached."));
+                        true, "target-reached", "Target price reached."), "cheapshark-scheduled");
     }
 
     @Test
@@ -99,6 +110,9 @@ class WishlistPriceRefreshServiceTests {
         WishlistItem item = item(1L, 7L, true, true, "$30.00", "$20.00");
         when(repository.findActiveUserAlertItemsForRefresh()).thenReturn(List.of(item));
         when(provider.findCurrentPrice(item)).thenReturn(Optional.of("$19.99"));
+        when(recorder.recordTargetReachedEvent(eq(7L),
+                eq(item), any(),
+                eq("price-refresh"))).thenReturn(true);
         WishlistPriceRefreshService service = service(
                 repository, provider, recorder, historyService);
 
@@ -110,12 +124,12 @@ class WishlistPriceRefreshServiceTests {
                 () -> assertEquals(new WishlistPriceRefreshSummary(1, 0, 0, 0), secondRun)
         );
         verify(repository, times(1)).save(item);
-        verify(historyService, times(1)).recordSnapshot(7L, item, null);
+        verify(historyService, times(1)).recordSnapshot(7L, item, "price-refresh");
         verify(recorder, times(1)).recordTargetReachedEvent(
                 7L,
                 item,
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached."));
+                        true, "target-reached", "Target price reached."), "price-refresh");
     }
 
     @Test
@@ -140,7 +154,7 @@ class WishlistPriceRefreshServiceTests {
                                 item.getCurrentPrice(), item.getTargetPrice(), true).state())
         );
         verify(repository).save(item);
-        verify(historyService).recordSnapshot(7L, item, null);
+        verify(historyService).recordSnapshot(7L, item, "price-refresh");
         verifyNoInteractions(recorder);
     }
 

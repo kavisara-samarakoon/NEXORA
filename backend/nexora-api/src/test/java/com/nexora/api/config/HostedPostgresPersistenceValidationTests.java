@@ -65,8 +65,8 @@ class HostedPostgresPersistenceValidationTests {
                 where version is not null
                   and success = true
                 """, Long.class);
-        assertEquals(12L, successfulMigrations,
-                "Hosted schema must contain exactly 12 successful versioned migrations");
+        assertEquals(13L, successfulMigrations,
+                "Hosted schema must contain exactly 13 successful versioned migrations");
 
         String latestMigrationVersion = jdbcTemplate.queryForObject("""
                 select version
@@ -76,8 +76,8 @@ class HostedPostgresPersistenceValidationTests {
                 order by installed_rank desc
                 limit 1
                 """, String.class);
-        assertEquals("12", latestMigrationVersion,
-                "Hosted schema must be at Flyway version 12");
+        assertEquals("13", latestMigrationVersion,
+                "Hosted schema must be at Flyway version 13");
 
         Long failedMigrations = jdbcTemplate.queryForObject("""
                 select count(*)

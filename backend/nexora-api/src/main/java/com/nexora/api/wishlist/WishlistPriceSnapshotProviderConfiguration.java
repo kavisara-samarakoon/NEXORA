@@ -2,6 +2,8 @@ package com.nexora.api.wishlist;
 
 import com.nexora.api.deals.CheapSharkDealClient;
 import com.nexora.api.deals.CheapSharkStoreDirectory;
+import com.nexora.api.deals.ExternalProviderRequestBudget;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -19,11 +21,13 @@ public class WishlistPriceSnapshotProviderConfiguration {
     WishlistPriceSnapshotProvider cheapSharkWishlistPriceSnapshotProvider(
             CheapSharkDealClient cheapSharkDealClient,
             CheapSharkStoreDirectory cheapSharkStoreDirectory,
-            WishlistPriceRefreshProperties properties) {
+            WishlistPriceRefreshProperties properties,
+            ObjectProvider<ExternalProviderRequestBudget> requestBudgetProvider) {
         return new CheapSharkWishlistPriceSnapshotProvider(
                 cheapSharkDealClient,
                 cheapSharkStoreDirectory,
-                properties
+                properties,
+                requestBudgetProvider.getIfAvailable()
         );
     }
 

@@ -19,33 +19,39 @@ public class WishlistPriceHistoryService {
         this.store = store;
     }
 
-    public void recordSnapshot(
+    public boolean recordSnapshot(
             long userId,
             com.nexora.api.wishlist.persistence.WishlistItem item,
             String source) {
         if (item == null || item.getId() == null) {
-            return;
+            return false;
         }
-        recordSnapshot(
+        return recordSnapshot(
                 userId,
                 item.getId(),
                 item.getTitle(),
                 item.getStore(),
                 item.getCurrentPrice(),
-                source);
+                item.getCurrency(),
+                source,
+                item.getExternalGameId(),
+                item.getExternalDealId());
     }
 
-    public void recordSnapshot(long userId, WishlistItem item, String source) {
+    public boolean recordSnapshot(long userId, WishlistItem item, String source) {
         if (item == null) {
-            return;
+            return false;
         }
-        recordSnapshot(
+        return recordSnapshot(
                 userId,
                 item.id(),
                 item.title(),
                 item.store(),
                 item.currentPrice(),
-                source);
+                item.currency(),
+                source,
+                item.externalGameId(),
+                item.externalDealId());
     }
 
     public List<WishlistPriceHistoryPoint> listRecent(
@@ -55,27 +61,39 @@ public class WishlistPriceHistoryService {
         return store.findRecent(userId, wishlistItemId, limit);
     }
 
-    private void recordSnapshot(
+    private boolean recordSnapshot(
             long userId,
             long wishlistItemId,
             String itemTitle,
             String itemStore,
             String priceLabel,
-            String source) {
+            String itemCurrency,
+            String source,
+            String externalGameId,
+            String externalDealId) {
         if (userId <= 0 || wishlistItemId <= 0 || priceLabel == null || priceLabel.isBlank()) {
-            return;
+            return false;
         }
 
         String normalizedLabel = priceLabel.trim();
-        Optional<WishlistPriceParser.ParsedPrice> parsed = WishlistPriceParser.parse(normalizedLabel);
+        Optional<WishlistPriceParser.ParsedPrice> parsed =
+                WishlistPriceParser.parse(normalizedLabel, itemCurrency);
+        String normalizedSource = normalizeSource(source);
+        boolean verified = WishlistRefreshSupport.isVerifiedProviderSource(normalizedSource);
+        if (verified && (parsed.isEmpty() || !WishlistRefreshSupport.isUsdEligible(itemCurrency))) {
+            return false;
+        }
         WishlistPriceHistoryPoint latest = store.findLatest(userId, wishlistItemId).orElse(null);
+        String parsedCurrency = parsed.map(WishlistPriceParser.ParsedPrice::currency).orElse(null);
         if (latest != null
                 && latest.priceLabel().equals(normalizedLabel)
                 && Objects.equals(latest.priceAmount(), parsed.map(
                         WishlistPriceParser.ParsedPrice::amount).orElse(null))
-                && Objects.equals(latest.currency(), parsed.map(
-                        WishlistPriceParser.ParsedPrice::currency).orElse(null))) {
-            return;
+                && Objects.equals(latest.currency(), parsedCurrency)
+                && Objects.equals(latest.externalDealId(), externalDealId)
+                && Objects.equals(latest.externalGameId(), externalGameId)
+                && WishlistRefreshSupport.isVerifiedProviderSource(latest.source()) == verified) {
+            return false;
         }
 
         store.save(new NewWishlistPriceHistoryEntry(
@@ -85,9 +103,12 @@ public class WishlistPriceHistoryService {
                 itemStore,
                 normalizedLabel,
                 parsed.map(WishlistPriceParser.ParsedPrice::amount).orElse(null),
-                parsed.map(WishlistPriceParser.ParsedPrice::currency).orElse(null),
-                normalizeSource(source),
+                parsedCurrency,
+                normalizedSource,
+                externalGameId,
+                externalDealId,
                 LocalDateTime.now(ZoneOffset.UTC)));
+        return true;
     }
 
     private static String normalizeSource(String source) {

@@ -558,6 +558,36 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/me/wishlist/refresh:
+    post:
+      operationId: refreshCurrentUserWishlistPrices
+      tags: [Wishlist]
+      summary: Refresh linked wishlist items from CheapShark and evaluate targets
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Resume after this wishlist item ID. Every page uses ascending ID order.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Bounded refresh summary and updated wishlist items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWishlistRefreshResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/me/wishlist/alert-events:
     get:
       operationId: listCurrentUserWishlistAlertEvents
@@ -1433,6 +1463,18 @@ components:
         priority:
           type: [string, "null"]
           enum: [high, medium, low, null]
+        externalGameId:
+          type: [string, "null"]
+          maxLength: 80
+        externalDealId:
+          type: [string, "null"]
+          maxLength: 160
+        currency:
+          type: [string, "null"]
+          maxLength: 10
+        thumbUrl:
+          type: [string, "null"]
+          maxLength: 512
 
     UpdateWishlistAlertRequest:
       type: object
@@ -1484,8 +1526,69 @@ components:
           type: boolean
         priority:
           type: [string, "null"]
+        externalGameId:
+          type: [string, "null"]
+        externalDealId:
+          type: [string, "null"]
+        currency:
+          type: string
+        priceSource:
+          type: string
+        lowestEverSource:
+          type: string
+        thumbUrl:
+          type: [string, "null"]
         alertEvaluation:
           $ref: "#/components/schemas/WishlistAlertEvaluation"
+
+    UserWishlistRefreshResponse:
+      type: object
+      required:
+        - scannedItems
+        - matchedItems
+        - updatedItems
+        - observationsRecorded
+        - targetReachedEventsCreated
+        - unavailableItems
+        - provider
+        - currency
+        - refreshedAtUtc
+        - items
+      properties:
+        scannedItems:
+          type: integer
+          format: int32
+        matchedItems:
+          type: integer
+          format: int32
+        updatedItems:
+          type: integer
+          format: int32
+        observationsRecorded:
+          type: integer
+          format: int32
+        targetReachedEventsCreated:
+          type: integer
+          format: int32
+        unavailableItems:
+          type: integer
+          format: int32
+        hasMore:
+          type: boolean
+        nextCursor:
+          type: [integer, "null"]
+          format: int64
+        provider:
+          type: string
+        currency:
+          type: string
+        refreshedAtUtc:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WishlistItem"
 
     WishlistAlertEvaluation:
       type: object
@@ -1532,6 +1635,10 @@ components:
           type: boolean
         message:
           type: string
+        deliveryStatus:
+          type: string
+        observationSource:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time
@@ -1568,6 +1675,10 @@ components:
           type: [string, "null"]
         source:
           type: string
+        externalGameId:
+          type: [string, "null"]
+        externalDealId:
+          type: [string, "null"]
         observedAt:
           type: string
           format: date-time

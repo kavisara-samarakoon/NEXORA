@@ -1140,3 +1140,48 @@
 .scene :global(.wl-network__item-icon) {
   background: rgba(255, 255, 255, 0.045);
 }
+
+.scene :global(.wl-results-bar__actions) {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.scene :global(.wl-refresh-button) {
+  appearance: none;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--nx-text);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.scene :global(.wl-refresh-button:hover:not(:disabled)) {
+  border-color: rgba(0, 212, 255, 0.5);
+  background: rgba(0, 212, 255, 0.16);
+}
+
+.scene :global(.wl-refresh-button:disabled) {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.scene :global(.wl-card__history-insufficient) {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--nx-text-soft);
+}
+
+.scene :global(.wl-alert-history__lifecycle) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--nx-muted);
+}
