@@ -486,6 +486,31 @@ paths:
           $ref: "#/components/responses/AuthenticationRequired"
         "500":
           $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateCurrentAccount
+      tags: [Authentication]
+      summary: Update the current account display name
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated account-safe fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /api/me/wishlist:
     get:
@@ -1364,6 +1389,15 @@ components:
           type: string
         displayName:
           type: string
+
+    UpdateProfileRequest:
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
 
     AddWishlistItemRequest:
       type: object

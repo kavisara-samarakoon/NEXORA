@@ -43,6 +43,17 @@ html {
   background: var(--nx-bg);
 }
 
+html[data-nx-glass="reduced"] {
+  --glass-blur: 4px;
+  --nx-panel: rgba(14, 16, 22, 0.94);
+  --nx-glass-bg: rgba(14, 16, 22, 0.94);
+}
+
+html[data-nx-compact="true"] {
+  --radius-lg: 18px;
+  --radius-md: 12px;
+}
+
 body {
   min-height: 100vh;
   overflow-x: hidden;

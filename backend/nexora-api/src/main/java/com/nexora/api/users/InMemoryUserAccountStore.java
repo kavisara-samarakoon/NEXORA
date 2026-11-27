@@ -58,6 +58,16 @@ public class InMemoryUserAccountStore implements UserAccountStore {
         return usernameIndex.containsKey(normalize(username));
     }
 
+    @Override
+    public synchronized Optional<UserAccount> updateDisplayName(long id, String displayName) {
+        UserAccount existing = users.get(id);
+        if (existing == null) {
+            return Optional.empty();
+        }
+        existing.updateDisplayName(displayName);
+        return Optional.of(existing);
+    }
+
     private Optional<UserAccount> findIndexed(Map<String, Long> index, String value) {
         return Optional.ofNullable(index.get(normalize(value))).map(users::get);
     }

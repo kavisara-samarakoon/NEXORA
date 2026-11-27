@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
 import AuthSessionBootstrap from "@/components/AuthSessionBootstrap";
+import { DevicePreferencesBootstrap } from "@/components/DevicePreferencesBootstrap";
 import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/metadata";
 import "./globals.css";
 
@@ -108,6 +109,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <AuthSessionBootstrap />
+        <DevicePreferencesBootstrap />
         {children}
       </body>
     </html>

@@ -1031,3 +1031,59 @@
   line-height: 1;
 
 }
+
+.scene :global(.st-profile-edit) {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 230, 210, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.scene :global(.st-profile-edit label) {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--nx-text-soft);
+}
+
+.scene :global(.st-profile-edit__row) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.scene :global(.st-profile-edit input) {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 230, 210, 0.2);
+  background: rgba(8, 9, 13, 0.72);
+  color: var(--nx-text);
+}
+
+.scene :global(.st-profile-edit__actions) {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scene :global(.st-outline-button--active) {
+  border-color: rgba(255, 106, 0, 0.45);
+  color: #ffd6b2;
+}
+
+:global(html[data-nx-compact="true"]) .scene :global(.st-content) {
+  gap: 14px;
+}
+
+:global(html[data-nx-compact="true"]) .scene :global(.st-card) {
+  padding: 18px;
+}
+
+:global(html[data-nx-glass="reduced"]) .scene {
+  --nx-panel: rgba(18, 18, 22, 0.92);
+  --nx-panel-soft: rgba(255, 255, 255, 0.06);
+}

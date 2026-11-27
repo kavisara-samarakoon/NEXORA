@@ -15,4 +15,6 @@ public interface UserAccountStore {
     boolean emailExists(String email);
 
     boolean usernameExists(String username);
+
+    Optional<UserAccount> updateDisplayName(long id, String displayName);
 }

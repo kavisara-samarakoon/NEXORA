@@ -6418,3 +6418,154 @@ test("F4-C02B Sentinel exposes named groups with their response text", async () 
     assert.match(file, /role="group" aria-label="Suggested next actions"/);
   } finally { h.restore(); }
 });
+
+test("R03: auth-client cache update and SettingsCenter handleDisplayNameSubmit enforce session revision, identity, and component ownership", async () => {
+  const h = await sentinelChatHarness();
+  try {
+    const startUser = { id: 101, email: "a@example.com", username: "usera", displayName: "User A", createdAt: "2026-01-01T00:00:00Z" };
+    h.auth.startAuthSession({ token: "tok-a", tokenType: "Bearer", expiresIn: 900, user: startUser });
+    const startRev = h.auth.readAuthSessionRevision();
+
+    // Stale revision or cross-account user ID must be rejected without mutating cache.
+    assert.equal(h.auth.updateSignedInUserCache({ ...startUser, displayName: "Stale" }, startRev - 1), false);
+    assert.equal(h.auth.updateSignedInUserCache({ ...startUser, id: 999, displayName: "Other Account" }, startRev), false);
+    assert.equal((await h.auth.readCurrentUser())?.displayName, "User A");
+
+    // Extract real handleDisplayNameSubmit from SettingsCenter.tsx
+    const settingsSource = await readFile(new URL("../src/components/SettingsCenter.tsx", import.meta.url), "utf8");
+    const ast = ts.createSourceFile("SettingsCenter.tsx", settingsSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const component = ast.statements.find((node) => node.name?.text === "SettingsCenter");
+    let submitDecl;
+    ts.forEachChild(component, function visit(node) {
+      if (ts.isFunctionDeclaration(node) && node.name?.text === "handleDisplayNameSubmit") submitDecl = node;
+      else ts.forEachChild(node, visit);
+    });
+    assert.ok(submitDecl);
+    const compiled = ts.transpileModule(submitDecl.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+
+    const createRunner = (sessionRev, deferredUpdate) => {
+      const state = {
+        authToken: "tok-a",
+        signedInUser: startUser,
+        displayNameDraft: "Updated A",
+        displayNameSaving: false,
+        editingDisplayName: true,
+        profileMessage: null,
+        authState: { status: "authenticated", user: startUser },
+      };
+      const lifetimeRef = { current: { active: true } };
+      const opOwnerRef = { current: null };
+      const mocks = {
+        ...h.auth,
+        normalizeAuthError: h.authApi.normalizeAuthError,
+        consumerLifetimeRef: lifetimeRef,
+        consumerSessionRevision: sessionRev,
+        displayNameOpOwner: opOwnerRef,
+        authToken: state.authToken,
+        signedInUser: state.signedInUser,
+        displayNameDraft: state.displayNameDraft,
+        get displayNameSaving() { return state.displayNameSaving; },
+        updateDisplayName: () => deferredUpdate.promise,
+        setAuthToken: (v) => { state.authToken = v; },
+        setAuthState: (v) => { state.authState = v; },
+        setEditingDisplayName: (v) => { state.editingDisplayName = v; },
+        setDisplayNameSaving: (v) => { state.displayNameSaving = v; },
+        setProfileMessage: (v) => { state.profileMessage = v; },
+      };
+      const fn = new Function(...Object.keys(mocks), `${compiled}\nreturn { handleDisplayNameSubmit };`);
+      const { handleDisplayNameSubmit } = fn(...Object.values(mocks));
+      return { state, lifetimeRef, handleDisplayNameSubmit };
+    };
+
+    // Case 1: Logout / account switch during flight must NOT write old user's profile message or cache.
+    const deferredSwitch = {};
+    deferredSwitch.promise = new Promise((resolve) => { deferredSwitch.resolve = resolve; });
+    const runner1 = createRunner(startRev, deferredSwitch);
+    const pending1 = runner1.handleDisplayNameSubmit({ preventDefault() {} });
+    h.auth.startAuthSession({ token: "tok-b", tokenType: "Bearer", expiresIn: 900, user: { ...startUser, id: 202, username: "userb", displayName: "User B" } });
+    deferredSwitch.resolve({ ...startUser, displayName: "Late User A" });
+    await pending1;
+    assert.equal((await h.auth.readCurrentUser())?.id, 202);
+    assert.equal((await h.auth.readCurrentUser())?.displayName, "User B");
+    assert.equal(runner1.state.profileMessage, null);
+    assert.equal(runner1.state.authState.user.id, 101);
+
+    // Case 2: Unmount during flight blocks completion state updates.
+    const revB = h.auth.readAuthSessionRevision();
+    const deferredUnmount = {};
+    deferredUnmount.promise = new Promise((resolve) => { deferredUnmount.resolve = resolve; });
+    const runner2 = createRunner(revB, deferredUnmount);
+    runner2.lifetimeRef.current.active = true;
+    const pending2 = runner2.handleDisplayNameSubmit({ preventDefault() {} });
+    runner2.lifetimeRef.current.active = false;
+    deferredUnmount.resolve({ id: 202, email: "a@example.com", username: "userb", displayName: "After Unmount", createdAt: "2026-01-01T00:00:00Z" });
+    await pending2;
+    assert.equal(runner2.state.profileMessage, null);
+  } finally {
+    h.restore();
+  }
+});
+
+test("R04: device-preferences persists and restores attributes across reloads, preserves unset homepage defaults, and reports storage failure honestly", async () => {
+  const origWindow = globalThis.window;
+  const origDocument = globalThis.document;
+  try {
+    const store = new Map();
+    const dataset = {};
+    let throwOnWrite = false;
+    const target = new EventTarget();
+    target.localStorage = {
+      getItem: (key) => store.get(key) ?? null,
+      setItem: (key, value) => {
+        if (throwOnWrite) throw new Error("QuotaExceededError");
+        store.set(key, value);
+      },
+      removeItem: (key) => store.delete(key),
+    };
+    globalThis.window = target;
+    globalThis.document = { documentElement: { dataset } };
+
+    const devicePrefsUrl = await moduleUrl("../src/lib/device-preferences.ts");
+    const prefs = await import(devicePrefsUrl);
+    prefs.resetDevicePreferencesCacheForTests();
+
+    // Unset preferences must NOT alter documentElement.dataset (homepage defaults intact).
+    prefs.applyDevicePreferenceAttributes(prefs.readStoredDevicePreferencesSnapshot());
+    assert.equal(dataset.nxCompact, undefined);
+    assert.equal(dataset.nxGlass, undefined);
+
+    // Enable compact-mode and reduce glass-effects -> persisted in localStorage & dataset updated.
+    const compactRes = prefs.setDevicePreferenceFlag("compact-mode", true);
+    const glassRes = prefs.setDevicePreferenceFlag("glass-effects", false);
+    assert.equal(compactRes.persisted, true);
+    assert.equal(glassRes.persisted, true);
+    assert.equal(dataset.nxCompact, "true");
+    assert.equal(dataset.nxGlass, "reduced");
+
+    // Simulate hard reload / navigation to another route: reset in-memory cache & delete dataset.
+    delete dataset.nxCompact;
+    delete dataset.nxGlass;
+    prefs.resetDevicePreferencesCacheForTests();
+    const restored = prefs.readStoredDevicePreferencesSnapshot();
+    prefs.applyDevicePreferenceAttributes(restored);
+    assert.equal(restored.compactMode, true);
+    assert.equal(restored.glassEffects, false);
+    assert.equal(dataset.nxCompact, "true");
+    assert.equal(dataset.nxGlass, "reduced");
+
+    // Revert to defaults removes attributes cleanly.
+    prefs.setDevicePreferenceFlag("compact-mode", false);
+    prefs.setDevicePreferenceFlag("glass-effects", true);
+    assert.equal(dataset.nxCompact, undefined);
+    assert.equal(dataset.nxGlass, undefined);
+
+    // When localStorage fails on write, persisted=false is returned instead of claiming browser persistence.
+    throwOnWrite = true;
+    const failedWrite = prefs.setDevicePreferenceFlag("compact-mode", true);
+    assert.equal(failedWrite.persisted, false);
+    assert.equal(dataset.nxCompact, "true");
+  } finally {
+    globalThis.window = origWindow;
+    globalThis.document = origDocument;
+  }
+});

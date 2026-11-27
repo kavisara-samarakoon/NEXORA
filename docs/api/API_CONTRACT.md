@@ -391,6 +391,7 @@ Primary catalog response fields are:
 | POST | `/api/auth/refresh` | Public; CSRF/origin guarded | Rotate refresh session and issue a new access token | None; uses refresh and CSRF cookies/header | `200`; `AuthResponse` plus rotated refresh `Set-Cookie` | `authentication_failed`, `csrf_failed`, `rate_limited`, `internal_error` | Prior refresh token becomes invalid after rotation. |
 | POST | `/api/auth/logout` | Public; CSRF/origin guarded | Revoke the presented refresh session and clear cookie | None | `204`; empty body plus clearing `Set-Cookie` | `csrf_failed`, `rate_limited`, `internal_error` | Safe when no active refresh session is present. |
 | GET | `/api/auth/me` | Protected | Return current account-safe fields | None | `200`; `id`, `email`, `username`, `displayName` | `authentication_required`, `internal_error` | Requires `Authorization: Bearer <ACCESS_TOKEN>`. |
+| PATCH | `/api/auth/me` | Protected | Update current account display name | `displayName` (1–100 non-blank chars) | `200`; updated `AuthUserResponse` | `authentication_required`, `validation_failed`, `internal_error` | Persists display name for the authenticated account. |
 
 Example request shapes:
 

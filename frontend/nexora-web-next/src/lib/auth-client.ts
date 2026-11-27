@@ -252,6 +252,27 @@ export function readAuthToken(): string | null {
   return currentAccessToken;
 }
 
+export function updateSignedInUserCache(
+  user: AuthUser,
+  expectedSessionRevision?: number,
+): boolean {
+  if (
+    expectedSessionRevision !== undefined &&
+    expectedSessionRevision !== authSessionRevision
+  ) {
+    return false;
+  }
+  if (!currentAccessToken) {
+    return false;
+  }
+  if (currentUser && currentUser.id !== user.id) {
+    return false;
+  }
+  currentUser = user;
+  dispatchAuthStateEvent();
+  return true;
+}
+
 function clearLocalAuthSession(): void {
   currentAccessToken = null;
   currentUser = null;
@@ -374,11 +395,18 @@ export async function readCurrentUser(): Promise<AuthUser | null> {
     return token ? currentUser : null;
   }
 
+  const revisionAtStart = authSessionRevision;
   try {
     const user = await getCurrentUser(token);
+    if (revisionAtStart !== authSessionRevision) {
+      return currentAccessToken ? currentUser : null;
+    }
     currentUser = user;
     return user;
   } catch (error) {
+    if (revisionAtStart !== authSessionRevision) {
+      return currentAccessToken ? currentUser : null;
+    }
     if (normalizeAuthError(error).status === 401) {
       token = await ensureAuthToken({ forceRefresh: true });
       return token ? currentUser : null;

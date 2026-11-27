@@ -9,7 +9,7 @@ import sys
 DEFAULT_CONTRACT = Path("docs/api/openapi.yaml")
 EXPECTED_INFO_VERSION = "0.38.0"
 EXPECTED_PATH_COUNT = 25
-EXPECTED_OPERATION_COUNT = 27
+EXPECTED_OPERATION_COUNT = 28
 
 EXPECTED_PATHS = {
     "/api",
@@ -58,6 +58,7 @@ EXPECTED_OPERATION_IDS = {
     "refreshAuthSession",
     "logoutAuthSession",
     "getCurrentAccount",
+    "updateCurrentAccount",
     "listCurrentUserWishlist",
     "addCurrentUserWishlistItem",
     "listCurrentUserWishlistAlertEvents",
@@ -87,6 +88,7 @@ REQUIRED_SCHEMAS = {
     "LoginRequest",
     "AuthResponse",
     "AuthUserResponse",
+    "UpdateProfileRequest",
     "AddWishlistItemRequest",
     "UpdateWishlistAlertRequest",
     "WishlistItem",

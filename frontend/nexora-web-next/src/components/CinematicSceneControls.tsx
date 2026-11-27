@@ -65,13 +65,15 @@ function readStoredMotionPreference(): boolean | null {
   }
 }
 
-function writeStoredMotionPreference(motionPaused: boolean): void {
-  if (typeof window === "undefined") return;
+function writeStoredMotionPreference(motionPaused: boolean): boolean {
+  if (typeof window === "undefined") return false;
 
   try {
-    window.localStorage.setItem(MOTION_STORAGE_KEY, String(motionPaused));
+    const serialized = String(motionPaused);
+    window.localStorage.setItem(MOTION_STORAGE_KEY, serialized);
+    return window.localStorage.getItem(MOTION_STORAGE_KEY) === serialized;
   } catch {
-    // Motion control still works for the current page when localStorage is blocked.
+    return false;
   }
 }
 
@@ -245,8 +247,9 @@ export function useCinematicSceneControls() {
       motionPaused: !sceneState.motionPaused,
     };
 
-    writeStoredMotionPreference(next.motionPaused);
+    const persisted = writeStoredMotionPreference(next.motionPaused);
     setSceneState(next);
+    return persisted;
   }, []);
 
   const toggleSound = useCallback(() => {
