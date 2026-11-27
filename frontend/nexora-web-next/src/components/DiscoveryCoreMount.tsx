@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { observeSceneVisibility } from "../lib/scene-visibility";
 import NexoraDiscoveryCoreFallback from "./NexoraDiscoveryCoreFallback";
 import { useHomeScene } from "./HomeSceneProvider";
 import styles from "./cinematic.module.css";
@@ -46,8 +47,16 @@ function detectQuality(): Quality {
 
 export default function DiscoveryCoreMount() {
   const { motionPaused } = useHomeScene();
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const paused = motionPaused || !visible;
   const [webglReady, setWebglReady] = useState(false);
   const [quality, setQuality] = useState<Quality>("low");
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (host) return observeSceneVisibility(host, setVisible);
+  }, []);
 
   useEffect(() => {
     if (!ENABLE_WEBGL_CORE) return;
@@ -59,19 +68,22 @@ export default function DiscoveryCoreMount() {
     });
 
     const media = window.matchMedia("(min-width: 900px)");
+    const pointer = window.matchMedia("(pointer: coarse)");
     const onChange = () => setQuality(detectQuality());
     media.addEventListener("change", onChange);
+    pointer.addEventListener("change", onChange);
     return () => {
       window.cancelAnimationFrame(frame);
       media.removeEventListener("change", onChange);
+      pointer.removeEventListener("change", onChange);
     };
   }, []);
 
   return (
-    <div className={styles.canvasHost}>
+    <div ref={hostRef} className={styles.canvasHost} data-nx-core-motion={paused ? "idle" : "active"}>
       {webglReady ? (
         // [OPTION B] delete this branch and render the fallback directly
-        <DiscoveryCore3D quality={quality} paused={motionPaused} />
+        <DiscoveryCore3D quality={quality} paused={paused} />
       ) : (
         <NexoraDiscoveryCoreFallback />
       )}

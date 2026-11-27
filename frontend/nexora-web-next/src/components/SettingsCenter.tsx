@@ -4,7 +4,6 @@ import Link from "next/link";
 import NotificationPreferencesPanel from "@/components/NotificationPreferencesPanel";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import UxStatePanel from "@/components/UxStatePanel";
-import { useCinematicSceneControls } from "./CinematicSceneControls";
 import { normalizeAuthError, updateDisplayName, type AuthUser } from "@/lib/auth";
 import {
   assertAuthSessionRevision,
@@ -18,11 +17,11 @@ import {
   withAuthSessionRetry,
 } from "@/lib/auth-client";
 import {
-  applyDevicePreferenceAttributes,
   getServerDevicePreferencesSnapshot,
   isDevicePreferenceId,
   readStoredDevicePreferencesSnapshot,
   setDevicePreferenceFlag,
+  toggleDeviceMotionPause,
   subscribeDevicePreferences,
 } from "@/lib/device-preferences";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -169,7 +168,7 @@ export default function SettingsCenter() {
     text: string;
     requestId?: string | null;
   } | null>(null);
-  const { motionPaused, toggleMotion } = useCinematicSceneControls();
+  const { motionPaused, reducedMotion } = devicePreferences;
 
   useEffect(() => {
     const lifetime = { active: true };
@@ -179,10 +178,6 @@ export default function SettingsCenter() {
       displayNameOpOwner.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    applyDevicePreferenceAttributes(devicePreferences);
-  }, [devicePreferences]);
 
   const displayedPreferences = useMemo(
     () => ({
@@ -427,11 +422,13 @@ export default function SettingsCenter() {
 
     if (id === "animations") {
       const nextAnimationsEnabled = motionPaused;
-      const persisted = toggleMotion();
+      const persisted = toggleDeviceMotionPause();
       setPreferenceMessage(
         persisted
           ? nextAnimationsEnabled
-            ? "Device-local setting saved: animations enabled in this browser."
+            ? reducedMotion
+              ? "Device-local setting saved. Your system reduced motion preference is still active."
+              : "Device-local setting saved: animations enabled in this browser."
             : "Device-local setting saved: animations paused in this browser."
           : `Device-local setting applied for this session only (${item.label} ${nextAnimationsEnabled ? "enabled" : "paused"}); browser storage could not persist it across reloads.`,
       );

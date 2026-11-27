@@ -1,7 +1,54 @@
 :root {
+  /* Shared semantic roles. Legacy tokens below retain their existing consumers. */
+  --nx-color-canvas: #030303;
+  --nx-color-void: #050506;
+  --nx-color-carbon: #090909;
+  --nx-color-surface: #101013;
+  --nx-color-raised: #16161a;
+  --nx-color-action: #ff6a00;
+  --nx-color-action-deep: #ff4d00;
+  --nx-color-amber: #ffb347;
+  --nx-color-peach: #ffd2a0;
+  --nx-color-info: #00d4ff;
+  --nx-color-text: #f7f3ec;
+  --nx-color-muted: #aaa49d;
+  --nx-color-secondary: #c8c0b5;
+  --nx-color-success: #58f5a5;
+  --nx-color-error: #ff8585;
+  --nx-color-action-ink: #1a0b00;
+  --nx-hairline: rgba(255, 230, 210, 0.20);
+  --nx-border-strong: rgba(255, 230, 210, 0.36);
+  --nx-font-body: var(--font-geist-sans), Arial, sans-serif;
+  --nx-font-telemetry: var(--font-geist-mono), sans-serif;
+  --nx-space-1: 4px;
+  --nx-space-2: 8px;
+  --nx-space-3: 12px;
+  --nx-space-4: 16px;
+  --nx-space-5: 20px;
+  --nx-space-6: 24px;
+  --nx-space-8: 32px;
+  --nx-space-10: 40px;
+  --nx-space-12: 48px;
+  --nx-space-16: 64px;
+  --nx-touch-target: 44px;
+  --nx-drawer-gap: var(--nx-space-1);
+  --nx-drawer-padding: var(--nx-space-3);
+  --nx-drawer-surface: var(--nx-color-surface);
+  --nx-material-glass: rgba(18, 18, 22, 0.42);
+  --nx-outline-focus: 2px solid var(--nx-color-info);
+  --nx-shadow-overlay: 0 24px 58px rgba(0, 0, 0, 0.6);
+  --nx-motion-press: 100ms;
+  --nx-motion-feedback: 150ms;
+  --nx-motion-route-reveal: 240ms;
+  --nx-motion-dialog-in: 320ms;
+  --nx-motion-dialog-out: 180ms;
+  --nx-motion-layout: 350ms;
+  --nx-motion-stagger: 35ms;
+  --nx-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
   --nx-orange: #ff7a00;
   --nx-orange-soft: rgba(255, 122, 0, 0.14);
-  --nx-blue: #00d4ff;
+  --nx-blue: var(--nx-color-info);
   --nx-blue-soft: rgba(0, 212, 255, 0.12);
   --nx-bg: #07080b;
   --nx-bg-raised: #0c0e13;
@@ -12,7 +59,7 @@
   --nx-text: #f4f6fb;
   --nx-muted: #9299a9;
   --nx-subtle: #5e6574;
-  --nx-success: #58f5a5;
+  --nx-success: var(--nx-color-success);
   --sidebar-width: 272px;
   --topbar-height: 76px;
   --radius-sm: 10px;
@@ -44,12 +91,26 @@ html {
 }
 
 html[data-nx-glass="reduced"] {
-  --glass-blur: 4px;
+  --glass-blur: 0px;
+  --nx-glass-effect: none;
+  --nx-glass-override: var(--nx-color-surface);
   --nx-panel: rgba(14, 16, 22, 0.94);
   --nx-glass-bg: rgba(14, 16, 22, 0.94);
 }
 
+@media (prefers-reduced-transparency: reduce) {
+  html {
+    --glass-blur: 0px;
+    --nx-glass-effect: none;
+    --nx-glass-override: var(--nx-color-surface);
+    --nx-panel: rgba(14, 16, 22, 0.94);
+    --nx-glass-bg: rgba(14, 16, 22, 0.94);
+  }
+}
+
 html[data-nx-compact="true"] {
+  --nx-drawer-gap: 2px;
+  --nx-drawer-padding: var(--nx-space-2);
   --radius-lg: 18px;
   --radius-md: 12px;
 }
@@ -62,7 +123,7 @@ body {
     radial-gradient(circle at 78% -10%, rgba(0, 212, 255, 0.07), transparent 30%),
     radial-gradient(circle at 8% 38%, rgba(255, 122, 0, 0.055), transparent 25%),
     var(--nx-bg);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: var(--nx-font-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -10010,17 +10071,11 @@ body::after {
   animation: nx-ambient-drift 18s ease-in-out infinite;
 }
 
-.nx-reveal,
-.nx-page-reveal > :not(.auth-page__orb) {
+.nx-reveal {
   animation: nx-reveal-up var(--nx-motion-reveal) var(--nx-ease-premium) both;
   animation-delay: var(--nx-reveal-delay, 0ms);
 }
 
-.nx-page-reveal > :nth-child(2) { --nx-reveal-delay: 70ms; }
-.nx-page-reveal > :nth-child(3) { --nx-reveal-delay: 140ms; }
-.nx-page-reveal > :nth-child(4) { --nx-reveal-delay: 210ms; }
-.nx-page-reveal > :nth-child(5) { --nx-reveal-delay: 280ms; }
-.nx-page-reveal > :nth-child(n + 6) { --nx-reveal-delay: 320ms; }
 
 .dashboard-card-grid > *,
 .deals-grid > *,
@@ -10567,7 +10622,6 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   body::after,
   .nx-reveal,
-  .nx-page-reveal > :not(.auth-page__orb),
   .dashboard-card-grid > *,
   .deals-grid > *,
   .ga-grid > *,
@@ -10582,7 +10636,6 @@ textarea {
   }
 
   .nx-reveal,
-  .nx-page-reveal > :not(.auth-page__orb),
   .dashboard-card-grid > *,
   .deals-grid > *,
   .ga-grid > *,
@@ -11489,7 +11542,6 @@ textarea {
   }
 
   .nx-reveal,
-  .nx-page-reveal > :not(.auth-page__orb),
   .dashboard-card-grid > *,
   .deals-grid > *,
   .ga-grid > *,
@@ -12302,29 +12354,10 @@ textarea {
   }
 }
 
-/* v0.90 demo readiness: smoother cinematic route entry */
-:root {
-  --nx-motion-route-reveal: 720ms;
-  --nx-route-reveal-distance: 18px;
-}
-
+/* Route entry is visible and interactive from its first frame. */
 @keyframes nx-route-enter-soft {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, var(--nx-route-reveal-distance), 0) scale(0.992);
-    filter: blur(7px);
-  }
-
-  58% {
-    opacity: 1;
-    filter: blur(1px);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
-  }
+  from { opacity: 0.9; translate: 0 6px; }
+  to { opacity: 1; translate: 0 0; }
 }
 
 .nx-page-reveal {
@@ -12332,26 +12365,26 @@ textarea {
 }
 
 .nx-page-reveal > :not(.auth-page__orb) {
-  animation-name: nx-route-enter-soft;
-  animation-duration: var(--nx-motion-route-reveal);
-  animation-timing-function: var(--nx-ease-premium);
-  animation-fill-mode: both;
-  animation-delay: var(--nx-reveal-delay, 0ms);
-  will-change: opacity, transform, filter;
+  animation: none;
 }
 
-.nx-page-reveal > :nth-child(1) { --nx-reveal-delay: 40ms; }
-.nx-page-reveal > :nth-child(2) { --nx-reveal-delay: 100ms; }
-.nx-page-reveal > :nth-child(3) { --nx-reveal-delay: 160ms; }
-.nx-page-reveal > :nth-child(4) { --nx-reveal-delay: 220ms; }
-.nx-page-reveal > :nth-child(5) { --nx-reveal-delay: 270ms; }
-.nx-page-reveal > :nth-child(n + 6) { --nx-reveal-delay: 310ms; }
+.nx-page-reveal > :nth-child(-n + 3):not(.auth-page__orb) {
+  animation: nx-route-enter-soft var(--nx-motion-route-reveal) var(--nx-ease-premium) backwards;
+}
+
+html[data-nx-motion="paused"] {
+  scroll-behavior: auto;
+}
+
+html[data-nx-motion="paused"] .nx-page-reveal > :not(.auth-page__orb) {
+  animation: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .nx-page-reveal > :not(.auth-page__orb) {
-    animation: none !important;
-    opacity: 1;
-    transform: none;
-    filter: none;
+  html {
+    scroll-behavior: auto;
+  }
+  .nx-page-reveal > :nth-child(-n + 3):not(.auth-page__orb) {
+    animation: none;
   }
 }

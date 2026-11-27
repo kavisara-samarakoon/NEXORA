@@ -635,6 +635,12 @@
   animation: nexoraHeroGradientFlow 7.5s ease-in-out infinite alternate;
 }
 
+/* Keep the current gradient phase when the user pauses. */
+:global(html[data-nx-motion="paused"]) .headline,
+:global(html[data-nx-motion="paused"]) .headlineAccent {
+  animation-play-state: paused;
+}
+
 @keyframes nexoraHeroGradientFlow {
   0% {
     background-position: 0% 50%;

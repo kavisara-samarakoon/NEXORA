@@ -166,7 +166,7 @@ function Rig({ paused, quality, cursor, children }: CoreProps & { cursor: CoreCu
     // Cap a background-tab delta so returning to the page never jumps the pose.
     const step = Math.min(delta, 0.05);
     const mobile = quality === "low";
-    const cycleSeconds = mobile ? 132 : 96;
+    const cycleSeconds = mobile ? 110 : 80;
     phase.current += step;
     turn.current = (turn.current + step * Math.PI * 2 / cycleSeconds) % (Math.PI * 2);
     const response = mobile ? 0.55 : 1;

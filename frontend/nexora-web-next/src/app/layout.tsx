@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
 import AuthSessionBootstrap from "@/components/AuthSessionBootstrap";
 import { DevicePreferencesBootstrap } from "@/components/DevicePreferencesBootstrap";
+import { INITIAL_DEVICE_PREFERENCES_SCRIPT } from "@/lib/device-preferences";
 import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/metadata";
 import "./globals.css";
 
@@ -106,6 +107,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${orbitron.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: INITIAL_DEVICE_PREFERENCES_SCRIPT }} />
+      </head>
       <body suppressHydrationWarning>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <AuthSessionBootstrap />

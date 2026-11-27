@@ -6354,25 +6354,38 @@ test("F4-C01 compact menu scopes Escape and preserves outside dismissal", async 
   const effect = component.body.statements.find(node => ts.isExpressionStatement(node) && node.getText(ast).includes('document.addEventListener("keydown"'));
   const output = ts.transpileModule(effect.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   const listeners = new Map(), states = [];
-  const link = {}, background = {}, toggle = { focus() { document.activeElement = toggle; } };
-  const document = { activeElement: link, addEventListener: (type, handler) => listeners.set(type, handler), removeEventListener: type => listeners.delete(type) };
+  class TestNode {}
+  const link = new TestNode(), background = new TestNode();
+  const toggle = new TestNode();
+  toggle.focus = () => { document.activeElement = toggle; };
+  const add = (type, handler) => listeners.set(type, handler);
+  const remove = (type) => listeners.delete(type);
+  const document = { body: background, activeElement: link, addEventListener: add, removeEventListener: remove };
+  const window = {
+    addEventListener: add, removeEventListener: remove,
+    matchMedia: () => ({ matches: true, addEventListener: add, removeEventListener: remove }),
+  };
   let cleanup;
   const mocks = {
-    useEffect: fn => { cleanup = fn(); }, menuOpen: true, document,
-    setMenuOpen: value => states.push(value),
+    useEffect: fn => { cleanup = fn(); }, menuOpen: true, document, window, Node: TestNode,
+    setOpenPath: value => states.push(value),
     menuToggleRef: { current: toggle }, menuPanelRef: { current: { contains: node => node === link } },
     navRef: { current: { contains: node => node === link || node === toggle } },
   };
   new Function(...Object.keys(mocks), output)(...Object.values(mocks));
-  listeners.get("keydown")({ key: "Escape" });
-  assert.deepEqual(states, [false]);
+  listeners.get("keydown")({ key: "Escape", preventDefault() {} });
+  assert.deepEqual(states, [null]);
   assert.equal(document.activeElement, toggle);
   document.activeElement = background;
   listeners.get("keydown")({ key: "Escape" });
-  assert.deepEqual(states, [false]);
+  assert.deepEqual(states, [null]);
   assert.equal(document.activeElement, background);
+  document.activeElement = link;
   listeners.get("pointerdown")({ target: background });
-  assert.deepEqual(states, [false, false]);
+  document.activeElement = background;
+  listeners.get("click")({ target: background });
+  assert.deepEqual(states, [null, null]);
+  assert.equal(document.activeElement, toggle);
   cleanup();
   assert.equal(listeners.size, 0);
 });
@@ -6727,5 +6740,116 @@ test("R04: device-preferences persists and restores attributes across reloads, p
   } finally {
     globalThis.window = origWindow;
     globalThis.document = origDocument;
+  }
+});
+
+test("P03 device motion keeps the explicit choice separate from system motion and shares listeners", async () => {
+  const previousWindow = globalThis.window;
+  const previousDocument = globalThis.document;
+  const target = new EventTarget();
+  const media = new EventTarget();
+  const dataset = {};
+  const values = new Map([["nexora.cinematic.motion.paused", "false"]]);
+  const counts = { storage: 0, change: 0 };
+  for (const [owner, kind] of [[target, "storage"], [media, "change"]]) {
+    const add = owner.addEventListener.bind(owner);
+    const remove = owner.removeEventListener.bind(owner);
+    owner.addEventListener = (...args) => { counts[kind]++; add(...args); };
+    owner.removeEventListener = (...args) => { counts[kind]--; remove(...args); };
+  }
+  media.matches = false;
+  target.matchMedia = () => media;
+  let rejectWrites = false;
+  target.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => {
+      if (rejectWrites) throw new Error("test write failure");
+      values.set(key, value);
+    },
+  };
+  globalThis.window = target;
+  globalThis.document = { documentElement: { dataset } };
+  const prefs = await import(await moduleUrl("../src/lib/device-preferences.ts"));
+  prefs.resetDevicePreferencesCacheForTests();
+  let notify = 0;
+  const unsubscribe = prefs.subscribeDevicePreferences(() => notify++);
+  const unsubscribeOther = prefs.subscribeDevicePreferences(() => {});
+  const storage = (key) => {
+    const event = new Event("storage");
+    Object.defineProperty(event, "key", { value: key });
+    target.dispatchEvent(event);
+  };
+  try {
+    assert.deepEqual(counts, { storage: 1, change: 1 });
+    media.matches = true;
+    media.dispatchEvent(new Event("change"));
+    assert.equal(dataset.nxMotion, "paused");
+    assert.equal(values.get("nexora.cinematic.motion.paused"), "false");
+    assert.equal(prefs.readStoredDevicePreferencesSnapshot().motionPaused, false);
+
+    media.matches = false;
+    media.dispatchEvent(new Event("change"));
+    assert.equal(dataset.nxMotion, "running");
+    values.set("nexora.cinematic.motion.paused", "true");
+    storage("nexora.cinematic.motion.paused");
+    assert.equal(dataset.nxMotion, "paused");
+    assert.equal(prefs.readStoredDevicePreferencesSnapshot().motionPaused, true);
+    rejectWrites = true;
+    assert.equal(prefs.toggleDeviceMotionPause(), false);
+    assert.equal(prefs.readStoredDevicePreferencesSnapshot().motionPaused, false);
+    assert.equal(dataset.nxMotion, "running");
+    assert.equal(values.get("nexora.cinematic.motion.paused"), "true");
+    assert.equal(notify, 4);
+    unsubscribeOther();
+    assert.deepEqual(counts, { storage: 1, change: 1 });
+  } finally {
+    unsubscribe();
+    unsubscribeOther();
+    globalThis.window = previousWindow;
+    globalThis.document = previousDocument;
+  }
+  assert.deepEqual(counts, { storage: 0, change: 0 });
+});
+
+test("P03 scene activity tracks intersection and tab visibility and rejects callbacks after cleanup", async () => {
+  const previousDocument = globalThis.document;
+  const previousObserver = globalThis.IntersectionObserver;
+  const doc = new EventTarget();
+  doc.visibilityState = "visible";
+  globalThis.document = doc;
+  const host = {};
+  const observed = [];
+  const changes = [];
+  let callback;
+  let disconnected = false;
+  globalThis.IntersectionObserver = class {
+    constructor(notify) { callback = notify; }
+    observe(element) { observed.push(element); }
+    disconnect() { disconnected = true; }
+  };
+  try {
+    const { observeSceneVisibility } = await import(await moduleUrl("../src/lib/scene-visibility.ts"));
+    const stop = observeSceneVisibility(host, (visible) => changes.push(visible));
+    assert.deepEqual(observed, [host]);
+    callback([{ target: host, isIntersecting: true, intersectionRatio: 0.5 }]);
+    doc.visibilityState = "hidden";
+    doc.dispatchEvent(new Event("visibilitychange"));
+    callback([{ target: host, isIntersecting: false, intersectionRatio: 0 }]);
+    doc.visibilityState = "visible";
+    doc.dispatchEvent(new Event("visibilitychange"));
+    callback([{ target: host, isIntersecting: true, intersectionRatio: 1 }]);
+    assert.deepEqual(changes, [false, true, false, true]);
+    stop();
+    assert.equal(disconnected, true);
+    callback([{ target: host, isIntersecting: false, intersectionRatio: 0 }]);
+    doc.visibilityState = "hidden";
+    doc.dispatchEvent(new Event("visibilitychange"));
+    assert.deepEqual(changes, [false, true, false, true]);
+    const cleanupRemount = observeSceneVisibility(host, (visible) => changes.push(visible));
+    assert.deepEqual(changes, [false, true, false, true, false]);
+    cleanupRemount();
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.IntersectionObserver = previousObserver;
   }
 });
