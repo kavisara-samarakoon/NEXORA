@@ -8,15 +8,17 @@ import sys
 
 DEFAULT_CONTRACT = Path("docs/api/openapi.yaml")
 EXPECTED_INFO_VERSION = "0.38.0"
-EXPECTED_PATH_COUNT = 23
-EXPECTED_OPERATION_COUNT = 25
+EXPECTED_PATH_COUNT = 25
+EXPECTED_OPERATION_COUNT = 27
 
 EXPECTED_PATHS = {
     "/api",
     "/api/health",
     "/api/deals",
     "/api/deals/external",
+    "/api/deals/live",
     "/api/giveaways",
+    "/api/giveaways/live",
     "/api/wishlist",
     "/api/dashboard/summary",
     "/api/security/status",
@@ -42,7 +44,9 @@ EXPECTED_OPERATION_IDS = {
     "getRuntimeHealth",
     "listDeals",
     "listExternalDeals",
+    "listLiveDealsCatalog",
     "listGiveaways",
+    "listLiveGiveaways",
     "listPublicWishlist",
     "getDashboardSummary",
     "getSecurityStatus",
@@ -69,7 +73,11 @@ REQUIRED_SCHEMAS = {
     "WelcomeResponse",
     "HealthResponse",
     "Deal",
+    "DealStoreOption",
+    "ExternalDealsCatalogResponse",
     "Giveaway",
+    "LiveGiveaway",
+    "LiveGiveawaysResponse",
     "DashboardSummary",
     "SecurityStatusResponse",
     "SentinelStatusResponse",

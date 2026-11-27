@@ -14,11 +14,15 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class CheapSharkDealClient {
 
-    private static final String USER_AGENT = "NEXORA/0.1 (external-deals-foundation)";
+    private static final String USER_AGENT = "NEXORA/1.0 (external-deals-client)";
+    private static final Set<String> ALLOWED_SORT_BY = Set.of(
+            "DealRating", "Savings", "Price", "Title", "Recent"
+    );
 
     private final ExternalDealsProperties properties;
     private final ObjectMapper objectMapper;
@@ -36,8 +40,19 @@ public class CheapSharkDealClient {
             int pageSize,
             String title,
             BigDecimal upperPrice) {
+        return getDeals(pageSize, title, upperPrice, "DealRating", true, null, 0);
+    }
+
+    public List<CheapSharkDealResponse> getDeals(
+            int pageSize,
+            String title,
+            BigDecimal upperPrice,
+            String sortBy,
+            boolean desc,
+            String storeId,
+            int pageNumber) {
         return getArray(
-                buildDealsUri(pageSize, title, upperPrice),
+                buildDealsUri(pageSize, title, upperPrice, sortBy, desc, storeId, pageNumber),
                 CheapSharkDealResponse[].class,
                 "deals"
         );
@@ -65,6 +80,9 @@ public class CheapSharkDealClient {
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
             );
 
+            if (response.statusCode() == 429) {
+                throw new CheapSharkClientException("CheapShark rate limit reached (HTTP 429)");
+            }
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new CheapSharkClientException(
                         "CheapShark returned HTTP " + response.statusCode()
@@ -92,12 +110,21 @@ public class CheapSharkDealClient {
         }
     }
 
-    private URI buildDealsUri(int pageSize, String title, BigDecimal upperPrice) {
+    private URI buildDealsUri(
+            int pageSize,
+            String title,
+            BigDecimal upperPrice,
+            String sortBy,
+            boolean desc,
+            String storeId,
+            int pageNumber) {
+        String effectiveSortBy = normalizeSortBy(sortBy);
+        int effectivePageNumber = Math.max(0, Math.min(pageNumber, 20));
         StringBuilder uri = new StringBuilder(normalizedBaseUrl())
                 .append("/deals?pageSize=").append(pageSize)
-                .append("&pageNumber=0")
-                .append("&sortBy=DealRating")
-                .append("&desc=1")
+                .append("&pageNumber=").append(effectivePageNumber)
+                .append("&sortBy=").append(encode(effectiveSortBy))
+                .append("&desc=").append(desc ? "1" : "0")
                 .append("&onSale=1");
 
         if (title != null) {
@@ -106,8 +133,24 @@ public class CheapSharkDealClient {
         if (upperPrice != null) {
             uri.append("&upperPrice=").append(encode(upperPrice.stripTrailingZeros().toPlainString()));
         }
+        if (storeId != null && storeId.matches("\\d+(,\\d+)*")) {
+            uri.append("&storeID=").append(encode(storeId));
+        }
 
         return URI.create(uri.toString());
+    }
+
+    static String normalizeSortBy(String sortBy) {
+        if (sortBy == null || sortBy.isBlank()) {
+            return "DealRating";
+        }
+        String trimmed = sortBy.trim();
+        for (String allowed : ALLOWED_SORT_BY) {
+            if (allowed.equalsIgnoreCase(trimmed)) {
+                return allowed;
+            }
+        }
+        return "DealRating";
     }
 
     private String normalizedBaseUrl() {
@@ -115,7 +158,21 @@ public class CheapSharkDealClient {
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new CheapSharkClientException("CheapShark base URL is not configured");
         }
-        return baseUrl.replaceAll("/+$", "");
+        String trimmed = baseUrl.trim().replaceAll("/+$", "");
+        URI parsed;
+        try {
+            parsed = URI.create(trimmed);
+        } catch (IllegalArgumentException exception) {
+            throw new CheapSharkClientException("CheapShark base URL is invalid", exception);
+        }
+        String scheme = parsed.getScheme();
+        String host = parsed.getHost();
+        boolean isLocalTest = "http".equalsIgnoreCase(scheme)
+                && ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host));
+        if (!"https".equalsIgnoreCase(scheme) && !isLocalTest) {
+            throw new CheapSharkClientException("CheapShark base URL must use HTTPS");
+        }
+        return trimmed;
     }
 
     private static String encode(String value) {

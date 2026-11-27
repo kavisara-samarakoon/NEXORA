@@ -37,7 +37,7 @@ public class ExternalDealsCache {
         this.maxDealsEntries = Math.max(1, maxDealsEntries);
     }
 
-    synchronized ExternalDealsCacheEntry<List<CheapSharkDealResponse>> getDeals(
+    public synchronized ExternalDealsCacheEntry<List<CheapSharkDealResponse>> getDeals(
             ExternalDealsCacheKey key) {
         ExternalDealsCacheEntry<List<CheapSharkDealResponse>> entry = deals.get(key);
         if (entry != null && !entry.isFresh(clock.instant())) {
@@ -46,7 +46,7 @@ public class ExternalDealsCache {
         return entry;
     }
 
-    synchronized void putDeals(
+    public synchronized void putDeals(
             ExternalDealsCacheKey key,
             List<CheapSharkDealResponse> responses) {
         Instant now = clock.instant();
@@ -56,11 +56,12 @@ public class ExternalDealsCache {
         }
         deals.put(key, new ExternalDealsCacheEntry<>(
                 List.copyOf(responses),
+                now,
                 now.plus(properties.getCache().dealsTtl())
         ));
     }
 
-    synchronized ExternalDealsCacheEntry<Map<String, String>> getStoreLookup() {
+    public synchronized ExternalDealsCacheEntry<Map<String, String>> getStoreLookup() {
         ExternalDealsCacheEntry<Map<String, String>> entry = storeLookup;
         if (entry != null && !entry.isFresh(clock.instant())) {
             storeLookup = null;
@@ -68,16 +69,21 @@ public class ExternalDealsCache {
         return entry;
     }
 
-    synchronized void putStoreLookup(Map<String, String> lookup) {
+    public synchronized void putStoreLookup(Map<String, String> lookup) {
         Instant now = clock.instant();
         storeLookup = new ExternalDealsCacheEntry<>(
                 Map.copyOf(lookup),
+                now,
                 now.plus(properties.getCache().storesTtl())
         );
     }
 
-    boolean isFresh(ExternalDealsCacheEntry<?> entry) {
+    public boolean isFresh(ExternalDealsCacheEntry<?> entry) {
         return entry != null && entry.isFresh(clock.instant());
+    }
+
+    Instant now() {
+        return clock.instant();
     }
 
     synchronized int dealEntryCount() {

@@ -344,6 +344,12 @@
     radial-gradient(ellipse at 95% 5%, rgba(0,212,255,0.07), transparent 65%),
     #11161d;
 }
+.cardMediaImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .cardMediaArt { position: absolute; inset: 0; pointer-events: none; }
 .cardMediaArt::before, .cardMediaArt::after {
   content: "";
@@ -423,7 +429,172 @@
   overflow-wrap: anywhere;
 }
 .saveButton, .alertButton { flex: 1 1 125px; }
+.detailButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 0 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--nx-glass-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--card-secondary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.detailButton:hover { color: var(--nx-warm-white); border-color: var(--nx-glass-border-strong); }
 .viewButton { flex: 1 0 100%; }
+
+.liveControlsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+.selectControl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1 1 150px;
+}
+.selectControl span {
+  font-size: 0.72rem;
+  color: var(--nx-muted);
+}
+.selectControl select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--nx-glass-border);
+  background: rgba(9,9,9,0.55);
+  color: var(--nx-warm-white);
+  font: inherit;
+  font-size: 0.84rem;
+}
+.selectControl select:focus-visible { outline: 2px solid var(--nx-electric-blue); outline-offset: 2px; }
+.networkAttribution {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,230,210,0.08);
+  font-size: 0.74rem;
+  color: var(--nx-muted);
+}
+.networkAttribution a,
+.modalAttribution a {
+  color: var(--nx-electric-blue);
+  text-decoration: underline;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 84px 20px 24px;
+  background: rgba(3, 4, 7, 0.78);
+  backdrop-filter: blur(8px);
+}
+.modalDialog {
+  width: min(100%, 620px);
+  max-height: calc(100svh - 108px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 22px;
+  border: 1px solid var(--nx-glass-border-strong);
+  background: #101319;
+  color: var(--nx-warm-white);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65);
+}
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.modalEyebrow {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nx-peach);
+}
+.modalTitle {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+.modalClose {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--nx-glass-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--nx-warm-white);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.modalMedia {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,230,210,0.14);
+  max-height: 240px;
+  background: #090b0f;
+}
+.modalMediaImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 240px;
+  object-fit: cover;
+}
+.modalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.modalGrid div {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,230,210,0.1);
+  background: rgba(255,255,255,0.03);
+}
+.modalGrid dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nx-muted);
+}
+.modalGrid dd {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.modalAttribution {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--nx-text-soft);
+}
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 560px) {
+  .modalGrid { grid-template-columns: minmax(0, 1fr); }
+}
 .saveButton:hover:not(:disabled), .alertButton:hover, .viewButton:hover { color: var(--nx-warm-white); border-color: var(--nx-glass-border-strong); }
 .saveButton:disabled { cursor: default; }
 .saveButtonSaved { color: var(--nx-amber); border-color: rgba(255,106,0,0.4); }

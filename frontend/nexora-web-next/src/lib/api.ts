@@ -1,13 +1,18 @@
 import {
   deals as fallbackDeals,
+  type DealSortBy,
   type DealStatus,
+  type DealStoreOption,
   type GameDeal,
+  type LiveDealsCatalog,
 } from "@/data/deals";
 import {
   giveaways as fallbackGiveaways,
   type Giveaway,
   type GiveawayPlatform,
   type GiveawayTag,
+  type LiveGiveaway,
+  type LiveGiveawaysCatalog,
 } from "@/data/giveaways";
 import {
   securityStatus as fallbackSecurityStatus,
@@ -124,12 +129,47 @@ export type DealsResult = {
 export type ExternalDealsOptions = {
   title?: string;
   pageSize?: number;
+  upperPrice?: number;
+  sortBy?: DealSortBy;
+  desc?: boolean;
+  storeId?: string;
+  pageNumber?: number;
 };
 
 export type ExternalDealsResult = {
   deals: readonly GameDeal[];
   source: "external-api" | "fallback";
 };
+
+function isDealStoreOption(value: unknown): value is DealStoreOption {
+  if (typeof value !== "object" || value === null) return false;
+  const option = value as Record<string, unknown>;
+  return typeof option.id === "string"
+    && option.id.trim().length > 0
+    && typeof option.name === "string"
+    && option.name.trim().length > 0;
+}
+
+function isLiveDealsCatalog(value: unknown): value is LiveDealsCatalog {
+  if (typeof value !== "object" || value === null) return false;
+  const catalog = value as Record<string, unknown>;
+  return (
+    Array.isArray(catalog.deals) &&
+    catalog.deals.every(isGameDeal) &&
+    (catalog.source === "cheapshark" || catalog.source === "unavailable") &&
+    typeof catalog.sourceAttribution === "string" &&
+    (catalog.sourceUrl === null || typeof catalog.sourceUrl === "string") &&
+    typeof catalog.currency === "string" &&
+    ["live", "cached", "stale", "fallback", "unavailable"].includes(
+      catalog.cacheState as string,
+    ) &&
+    (catalog.lastRefreshedAtUtc === null ||
+      typeof catalog.lastRefreshedAtUtc === "string") &&
+    Array.isArray(catalog.availableStores) &&
+    catalog.availableStores.every(isDealStoreOption) &&
+    (catalog.notice === null || typeof catalog.notice === "string")
+  );
+}
 
 export type GiveawaysResult = {
   giveaways: readonly Giveaway[];
@@ -458,6 +498,59 @@ export async function getExternalDeals(
   }
 }
 
+export async function getLiveDeals(
+  options: ExternalDealsOptions = {},
+): Promise<LiveDealsCatalog> {
+  const requestedPageSize = Number.isFinite(options.pageSize)
+    ? Math.floor(options.pageSize as number)
+    : 12;
+  const pageSize = Math.min(24, Math.max(1, requestedPageSize));
+  const title = options.title?.trim().slice(0, 80);
+  const query = new URLSearchParams({ pageSize: String(pageSize) });
+
+  if (title) query.set("title", title);
+  if (options.upperPrice !== undefined && Number.isFinite(options.upperPrice) && options.upperPrice >= 0) {
+    query.set("upperPrice", String(options.upperPrice));
+  }
+  if (options.sortBy) query.set("sortBy", options.sortBy);
+  if (options.desc !== undefined) query.set("desc", String(options.desc));
+  if (options.storeId && /^\d+(,\d+){0,10}$/.test(options.storeId)) {
+    query.set("storeId", options.storeId);
+  }
+  if (options.pageNumber !== undefined && Number.isInteger(options.pageNumber) && options.pageNumber >= 0) {
+    query.set("pageNumber", String(options.pageNumber));
+  }
+
+  try {
+    const response = await fetch(buildApiUrl(`/api/deals/live?${query}`), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Live deals API returned ${response.status}`);
+    }
+
+    const data: unknown = await response.json();
+    if (!isLiveDealsCatalog(data)) {
+      throw new Error("Live deals API returned an unexpected response");
+    }
+    return data;
+  } catch {
+    return {
+      deals: [],
+      source: "unavailable",
+      sourceAttribution: "CheapShark",
+      sourceUrl: "https://www.cheapshark.com",
+      currency: "USD",
+      cacheState: "unavailable",
+      lastRefreshedAtUtc: null,
+      availableStores: [],
+      notice: "Could not reach the NEXORA live deals endpoint. You can retry or browse curated sample deals.",
+    };
+  }
+}
+
 export async function getDashboardSummary(): Promise<DashboardSummaryResult> {
   try {
     const response = await fetch(buildApiUrl("/api/dashboard/summary"), {
@@ -481,6 +574,40 @@ export async function getDashboardSummary(): Promise<DashboardSummaryResult> {
   }
 }
 
+function isLiveGiveaway(value: unknown): value is LiveGiveaway {
+  if (typeof value !== "object" || value === null) return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.id === "number" &&
+    Number.isInteger(item.id) &&
+    item.id > 0 &&
+    typeof item.title === "string" &&
+    item.title.trim().length > 0 &&
+    typeof item.platformLabel === "string" &&
+    typeof item.type === "string" &&
+    (item.status === "active" || item.status === "expired" || item.status === "unknown") &&
+    typeof item.claimUrl === "string" &&
+    item.claimUrl.startsWith("https://") &&
+    typeof item.source === "string" &&
+    typeof item.sourceAttribution === "string"
+  );
+}
+
+function isLiveGiveawaysCatalog(value: unknown): value is LiveGiveawaysCatalog {
+  if (typeof value !== "object" || value === null) return false;
+  const catalog = value as Record<string, unknown>;
+  return (
+    Array.isArray(catalog.giveaways) &&
+    catalog.giveaways.every(isLiveGiveaway) &&
+    (catalog.source === "gamerpower" || catalog.source === "unavailable") &&
+    typeof catalog.sourceAttribution === "string" &&
+    (catalog.sourceUrl === null || typeof catalog.sourceUrl === "string") &&
+    ["live", "cached", "stale", "unavailable"].includes(catalog.cacheState as string) &&
+    (catalog.lastRefreshedAtUtc === null || typeof catalog.lastRefreshedAtUtc === "string") &&
+    (catalog.notice === null || typeof catalog.notice === "string")
+  );
+}
+
 export async function getGiveaways(): Promise<GiveawaysResult> {
   try {
     const response = await fetch(buildApiUrl("/api/giveaways"), {
@@ -501,6 +628,35 @@ export async function getGiveaways(): Promise<GiveawaysResult> {
     return { giveaways: data, source: "api" };
   } catch {
     return { giveaways: fallbackGiveaways, source: "fallback" };
+  }
+}
+
+export async function getLiveGiveaways(): Promise<LiveGiveawaysCatalog> {
+  try {
+    const response = await fetch(buildApiUrl("/api/giveaways/live"), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Live giveaways API returned ${response.status}`);
+    }
+
+    const data: unknown = await response.json();
+    if (!isLiveGiveawaysCatalog(data)) {
+      throw new Error("Live giveaways API returned an unexpected response");
+    }
+    return data;
+  } catch {
+    return {
+      giveaways: [],
+      source: "unavailable",
+      sourceAttribution: "GamerPower",
+      sourceUrl: "https://www.gamerpower.com",
+      cacheState: "unavailable",
+      lastRefreshedAtUtc: null,
+      notice: "Live giveaways could not be retrieved from GamerPower right now.",
+    };
   }
 }
 

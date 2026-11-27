@@ -4,7 +4,10 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.InetAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,6 +31,13 @@ public class CheapSharkDealMapper {
     public List<Deal> toDeals(
             List<CheapSharkDealResponse> responses,
             Map<String, String> storeLookup) {
+        return toDeals(responses, storeLookup, null);
+    }
+
+    public List<Deal> toDeals(
+            List<CheapSharkDealResponse> responses,
+            Map<String, String> storeLookup,
+            Instant observedAtUtc) {
         if (responses == null) {
             throw new IllegalArgumentException("CheapShark response list is missing");
         }
@@ -36,7 +46,8 @@ public class CheapSharkDealMapper {
                 .mapToObj(index -> toDealIfValid(
                         responses.get(index),
                         index + 1L,
-                        storeLookup))
+                        storeLookup,
+                        observedAtUtc))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -44,23 +55,36 @@ public class CheapSharkDealMapper {
     private Deal toDealIfValid(
             CheapSharkDealResponse response,
             long id,
-            Map<String, String> storeLookup) {
+            Map<String, String> storeLookup,
+            Instant observedAtUtc) {
         try {
-            return toDeal(response, id, storeLookup);
+            return toDeal(response, id, storeLookup, observedAtUtc);
         } catch (IllegalArgumentException exception) {
             return null;
         }
     }
 
     Deal toDeal(CheapSharkDealResponse response, long id, Map<String, String> storeLookup) {
+        return toDeal(response, id, storeLookup, null);
+    }
+
+    Deal toDeal(
+            CheapSharkDealResponse response,
+            long id,
+            Map<String, String> storeLookup,
+            Instant observedAtUtc) {
         if (response == null || response.title() == null || response.title().isBlank()) {
             throw new IllegalArgumentException("CheapShark deal title is missing");
         }
 
         BigDecimal salePrice = providerPrice(response.salePrice()).setScale(2, RoundingMode.HALF_UP);
         BigDecimal normalPrice = providerPrice(response.normalPrice()).setScale(2, RoundingMode.HALF_UP);
-        int discountValue = discountValue(response.savings());
+        int discountValue = discountValue(response.savings(), salePrice, normalPrice);
         BigDecimal rating = rating(response.steamRatingPercent());
+        String rawDealId = response.dealID() == null || response.dealID().isBlank()
+                ? null
+                : response.dealID().trim();
+        String externalDealId = safeExternalDealId(rawDealId);
 
         return new Deal(
                 id,
@@ -75,13 +99,59 @@ public class CheapSharkDealMapper {
                 DatabaseDealService.starsFor(rating),
                 "External Deal",
                 status(discountValue, salePrice),
-                dealUrl(response.dealID())
+                dealUrl(rawDealId),
+                safeHttpsUrl(response.thumb()),
+                "USD",
+                safeExternalGameId(response.gameID()),
+                externalDealId,
+                normalizedDigits(response.steamAppID()),
+                metacriticScore(response.metacriticScore()),
+                "cheapshark",
+                observedAtUtc
         );
     }
 
     static String dealUrl(String dealId) {
         if (dealId == null || dealId.isBlank()) return null;
         return CHEAPSHARK_REDIRECT_URL + encodeDealId(dealId.trim());
+    }
+
+    public static String safeHttpsUrl(String rawUrl) {
+        if (rawUrl == null || rawUrl.isBlank()) return null;
+        String candidate = rawUrl.trim();
+        if (candidate.length() > 512 || candidate.chars().anyMatch(Character::isWhitespace)) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(candidate);
+            if (!"https".equalsIgnoreCase(uri.getScheme())) return null;
+            if (uri.getUserInfo() != null || uri.getHost() == null || uri.getHost().isBlank()) {
+                return null;
+            }
+            String host = uri.getHost().toLowerCase();
+            if ("localhost".equals(host) || host.endsWith(".local") || host.endsWith(".internal")) {
+                return null;
+            }
+            try {
+                InetAddress addr = InetAddress.getByName(host);
+                // Avoid SSRF/private literal IPs; skip DNS lookup side-effects for domain names
+                if (host.matches("^[0-9.:\\[\\]]+$")
+                        && (addr.isAnyLocalAddress()
+                        || addr.isLoopbackAddress()
+                        || addr.isLinkLocalAddress()
+                        || addr.isSiteLocalAddress())) {
+                    return null;
+                }
+            } catch (Exception ignored) {
+                // Keep valid hostnames without requiring DNS in unit tests
+                if (host.matches("^[0-9.:\\[\\]]+$")) {
+                    return null;
+                }
+            }
+            return uri.toASCIIString();
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     private static String encodeDealId(String dealId) {
@@ -130,9 +200,19 @@ public class CheapSharkDealMapper {
                 || character >= 'A' && character <= 'F';
     }
 
-    private static int discountValue(String savings) {
+    private static int discountValue(
+            String savings,
+            BigDecimal salePrice,
+            BigDecimal normalPrice) {
         BigDecimal value = nullableDecimal(savings);
-        if (value == null) return 0;
+        if (value == null) {
+            if (normalPrice.signum() <= 0 || salePrice.compareTo(normalPrice) >= 0) {
+                return 0;
+            }
+            value = normalPrice.subtract(salePrice)
+                    .multiply(ONE_HUNDRED)
+                    .divide(normalPrice, 0, RoundingMode.HALF_UP);
+        }
 
         return value.max(ZERO)
                 .min(ONE_HUNDRED)
@@ -146,6 +226,41 @@ public class CheapSharkDealMapper {
 
         return steamRating.min(ONE_HUNDRED)
                 .divide(new BigDecimal("20"), 1, RoundingMode.HALF_UP);
+    }
+
+    private static Integer metacriticScore(String score) {
+        BigDecimal parsed = nullableDecimal(score);
+        if (parsed == null) return null;
+        int rounded = parsed.setScale(0, RoundingMode.HALF_UP).intValue();
+        return rounded > 0 && rounded <= 100 ? rounded : null;
+    }
+
+    public static String safeExternalGameId(String value) {
+        String normalized = normalizedIdentifier(value);
+        if (normalized == null || normalized.length() > 64 || !normalized.matches("[A-Za-z0-9._-]+")) {
+            return null;
+        }
+        return normalized;
+    }
+
+    public static String safeExternalDealId(String value) {
+        String normalized = normalizedIdentifier(value);
+        if (normalized == null || normalized.length() > 128 || !normalized.matches("[A-Za-z0-9%._~+=-]+")) {
+            return null;
+        }
+        return normalized;
+    }
+
+    private static String normalizedIdentifier(String value) {
+        if (value == null || value.isBlank()) return null;
+        String trimmed = value.trim();
+        return "null".equalsIgnoreCase(trimmed) ? null : trimmed;
+    }
+
+    private static String normalizedDigits(String value) {
+        String normalized = normalizedIdentifier(value);
+        if (normalized == null || !normalized.matches("\\d+")) return null;
+        return normalized;
     }
 
     private static BigDecimal providerPrice(String value) {
