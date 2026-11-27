@@ -18,22 +18,26 @@ import {
 } from "@/data/wishlist";
 import type { WishlistResult } from "@/lib/api";
 import { normalizeAuthError } from "@/lib/auth";
-import { AUTH_STATE_EVENT, clearAuthToken, ensureAuthToken } from "@/lib/auth-client";
+import {
+  AUTH_STATE_EVENT,
+  clearAuthToken,
+  ensureAuthToken,
+  assertAuthSessionRevision,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
+  readAuthToken,
+  withAuthSessionRetry,
+} from "@/lib/auth-client";
 import { normalizeTargetPriceInput } from "@/lib/target-price";
 import { wishlistCardIdentity } from "@/lib/wishlist-card-identity";
-import {
-  getMyNotificationPreferences,
-  normalizeNotificationPreferenceError,
-  updateMyNotificationPreferences,
-  withNotificationPreferenceAuthRetry,
-  type NotificationPreferences,
-} from "@/lib/user-notification-preferences";
+import NotificationPreferencesPanel from "@/components/NotificationPreferencesPanel";
 import {
   deleteMyWishlistItem,
   getMyWishlist,
   getMyWishlistAlertEvents,
   getMyWishlistPriceHistory,
   normalizeUserWishlistError,
+  refreshMyWishlistPrices,
   updateMyWishlistAlert,
   withWishlistAuthRetry,
   type UpdateWishlistAlertPayload,
@@ -47,48 +51,34 @@ type ItemMessage = {
 };
 type PriceHistoryState = "idle" | "loading" | "loaded" | "unavailable";
 type NumericPriceHistoryPoint = WishlistPriceHistoryPoint & { priceAmount: number };
-type NotificationPreferenceLoadState = "idle" | "loading" | "ready" | "error";
 
 const PRICE_HISTORY_REQUEST_LIMIT = 15;
 const PRICE_HISTORY_TIMELINE_LIMIT = 5;
-const notificationPreferenceFields = [
-  {
-    key: "emailEnabled",
-    label: "Email alerts",
-    description: "Opt in to the future configured email channel.",
-  },
-  {
-    key: "inAppEnabled",
-    label: "In-app / log alerts",
-    description: "Keep local product-side notification signals enabled.",
-  },
-  {
-    key: "targetReachedEnabled",
-    label: "Target reached",
-    description: "Notify when a tracked price reaches its target.",
-  },
-  {
-    key: "priceDropEnabled",
-    label: "Price drops",
-    description: "Keep price-drop notification intent enabled.",
-  },
-  {
-    key: "freeGameEnabled",
-    label: "Free games",
-    description: "Keep free-game notification intent enabled.",
-  },
-] as const satisfies readonly {
-  key: keyof NotificationPreferences;
-  label: string;
-  description: string;
-}[];
-
 function protectedWishlistError(error: unknown) {
   const wishlistError = normalizeUserWishlistError(error);
   if (wishlistError.code !== "unknown_error") return wishlistError;
 
   const authError = normalizeAuthError(error);
   return authError.code === "unknown_error" ? wishlistError : authError;
+}
+
+async function requestCurrentWishlistSnapshot<T>(
+  token: string,
+  request: (activeToken: string) => Promise<T>,
+  isCurrent: () => boolean,
+): Promise<{ value: T; token: string; sessionRevision: number }> {
+  // The synchronous classifier checks freshness at the final recovery decision,
+  // after rejection has propagated beyond the inner request guard.
+  return withAuthSessionRetry(token, async (activeToken) => {
+    if (!isCurrent()) throw new Error("The wishlist snapshot was superseded.");
+    try {
+      return await request(activeToken);
+    } catch (error) {
+      if (!isCurrent()) throw new Error("The wishlist snapshot was superseded.");
+      throw error;
+    }
+  }, (error) => normalizeUserWishlistError(error).status === 401 && isCurrent(),
+  { sessionRevision: readAuthSessionRevision(), isCurrent });
 }
 
 const wishlistPriorities: readonly WishlistPriority[] = ["high", "medium", "low"];
@@ -153,10 +143,13 @@ function formatAlertEventTime(createdAt: string) {
 
 function priceHistorySourceLabel(source: string) {
   const knownSources: Record<string, string> = {
-    "wishlist-create": "Added to wishlist",
-    "price-refresh": "Price refresh",
-    "stored-provider": "Stored provider",
-    "cheapshark-provider": "CheapShark",
+    "wishlist-create": "User-entered (unverified)",
+    "alert-update": "Alert update (unverified)",
+    "price-refresh": "Price refresh (unverified)",
+    "stored-provider": "Stored snapshot (unverified)",
+    "cheapshark-provider": "Earlier CheapShark refresh (unverified)",
+    "cheapshark-refresh": "CheapShark",
+    "cheapshark-scheduled": "CheapShark scheduled check",
   };
   if (knownSources[source]) return knownSources[source];
 
@@ -167,10 +160,14 @@ function priceHistorySourceLabel(source: string) {
 }
 
 function priceHistorySourceTone(source: string) {
-  if (source === "wishlist-create") return "added";
-  if (source === "cheapshark-provider") return "external";
+  if (source === "wishlist-create" || source === "alert-update") return "added";
+  if (isVerifiedObservationSource(source)) return "external";
   if (source === "stored-provider") return "stored";
   return "refresh";
+}
+
+function isVerifiedObservationSource(source?: string | null): boolean {
+  return source === "cheapshark-refresh" || source === "cheapshark-scheduled";
 }
 
 function numericPriceHistory(
@@ -234,17 +231,31 @@ function PriceHistoryPanel({
   state: PriceHistoryState;
 }) {
   const headingId = `wishlist-price-history-${itemId}`;
-  const numericPoints = numericPriceHistory(points);
-  const latestPoint = points.at(-1);
-  const lowestPoint = numericPoints.reduce<NumericPriceHistoryPoint | null>(
+  const verifiedPoints = points.filter((point) => isVerifiedObservationSource(point.source));
+  const numericPoints = numericPriceHistory(verifiedPoints);
+  const currencies = Array.from(
+    new Set(
+      numericPoints
+        .map((point) => point.currency?.trim().toUpperCase())
+        .filter((currency): currency is string => Boolean(currency)),
+    ),
+  );
+  const hasMixedCurrencies = currencies.length > 1;
+  const comparableNumericPoints = hasMixedCurrencies ? [] : numericPoints;
+  const latestPoint = verifiedPoints.at(-1) ?? points.at(-1);
+  const lowestPoint = comparableNumericPoints.reduce<NumericPriceHistoryPoint | null>(
     (lowest, point) => !lowest || point.priceAmount < lowest.priceAmount ? point : lowest,
     null,
   );
-  const highestPoint = numericPoints.reduce<NumericPriceHistoryPoint | null>(
+  const highestPoint = comparableNumericPoints.reduce<NumericPriceHistoryPoint | null>(
     (highest, point) => !highest || point.priceAmount > highest.priceAmount ? point : highest,
     null,
   );
-  const trend = priceHistoryTrend(numericPoints, points.length);
+  const trend = verifiedPoints.length === 0
+    ? ({ label: "Unverified only", tone: "neutral" } as const)
+    : hasMixedCurrencies
+      ? ({ label: "Mixed currencies", tone: "neutral" } as const)
+      : priceHistoryTrend(comparableNumericPoints, verifiedPoints.length);
   const timelinePoints = points.slice(-PRICE_HISTORY_TIMELINE_LIMIT).reverse();
   const lowestAmount = lowestPoint?.priceAmount ?? 0;
   const highestAmount = highestPoint?.priceAmount ?? 0;
@@ -303,7 +314,7 @@ function PriceHistoryPanel({
             <div><dt>Highest</dt><dd>{highestPoint?.priceLabel ?? "—"}</dd></div>
             <div><dt>Snapshots</dt><dd>{points.length}</dd></div>
             <div>
-              <dt>Last observed</dt>
+              <dt>{verifiedPoints.length ? "Last observed" : "Last recorded"}</dt>
               <dd><time dateTime={latestPoint.observedAt}>{formatAlertEventTime(latestPoint.observedAt)}</time></dd>
             </div>
           </dl>
@@ -313,33 +324,46 @@ function PriceHistoryPanel({
               <span>Observed trend</span>
               <strong>{trend.label}</strong>
             </div>
-            {numericPoints.length === 0 ? (
+            {verifiedPoints.length === 0 ? (
+              <p>History contains unverified prices. Verified provider observations will appear here.</p>
+            ) : hasMixedCurrencies ? (
+              <p>
+                Stored observations use multiple currencies ({currencies.join(", ")}), so incompatible offers are not combined into one numeric trend.
+              </p>
+            ) : comparableNumericPoints.length === 0 ? (
               <p>These snapshots use labels such as TBA, so a numeric trend is not available.</p>
             ) : (
-              <div
-                className={numericPoints.length === 1
-                  ? "wl-card__history-bars wl-card__history-bars--single"
-                  : "wl-card__history-bars"}
-                role="img"
-                aria-label={numericPoints.length === 1
-                  ? `One numeric price snapshot: ${numericPoints[0].priceLabel}`
-                  : `${numericPoints.length} numeric price snapshots, trending ${trend.label.toLowerCase()}`}
-              >
-                {numericPoints.map((point) => (
-                  <span
-                    aria-hidden="true"
-                    key={point.id}
-                    style={{
-                      height: `${priceHistoryBarHeight(
-                        point.priceAmount,
-                        lowestAmount,
-                        highestAmount,
-                      )}%`,
-                    }}
-                    title={`${point.priceLabel} · ${formatAlertEventTime(point.observedAt)}`}
-                  />
-                ))}
-              </div>
+              <>
+                <div
+                  className={comparableNumericPoints.length === 1
+                    ? "wl-card__history-bars wl-card__history-bars--single"
+                    : "wl-card__history-bars"}
+                  role="img"
+                  aria-label={comparableNumericPoints.length === 1
+                    ? `One numeric price snapshot: ${comparableNumericPoints[0].priceLabel}`
+                    : `${comparableNumericPoints.length} numeric price snapshots, trending ${trend.label.toLowerCase()}`}
+                >
+                  {comparableNumericPoints.map((point) => (
+                    <span
+                      aria-hidden="true"
+                      key={point.id}
+                      style={{
+                        height: `${priceHistoryBarHeight(
+                          point.priceAmount,
+                          lowestAmount,
+                          highestAmount,
+                        )}%`,
+                      }}
+                      title={`${point.priceLabel} · ${formatAlertEventTime(point.observedAt)}`}
+                    />
+                  ))}
+                </div>
+                {comparableNumericPoints.length < 2 && (
+                  <p className="wl-card__history-insufficient">
+                    Insufficient history: one price observation has been recorded so far.
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -391,7 +415,7 @@ function WishlistCard({
   isUpdating: boolean;
   item: WishlistItem;
   message?: ItemMessage;
-  onDelete: (item: WishlistItem) => void;
+  onDelete: (item: WishlistItem, button: HTMLButtonElement) => void;
   onAuthenticationRequired: () => void;
   onTokenChanged: (token: string) => void;
   onUpdateAlert: (
@@ -403,16 +427,42 @@ function WishlistCard({
   const status = statusDetails(item.status);
   const alertEvaluation = alertEvaluationFor(item);
   const storeClass = wishlistStoreClass(item.store);
+  const renderSessionRevision = readAuthSessionRevision();
+  const historyOwner = useRef<{ active: boolean; item: WishlistItem; sessionRevision: number } | null>(null);
+  const historyRequestVersion = useRef(0);
   const [targetPrice, setTargetPrice] = useState(item.targetPrice);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
-  const [priceHistory, setPriceHistory] = useState<WishlistPriceHistoryPoint[]>([]);
-  const [priceHistoryState, setPriceHistoryState] = useState<PriceHistoryState>("idle");
+  const [historySnapshot, setHistorySnapshot] = useState<{
+    item: WishlistItem; sessionRevision: number; points: WishlistPriceHistoryPoint[]; state: PriceHistoryState;
+  } | null>(null);
+  const ownsHistory = historySnapshot?.item === item && historySnapshot.sessionRevision === renderSessionRevision;
+  const priceHistory = ownsHistory ? historySnapshot.points : [];
+  const priceHistoryState = ownsHistory ? historySnapshot.state : "idle";
+  function setPriceHistory(points: WishlistPriceHistoryPoint[]) {
+    setHistorySnapshot({ item, sessionRevision: renderSessionRevision, points, state: "loaded" });
+  }
+  function setPriceHistoryState(state: PriceHistoryState) {
+    setHistorySnapshot((current) => ({ item, sessionRevision: renderSessionRevision, state,
+      points: current?.item === item && current.sessionRevision === renderSessionRevision ? current.points : [] }));
+  }
+  useEffect(() => {
+    const owner = { active: true, item, sessionRevision: renderSessionRevision };
+    historyOwner.current = owner;
+    return () => { owner.active = false; };
+  }, [item, renderSessionRevision]);
   const titleId = `wishlist-item-title-${item.id}`;
   const targetHelpId = `wishlist-target-price-help-${item.id}`;
   const settingsMessageId = `wishlist-settings-message-${item.id}`;
 
   async function loadPriceHistory() {
-    if (!authToken || priceHistoryState === "loading") return;
+    const sessionRevision = renderSessionRevision;
+    const owner = historyOwner.current;
+    if (!owner?.active || owner.item !== item || owner.sessionRevision !== sessionRevision
+      || sessionRevision !== readAuthSessionRevision()
+      || !authToken || priceHistoryState === "loading") return;
+    const requestVersion = ++historyRequestVersion.current;
+    const isCurrent = () => owner.active && owner === historyOwner.current
+      && requestVersion === historyRequestVersion.current && sessionRevision === readAuthSessionRevision();
     setPriceHistoryState("loading");
 
     try {
@@ -423,11 +473,15 @@ function WishlistCard({
           item.id,
           PRICE_HISTORY_REQUEST_LIMIT,
         ),
+        { sessionRevision, isCurrent },
       );
+      if (!isCurrent()) return;
+      assertAuthSessionRevision(result.sessionRevision);
       onTokenChanged(result.token);
       setPriceHistory(result.value);
       setPriceHistoryState("loaded");
     } catch (error) {
+      if (!isCurrent() || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         onAuthenticationRequired();
@@ -480,9 +534,15 @@ function WishlistCard({
       {item.discount && <span className="wl-card__discount">{item.discount}</span>}
 
       <div className="wl-card__prices" aria-label={`${item.title} price information`}>
-        <div><span>Current</span><strong className={item.currentPrice === "FREE" ? "wl-card__price--free" : undefined}>{item.currentPrice}</strong></div>
+        <div>
+          <span>Current{canManage && !isVerifiedObservationSource(item.priceSource) ? " (unverified)" : ""}</span>
+          <strong className={item.currentPrice === "FREE" ? "wl-card__price--free" : undefined}>{item.currentPrice}</strong>
+        </div>
         <div><span>Target</span><strong className="wl-card__price--target">{item.targetPrice}</strong></div>
-        <div><span>Lowest</span><strong>{item.lowestEver}</strong></div>
+        <div>
+          <span>Lowest{canManage && !isVerifiedObservationSource(item.lowestEverSource) ? " (unverified)" : ""}</span>
+          <strong>{item.lowestEver}</strong>
+        </div>
       </div>
 
       <div
@@ -490,7 +550,8 @@ function WishlistCard({
         aria-label={`Alert evaluation: ${alertEvaluation.message}`}
       >
         <span aria-hidden="true">{evaluationIcon(alertEvaluation.state)}</span>
-        <strong>{alertEvaluation.message}</strong>
+        <strong>{alertEvaluation.message}{alertEvaluation.targetReached && canManage
+          && !isVerifiedObservationSource(item.priceSource) ? " (unverified price)" : ""}</strong>
       </div>
 
       {canManage && (
@@ -546,16 +607,27 @@ function WishlistCard({
       )}
 
       <div className="wl-card__actions">
-        <button
+        <Link
           className={`wl-card__view wl-card__view--${storeClass}`}
-          type="button"
-          disabled
-          aria-label={`View deal for ${item.title} unavailable in this preview`}
-          title="Store redirects are planned for a later migration"
+          style={{
+            display: "inline-flex",
+            minHeight: 44,
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            border: "1px solid var(--nx-glass-border-strong)",
+            borderRadius: 999,
+            font: "inherit",
+            fontWeight: 700,
+          }}
+          href={`/deals?title=${encodeURIComponent(item.title)}#deal-search`}
+          aria-label={`Find current deals for ${item.title}`}
+          title={`Search current external offers for ${item.title}`}
         >
           <span aria-hidden="true">↗</span>
           View Deal
-        </button>
+        </Link>
         {canManage && (
           <button
             className={alertIsActive ? "wl-card__edit wl-card__edit--active" : "wl-card__edit"}
@@ -577,10 +649,11 @@ function WishlistCard({
         <button
           className="wl-card__remove"
           type="button"
-          disabled={!canManage || isDeleting || isUpdating}
+          disabled={!canManage || isUpdating}
+          aria-disabled={isDeleting || undefined}
           aria-label={`Remove ${item.title}`}
           title={canManage ? `Remove ${item.title} from your personal wishlist` : "Sign in to manage personal wishlist items"}
-          onClick={() => onDelete(item)}
+          onClick={(event) => onDelete(item, event.currentTarget)}
         >
           <span aria-hidden="true">{isDeleting ? "…" : "✕"}</span>
         </button>
@@ -763,8 +836,20 @@ function WishlistAlertPanel({
                 </div>
                 <p>{event.message}</p>
                 <div className="wl-alert-history__prices">
-                  <span>Current <strong>{event.currentPrice}</strong></span>
-                  <span>Target <strong>{event.targetPrice}</strong></span>
+                  <span>Target configured <strong>{event.targetPrice}</strong></span>
+                  <span>
+                    {isVerifiedObservationSource(event.observationSource) ? "Observed" : "Price at evaluation"}{" "}
+                    <strong>{event.currentPrice}</strong>
+                    {event.observationSource ? ` (${priceHistorySourceLabel(event.observationSource)})` : " (unverified)"}
+                  </span>
+                </div>
+                <div className="wl-alert-history__lifecycle">
+                  <span>Event persisted #{event.id}</span>
+                  <span>
+                    {event.deliveryStatus && event.deliveryStatus !== "not-delivered"
+                      ? `Delivery: ${event.deliveryStatus}`
+                      : "Delivery: Not sent (persisted alert event only)"}
+                  </span>
                 </div>
                 <time className="wl-alert-history__meta" dateTime={event.createdAt}>
                   {formatAlertEventTime(event.createdAt)}
@@ -791,198 +876,8 @@ function WishlistAlertPanel({
   );
 }
 
-function NotificationPreferencesPanel({
-  authToken,
-  onAuthenticationRequired,
-  onTokenChanged,
-}: {
-  authToken: string;
-  onAuthenticationRequired: () => void;
-  onTokenChanged: (token: string) => void;
-}) {
-  const [loadState, setLoadState] = useState<NotificationPreferenceLoadState>("idle");
-  const [savedPreferences, setSavedPreferences] =
-    useState<NotificationPreferences | null>(null);
-  const [draftPreferences, setDraftPreferences] =
-    useState<NotificationPreferences | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<ItemMessage | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadPreferences() {
-      setLoadState("loading");
-      setMessage(null);
-
-      try {
-        const result = await withNotificationPreferenceAuthRetry(
-          authToken,
-          getMyNotificationPreferences,
-        );
-        if (!active) return;
-        onTokenChanged(result.token);
-        setSavedPreferences(result.value);
-        setDraftPreferences(result.value);
-        setLoadState("ready");
-      } catch (error) {
-        if (!active) return;
-        const details = normalizeNotificationPreferenceError(error);
-        if (details.status === 401) {
-          onAuthenticationRequired();
-          return;
-        }
-        setLoadState("error");
-        setMessage({
-          kind: "error",
-          text: details.message,
-          requestId: details.requestId,
-        });
-      }
-    }
-
-    void loadPreferences();
-    return () => {
-      active = false;
-    };
-  }, [authToken, onAuthenticationRequired, onTokenChanged, retryKey]);
-
-  const hasChanges = Boolean(draftPreferences && savedPreferences
-    && notificationPreferenceFields.some(
-      (field) => draftPreferences[field.key] !== savedPreferences[field.key],
-    ));
-
-  async function savePreferences(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!draftPreferences || !hasChanges || isSaving) return;
-
-    setIsSaving(true);
-    setMessage(null);
-    try {
-      const result = await withNotificationPreferenceAuthRetry(
-        authToken,
-        (activeToken) => updateMyNotificationPreferences(
-          activeToken,
-          draftPreferences,
-        ),
-      );
-      onTokenChanged(result.token);
-      setSavedPreferences(result.value);
-      setDraftPreferences(result.value);
-      setMessage({ kind: "success", text: "Preferences saved to your account." });
-    } catch (error) {
-      const details = normalizeNotificationPreferenceError(error);
-      if (details.status === 401) {
-        onAuthenticationRequired();
-        return;
-      }
-      setMessage({
-        kind: "error",
-        text: details.message,
-        requestId: details.requestId,
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  return (
-    <section className="wl-notification-preferences" id="notification-preferences" aria-labelledby="wishlist-notification-preferences-title">
-      <div className="wl-notification-preferences__header">
-        <div>
-          <span>Account controls</span>
-          <strong id="wishlist-notification-preferences-title">Notification preferences</strong>
-        </div>
-        <span className="wl-notification-preferences__badge">Account</span>
-      </div>
-
-      {loadState === "loading" && (
-        <UxStatePanel
-          className="ux-state--compact wl-notification-preferences__state"
-          description={<>Waiting for notification preferences stored with this account.<UxSkeleton lines={3} /></>}
-          role="status"
-          title="Loading notification preferences"
-          tone="loading"
-        />
-      )}
-
-      {loadState === "error" && (
-        <UxStatePanel
-          className="ux-state--compact wl-notification-preferences__error"
-          description={(
-            <>
-              {message?.text || "The account preference route could not be reached."} Wishlist items and alert settings remain available. Retry preferences starts one manual request.
-              <RequestIdSupportText requestId={message?.requestId} />
-            </>
-          )}
-          role="alert"
-          title="Notification preferences unavailable"
-          tone="unavailable"
-        >
-          <button className="ux-state__action" type="button" onClick={() => setRetryKey((current) => current + 1)}>
-            Retry preferences
-          </button>
-        </UxStatePanel>
-      )}
-
-      {loadState === "ready" && draftPreferences && (
-        <form aria-busy={isSaving} onSubmit={savePreferences}>
-          <div className="wl-notification-preferences__rows">
-            {notificationPreferenceFields.map((field) => (
-              <label key={field.key}>
-                <span className="wl-notification-preferences__copy">
-                  <strong>{field.label}</strong>
-                  <small>{field.description}</small>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={draftPreferences[field.key]}
-                  disabled={isSaving}
-                  onChange={(event) => {
-                    setDraftPreferences((current) => current
-                      ? { ...current, [field.key]: event.target.checked }
-                      : current);
-                    setMessage(null);
-                  }}
-                />
-                <span className="wl-notification-preferences__toggle" aria-hidden="true">
-                  <span />
-                </span>
-              </label>
-            ))}
-          </div>
-
-          <p className="wl-notification-preferences__notice">
-            These controls save notification intent only. Email delivery is unavailable
-            until local SMTP and a recipient workflow are configured; durable retries are not implemented.
-          </p>
-
-          <div className="wl-notification-preferences__actions">
-            <span
-              className={message?.kind === "error"
-                ? "wl-notification-preferences__message wl-notification-preferences__message--error"
-                : message?.kind === "success"
-                  ? "wl-notification-preferences__message wl-notification-preferences__message--success"
-                  : "wl-notification-preferences__message"}
-              role={message?.kind === "error" ? "alert" : isSaving || message ? "status" : undefined}
-            >
-              {isSaving ? "Saving preferences to your account…" : message?.text || "Changes are saved only when you use Save."}
-              {message?.kind === "error" ? (
-                <RequestIdSupportText requestId={message.requestId} />
-              ) : null}
-            </span>
-            <button type="submit" disabled={!hasChanges || isSaving}>
-              {isSaving ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </form>
-      )}
-    </section>
-  );
-}
-
 export default function WishlistExplorer({ wishlistItems, source }: WishlistResult) {
+  const consumerSessionRevision = readAuthSessionRevision();
   const [activeFilter, setActiveFilter] = useState<WishlistFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<WishlistView>("checking");
@@ -999,7 +894,33 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   const [itemMessages, setItemMessages] = useState<Record<number, ItemMessage>>({});
   const [refreshKey, setRefreshKey] = useState(0);
   const [personalWishlistRevision, setPersonalWishlistRevision] = useState(0);
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
+  const [refreshNextCursor, setRefreshNextCursor] = useState<number | null>(null);
   const alertEventsRequestVersion = useRef(0);
+  const wishlistGridRef = useRef<HTMLDivElement>(null);
+  const pendingDeleteFocus = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    const restore = pendingDeleteFocus.current;
+    pendingDeleteFocus.current = null;
+    restore?.();
+  });
+  const mutationOwners = useRef(new Map<string, object>());
+  const refreshOwnerRef = useRef<object | null>(null);
+  // Successful mutations invalidate snapshots captured before their completion.
+  const wishlistDataGeneration = useRef(0);
+  const consumerLifetimeRef = useRef({ active: false });
+  const consumerLifetime = consumerLifetimeRef.current;
+
+  useEffect(() => {
+    const lifetime = { active: true };
+    consumerLifetimeRef.current = lifetime;
+    return () => {
+      lifetime.active = false;
+      refreshOwnerRef.current = null;
+      pendingDeleteFocus.current?.();
+      pendingDeleteFocus.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -1037,6 +958,9 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         setServiceMessage(null);
         setOperationMessage(null);
         setItemMessages({});
+        setRefreshNextCursor(null);
+        refreshOwnerRef.current = null;
+        setIsRefreshingPrices(false);
         setView("public");
         return;
       }
@@ -1049,12 +973,32 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       setAlertEventsLoading(true);
       setView("checking");
 
+      const sessionRevision = readAuthSessionRevision();
+      const dataGeneration = wishlistDataGeneration.current;
       const eventRequestVersion = ++alertEventsRequestVersion.current;
+      const isCurrentSnapshot = () => active && currentVersion === requestVersion
+        && dataGeneration === wishlistDataGeneration.current;
       const [wishlistResult, alertEventsResult] = await Promise.allSettled([
-        withWishlistAuthRetry(token, getMyWishlist),
-        withWishlistAuthRetry(token, getMyWishlistAlertEvents),
+        requestCurrentWishlistSnapshot(token, getMyWishlist, isCurrentSnapshot),
+        requestCurrentWishlistSnapshot(
+          token, getMyWishlistAlertEvents,
+          () => isCurrentSnapshot() && eventRequestVersion === alertEventsRequestVersion.current,
+        ),
       ]);
       if (!active || currentVersion !== requestVersion) return;
+
+      if (sessionRevision !== readAuthSessionRevision()) return;
+      if (isCurrentSnapshot() && [wishlistResult,
+        ...(eventRequestVersion === alertEventsRequestVersion.current ? [alertEventsResult] : []),
+      ].some((result) => result.status === "rejected" && isAuthSessionInvalidatedError(result.reason))) return;
+
+      if (dataGeneration !== wishlistDataGeneration.current) {
+        if (eventRequestVersion === alertEventsRequestVersion.current) {
+          setAlertEventsLoading(false);
+        }
+        setView("personal");
+        return;
+      }
 
       if (wishlistResult.status === "rejected") {
         const details = protectedWishlistError(wishlistResult.reason);
@@ -1076,7 +1020,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         return;
       }
 
-      if (alertEventsResult.status === "rejected") {
+      if (eventRequestVersion === alertEventsRequestVersion.current && alertEventsResult.status === "rejected") {
         const details = protectedWishlistError(alertEventsResult.reason);
 
         if (details.status === 401) {
@@ -1094,7 +1038,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         setAlertEventsMessage(
           "Alert history could not be loaded. Your wishlist is still available.",
         );
-      } else if (eventRequestVersion === alertEventsRequestVersion.current) {
+      } else if (alertEventsResult.status === "fulfilled" && eventRequestVersion === alertEventsRequestVersion.current) {
         setAlertEvents(alertEventsResult.value.value);
         setAlertEventsMessage(null);
       }
@@ -1110,11 +1054,15 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       setAlerts(alertsFor(wishlistResult.value.value));
       setOperationMessage(null);
       setItemMessages({});
+      setRefreshNextCursor(null);
       setPersonalWishlistRevision((current) => current + 1);
       setView("personal");
     }
 
     function handleAuthChange() {
+      refreshOwnerRef.current = null;
+      setIsRefreshingPrices(false);
+      setRefreshNextCursor(null);
       void refreshWishlist();
     }
 
@@ -1124,6 +1072,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
 
     return () => {
       active = false;
+      alertEventsRequestVersion.current += 1;
       window.removeEventListener("storage", handleAuthChange);
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
@@ -1154,6 +1103,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
   }
 
   const handleAuthenticationRequired = useCallback(() => {
+    if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
     alertEventsRequestVersion.current += 1;
     clearAuthToken();
     setAuthToken(null);
@@ -1166,20 +1116,28 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     setItemMessages({});
     setServiceMessage("Please sign in again.");
     setView("public");
-  }, [wishlistItems]);
+  }, [consumerLifetime, consumerSessionRevision, wishlistItems]);
 
   async function refreshAlertEvents(token: string) {
+    if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
+    const sessionRevision = readAuthSessionRevision();
     const requestVersion = ++alertEventsRequestVersion.current;
+    const dataGeneration = wishlistDataGeneration.current;
+    const isCurrentSnapshot = () => consumerLifetime.active
+      && sessionRevision === readAuthSessionRevision() && requestVersion === alertEventsRequestVersion.current
+      && dataGeneration === wishlistDataGeneration.current;
     setAlertEventsLoading(true);
     setAlertEventsMessage(null);
 
     try {
-      const result = await withWishlistAuthRetry(token, getMyWishlistAlertEvents);
-      if (requestVersion !== alertEventsRequestVersion.current) return;
+      const result = await requestCurrentWishlistSnapshot(token, getMyWishlistAlertEvents, isCurrentSnapshot);
+      if (!isCurrentSnapshot()) return;
+      assertAuthSessionRevision(result.sessionRevision);
       setAuthToken(result.token);
       setAlertEvents(result.value);
     } catch (error) {
-      if (requestVersion !== alertEventsRequestVersion.current) return;
+      if (!isCurrentSnapshot()) return;
+      if (isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1189,15 +1147,26 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         );
       }
     } finally {
-      if (requestVersion === alertEventsRequestVersion.current) {
+      if (isCurrentSnapshot()) {
         setAlertEventsLoading(false);
       }
     }
   }
 
   function handleItemAdded(item: WishlistItem) {
-    setPersonalItems((current) => [item, ...current]);
+    if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
+    wishlistDataGeneration.current += 1;
+    setPersonalItems((current) => {
+      const existingIndex = current.findIndex((candidate) => candidate.id === item.id);
+      if (existingIndex === -1) return [item, ...current];
+
+      return current.flatMap((candidate, index) => {
+        if (candidate.id !== item.id) return [candidate];
+        return index === existingIndex ? [item] : [];
+      });
+    });
     setAlerts((current) => ({ ...current, [item.id]: item.alertActive }));
+    setView("personal");
     setOperationMessage(null);
     setItemMessages((current) => {
       const next = { ...current };
@@ -1205,7 +1174,8 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       return next;
     });
     resetFilters();
-    if (authToken) void refreshAlertEvents(authToken);
+    const activeToken = readAuthToken();
+    if (activeToken) void refreshAlertEvents(activeToken);
   }
 
   async function handleAlertUpdate(
@@ -1213,8 +1183,16 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
     payload: UpdateWishlistAlertPayload,
     successMessage: string,
   ) {
+    const sessionRevision = consumerSessionRevision;
+    const operationKey = `${sessionRevision}:update:${item.id}`;
+    if (!consumerLifetime.active || sessionRevision !== readAuthSessionRevision()
+      || mutationOwners.current.has(operationKey)) return;
+    const owner = {};
+    const isCurrent = () => consumerLifetime.active && sessionRevision === readAuthSessionRevision()
+      && mutationOwners.current.get(operationKey) === owner;
     if (view !== "personal" || !authToken || updatingIds.has(item.id)) return;
 
+    mutationOwners.current.set(operationKey, owner);
     setUpdatingIds((current) => new Set(current).add(item.id));
     setItemMessages((current) => {
       const next = { ...current };
@@ -1226,18 +1204,24 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       const result = await withWishlistAuthRetry(
         authToken,
         (activeToken) => updateMyWishlistAlert(activeToken, item.id, payload),
+        { sessionRevision, isCurrent },
       );
+      assertAuthSessionRevision(result.sessionRevision);
+      if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
       const updatedItem = result.value;
+      wishlistDataGeneration.current += 1;
       setAuthToken(result.token);
       setPersonalItems((current) => current.map((candidate) =>
         candidate.id === updatedItem.id ? updatedItem : candidate));
       setAlerts((current) => ({ ...current, [updatedItem.id]: updatedItem.alertActive }));
+      setView("personal");
       setItemMessages((current) => ({
         ...current,
         [updatedItem.id]: { kind: "success", text: successMessage },
       }));
       void refreshAlertEvents(result.token);
     } catch (error) {
+      if (!consumerLifetime.active || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1252,17 +1236,38 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         }));
       }
     } finally {
-      setUpdatingIds((current) => {
-        const next = new Set(current);
-        next.delete(item.id);
-        return next;
-      });
+      if (isCurrent()) {
+        setUpdatingIds((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+      }
+      if (mutationOwners.current.get(operationKey) === owner) mutationOwners.current.delete(operationKey);
     }
   }
 
-  async function handleDelete(item: WishlistItem) {
+  async function handleDelete(item: WishlistItem, button?: HTMLButtonElement) {
+    const sessionRevision = consumerSessionRevision;
+    const operationKey = `${sessionRevision}:delete:${item.id}`;
+    if (!consumerLifetime.active || sessionRevision !== readAuthSessionRevision()
+      || mutationOwners.current.has(operationKey)) return;
+    const owner = {};
+    const isCurrent = () => consumerLifetime.active && sessionRevision === readAuthSessionRevision()
+      && mutationOwners.current.get(operationKey) === owner;
     if (view !== "personal" || !authToken || deletingIds.has(item.id)) return;
 
+    const focusedButton = button && document.activeElement === button ? button : null;
+    const visibleButtons = Array.from(wishlistGridRef.current?.querySelectorAll<HTMLButtonElement>(".wl-card__remove") ?? []);
+    const focusIndex = focusedButton ? visibleButtons.indexOf(focusedButton) : -1;
+    let focusMoved = false;
+    let focusQueued = false;
+    const trackFocus = (event: FocusEvent) => {
+      if (event.target !== focusedButton) focusMoved = true;
+    };
+    if (focusedButton) document.addEventListener("focusin", trackFocus);
+
+    mutationOwners.current.set(operationKey, owner);
     setDeletingIds((current) => new Set(current).add(item.id));
     setOperationMessage(null);
 
@@ -1270,9 +1275,31 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       const result = await withWishlistAuthRetry(
         authToken,
         (activeToken) => deleteMyWishlistItem(activeToken, item.id),
+        { sessionRevision, isCurrent },
       );
+      assertAuthSessionRevision(result.sessionRevision);
+      if (!consumerLifetime.active || consumerSessionRevision !== readAuthSessionRevision()) return;
+      if (focusedButton) {
+        focusQueued = true;
+        pendingDeleteFocus.current = () => {
+          document.removeEventListener("focusin", trackFocus);
+          if (focusMoved || !consumerLifetime.active || sessionRevision !== readAuthSessionRevision()
+            || (document.activeElement !== document.body && document.activeElement !== focusedButton)) return;
+          const candidates = Array.from(wishlistGridRef.current?.querySelectorAll<HTMLButtonElement>(".wl-card__remove") ?? [])
+            .filter((candidate) => !candidate.disabled && candidate.getAttribute("aria-disabled") !== "true" && candidate.checkVisibility({ visibilityProperty: true }));
+          const adjacent = candidates[Math.min(Math.max(focusIndex, 0), candidates.length - 1)];
+          const fallback = document.querySelector<HTMLButtonElement>("#add-personal-wishlist-item button[type=submit]");
+          const target = adjacent ?? fallback;
+          if (target?.isConnected && !target.disabled && target.checkVisibility({ visibilityProperty: true })) target.focus();
+        };
+      }
+      wishlistDataGeneration.current += 1;
+      // Deletion retires pending history without starting another request.
+      alertEventsRequestVersion.current += 1;
+      setAlertEventsLoading(false);
       setAuthToken(result.token);
       setPersonalItems((current) => current.filter((candidate) => candidate.id !== item.id));
+      setView("personal");
       setAlerts((current) => {
         const next = { ...current };
         delete next[item.id];
@@ -1285,6 +1312,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
       });
       setOperationMessage({ kind: "success", text: `${item.title} was removed from your personal wishlist.` });
     } catch (error) {
+      if (!consumerLifetime.active || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = protectedWishlistError(error);
       if (details.status === 401) {
         handleAuthenticationRequired();
@@ -1296,11 +1324,127 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         });
       }
     } finally {
-      setDeletingIds((current) => {
-        const next = new Set(current);
-        next.delete(item.id);
-        return next;
+      if (focusedButton && !focusQueued) document.removeEventListener("focusin", trackFocus);
+      if (isCurrent()) {
+        setDeletingIds((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+      }
+      if (mutationOwners.current.get(operationKey) === owner) mutationOwners.current.delete(operationKey);
+    }
+  }
+
+  async function handleRefreshPrices(cursorOverride?: number | null) {
+    const lifetime = consumerLifetimeRef.current;
+    const sessionRevision = consumerSessionRevision;
+    if (
+      !lifetime.active ||
+      sessionRevision !== readAuthSessionRevision() ||
+      !authToken ||
+      view !== "personal" ||
+      isRefreshingPrices
+    ) {
+      return;
+    }
+
+    const opOwner = {};
+    refreshOwnerRef.current = opOwner;
+    const dataGenerationAtStart = wishlistDataGeneration.current;
+    const activeCursor = cursorOverride !== undefined ? cursorOverride : refreshNextCursor;
+    const isCurrent = () =>
+      lifetime.active &&
+      refreshOwnerRef.current === opOwner &&
+      sessionRevision === readAuthSessionRevision();
+    const isCurrentDataset = () =>
+      isCurrent() && dataGenerationAtStart === wishlistDataGeneration.current;
+
+    setIsRefreshingPrices(true);
+    setOperationMessage(null);
+    try {
+      const result = await withWishlistAuthRetry(
+        authToken,
+        (activeToken) => refreshMyWishlistPrices(activeToken, activeCursor),
+        { sessionRevision, isCurrent: isCurrentDataset },
+      );
+      if (!isCurrentDataset()) return;
+      wishlistDataGeneration.current += 1;
+      setAuthToken(result.token);
+      setPersonalItems(result.value.items);
+      setAlerts(alertsFor(result.value.items));
+      setPersonalWishlistRevision((current) => current + 1);
+      setRefreshNextCursor(
+        result.value.hasMore && result.value.nextCursor
+          ? result.value.nextCursor
+          : null,
+      );
+      setView("personal");
+
+      if (result.value.targetReachedEventsCreated > 0) {
+        const eventRequestVersion = ++alertEventsRequestVersion.current;
+        try {
+          const eventsResult = await withWishlistAuthRetry(
+            result.token,
+            (activeToken) => getMyWishlistAlertEvents(activeToken),
+            {
+              sessionRevision,
+              isCurrent: () =>
+                isCurrent() && eventRequestVersion === alertEventsRequestVersion.current,
+            },
+          );
+          if (isCurrent() && eventRequestVersion === alertEventsRequestVersion.current) {
+            setAuthToken(eventsResult.token);
+            setAlertEvents(eventsResult.value);
+            setAlertEventsMessage(null);
+          }
+        } catch {
+          // Personal items already refreshed; alert event reload stays non-fatal.
+        }
+      }
+
+      const summary = result.value;
+      const parts = [
+        `${summary.scannedItems} scanned`,
+        `${summary.matchedItems} matched`,
+        `${summary.observationsRecorded} price observation${summary.observationsRecorded === 1 ? "" : "s"} recorded`,
+        `${summary.targetReachedEventsCreated} new alert event${summary.targetReachedEventsCreated === 1 ? "" : "s"}`,
+      ];
+      if (summary.unavailableItems > 0) {
+        parts.push(`${summary.unavailableItems} unavailable`);
+      }
+      if (summary.hasMore && summary.nextCursor) {
+        parts.push("more items available in next batch");
+      }
+      setOperationMessage({
+        kind: summary.provider === "disabled" ? "error" : "success",
+        text: `Live price check (${summary.provider}, ${summary.currency}): ${parts.join(", ")}.`,
       });
+    } catch (error) {
+      if (
+        !isCurrentDataset() ||
+        isAuthSessionInvalidatedError(error) ||
+        sessionRevision !== readAuthSessionRevision()
+      ) {
+        return;
+      }
+      const details = protectedWishlistError(error);
+      if (details.status === 401) {
+        handleAuthenticationRequired();
+      } else {
+        setOperationMessage({
+          kind: "error",
+          text: details.message,
+          requestId: details.requestId,
+        });
+      }
+    } finally {
+      if (refreshOwnerRef.current === opOwner) {
+        refreshOwnerRef.current = null;
+      }
+      if (lifetime.active && sessionRevision === readAuthSessionRevision()) {
+        setIsRefreshingPrices(false);
+      }
     }
   }
 
@@ -1373,7 +1517,7 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
           token={authToken}
           onAdded={handleItemAdded}
           onAuthenticationRequired={handleAuthenticationRequired}
-          onTokenChanged={setAuthToken}
+          onTokenChanged={(token) => { if (consumerLifetime.active && consumerSessionRevision === readAuthSessionRevision()) setAuthToken(token); }}
         />
       )}
 
@@ -1430,9 +1574,25 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
         <section aria-label={isPersonal ? "Personal wishlist games" : "Public wishlist preview games"}>
           <div className="wl-results-bar">
             <span><strong>{filteredItems.length}</strong> tracked games</span>
-            <span>{isPersonal ? "Personal account feed" : source === "api" ? "Public backend preview" : "Static fallback preview"}</span>
+            <div className="wl-results-bar__actions">
+              {isPersonal && authToken && (
+                <button
+                  className="wl-refresh-button"
+                  type="button"
+                  disabled={isRefreshingPrices}
+                  onClick={() => void handleRefreshPrices()}
+                >
+                  {isRefreshingPrices
+                    ? "Checking live prices…"
+                    : refreshNextCursor !== null
+                      ? "Check next batch"
+                      : "Check live prices"}
+                </button>
+              )}
+              <span>{isPersonal ? "Personal account feed" : source === "api" ? "Public backend preview" : "Static fallback preview"}</span>
+            </div>
           </div>
-          <div className="wl-grid">
+          <div className="wl-grid" ref={wishlistGridRef}>
             {filteredItems.map((item) => (
               <WishlistCard
                 alertIsActive={alerts[item.id] ?? item.alertActive}
@@ -1451,8 +1611,12 @@ export default function WishlistExplorer({ wishlistItems, source }: WishlistResu
                   item,
                 )}
                 onAuthenticationRequired={handleAuthenticationRequired}
-                onDelete={(candidate) => void handleDelete(candidate)}
-                onTokenChanged={setAuthToken}
+                onDelete={(candidate, button) => void handleDelete(candidate, button)}
+                onTokenChanged={(nextToken) => {
+                  if (consumerLifetimeRef.current.active && consumerSessionRevision === readAuthSessionRevision()) {
+                    setAuthToken(nextToken);
+                  }
+                }}
                 onUpdateAlert={handleAlertUpdate}
               />
             ))}

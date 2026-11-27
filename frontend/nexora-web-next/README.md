@@ -12,7 +12,7 @@ required to run this application.
 
 ## Requirements
 
-- Node.js 20.9 or newer (Next.js minimum); select Node.js 24.x for the hosted demo
+- Node.js 24 LTS (24.x). From the repository root, run `nvm use` if you use nvm.
 - npm
 - The Spring Boot backend for authentication, personal wishlist operations, and
   live API data
@@ -21,7 +21,7 @@ Public content pages retain typed local fallbacks, so linting and production
 builds do not require a running backend.
 
 These commands can also run unchanged inside the repository's optional
-development container, which supplies Node.js 20 and npm. See the
+development container, which supplies Node.js 24 and npm. See the
 [devcontainer guide](../../docs/development/dev-container-foundation.md). The
 container is local tooling, not a frontend release image, and it does not alter
 frontend environment-variable or secret-handling rules.
@@ -142,8 +142,8 @@ hosted smoke plan for dependencies, browser auth, and restart persistence.
 
 Vercel setup: framework **Next.js**, root `frontend/nexora-web-next`, install
 `npm ci`, build `npm run build`, and the default framework output setting.
-Select Node.js 24.x in project settings; this is a currently supported Vercel
-runtime. [Vercel Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
+The frontend manifest sets `engines.node` to `24.x`, which selects the hosted
+runtime. Align the Vercel project setting to 24.x as well. [Vercel Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
 
 From the repository root, with the intended three frontend variables exported,
 run `python3 scripts/deployment/check-hosted-demo.py env frontend` before
@@ -380,7 +380,7 @@ secrets, and database credentials belong only in backend/deployment
 configuration.
 
 The repository's `Frontend CI` GitHub Actions workflow runs `npm ci`, lint, and
-the production build with Node.js 20 for pushes to `main` and pull requests
+the production build with Node.js 24 for pushes to `main` and pull requests
 targeting `main`. It validates this Next.js application only, not the retained
 Vite prototype. The separate `Security CI` workflow runs
 `npm audit --omit=dev --audit-level=high` against this application's production

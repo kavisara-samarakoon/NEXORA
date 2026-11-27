@@ -25,7 +25,7 @@ scripts/reviewer-local-preflight.sh
 ```
 
 It verifies Java 17+, Maven, curl, Python 3, Git, Bash, required repository
-paths, and the executable smoke/OpenAPI scripts. Node.js 20+ and npm are optional
+paths, and the executable smoke/OpenAPI scripts. Node.js 24.x and npm are optional
 warnings for API-only review but are needed for frontend review. The preflight
 does not start services or prove production readiness; see the
 [scripts guide](../../scripts/README.md#reviewer-local-preflight) for its full
@@ -211,7 +211,7 @@ rm -f /tmp/nexora-request-headers.txt \
 - Maven 3.9 or newer
 - `curl`
 - A local checkout of NEXORA
-- Optional: Node.js 20+ and npm if you also want to start the Next.js frontend
+- Optional: Node.js 24.x and npm if you also want to start the Next.js frontend
 
 Use only the local demo identity shown below:
 

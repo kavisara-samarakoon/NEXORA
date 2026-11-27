@@ -213,17 +213,11 @@ cost controls, or production AI observability.
 - The primary frontend is checked with ESLint and a production build.
 - GitHub Actions cover backend, PostgreSQL, primary frontend, and lightweight
   dependency/security validation.
-- Official GitHub action majors are maintained on Node 24-compatible releases;
-  this action runtime is separate from the preserved Java 17 and Node.js 20
-  application validation inputs.
-- GitHub CI proved that enforceable Dependency Review is unsupported by the
-  repository's current GitHub security configuration. It therefore remains
-  advisory through intentional `continue-on-error: true`, with
-  `fail-on-severity: high` retained as the intended threshold when evaluation
-  is available. It is not a rejecting or merge-blocking control; enforcement is
-  deferred until the required Dependency Graph and repository security
-  capability are available. Read-only permissions and job-summary reporting
-  remain, while npm audit and the Maven dependency tree stay separate controls.
+- External workflow actions are pinned to reviewed commits. Backend and
+  frontend application validation target Java 17 and Node.js 24 LTS.
+- GitHub Dependency Review blocks High/Critical dependency changes when it is
+  supported. Independent npm and Maven runtime scans also check the resolved
+  dependencies, including branches that do not change a dependency manifest.
 - Reviewer Tooling CI checks the read-only local preflight from the repository
   root and `/tmp`, improving setup and reviewer confidence without starting
   services, installing dependencies, or making a production-readiness claim.

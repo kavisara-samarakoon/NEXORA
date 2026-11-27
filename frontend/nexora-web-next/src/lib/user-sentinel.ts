@@ -1,4 +1,4 @@
-import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { withAuthSessionRetry, type AuthOperationValidity } from "@/lib/auth-client";
 import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
 const SENTINEL_REQUEST_TIMEOUT_MS = 10000;
@@ -12,6 +12,9 @@ export type SentinelInsightRequest = {
 
 export type SentinelProviderFallbackReason =
   | "gemini_not_configured"
+  | "gemini_auth_failed"
+  | "gemini_model_unavailable"
+  | "gemini_rate_limited"
   | "gemini_non_success_response"
   | "gemini_invalid_response"
   | "gemini_timeout_or_network"
@@ -77,6 +80,9 @@ function isSentinelProviderFallbackReason(
   value: unknown,
 ): value is SentinelProviderFallbackReason {
   return value === "gemini_not_configured" ||
+    value === "gemini_auth_failed" ||
+    value === "gemini_model_unavailable" ||
+    value === "gemini_rate_limited" ||
     value === "gemini_non_success_response" ||
     value === "gemini_invalid_response" ||
     value === "gemini_timeout_or_network" ||
@@ -217,21 +223,13 @@ export function normalizeSentinelInsightError(error: unknown): SentinelInsightEr
 export async function withSentinelAuthRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
+  operation?: AuthOperationValidity,
 ): Promise<{ value: T; token: string }> {
-  try {
-    return { value: await request(token), token };
-  } catch (error) {
-    if (normalizeSentinelInsightError(error).status !== 401) throw error;
-
-    const currentToken = readAuthToken();
-    const refreshedToken = currentToken && currentToken !== token
-      ? currentToken
-      : await ensureAuthToken({ forceRefresh: true });
-    if (!refreshedToken) throw error;
-
-    return {
-      value: await request(refreshedToken),
-      token: refreshedToken,
-    };
-  }
+  const result = await withAuthSessionRetry(
+    token,
+    request,
+    error => normalizeSentinelInsightError(error).status === 401,
+    operation,
+  );
+  return { value: result.value, token: result.token };
 }

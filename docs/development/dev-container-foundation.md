@@ -1,7 +1,7 @@
 # NEXORA optional dev container
 
 NEXORA includes an optional development-container configuration for a
-consistent Java 17, Maven, Node.js 20, npm, Git, and Docker CLI toolchain. It is
+consistent Java 17, Maven, Node.js 24, npm, Git, and Docker CLI toolchain. It is
 local developer-experience tooling only. It is not a production container
 image, does not deploy NEXORA, does not create release images, and does not
 replace the normal host-native setup.

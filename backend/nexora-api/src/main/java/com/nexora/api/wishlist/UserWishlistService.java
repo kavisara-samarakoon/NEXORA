@@ -16,4 +16,10 @@ public interface UserWishlistService {
     WishlistItem updateWishlistAlert(long userId, long itemId, UpdateWishlistAlertRequest request);
 
     void deleteWishlistItem(long userId, long itemId);
+
+    UserWishlistRefreshResponse refreshWishlistPrices(long userId);
+
+    default UserWishlistRefreshResponse refreshWishlistPrices(long userId, Long cursor) {
+        return refreshWishlistPrices(userId);
+    }
 }

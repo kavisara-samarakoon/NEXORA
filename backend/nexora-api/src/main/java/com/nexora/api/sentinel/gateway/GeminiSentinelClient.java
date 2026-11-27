@@ -1,5 +1,6 @@
 package com.nexora.api.sentinel.gateway;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
@@ -52,12 +53,11 @@ public class GeminiSentinelClient {
         validateConfiguration(gemini);
 
         GeminiGenerateContentRequest payload = new GeminiGenerateContentRequest(
-                new GeminiContent(List.of(new GeminiPart(SYSTEM_INSTRUCTION))),
-                List.of(new GeminiContent(List.of(new GeminiPart(userPrompt(input))))),
+                new GeminiContent(null, List.of(new GeminiPart(SYSTEM_INSTRUCTION))),
+                List.of(new GeminiContent("user", List.of(new GeminiPart(userPrompt(input))))),
                 new GeminiGenerationConfig(
                         gemini.boundedMaxOutputTokens(),
-                        gemini.boundedTemperature()),
-                false);
+                        gemini.boundedTemperature()));
 
         String body;
         try {
@@ -85,36 +85,78 @@ public class GeminiSentinelClient {
                     exception);
         }
 
-        GeminiHttpResponse response;
-        try {
-            response = requestSender.send(request);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new GeminiClientException(
-                    "Gemini provider request was interrupted",
-                    SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK,
-                    exception);
-        } catch (IOException exception) {
-            throw new GeminiClientException(
-                    "Gemini provider request failed",
-                    SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK,
-                    exception);
-        } catch (RuntimeException exception) {
-            throw new GeminiClientException(
-                    "Gemini provider request failed unexpectedly",
-                    SentinelProviderFallbackReason.UNKNOWN,
-                    exception);
-        }
+        GeminiHttpResponse response = sendWithSingleTransientRetry(request);
 
         if (response == null) {
             throw invalidResponse();
         }
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+        int status = response.statusCode();
+        if (status < 200 || status >= 300) {
             throw new GeminiClientException(
-                    "Gemini provider returned a non-success status",
-                    SentinelProviderFallbackReason.GEMINI_NON_SUCCESS_RESPONSE);
+                    "Gemini provider returned status " + status,
+                    classifyHttpError(status));
         }
         return extractAnswer(response.body());
+    }
+
+    private GeminiHttpResponse sendWithSingleTransientRetry(HttpRequest request) {
+        for (int attempt = 0; attempt < 2; attempt++) {
+            try {
+                GeminiHttpResponse response = requestSender.send(request);
+                if (response == null) {
+                    return null;
+                }
+                if (attempt == 0 && isTransientHttpStatus(response.statusCode())) {
+                    continue;
+                }
+                return response;
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new GeminiClientException(
+                        "Gemini provider request was interrupted",
+                        SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK,
+                        exception);
+            } catch (IOException exception) {
+                if (attempt == 0) {
+                    continue;
+                }
+                throw new GeminiClientException(
+                        "Gemini provider request failed",
+                        SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK,
+                        exception);
+            } catch (RuntimeException exception) {
+                throw new GeminiClientException(
+                        "Gemini provider request failed unexpectedly",
+                        SentinelProviderFallbackReason.UNKNOWN,
+                        exception);
+            }
+        }
+        throw new GeminiClientException(
+                "Gemini provider request failed",
+                SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK);
+    }
+
+    private static boolean isTransientHttpStatus(int status) {
+        return status == 502 || status == 503 || status == 504;
+    }
+
+    private static SentinelProviderFallbackReason classifyHttpError(int status) {
+        if (status == 401 || status == 403) {
+            return SentinelProviderFallbackReason.GEMINI_AUTH_FAILED;
+        }
+        if (status == 404) {
+            return SentinelProviderFallbackReason.GEMINI_MODEL_UNAVAILABLE;
+        }
+        if (status == 429) {
+            return SentinelProviderFallbackReason.GEMINI_RATE_LIMITED;
+        }
+        if (status == 408 || status == 504) {
+            return SentinelProviderFallbackReason.GEMINI_TIMEOUT_OR_NETWORK;
+        }
+        if (status == 502 || status == 503) {
+            return SentinelProviderFallbackReason.GEMINI_UNAVAILABLE;
+        }
+        return SentinelProviderFallbackReason.GEMINI_NON_SUCCESS_RESPONSE;
     }
 
     private String extractAnswer(String responseBody) {
@@ -203,7 +245,9 @@ public class GeminiSentinelClient {
                     "Gemini provider is not configured",
                     SentinelProviderFallbackReason.GEMINI_NOT_CONFIGURED);
         }
-        if (gemini.normalizedBaseUrl().isEmpty()
+        String baseUrl = gemini.normalizedBaseUrl();
+        if (baseUrl.isEmpty()
+                || !baseUrl.startsWith("https://")
                 || !gemini.normalizedModel().matches("[A-Za-z0-9._-]+")) {
             throw new GeminiClientException(
                     "Gemini provider configuration is invalid",
@@ -240,11 +284,11 @@ public class GeminiSentinelClient {
     private record GeminiGenerateContentRequest(
             GeminiContent systemInstruction,
             List<GeminiContent> contents,
-            GeminiGenerationConfig generationConfig,
-            boolean store) {
+            GeminiGenerationConfig generationConfig) {
     }
 
-    private record GeminiContent(List<GeminiPart> parts) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record GeminiContent(String role, List<GeminiPart> parts) {
     }
 
     private record GeminiPart(String text) {

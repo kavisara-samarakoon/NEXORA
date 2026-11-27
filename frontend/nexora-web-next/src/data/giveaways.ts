@@ -15,12 +15,61 @@ export type Giveaway = {
   originalPrice: string;
 };
 
+export type LiveGiveawayStatus = "active" | "expired" | "unknown";
+
+export type LiveGiveaway = {
+  id: number;
+  title: string;
+  description: string | null;
+  instructions: string | null;
+  worth: string | null;
+  thumbnailUrl: string | null;
+  imageUrl: string | null;
+  platformLabel: string;
+  rawPlatforms: string | null;
+  type: string;
+  status: LiveGiveawayStatus;
+  publishedAtUtc: string | null;
+  endsAtUtc: string | null;
+  daysRemaining: number | null;
+  claimUrl: string;
+  source: string;
+  sourceAttribution: string;
+};
+
+export type LiveGiveawaysCatalog = {
+  giveaways: readonly LiveGiveaway[];
+  source: "gamerpower" | "unavailable";
+  sourceAttribution: string;
+  sourceUrl: string | null;
+  cacheState: "live" | "cached" | "stale" | "unavailable";
+  lastRefreshedAtUtc: string | null;
+  notice: string | null;
+};
+
 export const giveawayFilters = [
   "All",
   "Steam",
   "Epic Games",
   "GOG",
   "Prime Gaming",
+] as const;
+
+export const liveGiveawayPlatformFilters = [
+  "All",
+  "Epic Games",
+  "Steam",
+  "GOG",
+  "PC",
+  "Mobile",
+  "Console",
+] as const;
+
+export const liveGiveawayTypeFilters = [
+  "All Types",
+  "Game",
+  "DLC",
+  "Early Access",
 ] as const;
 
 export type GiveawayFilter = (typeof giveawayFilters)[number];

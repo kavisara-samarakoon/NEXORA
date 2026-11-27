@@ -48,7 +48,8 @@ export default function HomeSceneProvider({ children }: { children: ReactNode })
   const [data, setData] = useState<HomeFeedData>(EMPTY_HOME_FEED);
   const [errors, setErrors] = useState<HomeFeedErrors>(NO_ERRORS);
   const [attempt, setAttempt] = useState(0);
-  const { motionPaused } = useCinematicSceneControls();
+  const controls = useCinematicSceneControls();
+  const motionPaused = controls.motionPaused || controls.reducedMotion;
 
 
   /* Feed */

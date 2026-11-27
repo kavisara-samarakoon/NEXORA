@@ -46,6 +46,12 @@ public class WishlistAlertEvent {
     @Column(nullable = false, length = 255)
     private String message;
 
+    @Column(name = "delivery_status", nullable = false, length = 64)
+    private String deliveryStatus = "not-delivered";
+
+    @Column(name = "observation_source", length = 64)
+    private String observationSource;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -64,6 +70,24 @@ public class WishlistAlertEvent {
             boolean targetReached,
             String message,
             LocalDateTime createdAt) {
+        this(id, userId, wishlistItemId, itemTitle, store, currentPrice, targetPrice,
+                evaluationState, targetReached, message, "not-delivered", null, createdAt);
+    }
+
+    public WishlistAlertEvent(
+            Long id,
+            long userId,
+            long wishlistItemId,
+            String itemTitle,
+            String store,
+            String currentPrice,
+            String targetPrice,
+            String evaluationState,
+            boolean targetReached,
+            String message,
+            String deliveryStatus,
+            String observationSource,
+            LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.wishlistItemId = wishlistItemId;
@@ -74,6 +98,10 @@ public class WishlistAlertEvent {
         this.evaluationState = evaluationState;
         this.targetReached = targetReached;
         this.message = message;
+        this.deliveryStatus = deliveryStatus == null || deliveryStatus.isBlank()
+                ? "not-delivered"
+                : deliveryStatus;
+        this.observationSource = observationSource;
         this.createdAt = createdAt;
     }
 
@@ -81,6 +109,9 @@ public class WishlistAlertEvent {
     void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now(ZoneOffset.UTC);
+        }
+        if (deliveryStatus == null || deliveryStatus.isBlank()) {
+            deliveryStatus = "not-delivered";
         }
     }
 
@@ -122,6 +153,14 @@ public class WishlistAlertEvent {
 
     public String getMessage() {
         return message;
+    }
+
+    public String getDeliveryStatus() {
+        return deliveryStatus;
+    }
+
+    public String getObservationSource() {
+        return observationSource;
     }
 
     public LocalDateTime getCreatedAt() {

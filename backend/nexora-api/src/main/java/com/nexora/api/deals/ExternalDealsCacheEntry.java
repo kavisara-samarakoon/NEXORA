@@ -2,9 +2,13 @@ package com.nexora.api.deals;
 
 import java.time.Instant;
 
-record ExternalDealsCacheEntry<T>(T value, Instant expiresAt) {
+public record ExternalDealsCacheEntry<T>(T value, Instant fetchedAt, Instant expiresAt) {
 
-    boolean isFresh(Instant now) {
+    public ExternalDealsCacheEntry(T value, Instant expiresAt) {
+        this(value, null, expiresAt);
+    }
+
+    public boolean isFresh(Instant now) {
         return now.isBefore(expiresAt);
     }
 }

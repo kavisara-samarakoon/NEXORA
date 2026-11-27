@@ -11,6 +11,7 @@
 /* ── Top navigation ─────────────────────────────────────────── */
 
 .nav {
+  position: relative;
   display: flex;
   align-items: center;
   gap: clamp(14px, 2.4vw, 34px);
@@ -130,9 +131,9 @@
       rgba(255, 255, 255, 0.03) 42%,
       rgba(255, 106, 0, 0.06)
     ),
-    var(--nx-glass-bg, rgba(18, 18, 22, 0.42));
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
+    var(--nx-glass-override, var(--nx-glass-bg, var(--nx-material-glass)));
+  backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(140%));
+  -webkit-backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(140%));
   transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
 }
 
@@ -168,9 +169,9 @@
       rgba(255, 255, 255, 0.03) 42%,
       rgba(255, 106, 0, 0.08)
     ),
-    var(--nx-glass-bg, rgba(18, 18, 22, 0.42));
-  backdrop-filter: blur(22px) saturate(145%);
-  -webkit-backdrop-filter: blur(22px) saturate(145%);
+    var(--nx-glass-override, var(--nx-glass-bg, var(--nx-material-glass)));
+  backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(145%));
+  -webkit-backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(145%));
   transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
 }
 
@@ -186,44 +187,48 @@
 
 .menuPanel {
   position: absolute;
-  top: calc(100% - 8px);
-  right: clamp(20px, 4vw, 64px);
-  min-width: 200px;
-  max-width: calc(100vw - 32px);
-  padding: 14px;
-  border-radius: 20px;
+  z-index: 1;
+  top: 100%;
+  right: max(clamp(16px, 4vw, 64px), env(safe-area-inset-right));
+  inline-size: min(19rem, calc(100% - 2 * var(--nx-space-4)));
+  max-block-size: calc(100vh - 6rem);
+  max-block-size: calc(100dvh - 6rem - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: var(--nx-drawer-padding);
+  border-radius: 16px;
   list-style: none;
   margin: 0;
-  border: 1px solid var(--nx-glass-border, rgba(255, 230, 210, 0.2));
-  background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.1),
-      rgba(255, 255, 255, 0.03) 42%,
-      rgba(255, 106, 0, 0.06)
-    ),
-    rgba(12, 12, 15, 0.86);
-  backdrop-filter: blur(26px) saturate(150%);
-  -webkit-backdrop-filter: blur(26px) saturate(150%);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--nx-hairline);
+  background: var(--nx-drawer-surface);
+  color: var(--nx-color-text);
+  box-shadow: var(--nx-shadow-overlay);
 }
 
 .menuPanel li + li {
-  margin-top: 4px;
+  margin-top: var(--nx-drawer-gap);
 }
 
 .menuLink {
-  display: block;
-  padding: 9px 10px;
-  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  min-block-size: var(--nx-touch-target);
+  padding: 6px var(--nx-space-2);
+  border-radius: 10px;
   font-size: 0.9rem;
   text-decoration: none;
-  color: var(--nx-text-soft, rgba(247, 243, 236, 0.78));
-  transition: background 0.3s ease, color 0.3s ease;
+  color: var(--nx-color-secondary);
 }
 
-.menuLink:hover {
-  color: var(--nx-warm-white, #f7f3ec);
-  background: rgba(255, 255, 255, 0.06);
+@media (hover: hover) and (pointer: fine) {
+  .menuLink:hover {
+    color: var(--nx-color-text);
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.menuLink:active {
+  background: var(--nx-color-raised);
 }
 
 /* ── Liquid glass Discovery Window ──────────────────────────── */
@@ -241,9 +246,9 @@
       rgba(255, 255, 255, 0.03) 42%,
       rgba(255, 106, 0, 0.06)
     ),
-    rgba(18, 18, 22, 0.42);
-  backdrop-filter: blur(26px) saturate(145%);
-  -webkit-backdrop-filter: blur(26px) saturate(145%);
+    var(--nx-glass-override, var(--nx-material-glass));
+  backdrop-filter: var(--nx-glass-effect, blur(26px) saturate(145%));
+  -webkit-backdrop-filter: var(--nx-glass-effect, blur(26px) saturate(145%));
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 36px rgba(255, 106, 0, 0.045),
     inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 0 rgba(255, 106, 0, 0.08);
   transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.24, 1), border-color 0.6s ease,
@@ -622,9 +627,9 @@
       rgba(255, 255, 255, 0.02) 42%,
       rgba(255, 106, 0, 0.05)
     ),
-    var(--nx-glass-bg, rgba(18, 18, 22, 0.42));
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
+    var(--nx-glass-override, var(--nx-glass-bg, var(--nx-material-glass)));
+  backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(140%));
+  -webkit-backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(140%));
   transition: color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
@@ -657,11 +662,12 @@
 .register:focus-visible,
 .menuButton:focus-visible,
 .menuLink:focus-visible,
+.sceneControlButton:focus-visible,
 .tab:focus-visible,
 .itemLink:focus-visible,
 .retry:focus-visible,
 .controlButton:focus-visible {
-  outline: 2px solid var(--nx-electric-blue, #00d4ff);
+  outline: var(--nx-outline-focus);
   outline-offset: 3px;
   border-radius: 8px;
 }
@@ -826,9 +832,13 @@
   animation-play-state: paused;
 }
 
+.canvasHost[data-nx-core-motion="idle"] .fallback * {
+  animation-play-state: paused;
+}
+
 /* ── Responsive ─────────────────────────────────────────────── */
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .navLinks {
     display: none;
   }
@@ -837,15 +847,25 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: var(--nx-touch-target);
+    height: var(--nx-touch-target);
     border-radius: 50%;
     cursor: pointer;
     color: var(--nx-soft-white, #e8e1d8);
     border: 1px solid var(--nx-glass-border, rgba(255, 230, 210, 0.2));
-    background: rgba(18, 18, 22, 0.5);
-    backdrop-filter: blur(22px) saturate(140%);
-    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    background: var(--nx-glass-override, rgba(18, 18, 22, 0.5));
+    backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(140%));
+    -webkit-backdrop-filter: var(--nx-glass-effect, blur(22px) saturate(140%));
+  }
+
+  .iconButton {
+    width: var(--nx-touch-target);
+    height: var(--nx-touch-target);
+  }
+
+  .brand {
+    align-items: center;
+    min-height: var(--nx-touch-target);
   }
 
   .navActions {
@@ -865,8 +885,8 @@
 
   .iconButton,
   .menuButton {
-    width: 40px;
-    height: 40px;
+    width: var(--nx-touch-target);
+    height: var(--nx-touch-target);
   }
 
   .register {
@@ -1161,6 +1181,8 @@
 .menuAuthStatus :global(.auth-status__register),
 .menuAuthStatus :global(.auth-status--unavailable a) {
   width: 100%;
+  min-height: var(--nx-touch-target);
+  align-content: center;
 }
 
 .menuAuthStatus :global(.auth-status__identity) {
@@ -1249,6 +1271,7 @@
 
 .menuSceneControls .sceneControlButton {
   width: 100%;
+  min-height: var(--nx-touch-target);
 }
 
 @media (max-width: 1180px) {
@@ -1351,4 +1374,17 @@
   opacity: 0;
   transform: scaleX(0);
   box-shadow: none;
+}
+
+
+/* The 980px disclosure breakpoint matches the account-control breakpoint. */
+@media (min-width: 981px) {
+  .menuPanel {
+    display: none;
+  }
+}
+
+:global(html[data-nx-motion="paused"]) .nav :is(.navLink, .menuButton, .iconButton, .sceneControlButton),
+:global(html[data-nx-motion="paused"]) .nav .navLink::after {
+  transition: none;
 }

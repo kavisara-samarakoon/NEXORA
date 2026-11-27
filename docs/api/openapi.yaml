@@ -104,6 +104,36 @@ paths:
             type: number
             format: double
             minimum: 0
+        - name: sortBy
+          in: query
+          required: false
+          description: Allowlisted sort mode (DealRating, Savings, Price, Metacritic, Recent, Title, Release, Reviews, Store).
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          description: Sort direction (1 descending, 0 ascending).
+          schema:
+            type: integer
+            format: int32
+        - name: storeId
+          in: query
+          required: false
+          description: Optional numeric store identifier.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: pageNumber
+          in: query
+          required: false
+          description: Optional zero-based page number (0-20).
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 20
       responses:
         "200":
           description: External or fallback deal records
@@ -113,6 +143,71 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Deal"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/deals/live:
+    get:
+      operationId: listLiveDealsCatalog
+      tags: [Catalog]
+      summary: Fetch live CheapShark deals with provider state, attribution, and store options
+      parameters:
+        - name: title
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 24
+        - name: upperPrice
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+            minimum: 0
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: storeId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: pageNumber
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 20
+      responses:
+        "200":
+          description: Structured deals response with provider state and store filter metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalDealsCatalogResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "500":
@@ -132,6 +227,34 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Giveaway"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/giveaways/live:
+    get:
+      operationId: listLiveGiveaways
+      tags: [Catalog]
+      summary: Fetch live game giveaways from GamerPower with status handling and attribution
+      parameters:
+        - name: platform
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live giveaway feed with attribution and graceful unavailable metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveGiveawaysResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -363,6 +486,31 @@ paths:
           $ref: "#/components/responses/AuthenticationRequired"
         "500":
           $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateCurrentAccount
+      tags: [Authentication]
+      summary: Update the current account display name
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated account-safe fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /api/me/wishlist:
     get:
@@ -403,6 +551,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/me/wishlist/refresh:
+    post:
+      operationId: refreshCurrentUserWishlistPrices
+      tags: [Wishlist]
+      summary: Refresh linked wishlist items from CheapShark and evaluate targets
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Resume after this wishlist item ID. Every page uses ascending ID order.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Bounded refresh summary and updated wishlist items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWishlistRefreshResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -812,6 +990,149 @@ components:
         dealUrl:
           type: [string, "null"]
           format: uri
+        thumbUrl:
+          type: [string, "null"]
+        currency:
+          type: string
+        gameId:
+          type: [string, "null"]
+        externalDealId:
+          type: [string, "null"]
+        steamAppId:
+          type: [string, "null"]
+        metacriticScore:
+          type: [integer, "null"]
+          format: int32
+        source:
+          type: [string, "null"]
+        observedAtUtc:
+          type: [string, "null"]
+          format: date-time
+
+    DealStoreOption:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    ExternalDealsCatalogResponse:
+      type: object
+      required:
+        - deals
+        - source
+        - sourceAttribution
+        - sourceUrl
+        - currency
+        - cacheState
+        - lastRefreshedAtUtc
+        - availableStores
+      properties:
+        deals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Deal"
+        source:
+          type: string
+        sourceAttribution:
+          type: string
+        sourceUrl:
+          type: string
+        currency:
+          type: string
+        cacheState:
+          type: string
+        lastRefreshedAtUtc:
+          type: [string, "null"]
+          format: date-time
+        availableStores:
+          type: array
+          items:
+            $ref: "#/components/schemas/DealStoreOption"
+        notice:
+          type: [string, "null"]
+
+    LiveGiveaway:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - instructions
+        - platformLabel
+        - type
+        - status
+        - claimUrl
+        - source
+        - sourceAttribution
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        worth:
+          type: [string, "null"]
+        thumbnailUrl:
+          type: [string, "null"]
+        imageUrl:
+          type: [string, "null"]
+        platformLabel:
+          type: string
+        rawPlatforms:
+          type: [string, "null"]
+        type:
+          type: string
+        status:
+          type: string
+        publishedAtUtc:
+          type: [string, "null"]
+          format: date-time
+        endsAtUtc:
+          type: [string, "null"]
+          format: date-time
+        daysRemaining:
+          type: [integer, "null"]
+          format: int32
+        claimUrl:
+          type: [string, "null"]
+        source:
+          type: string
+        sourceAttribution:
+          type: string
+
+    LiveGiveawaysResponse:
+      type: object
+      required:
+        - giveaways
+        - source
+        - sourceAttribution
+        - sourceUrl
+        - cacheState
+      properties:
+        giveaways:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiveGiveaway"
+        source:
+          type: string
+        sourceAttribution:
+          type: string
+        sourceUrl:
+          type: string
+        cacheState:
+          type: string
+        lastRefreshedAtUtc:
+          type: [string, "null"]
+          format: date-time
+        notice:
+          type: [string, "null"]
 
     Giveaway:
       type: object
@@ -1099,6 +1420,15 @@ components:
         displayName:
           type: string
 
+    UpdateProfileRequest:
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+
     AddWishlistItemRequest:
       type: object
       required: [title, store, currentPrice, targetPrice]
@@ -1133,6 +1463,18 @@ components:
         priority:
           type: [string, "null"]
           enum: [high, medium, low, null]
+        externalGameId:
+          type: [string, "null"]
+          maxLength: 80
+        externalDealId:
+          type: [string, "null"]
+          maxLength: 160
+        currency:
+          type: [string, "null"]
+          maxLength: 10
+        thumbUrl:
+          type: [string, "null"]
+          maxLength: 512
 
     UpdateWishlistAlertRequest:
       type: object
@@ -1184,8 +1526,69 @@ components:
           type: boolean
         priority:
           type: [string, "null"]
+        externalGameId:
+          type: [string, "null"]
+        externalDealId:
+          type: [string, "null"]
+        currency:
+          type: string
+        priceSource:
+          type: string
+        lowestEverSource:
+          type: string
+        thumbUrl:
+          type: [string, "null"]
         alertEvaluation:
           $ref: "#/components/schemas/WishlistAlertEvaluation"
+
+    UserWishlistRefreshResponse:
+      type: object
+      required:
+        - scannedItems
+        - matchedItems
+        - updatedItems
+        - observationsRecorded
+        - targetReachedEventsCreated
+        - unavailableItems
+        - provider
+        - currency
+        - refreshedAtUtc
+        - items
+      properties:
+        scannedItems:
+          type: integer
+          format: int32
+        matchedItems:
+          type: integer
+          format: int32
+        updatedItems:
+          type: integer
+          format: int32
+        observationsRecorded:
+          type: integer
+          format: int32
+        targetReachedEventsCreated:
+          type: integer
+          format: int32
+        unavailableItems:
+          type: integer
+          format: int32
+        hasMore:
+          type: boolean
+        nextCursor:
+          type: [integer, "null"]
+          format: int64
+        provider:
+          type: string
+        currency:
+          type: string
+        refreshedAtUtc:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WishlistItem"
 
     WishlistAlertEvaluation:
       type: object
@@ -1232,6 +1635,10 @@ components:
           type: boolean
         message:
           type: string
+        deliveryStatus:
+          type: string
+        observationSource:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time
@@ -1268,6 +1675,10 @@ components:
           type: [string, "null"]
         source:
           type: string
+        externalGameId:
+          type: [string, "null"]
+        externalDealId:
+          type: [string, "null"]
         observedAt:
           type: string
           format: date-time

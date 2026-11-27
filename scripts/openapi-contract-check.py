@@ -8,15 +8,17 @@ import sys
 
 DEFAULT_CONTRACT = Path("docs/api/openapi.yaml")
 EXPECTED_INFO_VERSION = "0.38.0"
-EXPECTED_PATH_COUNT = 23
-EXPECTED_OPERATION_COUNT = 25
+EXPECTED_PATH_COUNT = 26
+EXPECTED_OPERATION_COUNT = 29
 
 EXPECTED_PATHS = {
     "/api",
     "/api/health",
     "/api/deals",
     "/api/deals/external",
+    "/api/deals/live",
     "/api/giveaways",
+    "/api/giveaways/live",
     "/api/wishlist",
     "/api/dashboard/summary",
     "/api/security/status",
@@ -29,6 +31,7 @@ EXPECTED_PATHS = {
     "/api/auth/logout",
     "/api/auth/me",
     "/api/me/wishlist",
+    "/api/me/wishlist/refresh",
     "/api/me/wishlist/alert-events",
     "/api/me/wishlist/{id}/price-history",
     "/api/me/wishlist/{id}/alert",
@@ -42,7 +45,9 @@ EXPECTED_OPERATION_IDS = {
     "getRuntimeHealth",
     "listDeals",
     "listExternalDeals",
+    "listLiveDealsCatalog",
     "listGiveaways",
+    "listLiveGiveaways",
     "listPublicWishlist",
     "getDashboardSummary",
     "getSecurityStatus",
@@ -54,8 +59,10 @@ EXPECTED_OPERATION_IDS = {
     "refreshAuthSession",
     "logoutAuthSession",
     "getCurrentAccount",
+    "updateCurrentAccount",
     "listCurrentUserWishlist",
     "addCurrentUserWishlistItem",
+    "refreshCurrentUserWishlistPrices",
     "listCurrentUserWishlistAlertEvents",
     "listCurrentUserWishlistPriceHistory",
     "updateCurrentUserWishlistAlert",
@@ -69,7 +76,11 @@ REQUIRED_SCHEMAS = {
     "WelcomeResponse",
     "HealthResponse",
     "Deal",
+    "DealStoreOption",
+    "ExternalDealsCatalogResponse",
     "Giveaway",
+    "LiveGiveaway",
+    "LiveGiveawaysResponse",
     "DashboardSummary",
     "SecurityStatusResponse",
     "SentinelStatusResponse",
@@ -79,9 +90,11 @@ REQUIRED_SCHEMAS = {
     "LoginRequest",
     "AuthResponse",
     "AuthUserResponse",
+    "UpdateProfileRequest",
     "AddWishlistItemRequest",
     "UpdateWishlistAlertRequest",
     "WishlistItem",
+    "UserWishlistRefreshResponse",
     "WishlistAlertEventResponse",
     "WishlistPriceHistoryPoint",
     "NotificationPreferenceResponse",

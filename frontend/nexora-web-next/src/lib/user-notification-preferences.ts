@@ -1,4 +1,4 @@
-import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { withAuthSessionRetry, type AuthOperationValidity } from "@/lib/auth-client";
 import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
 const NOTIFICATION_PREFERENCE_TIMEOUT_MS = 8000;
@@ -169,24 +169,15 @@ export function normalizeNotificationPreferenceError(
   };
 }
 
-export async function withNotificationPreferenceAuthRetry<T>(
+export function withNotificationPreferenceAuthRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
-): Promise<{ value: T; token: string }> {
-  try {
-    return { value: await request(token), token };
-  } catch (error) {
-    if (normalizeNotificationPreferenceError(error).status !== 401) throw error;
-
-    const currentToken = readAuthToken();
-    const refreshedToken = currentToken && currentToken !== token
-      ? currentToken
-      : await ensureAuthToken({ forceRefresh: true });
-    if (!refreshedToken) throw error;
-
-    return {
-      value: await request(refreshedToken),
-      token: refreshedToken,
-    };
-  }
+  operation?: AuthOperationValidity,
+): Promise<{ value: T; token: string; sessionRevision: number }> {
+  return withAuthSessionRetry(
+    token,
+    request,
+    (error) => normalizeNotificationPreferenceError(error).status === 401,
+    operation,
+  );
 }

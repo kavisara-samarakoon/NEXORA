@@ -332,6 +332,30 @@ export async function getCurrentUser(token: string): Promise<AuthUser> {
   return data;
 }
 
+export async function updateDisplayName(
+  token: string,
+  displayName: string,
+): Promise<AuthUser> {
+  const data = await authRequest("/api/auth/me", {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ displayName }),
+  });
+
+  if (!isAuthUser(data)) {
+    throw new AuthRequestError({
+      status: null,
+      code: "invalid_response",
+      message: "The authentication service returned an unexpected response.",
+    });
+  }
+
+  return data;
+}
+
 export function normalizeAuthError(error: unknown): AuthError {
   if (error instanceof AuthRequestError) {
     return { ...error.details, requestId: error.requestId };

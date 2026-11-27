@@ -2,6 +2,7 @@ package com.nexora.api.deals;
 
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,16 @@ public class CheapSharkStoreDirectory {
         Map<String, String> lookup = new LinkedHashMap<>();
         entries.forEach((storeId, entry) -> lookup.put(storeId, entry.name()));
         return Map.copyOf(lookup);
+    }
+
+    public List<DealStoreOption> toActiveStoreOptions(Map<String, String> lookup) {
+        if (lookup == null || lookup.isEmpty()) {
+            return List.of();
+        }
+        return lookup.entrySet().stream()
+                .map(entry -> new DealStoreOption(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparing(DealStoreOption::name, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     public String storeName(Map<String, String> lookup, String storeId) {

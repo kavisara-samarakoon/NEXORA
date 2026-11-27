@@ -7,6 +7,13 @@ export type DealStatus =
   | "Observed offer"
   | "Free offer";
 
+export type DealSortBy = "DealRating" | "Savings" | "Price" | "Title" | "Recent";
+
+export type DealStoreOption = {
+  id: string;
+  name: string;
+};
+
 export type GameDeal = {
   id: number;
   store: DealStore;
@@ -21,6 +28,26 @@ export type GameDeal = {
   category: string;
   status: DealStatus;
   dealUrl?: string | null;
+  thumbUrl?: string | null;
+  currency?: string;
+  gameId?: string | null;
+  externalDealId?: string | null;
+  steamAppId?: string | null;
+  metacriticScore?: number | null;
+  source?: string | null;
+  observedAtUtc?: string | null;
+};
+
+export type LiveDealsCatalog = {
+  deals: readonly GameDeal[];
+  source: "cheapshark" | "unavailable";
+  sourceAttribution: string;
+  sourceUrl: string | null;
+  currency: string;
+  cacheState: "live" | "cached" | "stale" | "fallback" | "unavailable";
+  lastRefreshedAtUtc: string | null;
+  availableStores: readonly DealStoreOption[];
+  notice: string | null;
 };
 
 type CuratedGameDeal = Omit<GameDeal, "store"> & { store: KnownDealStore };
@@ -36,6 +63,14 @@ export const dealFilters = [
   "50%+ Off",
   "Free offers",
 ] as const;
+
+export const dealSortOptions: readonly { value: DealSortBy; label: string }[] = [
+  { value: "DealRating", label: "Deal Rating" },
+  { value: "Savings", label: "Biggest Savings" },
+  { value: "Price", label: "Price" },
+  { value: "Title", label: "Title" },
+  { value: "Recent", label: "Most Recent" },
+];
 
 export type DealFilter = (typeof dealFilters)[number];
 

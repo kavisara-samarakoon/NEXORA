@@ -54,14 +54,18 @@ public class UserWishlistExceptionHandler {
                 HttpStatus.BAD_REQUEST, "validation_failed", message, request);
     }
 
-    @ExceptionHandler(ConstraintViolationException.class)
+    @ExceptionHandler({ConstraintViolationException.class, IllegalArgumentException.class})
     public ResponseEntity<ApiErrorResponse> invalidParameter(
-            ConstraintViolationException exception,
+            Exception exception,
             HttpServletRequest request) {
+        String message = exception instanceof IllegalArgumentException
+                && exception.getMessage() != null && !exception.getMessage().isBlank()
+                ? exception.getMessage()
+                : "Request validation failed";
         return errorFactory.response(
                 HttpStatus.BAD_REQUEST,
                 "validation_failed",
-                "Request validation failed",
+                message,
                 request);
     }
 }

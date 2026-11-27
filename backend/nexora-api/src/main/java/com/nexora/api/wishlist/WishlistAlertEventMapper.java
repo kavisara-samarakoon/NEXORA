@@ -20,12 +20,17 @@ final class WishlistAlertEventMapper {
                 event.getEvaluationState(),
                 event.isTargetReached(),
                 event.getMessage(),
-                event.getCreatedAt()
+                event.getCreatedAt(),
+                event.getDeliveryStatus(),
+                event.getObservationSource()
         );
     }
 
     static WishlistAlertEventResponse toResponse(
-            long id, WishlistItem item, LocalDateTime createdAt) {
+            long id,
+            WishlistItem item,
+            LocalDateTime createdAt,
+            String observationSource) {
         WishlistAlertEvaluation evaluation = item.alertEvaluation();
         return new WishlistAlertEventResponse(
                 id,
@@ -37,7 +42,14 @@ final class WishlistAlertEventMapper {
                 evaluation.state(),
                 evaluation.targetReached(),
                 evaluation.message(),
-                createdAt
+                createdAt,
+                "not-delivered",
+                observationSource
         );
+    }
+
+    static WishlistAlertEventResponse toResponse(
+            long id, WishlistItem item, LocalDateTime createdAt) {
+        return toResponse(id, item, createdAt, null);
     }
 }

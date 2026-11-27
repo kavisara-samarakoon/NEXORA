@@ -8,6 +8,10 @@ public interface WishlistPriceSnapshotProvider {
 
     Optional<String> findCurrentPrice(WishlistItem item);
 
+    default Optional<CheapSharkWishlistLiveLookup.ObservedOffer> findVerifiedOffer(WishlistItem item) {
+        return Optional.empty();
+    }
+
     default String priceHistorySource() {
         return "price-refresh";
     }

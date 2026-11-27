@@ -8,13 +8,6 @@ import AuthStatus from "./AuthStatus";
 import CinematicSceneControls from "./CinematicSceneControls";
 import styles from "./cinematic.module.css";
 
-/**
- * NOTE FOR INTEGRATION
- * If `src/app/layout.tsx` already renders a global site header, either
- * remove this component from `page.tsx` or hide the global header on `/`.
- * Two stacked navigations will break the cinematic composition.
- */
-
 const PRIMARY_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/deals", label: "Deals" },
@@ -27,7 +20,11 @@ const PRIMARY_LINKS = [
 
 export default function CinematicTopNav({ className }: { className?: string }) {
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const menuOpen = openPath !== null && openPath === pathname;
+  if (openPath !== null && !menuOpen) setOpenPath(null);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLUListElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
   const isActiveRoute = (href: string) => {
@@ -37,49 +34,88 @@ export default function CinematicTopNav({ className }: { className?: string }) {
 
   const showNavbarSceneControls = !isActiveRoute("/");
 
-  const focusDealsSearch = () => {
-    const input = document.getElementById("deal-search");
-    if (!(input instanceof HTMLInputElement)) return false;
-
-    input.scrollIntoView({ behavior: "smooth", block: "center" });
-    window.setTimeout(() => input.focus({ preventScroll: true }), 250);
-    window.history.replaceState(null, "", "/deals#deal-search");
-    return true;
-  };
-
   const handleSearchShortcut = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!isActiveRoute("/deals")) return;
+    if (!isActiveRoute("/deals") || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const input = document.getElementById("deal-search");
+    if (!(input instanceof HTMLInputElement)) return;
 
     event.preventDefault();
-    focusDealsSearch();
-    setMenuOpen(false);
+    setOpenPath(null);
+    input.focus({ preventScroll: true });
+    input.scrollIntoView({ block: "center" });
+    window.history.replaceState(null, "", "/deals#deal-search");
   };
 
   useEffect(() => {
     if (!menuOpen) return;
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
-    };
-    const onPointerDown = (event: PointerEvent) => {
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
+    const restoreWithinDrawer = () => {
+      if (menuPanelRef.current?.contains(document.activeElement)) {
+        menuToggleRef.current?.focus({ preventScroll: true });
       }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented ||
+          !navRef.current?.contains(document.activeElement)) return;
+      event.preventDefault();
+      restoreWithinDrawer();
+      setOpenPath(null);
+    };
+    let focusWasInDrawer = false;
+    const onPointerDown = () => {
+      focusWasInDrawer = Boolean(menuPanelRef.current?.contains(document.activeElement));
+    };
+    const onOutsideClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Node) || navRef.current?.contains(event.target)) return;
+      // A click on a focusable control keeps its native focus. A click on the
+      // background can leave body focused after the drawer link loses focus.
+      if (focusWasInDrawer && document.activeElement === document.body) {
+        menuToggleRef.current?.focus({ preventScroll: true });
+      } else {
+        restoreWithinDrawer();
+      }
+      setOpenPath(null);
+    };
+    const onHistory = () => setOpenPath(null);
+    const mobileNav = window.matchMedia("(max-width: 980px)");
+    const onResize = () => {
+      if (mobileNav.matches) return;
+      if (menuToggleRef.current === document.activeElement ||
+          menuPanelRef.current?.contains(document.activeElement)) {
+        navRef.current?.querySelector<HTMLElement>("[data-nx-nav-brand]")?.focus({ preventScroll: true });
+      }
+      setOpenPath(null);
     };
 
     document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("click", onOutsideClick);
+    window.addEventListener("popstate", onHistory);
+    mobileNav.addEventListener("change", onResize);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("click", onOutsideClick);
+      window.removeEventListener("popstate", onHistory);
+      mobileNav.removeEventListener("change", onResize);
     };
   }, [menuOpen]);
 
   return (
     <header className={className}>
-      <nav ref={navRef} className={styles.nav} aria-label="Primary">
+      <nav
+        ref={navRef}
+        className={styles.nav}
+        aria-label="Primary"
+        onBlur={(event) => {
+          if (menuOpen && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) {
+            setOpenPath(null);
+          }
+        }}
+      >
         <Link
           href="/"
+          data-nx-nav-brand
           className={isActiveRoute("/") ? `${styles.brand} ${styles.brandActive}` : styles.brand}
           aria-current={isActiveRoute("/") ? "page" : undefined}
         >
@@ -139,11 +175,12 @@ export default function CinematicTopNav({ className }: { className?: string }) {
 
           <button
             type="button"
+            ref={menuToggleRef}
             className={styles.menuButton}
             aria-expanded={menuOpen}
             aria-controls="nexora-compact-menu"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={() => setOpenPath((open) => open === pathname ? null : pathname)}
           >
             <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
               <path
@@ -157,8 +194,19 @@ export default function CinematicTopNav({ className }: { className?: string }) {
           </button>
         </div>
 
-        {menuOpen ? (
-          <ul id="nexora-compact-menu" className={styles.menuPanel}>
+        <ul
+          ref={menuPanelRef}
+          id="nexora-compact-menu"
+          className={styles.menuPanel}
+          hidden={!menuOpen}
+          onClickCapture={(event) => {
+            if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+                !(event.target instanceof Element) || !event.target.closest("a")) return;
+            menuToggleRef.current?.focus({ preventScroll: true });
+            setOpenPath(null);
+          }}
+        >
+          {menuOpen ? <>
             {PRIMARY_LINKS.map((link) => {
               const isActive = isActiveRoute(link.href);
 
@@ -168,7 +216,6 @@ export default function CinematicTopNav({ className }: { className?: string }) {
                     href={link.href}
                     className={isActive ? `${styles.menuLink} ${styles.menuLinkActive}` : styles.menuLink}
                     aria-current={isActive ? "page" : undefined}
-                    onClick={() => setMenuOpen(false)}
                   >
                     {link.label}
                   </Link>
@@ -183,8 +230,8 @@ export default function CinematicTopNav({ className }: { className?: string }) {
             <li className={styles.menuAuthStatus}>
               <AuthStatus />
             </li>
-          </ul>
-        ) : null}
+          </> : null}
+        </ul>
       </nav>
     </header>
   );

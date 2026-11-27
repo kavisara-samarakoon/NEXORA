@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -16,6 +17,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ExternalDealService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExternalDealService.class);
+    private static final String CHEAPSHARK_ATTRIBUTION = "CheapShark";
+    private static final String CHEAPSHARK_URL = "https://www.cheapshark.com";
 
     private final CheapSharkDealClient cheapSharkDealClient;
     private final CheapSharkDealMapper cheapSharkDealMapper;
@@ -24,7 +27,7 @@ public class ExternalDealService {
     private final ExternalDealsProperties properties;
     private final ExternalDealsCache cache;
     private final ExternalProviderRequestBudget providerRequestBudget;
-    private final ConcurrentHashMap<ExternalDealsCacheKey, CompletableFuture<List<CheapSharkDealResponse>>>
+    private final ConcurrentHashMap<ExternalDealsCacheKey, CompletableFuture<DealLoadResult>>
             dealLoads = new ConcurrentHashMap<>();
     private final AtomicReference<CompletableFuture<Map<String, String>>> storeLookupLoad =
             new AtomicReference<>();
@@ -47,82 +50,264 @@ public class ExternalDealService {
     }
 
     public List<Deal> getDeals(String title, Integer pageSize, BigDecimal upperPrice) {
+        return getDeals(title, pageSize, upperPrice, null, null, null, null);
+    }
+
+    public List<Deal> getDeals(
+            String title,
+            Integer pageSize,
+            BigDecimal upperPrice,
+            String sortBy,
+            Boolean desc,
+            String storeId,
+            Integer pageNumber) {
         if (!properties.isEnabled()) {
             return localDeals.getDeals();
         }
 
-        int requestedPageSize = pageSize == null ? properties.getDefaultPageSize() : pageSize;
-        int maxPageSize = Math.max(1, properties.getMaxPageSize());
-        int effectivePageSize = Math.max(1, Math.min(requestedPageSize, maxPageSize));
+        int effectivePageSize = normalizePageSize(pageSize);
         String effectiveTitle = normalizeTitle(title);
+        String effectiveSortBy = CheapSharkDealClient.normalizeSortBy(sortBy);
+        boolean effectiveDesc = desc == null || desc;
+        String effectiveStoreId = normalizeStoreId(storeId);
+        int effectivePageNumber = normalizePageNumber(pageNumber);
 
         if (!properties.getCache().isEnabled()) {
-            return getDealsWithoutCache(effectivePageSize, effectiveTitle, upperPrice);
+            return getDealsWithoutCache(
+                    effectivePageSize,
+                    effectiveTitle,
+                    upperPrice,
+                    effectiveSortBy,
+                    effectiveDesc,
+                    effectiveStoreId,
+                    effectivePageNumber);
         }
 
         ExternalDealsCacheKey cacheKey = ExternalDealsCacheKey.of(
                 effectivePageSize,
                 effectiveTitle,
-                upperPrice
+                upperPrice,
+                effectiveSortBy,
+                effectiveDesc,
+                effectiveStoreId,
+                effectivePageNumber
         );
 
         try {
-            List<CheapSharkDealResponse> responses = getDealResponses(
+            DealLoadResult loadResult = getDealResponses(
                     cacheKey,
                     effectivePageSize,
                     effectiveTitle,
-                    upperPrice
+                    upperPrice,
+                    effectiveSortBy,
+                    effectiveDesc,
+                    effectiveStoreId,
+                    effectivePageNumber
             );
             Map<String, String> storeLookup = getStoreLookup();
-            return cheapSharkDealMapper.toDeals(responses, storeLookup);
+            return cheapSharkDealMapper.toDeals(
+                    loadResult.responses(), storeLookup, loadResult.refreshedAtUtc());
         } catch (RuntimeException exception) {
             return localFallback(exception);
+        }
+    }
+
+    public ExternalDealsCatalogResponse getLiveCatalog(
+            String title,
+            Integer pageSize,
+            BigDecimal upperPrice,
+            String sortBy,
+            Boolean desc,
+            String storeId,
+            Integer pageNumber) {
+        if (!properties.isEnabled()) {
+            return new ExternalDealsCatalogResponse(
+                    List.of(),
+                    "unavailable",
+                    CHEAPSHARK_ATTRIBUTION,
+                    CHEAPSHARK_URL,
+                    "USD",
+                    "unavailable",
+                    null,
+                    List.of(),
+                    "External live deals provider is disabled in configuration."
+            );
+        }
+
+        int effectivePageSize = normalizePageSize(pageSize);
+        String effectiveTitle = normalizeTitle(title);
+        String effectiveSortBy = CheapSharkDealClient.normalizeSortBy(sortBy);
+        boolean effectiveDesc = desc == null || desc;
+        String effectiveStoreId = normalizeStoreId(storeId);
+        int effectivePageNumber = normalizePageNumber(pageNumber);
+
+        try {
+            DealLoadResult loadResult;
+            Map<String, String> storeLookup;
+            if (!properties.getCache().isEnabled()) {
+                List<CheapSharkDealResponse> responses = fetchDealsFromClient(
+                        effectivePageSize,
+                        effectiveTitle,
+                        upperPrice,
+                        effectiveSortBy,
+                        effectiveDesc,
+                        effectiveStoreId,
+                        effectivePageNumber
+                );
+                loadResult = new DealLoadResult(responses, "live", cache.now());
+                storeLookup = getStoreLookupWithoutCache();
+            } else {
+                ExternalDealsCacheKey cacheKey = ExternalDealsCacheKey.of(
+                        effectivePageSize,
+                        effectiveTitle,
+                        upperPrice,
+                        effectiveSortBy,
+                        effectiveDesc,
+                        effectiveStoreId,
+                        effectivePageNumber
+                );
+                loadResult = getDealResponses(
+                        cacheKey,
+                        effectivePageSize,
+                        effectiveTitle,
+                        upperPrice,
+                        effectiveSortBy,
+                        effectiveDesc,
+                        effectiveStoreId,
+                        effectivePageNumber
+                );
+                storeLookup = getStoreLookup();
+            }
+
+            List<Deal> mappedDeals = cheapSharkDealMapper.toDeals(
+                    loadResult.responses(),
+                    storeLookup,
+                    loadResult.refreshedAtUtc()
+            );
+            List<DealStoreOption> stores = cheapSharkStoreDirectory.toActiveStoreOptions(storeLookup);
+            String notice = "stale".equals(loadResult.cacheState())
+                    ? "Live refresh failed; serving the last cached CheapShark snapshot."
+                    : null;
+            return new ExternalDealsCatalogResponse(
+                    mappedDeals,
+                    "cheapshark",
+                    CHEAPSHARK_ATTRIBUTION,
+                    CHEAPSHARK_URL,
+                    "USD",
+                    loadResult.cacheState(),
+                    loadResult.refreshedAtUtc(),
+                    stores,
+                    notice
+            );
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "CheapShark live deals unavailable ({})",
+                    exception.getMessage()
+            );
+            return new ExternalDealsCatalogResponse(
+                    List.of(),
+                    "unavailable",
+                    CHEAPSHARK_ATTRIBUTION,
+                    CHEAPSHARK_URL,
+                    "USD",
+                    "unavailable",
+                    null,
+                    List.of(),
+                    "Live deals could not be retrieved from CheapShark right now. Curated sample entries remain separate."
+            );
         }
     }
 
     private List<Deal> getDealsWithoutCache(
             int effectivePageSize,
             String effectiveTitle,
-            BigDecimal upperPrice) {
+            BigDecimal upperPrice,
+            String effectiveSortBy,
+            boolean effectiveDesc,
+            String effectiveStoreId,
+            int effectivePageNumber) {
         try {
-            List<CheapSharkDealResponse> responses = providerRequestBudget.execute(
+            List<CheapSharkDealResponse> responses = fetchDealsFromClient(
+                    effectivePageSize,
+                    effectiveTitle,
+                    upperPrice,
+                    effectiveSortBy,
+                    effectiveDesc,
+                    effectiveStoreId,
+                    effectivePageNumber
+            );
+            Map<String, String> storeLookup = getStoreLookupWithoutCache();
+            return cheapSharkDealMapper.toDeals(responses, storeLookup, cache.now());
+        } catch (RuntimeException exception) {
+            return localFallback(exception);
+        }
+    }
+
+    private List<CheapSharkDealResponse> fetchDealsFromClient(
+            int effectivePageSize,
+            String effectiveTitle,
+            BigDecimal upperPrice,
+            String effectiveSortBy,
+            boolean effectiveDesc,
+            String effectiveStoreId,
+            int effectivePageNumber) {
+        boolean defaultQuery = "DealRating".equals(effectiveSortBy)
+                && effectiveDesc
+                && effectiveStoreId == null
+                && effectivePageNumber == 0;
+        if (defaultQuery) {
+            return providerRequestBudget.execute(
                     () -> cheapSharkDealClient.getDeals(
                             effectivePageSize,
                             effectiveTitle,
                             upperPrice
                     )
             );
-            Map<String, String> storeLookup = getStoreLookupWithoutCache();
-            return cheapSharkDealMapper.toDeals(responses, storeLookup);
-        } catch (RuntimeException exception) {
-            return localFallback(exception);
         }
+        return providerRequestBudget.execute(
+                () -> cheapSharkDealClient.getDeals(
+                        effectivePageSize,
+                        effectiveTitle,
+                        upperPrice,
+                        effectiveSortBy,
+                        effectiveDesc,
+                        effectiveStoreId,
+                        effectivePageNumber
+                )
+        );
     }
 
-    private List<CheapSharkDealResponse> getDealResponses(
+    private DealLoadResult getDealResponses(
             ExternalDealsCacheKey cacheKey,
             int effectivePageSize,
             String effectiveTitle,
-            BigDecimal upperPrice) {
+            BigDecimal upperPrice,
+            String effectiveSortBy,
+            boolean effectiveDesc,
+            String effectiveStoreId,
+            int effectivePageNumber) {
         ExternalDealsCacheEntry<List<CheapSharkDealResponse>> cached = cache.getDeals(cacheKey);
         if (cache.isFresh(cached)) {
             LOGGER.debug("Using cached CheapShark deals");
-            return cached.value();
+            return new DealLoadResult(cached.value(), "cached", cached.fetchedAt());
         }
 
-        CompletableFuture<List<CheapSharkDealResponse>> newLoad = new CompletableFuture<>();
-        CompletableFuture<List<CheapSharkDealResponse>> activeLoad =
-                dealLoads.putIfAbsent(cacheKey, newLoad);
+        CompletableFuture<DealLoadResult> newLoad = new CompletableFuture<>();
+        CompletableFuture<DealLoadResult> activeLoad = dealLoads.putIfAbsent(cacheKey, newLoad);
         if (activeLoad != null) {
             return await(activeLoad);
         }
 
         try {
-            List<CheapSharkDealResponse> responses = loadDealResponses(
+            DealLoadResult responses = loadDealResponses(
                     cacheKey,
                     effectivePageSize,
                     effectiveTitle,
                     upperPrice,
+                    effectiveSortBy,
+                    effectiveDesc,
+                    effectiveStoreId,
+                    effectivePageNumber,
                     cached
             );
             newLoad.complete(responses);
@@ -162,39 +347,49 @@ public class ExternalDealService {
         }
     }
 
-    private List<CheapSharkDealResponse> loadDealResponses(
+    private DealLoadResult loadDealResponses(
             ExternalDealsCacheKey cacheKey,
             int effectivePageSize,
             String effectiveTitle,
             BigDecimal upperPrice,
+            String effectiveSortBy,
+            boolean effectiveDesc,
+            String effectiveStoreId,
+            int effectivePageNumber,
             ExternalDealsCacheEntry<List<CheapSharkDealResponse>> initialCached) {
         ExternalDealsCacheEntry<List<CheapSharkDealResponse>> latestCached = cache.getDeals(cacheKey);
         if (cache.isFresh(latestCached)) {
-            return latestCached.value();
+            return new DealLoadResult(latestCached.value(), "cached", latestCached.fetchedAt());
         }
         ExternalDealsCacheEntry<List<CheapSharkDealResponse>> stale =
                 initialCached != null ? initialCached : latestCached;
 
         try {
-            List<CheapSharkDealResponse> responses = providerRequestBudget.execute(
-                    () -> cheapSharkDealClient.getDeals(
-                            effectivePageSize,
-                            effectiveTitle,
-                            upperPrice
-                    )
+            List<CheapSharkDealResponse> responses = fetchDealsFromClient(
+                    effectivePageSize,
+                    effectiveTitle,
+                    upperPrice,
+                    effectiveSortBy,
+                    effectiveDesc,
+                    effectiveStoreId,
+                    effectivePageNumber
             );
             cache.putDeals(cacheKey, responses);
-            return responses;
+            ExternalDealsCacheEntry<List<CheapSharkDealResponse>> stored = cache.getDeals(cacheKey);
+            Instant refreshedAt = stored != null && stored.fetchedAt() != null
+                    ? stored.fetchedAt()
+                    : cache.now();
+            return new DealLoadResult(responses, "live", refreshedAt);
         } catch (ExternalProviderRequestBudget.CapacityUnavailableException exception) {
             if (stale != null) {
                 LOGGER.warn("CheapShark deals request budget saturated; serving stale cached deals");
-                return stale.value();
+                return new DealLoadResult(stale.value(), "stale", stale.fetchedAt());
             }
             throw exception;
         } catch (RuntimeException exception) {
             if (stale != null) {
                 LOGGER.warn("CheapShark deals refresh failed; serving stale cached deals");
-                return stale.value();
+                return new DealLoadResult(stale.value(), "stale", stale.fetchedAt());
             }
             throw exception;
         }
@@ -259,9 +454,33 @@ public class ExternalDealService {
         return localDeals.getDeals();
     }
 
+    private int normalizePageSize(Integer pageSize) {
+        int requestedPageSize = pageSize == null ? properties.getDefaultPageSize() : pageSize;
+        int maxPageSize = Math.max(1, properties.getMaxPageSize());
+        return Math.max(1, Math.min(requestedPageSize, maxPageSize));
+    }
+
+    private static int normalizePageNumber(Integer pageNumber) {
+        if (pageNumber == null) return 0;
+        return Math.max(0, Math.min(pageNumber, 20));
+    }
+
     private static String normalizeTitle(String title) {
         if (title == null) return null;
         String normalized = title.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String normalizeStoreId(String storeId) {
+        if (storeId == null) return null;
+        String normalized = storeId.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private record DealLoadResult(
+            List<CheapSharkDealResponse> responses,
+            String cacheState,
+            Instant refreshedAtUtc
+    ) {
     }
 }

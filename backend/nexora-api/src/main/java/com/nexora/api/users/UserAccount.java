@@ -95,6 +95,11 @@ public class UserAccount {
         return active;
     }
 
+    public void updateDisplayName(String displayName) {
+        this.displayName = displayName;
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
+    }
+
     void assignId(long id) {
         if (this.id == null) {
             this.id = id;

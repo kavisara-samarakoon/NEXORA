@@ -15,16 +15,24 @@ concurrency:
 
 jobs:
   review-dependency-changes:
-    name: Advisory dependency review
+    name: Dependency review
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Review high-severity dependency changes
-        uses: actions/dependency-review-action@v5
-        continue-on-error: true
+        if: ${{ !github.event.repository.private || vars.NEXORA_PRIVATE_DEPENDENCY_REVIEW == 'true' }}
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
         with:
           fail-on-severity: high
+
+      - name: Report unavailable private repository capability
+        if: ${{ github.event.repository.private && vars.NEXORA_PRIVATE_DEPENDENCY_REVIEW != 'true' }}
+        run: |
+          echo '::notice::Dependency Review is unavailable until GitHub Code Security is enabled and NEXORA_PRIVATE_DEPENDENCY_REVIEW is set. Security CI still runs independent scans.'
+          echo 'Dependency Review skipped. The repository owner must verify private repository entitlement before enabling this check.' >> "$GITHUB_STEP_SUMMARY"

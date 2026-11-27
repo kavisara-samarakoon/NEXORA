@@ -29,9 +29,18 @@ final class WishlistPriceSnapshotMatcher {
     }
 
     static boolean storeMatches(String wishlistStore, String dealStore) {
-        String normalizedWishlistStore = normalize(wishlistStore);
+        String normalizedWishlistStore = canonicalStoreName(wishlistStore);
+        String normalizedDealStore = canonicalStoreName(dealStore);
         return !normalizedWishlistStore.isEmpty()
-                && normalizedWishlistStore.equals(normalize(dealStore));
+                && normalizedWishlistStore.equals(normalizedDealStore);
+    }
+
+    private static String canonicalStoreName(String store) {
+        String normalized = normalize(store);
+        if ("epic games store".equals(normalized)) {
+            return "epic games";
+        }
+        return normalized;
     }
 
     static String normalize(String value) {

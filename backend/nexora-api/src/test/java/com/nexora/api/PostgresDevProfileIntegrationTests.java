@@ -3,10 +3,18 @@ package com.nexora.api;
 import com.nexora.api.auth.events.AuthSecurityEventReasonCode;
 import com.nexora.api.auth.events.AuthSecurityEventService;
 import com.nexora.api.auth.events.AuthSecurityEventStore;
+import com.nexora.api.deals.CheapSharkDealClient;
+import com.nexora.api.deals.CheapSharkDealResponse;
+import com.nexora.api.deals.CheapSharkStoreResponse;
+import com.nexora.api.wishlist.AddWishlistItemRequest;
+import com.nexora.api.wishlist.UserWishlistService;
+import com.nexora.api.wishlist.WishlistPriceHistoryPoint;
+import com.nexora.api.wishlist.WishlistAlertEventResponse;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -17,10 +25,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -42,6 +52,42 @@ class PostgresDevProfileIntegrationTests {
     @Autowired
     private AuthSecurityEventStore authSecurityEventStore;
 
+    @Autowired
+    private UserWishlistService wishlist;
+
+    @MockitoBean
+    private CheapSharkDealClient cheapShark;
+
+    @Test
+    void postgresPersistsFirstVerifiedPriceAndEventSeparatelyFromIdenticalManualValues() {
+        long userId = jdbcTemplate.queryForObject("""
+                insert into users (email, username, password_hash, display_name)
+                values ('price-fixture@example.invalid', 'price-fixture', 'test-fixture', 'Price Fixture')
+                returning id
+                """, Long.class);
+        var item = wishlist.addWishlistItem(userId, new AddWishlistItemRequest(
+                "Price Fixture", "Steam", "$8.00", "$10.00", null, null, null,
+                true, null, "123", "deal-id", "USD", null));
+        when(cheapShark.getStores()).thenReturn(List.of(new CheapSharkStoreResponse("1", "Steam", 1)));
+        when(cheapShark.getDeals(12, "Price Fixture", null)).thenReturn(List.of(new CheapSharkDealResponse(
+                "Price Fixture", "1", "8.00", "10.00", "0", "95", "9.0", "deal-id",
+                "123", null, null, "90", 1700000200L)));
+
+        var result = wishlist.refreshWishlistPrices(userId);
+        assertEquals(1, result.observationsRecorded());
+        assertEquals(1, result.targetReachedEventsCreated());
+        assertEquals(List.of("wishlist-create", "cheapshark-refresh"),
+                wishlist.getWishlistPriceHistory(userId, item.id(), 10).stream()
+                        .map(WishlistPriceHistoryPoint::source).toList());
+        assertEquals(List.of("cheapshark-refresh", "wishlist-create"),
+                wishlist.getWishlistAlertEvents(userId).stream()
+                        .map(WishlistAlertEventResponse::observationSource).toList());
+
+        var repeat = wishlist.refreshWishlistPrices(userId);
+        assertEquals(0, repeat.observationsRecorded());
+        assertEquals(0, repeat.targetReachedEventsCreated());
+    }
+
     @Test
     @Transactional
     void devProfileConnectsRunsAllMigrationsAndValidatesTheSchema() throws SQLException {
@@ -57,7 +103,7 @@ class PostgresDevProfileIntegrationTests {
                 where version is not null
                   and success = true
                 """, Long.class);
-        assertEquals(12L, successfulMigrations);
+        assertEquals(13L, successfulMigrations);
 
         String latestMigrationVersion = jdbcTemplate.queryForObject("""
                 select version
@@ -67,7 +113,7 @@ class PostgresDevProfileIntegrationTests {
                 order by installed_rank desc
                 limit 1
                 """, String.class);
-        assertEquals("12", latestMigrationVersion);
+        assertEquals("13", latestMigrationVersion);
 
         Integer requiredTableCount = jdbcTemplate.queryForObject("""
                 select count(*)

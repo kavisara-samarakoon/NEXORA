@@ -8,7 +8,7 @@ import {
   type WishlistPriority,
   type WishlistStatus,
 } from "@/data/wishlist";
-import { ensureAuthToken, readAuthToken } from "@/lib/auth-client";
+import { withAuthSessionRetry, type AuthOperationValidity } from "@/lib/auth-client";
 import { buildApiUrl, readResponseRequestId } from "@/lib/api-client";
 
 const WISHLIST_REQUEST_TIMEOUT_MS = 8000;
@@ -96,12 +96,31 @@ export type AddWishlistItemPayload = {
   status?: WishlistStatus;
   alertActive?: boolean;
   priority?: WishlistPriority;
+  externalGameId?: string;
+  externalDealId?: string;
+  currency?: string;
+  thumbUrl?: string;
 };
 
 export type UpdateWishlistAlertPayload = {
   targetPrice?: string;
   alertActive?: boolean;
   priority?: WishlistPriority;
+};
+
+export type UserWishlistRefreshSummary = {
+  scannedItems: number;
+  matchedItems: number;
+  updatedItems: number;
+  observationsRecorded: number;
+  targetReachedEventsCreated: number;
+  unavailableItems: number;
+  hasMore?: boolean;
+  nextCursor?: number | null;
+  provider: string;
+  currency: string;
+  refreshedAtUtc: string;
+  items: WishlistItem[];
 };
 
 export type UserWishlistError = {
@@ -321,6 +340,49 @@ export async function updateMyWishlistAlert(
   return data;
 }
 
+function isUserWishlistRefreshSummary(
+  value: unknown,
+): value is UserWishlistRefreshSummary {
+  if (typeof value !== "object" || value === null) return false;
+  const summary = value as Record<string, unknown>;
+  return (
+    typeof summary.scannedItems === "number" &&
+    typeof summary.matchedItems === "number" &&
+    typeof summary.updatedItems === "number" &&
+    typeof summary.observationsRecorded === "number" &&
+    typeof summary.targetReachedEventsCreated === "number" &&
+    typeof summary.unavailableItems === "number" &&
+    (summary.hasMore === undefined || typeof summary.hasMore === "boolean") &&
+    (summary.nextCursor === undefined ||
+      summary.nextCursor === null ||
+      (typeof summary.nextCursor === "number" && Number.isInteger(summary.nextCursor) && summary.nextCursor > 0)) &&
+    typeof summary.provider === "string" &&
+    typeof summary.currency === "string" &&
+    typeof summary.refreshedAtUtc === "string" &&
+    Array.isArray(summary.items) &&
+    summary.items.every(isWishlistItem)
+  );
+}
+
+export async function refreshMyWishlistPrices(
+  token: string,
+  cursor?: number | null,
+): Promise<UserWishlistRefreshSummary> {
+  const path =
+    cursor !== undefined && cursor !== null && Number.isInteger(cursor) && cursor > 0
+      ? `/api/me/wishlist/refresh?cursor=${encodeURIComponent(cursor)}`
+      : "/api/me/wishlist/refresh";
+  const response = await wishlistRequest(path, token, {
+    method: "POST",
+  });
+  const data = await readJson(response);
+
+  if (!isUserWishlistRefreshSummary(data)) {
+    throw invalidResponseError();
+  }
+  return data;
+}
+
 export async function deleteMyWishlistItem(token: string, id: number): Promise<void> {
   await wishlistRequest(`/api/me/wishlist/${encodeURIComponent(id)}`, token, { method: "DELETE" });
 }
@@ -338,25 +400,15 @@ export function normalizeUserWishlistError(error: unknown): UserWishlistError {
   };
 }
 
-export async function withWishlistAuthRetry<T>(
+export function withWishlistAuthRetry<T>(
   token: string,
   request: (activeToken: string) => Promise<T>,
-): Promise<{ value: T; token: string }> {
-  try {
-    return { value: await request(token), token };
-  } catch (error) {
-    if (normalizeUserWishlistError(error).status !== 401) throw error;
-
-    const currentToken = readAuthToken();
-    const refreshedToken =
-      currentToken && currentToken !== token
-        ? currentToken
-        : await ensureAuthToken({ forceRefresh: true });
-    if (!refreshedToken) throw error;
-
-    return {
-      value: await request(refreshedToken),
-      token: refreshedToken,
-    };
-  }
+  operation?: AuthOperationValidity,
+): Promise<{ value: T; token: string; sessionRevision: number }> {
+  return withAuthSessionRetry(
+    token,
+    request,
+    (error) => normalizeUserWishlistError(error).status === 401,
+    operation,
+  );
 }

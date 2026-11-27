@@ -44,4 +44,12 @@ public class JpaUserAccountStore implements UserAccountStore {
     public boolean usernameExists(String username) {
         return repository.existsByUsernameIgnoreCase(username);
     }
+
+    @Override
+    public Optional<UserAccount> updateDisplayName(long id, String displayName) {
+        return repository.findById(id).map(user -> {
+            user.updateDisplayName(displayName);
+            return repository.saveAndFlush(user);
+        });
+    }
 }

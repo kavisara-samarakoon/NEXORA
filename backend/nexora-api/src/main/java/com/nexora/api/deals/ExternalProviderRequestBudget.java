@@ -24,7 +24,7 @@ public final class ExternalProviderRequestBudget {
         permits = new Semaphore(maxConcurrentProviderCalls);
     }
 
-    <T> T execute(Supplier<T> providerCall) {
+    public <T> T execute(Supplier<T> providerCall) {
         Objects.requireNonNull(providerCall, "providerCall");
         if (!permits.tryAcquire()) {
             throw new CapacityUnavailableException();
@@ -37,7 +37,7 @@ public final class ExternalProviderRequestBudget {
         }
     }
 
-    static final class CapacityUnavailableException extends RuntimeException {
+    public static final class CapacityUnavailableException extends RuntimeException {
 
         private CapacityUnavailableException() {
             super("External provider request budget is saturated");

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import RequestIdSupportText from "@/components/RequestIdSupportText";
 import { useEffect, useState } from "react";
 import { normalizeAuthError, type AuthUser } from "@/lib/auth";
 import {
   AUTH_STATE_EVENT,
   logout,
+  readAuthSessionRevision,
   readCurrentUser,
 } from "@/lib/auth-client";
 
@@ -29,17 +31,42 @@ function initialsFor(user: AuthUser): string {
 export default function AuthStatus() {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [authRefreshKey, setAuthRefreshKey] = useState(0);
+  const [logoutFailure, setLogoutFailure] = useState<{
+    message: string;
+    requestId: string | null;
+    sessionRevision: number;
+  } | null>(null);
+
+  function handleLogout() {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setLogoutFailure(null);
+    void logout().then(() => {
+      setAuthRefreshKey((current) => current + 1);
+    }, (error) => {
+      const details = normalizeAuthError(error);
+      setLogoutFailure({
+        message: details.code === "storage_unavailable"
+          ? "Signed out locally. Browser storage is unavailable; retry sign out before reloading."
+          : "Signed out locally. Server sign-out could not be confirmed.",
+        requestId: details.requestId,
+        sessionRevision: readAuthSessionRevision(),
+      });
+    }).finally(() => setIsLoggingOut(false));
+  }
 
   useEffect(() => {
     let active = true;
 
     async function refreshAuthState() {
+      const sessionRevision = readAuthSessionRevision();
       try {
         const user = await readCurrentUser();
-        if (!active) return;
+        if (!active || sessionRevision !== readAuthSessionRevision()) return;
         setAuthState(user ? { status: "authenticated", user } : { status: "anonymous" });
       } catch (error) {
-        if (!active) return;
+        if (!active || sessionRevision !== readAuthSessionRevision()) return;
         setAuthState({
           status: "unavailable",
           message: normalizeAuthError(error).message,
@@ -60,7 +87,20 @@ export default function AuthStatus() {
       window.removeEventListener("storage", handleAuthChange);
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
-  }, []);
+  }, [authRefreshKey]);
+
+  if (logoutFailure && logoutFailure.sessionRevision === readAuthSessionRevision()
+    && authState.status !== "authenticated") {
+    return (
+      <div className="auth-status auth-status--unavailable" role="alert" style={{ maxWidth: 280, minWidth: 0, flexWrap: "wrap", whiteSpace: "normal" }}>
+        <div style={{ flexBasis: "100%" }}>{logoutFailure.message}<RequestIdSupportText requestId={logoutFailure.requestId} /></div>
+        <button className="auth-status__logout" type="button" disabled={isLoggingOut} onClick={handleLogout}>
+          {isLoggingOut ? "Signing out…" : "Retry sign out"}
+        </button>
+        <Link href="/login">Sign in</Link>
+      </div>
+    );
+  }
 
   if (authState.status === "loading") {
     return (
@@ -86,17 +126,7 @@ export default function AuthStatus() {
           className="auth-status__logout"
           type="button"
           disabled={isLoggingOut}
-          onClick={() => {
-            setIsLoggingOut(true);
-            void logout()
-              .catch(() => {
-                // Local state is cleared even when the backend is unavailable.
-              })
-              .finally(() => {
-                setAuthState({ status: "anonymous" });
-                setIsLoggingOut(false);
-              });
-          }}
+          onClick={handleLogout}
         >
           {isLoggingOut ? "Signing out…" : "Sign out"}
         </button>

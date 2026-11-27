@@ -156,7 +156,7 @@ the boundary between current controls and future production requirements.
 | `database` | Supporting schema and database-design workspace |
 | `assets` | Shared logos, images, and UI references |
 | `devops` | Local PostgreSQL Compose setup plus reserved deployment workspace |
-| `.devcontainer` | Optional local Java 17, Maven, Node.js 20, npm, Git, and Docker CLI development environment |
+| `.devcontainer` | Optional local Java 17, Maven, Node.js 24, npm, Git, and Docker CLI development environment |
 | `research` | Final-year project and research material |
 
 Use `frontend/nexora-web-next` for all new frontend work and as the Vercel
@@ -236,7 +236,7 @@ NEXORA supports three local-development approaches:
 
 Host-native requirements:
 
-- Node.js 20.9 or newer and npm
+- Node.js 24 LTS and npm
 - Java 17 or newer
 - Maven 3.9 or newer
 - PostgreSQL or Docker Compose when running the backend `dev` profile
@@ -294,7 +294,7 @@ and reset commands are in the
 
 ### Optional development container
 
-The repository includes an optional Java 17, Maven, Node.js 20, npm, Git, and
+The repository includes an optional Java 17, Maven, Node.js 24, npm, Git, and
 Docker CLI development environment. It forwards ports 3000, 8080, and 5432 but
 does not install project dependencies or start PostgreSQL, the backend, or the
 frontend automatically.
@@ -543,18 +543,20 @@ dispatch:
 | `api-smoke-ci.yml` | Warms Maven dependencies with bounded retries, starts the default backend locally, waits for health, and runs the existing reviewer smoke script against localhost |
 | `api-contract-ci.yml` | Runs the standard-library checker for the hand-maintained OpenAPI path, operation, schema, security, error, and localhost markers |
 | `reviewer-tooling-ci.yml` | Validates the reviewer preflight script's Bash syntax, executable bit, and read-only behavior from both the repository root and `/tmp` |
-| `frontend-ci.yml` | Sets up Node.js 20 with npm caching, then runs `npm ci`, lint, and build in `frontend/nexora-web-next` |
+| `frontend-ci.yml` | Sets up Node.js 24 with npm caching, then runs `npm ci`, frontend tests, lint, and build in `frontend/nexora-web-next` |
 | `hosted-demo-readiness.yml` | Hosted Demo Readiness: Offline deployment tooling, Backend Docker build, and Frontend hosted configuration build with placeholder origins on Node.js 24; no hosted validation or deployment |
-| `security-ci.yml` | Audits primary frontend production dependencies at high severity, retains the JSON report, and exports the backend Maven dependency tree |
-| `codeql.yml` | Manual CodeQL-ready workflow for backend Java and primary frontend JavaScript/TypeScript; automatic upload is disabled while private-repository code scanning is unavailable |
-| `dependency-review.yml` | Runs advisory pull-request dependency review with an intended high-severity threshold when repository support is available |
+| `security-ci.yml` | Blocks High/Critical frontend production and backend runtime findings, and retains the full npm audit, Maven inventory, and backend scan reports |
+| `codeql.yml` | Manual CodeQL workflow for backend Java and primary frontend JavaScript/TypeScript |
+| `dependency-review.yml` | Blocks High/Critical dependency changes on supported repositories and reports when repository capability has not been enabled |
 
 The completed v0.67 workflow/tooling milestone updated official GitHub action
 majors to current Node 24-compatible releases. This action execution runtime is
 separate from the application toolchains: backend validation remains on Java 17
-and Frontend CI remains on Node.js 20; Hosted Demo Readiness uses Node.js 24.
-Workflow triggers, commands, permissions, and Dependency Review's advisory
-policy are unchanged.
+and frontend validation uses Node.js 24 LTS. The root `.nvmrc`, frontend
+manifest, and devcontainer use the same Node major.
+
+See [dependency security](docs/security/dependency-security.md) for the runtime
+scan, advisory coverage and GitHub enforcement settings.
 
 The frontend workflow does not build the retained Vite prototype. Backend CI
 keeps the normal test suite database-free and runs PostgreSQL validation in a
@@ -597,7 +599,7 @@ the hand-maintained OpenAPI file. The lightweight checker verifies expected
 paths and operations, schema/security/error markers, and localhost-only server
 assumptions without installing an OpenAPI toolchain.
 
-Reviewer Tooling CI sets up Java 17, Python 3.12, and Node.js 20 so
+Reviewer Tooling CI sets up Java 17, Python 3.12, and Node.js 24 so
 [`scripts/reviewer-local-preflight.sh`](scripts/reviewer-local-preflight.sh) can
 verify its expected tools. It checks Bash syntax and executable mode, then runs
 the read-only preflight from the repository root and from `/tmp` through its

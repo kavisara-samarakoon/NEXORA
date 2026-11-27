@@ -77,6 +77,15 @@ public class AuthService {
                 .orElseThrow(() -> new AuthenticationFailedException("Authentication is required"));
     }
 
+    public AuthUserResponse updateDisplayName(long userId, UpdateProfileRequest request) {
+        String displayName = request.displayName().trim();
+        return userAccountStore.findById(userId)
+                .filter(UserAccount::isActive)
+                .flatMap(user -> userAccountStore.updateDisplayName(user.getId(), displayName))
+                .map(AuthUserResponse::from)
+                .orElseThrow(() -> new AuthenticationFailedException("Authentication is required"));
+    }
+
     public AuthResponse refreshAccessToken(long userId) {
         return userAccountStore.findById(userId)
                 .filter(UserAccount::isActive)

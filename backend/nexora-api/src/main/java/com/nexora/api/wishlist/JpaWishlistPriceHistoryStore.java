@@ -33,6 +33,8 @@ public class JpaWishlistPriceHistoryStore implements WishlistPriceHistoryStore {
                 entry.priceAmount(),
                 entry.currency(),
                 entry.source(),
+                entry.externalGameId(),
+                entry.externalDealId(),
                 entry.observedAt(),
                 null));
     }
@@ -70,6 +72,8 @@ public class JpaWishlistPriceHistoryStore implements WishlistPriceHistoryStore {
                 entry.getPriceAmount(),
                 entry.getCurrency(),
                 entry.getSource(),
-                entry.getObservedAt());
+                entry.getObservedAt(),
+                entry.getExternalGameId(),
+                entry.getExternalDealId());
     }
 }

@@ -25,6 +25,8 @@ export type WishlistAlertEvent = {
   evaluationState: WishlistAlertEvaluationState;
   targetReached: boolean;
   message: string;
+  deliveryStatus?: string;
+  observationSource?: string | null;
   createdAt: string;
 };
 
@@ -37,6 +39,8 @@ export type WishlistPriceHistoryPoint = {
   priceAmount: number | null;
   currency: string | null;
   source: string;
+  externalGameId?: string | null;
+  externalDealId?: string | null;
   observedAt: string;
 };
 
@@ -51,6 +55,12 @@ export type WishlistItem = {
   status: WishlistStatus;
   alertActive: boolean;
   priority: WishlistPriority;
+  externalGameId?: string | null;
+  externalDealId?: string | null;
+  currency?: string;
+  priceSource?: string;
+  lowestEverSource?: string;
+  thumbUrl?: string | null;
   alertEvaluation?: WishlistAlertEvaluation;
 };
 

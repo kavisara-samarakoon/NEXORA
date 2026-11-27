@@ -8,6 +8,8 @@ import {
   AUTH_STATE_EVENT,
   clearAuthToken,
   ensureAuthToken,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
   readAuthToken,
 } from "@/lib/auth-client";
 import { createSentinelRequestGuard } from "@/lib/sentinel-request-guard";
@@ -40,6 +42,9 @@ function SentinelAvatar() {
 
 const fallbackReasonCopy: Record<SentinelProviderFallbackReason, string> = {
   gemini_not_configured: "External AI is not configured for this local session.",
+  gemini_auth_failed: "The external provider rejected authentication.",
+  gemini_model_unavailable: "The configured external AI model could not be found.",
+  gemini_rate_limited: "The external provider is temporarily rate-limited.",
   gemini_non_success_response: "The external provider returned a non-success response.",
   gemini_invalid_response: "The external provider returned an unusable response.",
   gemini_timeout_or_network: "The external provider could not be reached in time.",
@@ -110,7 +115,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
         <p className="sn-gateway-response__answer">{response.answer}</p>
 
         {recommendations.length > 0 ? (
-          <div className="sn-gateway-response__chips" aria-label="Top recommendations">
+          <div className="sn-gateway-response__chips" role="group" aria-label="Top recommendations">
             {recommendations.map((item) => (
               <span key={item}>{item}</span>
             ))}
@@ -118,7 +123,7 @@ function GatewayResponseCard({ response }: { response: SentinelInsightResponse }
         ) : null}
 
         {nextActions.length > 0 ? (
-          <div className="sn-gateway-response__actions" aria-label="Suggested next actions">
+          <div className="sn-gateway-response__actions" role="group" aria-label="Suggested next actions">
             {nextActions.map((item) => (
               <span key={item}>{item}</span>
             ))}
@@ -156,6 +161,8 @@ export default function SentinelChat({
   messages: readonly ChatMessage[];
   suggestions: readonly string[];
 }) {
+  const renderSessionRevision = readAuthSessionRevision();
+  const requestLifetime = useRef<object | null>(null);
   const [draft, setDraft] = useState("");
   const [context, setContext] = useState<SentinelInsightContext>("general");
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
@@ -171,6 +178,7 @@ export default function SentinelChat({
   const [authState, setAuthState] = useState<GatewayAuthState>("checking");
   const composerInputRef = useRef<HTMLInputElement>(null);
   const requestGuardRef = useRef(createSentinelRequestGuard());
+  const authSessionRevisionRef = useRef(readAuthSessionRevision());
 
   const clearPrivateConversation = useCallback(() => {
     requestGuardRef.current.invalidate();
@@ -184,6 +192,7 @@ export default function SentinelChat({
   }, []);
 
   function returnMessageToComposer(message: string) {
+    if (!requestLifetime.current || renderSessionRevision !== readAuthSessionRevision()) return;
     setDraft(message);
     setGatewayError(null);
     window.requestAnimationFrame(() => composerInputRef.current?.focus());
@@ -192,8 +201,10 @@ export default function SentinelChat({
   useEffect(() => {
     let active = true;
     const requestGuard = requestGuardRef.current;
+    requestLifetime.current = {};
 
     async function refreshAuthentication() {
+      const revisionAtStart = readAuthSessionRevision();
       setAuthState("checking");
       const memoryToken = readAuthToken();
       if (memoryToken) {
@@ -206,18 +217,23 @@ export default function SentinelChat({
 
       try {
         const token = await ensureAuthToken();
-        if (!active) return;
+        if (!active || readAuthSessionRevision() !== revisionAtStart) return;
         setAuthToken(token);
         setAuthState(token ? "authenticated" : "anonymous");
       } catch {
-        if (!active) return;
+        if (!active || readAuthSessionRevision() !== revisionAtStart) return;
         setAuthToken(null);
         setAuthState("unavailable");
       }
     }
 
     function handleAuthChange() {
-      clearPrivateConversation();
+      const revision = readAuthSessionRevision();
+      if (revision !== authSessionRevisionRef.current) {
+        authSessionRevisionRef.current = revision;
+        clearPrivateConversation();
+        if (!readAuthToken()) setShowSignInHint(true);
+      }
       void refreshAuthentication();
     }
 
@@ -225,6 +241,7 @@ export default function SentinelChat({
     window.addEventListener(AUTH_STATE_EVENT, handleAuthChange);
     return () => {
       active = false;
+      requestLifetime.current = null;
       requestGuard.invalidate();
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthChange);
     };
@@ -232,9 +249,15 @@ export default function SentinelChat({
 
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const lifetime = requestLifetime.current;
+    if (!lifetime || renderSessionRevision !== readAuthSessionRevision()
+      || renderSessionRevision !== authSessionRevisionRef.current) return;
     const message = draft.trim();
     if (!message || isSubmitting || authState === "checking") return;
-    const requestVersion = requestGuardRef.current.begin();
+    const requestGuard = requestGuardRef.current;
+    const requestVersion = requestGuard.begin();
+    const isCurrent = () => requestLifetime.current === lifetime && requestGuard.isCurrent(requestVersion)
+      && renderSessionRevision === readAuthSessionRevision();
 
     setSubmittedMessage(message);
     setGatewayResponse(null);
@@ -251,20 +274,22 @@ export default function SentinelChat({
       const result = await withSentinelAuthRetry(
         authToken,
         (activeToken) => requestSentinelInsight(activeToken, { message, context }),
+        { sessionRevision: renderSessionRevision, isCurrent },
       );
-      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
+      if (!isCurrent()) return;
       setAuthToken(result.token);
       setAuthState("authenticated");
       setGatewayResponse(result.value);
       setDraft("");
     } catch (error) {
-      if (!requestGuardRef.current.isCurrent(requestVersion)) return;
+      if (!isCurrent() || isAuthSessionInvalidatedError(error)) return;
       const details = normalizeSentinelInsightError(error);
       if (details.status === 401) {
         clearAuthToken();
         clearPrivateConversation();
         setAuthToken(null);
         setAuthState("anonymous");
+        setShowSignInHint(true);
       } else {
         setGatewayError({
           code: details.code,
@@ -273,7 +298,7 @@ export default function SentinelChat({
         });
       }
     } finally {
-      if (requestGuardRef.current.isCurrent(requestVersion)) {
+      if (isCurrent()) {
         setIsSubmitting(false);
       }
     }

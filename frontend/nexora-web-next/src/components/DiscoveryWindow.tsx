@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { isExternalHref } from "../lib/homeFeed";
 import { useHomeScene } from "./HomeSceneProvider";
@@ -63,6 +63,7 @@ function Skeleton() {
 
 export default function DiscoveryWindow() {
   const { status, data, errors, reload } = useHomeScene();
+  const tabRefs = useRef<Partial<Record<TabKey, HTMLButtonElement>>>({});
   const [activeTab, setActiveTab] = useState<TabKey>("deals");
   const hasPreview =
     status === "ready" && !errors[activeTab] &&
@@ -71,7 +72,9 @@ export default function DiscoveryWindow() {
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     event.preventDefault();
-    setActiveTab((current) => (current === "deals" ? "giveaways" : "deals"));
+    const nextTab = activeTab === "deals" ? "giveaways" : "deals";
+    setActiveTab(nextTab);
+    tabRefs.current[nextTab]?.focus();
   };
 
   const renderBody = () => {
@@ -157,14 +160,23 @@ export default function DiscoveryWindow() {
       <>
         <div className={styles.itemMeta}>
           <span>{giveaway.platform ?? "Platform not listed"}</span>
-          {giveaway.worth ? <span className={styles.discount}>{giveaway.worth} value</span> : null}
+          {giveaway.worth ? (
+            <span className={styles.discount}>
+              {giveaway.status === "sample" ? "Sample list price" : "Listed value"} {giveaway.worth}
+            </span>
+          ) : null}
         </div>
 
         <h3 className={styles.itemTitle}>{giveaway.title}</h3>
 
-        <ItemLink href={giveaway.href} fallbackHref="/giveaways">
-          Claim giveaway
-        </ItemLink>
+        <p className={styles.stateText}>
+          {giveaway.status === "sample" ? "Unverified sample" : "Unverified entry"}. No verified claim destination.
+        </p>
+
+        <Link className={styles.itemLink} href="/giveaways">
+          {giveaway.status === "sample" ? "Explore giveaway samples" : "View giveaway details"}
+          <Arrow />
+        </Link>
       </>
     );
   };
@@ -182,6 +194,7 @@ export default function DiscoveryWindow() {
           return (
             <button
               key={tab.key}
+              ref={(element) => { tabRefs.current[tab.key] = element ?? undefined; }}
               type="button"
               role="tab"
               id={`discovery-tab-${tab.key}`}

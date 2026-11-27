@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  assertAuthSessionRevision,
+  isAuthSessionInvalidatedError,
+  readAuthSessionRevision,
+} from "@/lib/auth-client";
 import RequestIdSupportText from "@/components/RequestIdSupportText";
 import type { WishlistItem, WishlistPriority, WishlistStatus, WishlistStore } from "@/data/wishlist";
 import {
@@ -28,15 +33,29 @@ export default function AddWishlistItemForm({
   onAuthenticationRequired,
   onTokenChanged,
 }: AddWishlistItemFormProps) {
+  const renderSessionRevision = readAuthSessionRevision();
+  const lifetime = useRef({ active: true, generation: 0 });
+  const pendingSubmission = useRef(false);
+  useEffect(() => {
+    const owner = lifetime.current;
+    owner.active = true;
+    owner.generation += 1;
+    return () => { owner.active = false; owner.generation += 1; };
+  }, [lifetime]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{
     tone: "error" | "success";
     text: string;
     requestId?: string | null;
+    invalidField?: "targetPrice";
   } | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const generation = lifetime.current.generation;
+    const isCurrent = () => lifetime.current.active && generation === lifetime.current.generation
+      && renderSessionRevision === readAuthSessionRevision();
+    if (!isCurrent() || pendingSubmission.current) return;
     const form = event.currentTarget;
     const formData = new FormData(form);
     const title = readRequiredText(formData, "title");
@@ -49,7 +68,12 @@ export default function AddWishlistItemForm({
     }
 
     if (!targetPrice) {
-      setMessage({ tone: "error", text: "Enter a target price in a supported format, such as $15.00 or FREE." });
+      setMessage({
+        tone: "error",
+        text: "Enter a target price in a supported format, such as $15.00 or FREE.",
+        invalidField: "targetPrice",
+      });
+      form.querySelector<HTMLInputElement>("#wl-add-target-price")?.focus();
       return;
     }
 
@@ -60,13 +84,15 @@ export default function AddWishlistItemForm({
       store: formData.get("store") as WishlistStore,
       currentPrice,
       targetPrice,
-      lowestEver: lowestEver || currentPrice,
+      lowestEver: lowestEver || "Not established",
       discount: discount || null,
       priority: formData.get("priority") as WishlistPriority,
       status: formData.get("status") as WishlistStatus,
       alertActive: formData.get("alertActive") === "on",
     };
 
+    const sessionRevision = renderSessionRevision;
+    pendingSubmission.current = true;
     setIsSubmitting(true);
     setMessage(null);
 
@@ -74,13 +100,17 @@ export default function AddWishlistItemForm({
       const result = await withWishlistAuthRetry(
         token,
         (activeToken) => addMyWishlistItem(activeToken, payload),
+        { sessionRevision, isCurrent },
       );
+      if (!isCurrent()) return;
+      assertAuthSessionRevision(result.sessionRevision);
       const item = result.value;
       onTokenChanged(result.token);
       onAdded(item);
       form.reset();
       setMessage({ tone: "success", text: `${item.title} is now stored in this account’s personal wishlist.` });
     } catch (error) {
+      if (!isCurrent() || isAuthSessionInvalidatedError(error) || sessionRevision !== readAuthSessionRevision()) return;
       const details = normalizeUserWishlistError(error);
       if (details.status === 401) onAuthenticationRequired();
       setMessage({
@@ -89,9 +119,12 @@ export default function AddWishlistItemForm({
         requestId: details.requestId,
       });
     } finally {
-      setIsSubmitting(false);
+      pendingSubmission.current = false;
+      if (isCurrent()) setIsSubmitting(false);
     }
   }
+
+  const targetPriceInvalid = message?.invalidField === "targetPrice";
 
   return (
     <section className="wl-add-panel" id="add-personal-wishlist-item" aria-labelledby="wl-add-title">
@@ -128,12 +161,25 @@ export default function AddWishlistItemForm({
         </label>
         <label className="wl-add-form__field" htmlFor="wl-add-target-price">
           <span>Target price</span>
-          <input id="wl-add-target-price" name="targetPrice" type="text" required maxLength={40} placeholder="$24.99" disabled={isSubmitting} aria-describedby="wl-add-target-help" />
+          <input
+            id="wl-add-target-price"
+            name="targetPrice"
+            type="text"
+            required
+            maxLength={40}
+            placeholder="$24.99"
+            disabled={isSubmitting}
+            aria-invalid={targetPriceInvalid || undefined}
+            aria-describedby={targetPriceInvalid ? "wl-add-target-help wl-add-message" : "wl-add-target-help"}
+            onChange={(event) => {
+              if (targetPriceInvalid && normalizeTargetPriceInput(event.currentTarget.value.trim())) setMessage(null);
+            }}
+          />
           <small id="wl-add-target-help">Use a value such as $15.00 or FREE.</small>
         </label>
         <label className="wl-add-form__field" htmlFor="wl-add-lowest-ever">
           <span>Lowest ever <small>optional</small></span>
-          <input id="wl-add-lowest-ever" name="lowestEver" type="text" maxLength={40} placeholder="Defaults to current" disabled={isSubmitting} />
+          <input id="wl-add-lowest-ever" name="lowestEver" type="text" maxLength={40} placeholder="Not established unless set" disabled={isSubmitting} />
         </label>
         <label className="wl-add-form__field" htmlFor="wl-add-discount">
           <span>Discount <small>optional</small></span>

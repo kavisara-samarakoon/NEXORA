@@ -74,15 +74,10 @@ project's academic, portfolio, and product goals evolve.
 
 ## CI and release follow-up
 
-- Preserve Java 17 and Node.js 20 as the current application validation inputs
-  after the v0.67 official-action Node 24 runtime compatibility update. Treat
-  future application toolchain changes as separate, deliberately tested work.
-- Keep Dependency Review advisory with `continue-on-error: true` and retain
-  `fail-on-severity: high` as the intended threshold when evaluation is
-  supported. Defer an enforceable gate until the required GitHub Dependency
-  Graph and repository security capability are available. Do not describe the
-  current check as rejecting or merge-blocking; npm audit and Maven dependency-
-  tree visibility remain separate CI controls.
+- Use Java 17 and Node.js 24 LTS for application validation.
+- Keep the backend runtime vulnerability gate and frontend npm audit separate
+  from GitHub Dependency Review. Dependency Review rejects High/Critical
+  dependency changes where the repository has the required capability.
 - Add deployed-environment smoke tests only after approved target, credential,
   data-lifecycle, and ownership boundaries exist; they remain separate from the
   local-only v0.44 request correlation smoke coverage.
@@ -148,7 +143,7 @@ project's academic, portfolio, and product goals evolve.
 - Validate the existing backend Dockerfile and Next.js framework hosting path
   separately from local PostgreSQL Compose and devcontainer tooling. Hosted Demo
   Readiness CI includes Offline deployment tooling, Backend Docker build, and
-  Frontend hosted configuration build on Node.js 24; Frontend CI uses Node.js 20.
+  Frontend hosted configuration build on Node.js 24; Frontend CI uses the same runtime.
   These builds do not establish hosted runtime behavior.
 - Establish environment-specific configuration, managed secret storage,
   backups, restore testing, health checks, and rollback expectations.

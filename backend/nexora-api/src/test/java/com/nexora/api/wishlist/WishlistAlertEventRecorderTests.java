@@ -42,7 +42,7 @@ class WishlistAlertEventRecorderTests {
                 7L,
                 item(),
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached."));
+                        true, "target-reached", "Target price reached."), "cheapshark-refresh");
 
         ArgumentCaptor<WishlistAlertEvent> eventCaptor =
                 ArgumentCaptor.forClass(WishlistAlertEvent.class);
@@ -104,7 +104,7 @@ class WishlistAlertEventRecorderTests {
                 7L,
                 item(),
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached."));
+                        true, "target-reached", "Target price reached."), "cheapshark-refresh");
 
         verify(repository).saveAndFlush(any());
         verifyNoInteractions(sender);
@@ -123,7 +123,7 @@ class WishlistAlertEventRecorderTests {
                 7L,
                 item(),
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached."));
+                        true, "target-reached", "Target price reached."), "cheapshark-refresh");
 
         verify(repository).saveAndFlush(any());
         verifyNoInteractions(sender);
@@ -142,7 +142,7 @@ class WishlistAlertEventRecorderTests {
                 7L,
                 item(),
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached."));
+                        true, "target-reached", "Target price reached."), "cheapshark-refresh");
 
         verify(repository).saveAndFlush(any());
         verifyNoInteractions(sender);
@@ -163,7 +163,7 @@ class WishlistAlertEventRecorderTests {
                 7L,
                 item(),
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached.")));
+                        true, "target-reached", "Target price reached."), "cheapshark-refresh"));
 
         verify(repository).saveAndFlush(any());
         verify(dispatcher).dispatchTargetReached(any());
@@ -187,7 +187,7 @@ class WishlistAlertEventRecorderTests {
                 7L,
                 item(),
                 new WishlistAlertEvaluation(
-                        true, "target-reached", "Target price reached.")));
+                        true, "target-reached", "Target price reached."), "cheapshark-refresh"));
 
         InOrder inOrder = inOrder(repository, emailSender);
         inOrder.verify(repository).saveAndFlush(any());
@@ -234,7 +234,7 @@ class WishlistAlertEventRecorderTests {
                 true,
                 "medium",
                 true,
-                7L
+                7L, "123", "deal-id", "USD", null, "cheapshark-refresh", "cheapshark-refresh"
         );
     }
 }
